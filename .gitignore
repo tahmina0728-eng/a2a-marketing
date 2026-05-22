@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# Environment / secrets — NEVER commit these
+backend/.env
+*.env
+.env.*
+
+# GCP credentials
+*-credentials.json
+application_default_credentials.json
+service-account*.json
+*-sa-key.json
+*.json.key
+
+# Node
+node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
