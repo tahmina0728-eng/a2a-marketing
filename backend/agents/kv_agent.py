@@ -6,13 +6,14 @@ Adapts each concept for: Instagram Reel, TikTok, YouTube Short, CTV 10s.
 Output: kv_concepts.json (3 concepts)
 Model: gemini-2.5-pro (creative + detailed output)
 """
+
+import config
 from google.adk.agents import Agent
 from tools import (
     load_brand_guidelines,
-    save_json_to_gcs,
     log_audit_event,
+    save_json_to_gcs,
 )
-import config
 
 KV_INSTRUCTION = """
 You are the KV (Key Visual) Agent for McDonald's CampaignOS.
@@ -28,10 +29,10 @@ Call load_brand_guidelines() to ensure all concepts comply with brand standards.
 ### Step 2 — Generate 3 DISTINCT concepts
 The 3 concepts MUST be meaningfully different in tone and approach:
 - Concept A: Bold / High-energy / Unexpected
-- Concept B: Warm / Nostalgic / Emotional  
+- Concept B: Warm / Nostalgic / Emotional
 - Concept C: Sleek / Modern / Minimal
 
-Each concept must express the strategy's primary message (Fan Truth) 
+Each concept must express the strategy's primary message (Fan Truth)
 through a DIFFERENT visual metaphor and emotional approach.
 
 ### Step 3 — For each concept, produce this full structure:
@@ -40,7 +41,7 @@ through a DIFFERENT visual metaphor and emotional approach.
   "concept_name": "<memorable 2-3 word name>",
   "logline": "<one sentence that captures the concept's essence>",
   "tone": "bold_energetic | warm_nostalgic | modern_minimal",
-  
+
   "visual_direction": {
     "hero_description": "<detailed description of the key hero image/moment>",
     "colour_palette": {
@@ -61,7 +62,7 @@ through a DIFFERENT visual metaphor and emotional approach.
     "motion_style": "<e.g. 'quick cuts, kinetic typography' or 'slow push-in, emotional'>",
     "do_not_include": ["<visual elements to avoid>"]
   },
-  
+
   "reel_script_10s": {
     "total_duration": "10s",
     "scenes": [
@@ -84,7 +85,7 @@ through a DIFFERENT visual metaphor and emotional approach.
       "cta": "<call to action text>"
     }
   },
-  
+
   "channel_adaptations": {
     "instagram_reel": {
       "aspect_ratio": "9:16",
@@ -111,12 +112,12 @@ through a DIFFERENT visual metaphor and emotional approach.
       "audio_importance": "<TV has sound — how is audio more prominent>"
     }
   },
-  
+
   "brand_compliance": {
     "brand_locks_respected": ["<which locks from guidelines this concept respects>"],
     "potential_concerns": ["<any brand risks to flag for human review>"]
   },
-  
+
   "production_notes": {
     "estimated_complexity": "low | medium | high",
     "key_assets_needed": ["<asset>", ...],
@@ -140,7 +141,7 @@ through a DIFFERENT visual metaphor and emotional approach.
 
 kv_agent = Agent(
     name="kv_agent",
-    model=config.MODEL_SMART,  # gemini-2.5-pro for creative quality
+    model=config.MODEL_SMART,
     description=(
         "Generates 3 distinct Key Visual concepts with visual direction, "
         "colour palette, typography, 10s Reel scripts, music cues, "

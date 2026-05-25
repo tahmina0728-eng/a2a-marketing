@@ -8,7 +8,7 @@
 set -e  # Exit on any error
 
 # ── CONFIG — edit these ─────────────────────────────────────
-PROJECT_ID="your-gcp-project-id"          # <-- change this
+PROJECT_ID="dauntless-karma-497108-b0"          # <-- change this
 REGION="us-central1"
 SERVICE_ACCOUNT_NAME="campaignos-sa"
 GCS_BUCKET="${PROJECT_ID}-campaignos"

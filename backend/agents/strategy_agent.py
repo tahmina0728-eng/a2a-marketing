@@ -5,25 +5,26 @@ timing plan, audience targeting per channel, KPI targets per channel.
 Output: strategy_doc.json
 Model: gemini-2.5-pro (complex reasoning task)
 """
+
+import config
 from google.adk.agents import Agent
 from tools import (
-    query_fan_truths,
     get_channel_benchmarks,
-    save_json_to_gcs,
     log_audit_event,
+    query_fan_truths,
+    save_json_to_gcs,
 )
-import config
 
 STRATEGY_INSTRUCTION = """
 You are the Strategy Agent for McDonald's CampaignOS.
 
-You receive a validated machine_brief.json and produce a detailed 
+You receive a validated machine_brief.json and produce a detailed
 strategy_doc.json that guides all creative and execution decisions.
 
 ## YOUR PROCESS:
 
 ### Step 1 — Deepen audience insight
-Call query_fan_truths() using product_tags and audience_tags derived 
+Call query_fan_truths() using product_tags and audience_tags derived
 from the brief. This surfaces validated fan insights you can use in messaging.
 
 ### Step 2 — Refresh channel data
@@ -40,7 +41,7 @@ e.g., a "value/deal" truth → Search + Email (intent-driven)
 
 **Messaging Hierarchy:**
 - Primary message: the Fan Truth expressed as a campaign line (≤8 words)
-- Secondary message: product benefit that validates the truth (≤15 words)  
+- Secondary message: product benefit that validates the truth (≤15 words)
 - Tertiary message: the offer/CTA (≤5 words)
 
 **Budget Allocation Rules:**
@@ -54,7 +55,7 @@ e.g., a "value/deal" truth → Search + Email (intent-driven)
   "campaign_id": "<from brief>",
   "strategy_version": "1.0",
   "created_at": "<ISO timestamp>",
-  
+
   "messaging_hierarchy": {
     "primary": "<Fan Truth expressed as campaign line, ≤8 words>",
     "secondary": "<product benefit, ≤15 words>",
@@ -63,7 +64,7 @@ e.g., a "value/deal" truth → Search + Email (intent-driven)
     "do_not_say": ["<phrase>", ...],
     "always_say": ["<phrase>", ...]
   },
-  
+
   "channel_priority": [
     {
       "rank": 1,
@@ -99,13 +100,13 @@ e.g., a "value/deal" truth → Search + Email (intent-driven)
       }
     }
   ],
-  
+
   "timing_plan": {
     "phase_1_awareness": {"duration_weeks": <n>, "channels": [...], "objective": "..."},
     "phase_2_consideration": {"duration_weeks": <n>, "channels": [...], "objective": "..."},
     "phase_3_conversion": {"duration_weeks": <n>, "channels": [...], "objective": "..."}
   },
-  
+
   "ab_test_plan": [
     {
       "channel": "<channel>",
@@ -116,13 +117,13 @@ e.g., a "value/deal" truth → Search + Email (intent-driven)
       "min_sample_size": <number>
     }
   ],
-  
+
   "fan_insights_used": ["<insight from fan_truths table>", ...],
-  
+
   "risk_flags": [
     {"risk": "<description>", "mitigation": "<how to address>"}
   ],
-  
+
   "total_budget": <number>,
   "total_budget_breakdown": {"<channel>": <amount>, ...}
 }
@@ -132,7 +133,7 @@ e.g., a "value/deal" truth → Search + Email (intent-driven)
 2. Call log_audit_event() to record strategy creation
 
 ### KEY PRINCIPLES:
-- Every budget number must add up to 100% 
+- Every budget number must add up to 100%
 - Every KPI target must be grounded in the benchmark data you queried
 - The messaging hierarchy must directly express the campaign's Fan Truth
 - AB tests are mandatory — always include at least 2
@@ -141,7 +142,7 @@ e.g., a "value/deal" truth → Search + Email (intent-driven)
 
 strategy_agent = Agent(
     name="strategy_agent",
-    model=config.MODEL_SMART,  # gemini-2.5-pro for deep reasoning
+    model=config.MODEL_SMART,
     description=(
         "Creates channel strategy, messaging hierarchy, budget allocation, "
         "timing plan, and audience targeting per channel from a validated brief. "
