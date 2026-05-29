@@ -1,3 +1,5 @@
 # Campaign Production System
 
-See docs and individual folders 
+See individual folders for their README 
+
+See docs for implementation plans 
