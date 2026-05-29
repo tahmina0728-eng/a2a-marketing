@@ -30,6 +30,7 @@ frontend/.env.*
 .vscode/
 .idea/
 *.swp
+.zed
 
 # OS
 .DS_Store
