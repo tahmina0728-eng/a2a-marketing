@@ -521,4 +521,3 @@ async def refine_kv_image(
     except Exception as exc:
         logger.warning("kv_refine_failed", generator_id=generator_id, error=str(exc))
         return {"status": "failed", "error": str(exc)}
-
