@@ -1,6 +1,6 @@
-# CampaignOS — McDonald's AI Campaign Production System
+AI Campaign Production System
 
-Google ADK · FastAPI · React · GA4 · Google Ads
+Google ADK · FastAPI · React
 
 ---
 
@@ -13,26 +13,8 @@ cd infra
 chmod +x setup_gcp.sh && ./setup_gcp.sh
 ```
 
-### 2. Backend
-```bash
-cd backend
-
-# Copy and fill in environment variables
-cp .env.example .env
-# Edit .env with your GCP project ID, GA4 property, etc.
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Upload your brand guidelines to GCS
-gsutil cp your_brand_guidelines.md gs://YOUR_BUCKET/brand/brand_guidelines.md
-
-# Seed BigQuery with channel benchmark data
-python seed_data.py   # (create this with your real benchmarks)
-
-# Start the API
-uvicorn main:app --reload --port 8000
-```
+### 2. Harness
+see readme in folder
 
 ### 3. Frontend
 ```bash
@@ -58,72 +40,6 @@ GCS · BigQuery · Vertex AI · Firestore
 GA4 · Google Ads · Meta APIs (Execution + Performance)
 ```
 
----
-
-## Pipeline Flow
-
-```
-Human enters brief (React form)
-        ↓
-Agent 1: Briefing Agent     → machine_brief.json
-        ↓ [Human gate: approve brief]
-Agent 2: Strategy Agent     → strategy_doc.json  
-        ↓ [Human gate: approve strategy]
-Agent 3: KV Agent           → 3 × kv_concept.json
-        ↓ [Human gate: select KV concept]
-Agent 4: Content Agent      → content_package.json
-        ↓ [Human gate: approve content]
-Agent 5: Execution Agent    → publish to all platforms
-        ↓
-Agent 6: Performance Agent  → monitor every 6h (Cloud Scheduler)
-        ↓ (if underperforming)
-        └──────────────────── optimisation loop → KV Agent
-```
-
----
-
-## File Structure
-
-```
-campaignos/
-├── infra/
-│   └── setup_gcp.sh          # One-time GCP setup
-│
-├── backend/
-│   ├── main.py               # FastAPI app + SSE endpoints
-│   ├── pipeline.py           # Pipeline orchestrator
-│   ├── events.py             # SSE event schema
-│   ├── config.py             # Centralised config
-│   ├── requirements.txt
-│   ├── .env.example
-│   ├── agents/
-│   │   ├── briefing_agent.py
-│   │   ├── strategy_agent.py
-│   │   ├── kv_agent.py
-│   │   └── content_execution_performance.py
-│   ├── tools/
-│   │   ├── gcs_tools.py
-│   │   └── bigquery_tools.py
-│   └── schemas/
-│       ├── bq_campaigns.json
-│       ├── bq_channel_benchmarks.json
-│       ├── bq_fan_truths.json
-│       └── bq_audit_log.json
-│
-└── frontend/
-    ├── index.html
-    ├── vite.config.ts
-    ├── package.json
-    └── src/
-        ├── main.tsx
-        ├── App.tsx             # All UI components
-        ├── hooks/
-        │   └── usePipeline.ts  # SSE + state management
-        └── types/
-            └── pipeline.ts     # TypeScript types
-```
-
----
 
 ## Adding Real Platform APIs (Execution Agent)
 
