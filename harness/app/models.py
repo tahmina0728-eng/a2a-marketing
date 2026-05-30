@@ -44,6 +44,15 @@ class MomentType(str, Enum):
     PARTNERSHIP  = "Partnership Moment"
 
 
+# ── CULTURE ANALYSIS ──────────────────────────────────────────────────────
+
+class CultureAnalysis(BaseModel):
+    """Output of culture_formatter — structured cultural intelligence for the brief."""
+    summary:           str       = Field(..., description="Key cultural insight in 3–5 sentences, actionable for this specific brief")
+    sentiment_metrics: dict      = Field(default_factory=dict, description="Trend/topic → momentum descriptor, e.g. {'premium cooking revival': 'high momentum, youth-led'}")
+    recommendations:   list[str] = Field(default_factory=list, description="3–5 concrete cultural hooks the campaign can authentically tap into")
+
+
 # ── REQUEST MODELS ────────────────────────────────────────────────────────
 
 class AudienceInput(BaseModel):
@@ -266,7 +275,7 @@ class MessagingPillar(BaseModel):
 
 
 class CampaignStrategy(BaseModel):
-    """Output of the strategy_agent node."""
+    """Legacy strategy model — superseded by CreativeStrategy from creative_director."""
     campaign_id:         str
     strategic_framework: str
     hero_message:        str
@@ -276,6 +285,33 @@ class CampaignStrategy(BaseModel):
     timing_notes:        str                   = ""
     brand_locks:         BrandLocks            = Field(default_factory=BrandLocks)
     handoff_message:     str                   = ""
+
+
+# ── CREATIVE DIRECTION STAGE ──────────────────────────────────────────────
+
+class BigIdea(BaseModel):
+    """The singular creative concept at the heart of the campaign."""
+    title:               str = Field(..., description="Punchy idea title, ≤6 words")
+    essence:             str = Field(..., description="One sentence: what this campaign makes people feel")
+    visual_world:        str = Field(..., description="3–4 sentences: the visual universe, mood, and aesthetic register")
+    copy_direction:      str = Field(..., description="The tone, register, rhythm, and 2–3 key phrase examples that demonstrate the creative voice")
+    hero_proposition:    str = Field(..., description="What we are saying about the product in this idea")
+    emotional_territory: str = Field(..., description="The emotional space we occupy; what people will feel and remember")
+
+
+class CreativeStrategy(BaseModel):
+    """Output of creative_director — full campaign strategy built on the Big Idea."""
+    campaign_id:         str
+    big_idea:            BigIdea
+    strategic_framework: str                   = Field(..., description="Overarching campaign approach, 2–3 sentences")
+    hero_message:        str                   = Field(..., description="Single strongest campaign message, ≤8 words, Fan-to-Fan voice")
+    channel_priorities:  list[ChannelPriority] = Field(default_factory=list)
+    messaging_pillars:   list[MessagingPillar] = Field(default_factory=list)
+    budget_allocation:   dict[str, float]      = Field(default_factory=dict, description="Channel → % allocation (must sum to 100)")
+    timing_notes:        str                   = ""
+    brand_locks:         BrandLocks            = Field(default_factory=BrandLocks)
+    culture_context:     str                   = Field(..., description="1–2 sentences: the specific cultural insight that shaped the Big Idea")
+    handoff_message:     str                   = Field(..., description="Inspiring 3–4 sentence brief to the KV art directors about the Big Idea")
 
 
 # ── KV STAGE ─────────────────────────────────────────────────────────────

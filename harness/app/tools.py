@@ -11,12 +11,7 @@ Tool list:
                                service (InMemory in dev, GCS in prod â€” zero code change).
                                Passes product photos as multi-modal image inputs so the
                                model sees the actual product photography.
-  render_copy_overlay        â€” Pillow flat text overlay; creates a positional reference
-                               (kv_ref_{N}.png) showing exactly where headline/brand/
-                               tagline copy sits â€” used as stencil for refine_kv_image.
-  refine_kv_image            â€” Nano Banana 2 image-to-image; loads the Pillow reference,
-                               re-renders the text with scene-integrated lighting/shadows,
-                               saves the finished key visual as kv_final_{N}.png.
+
 """
 
 import json
@@ -114,10 +109,10 @@ async def save_brief_output(
     brief_input = machine_brief.get("structured_brief", {})
     log_brief_to_bigquery(campaign_id, brief_input, machine_brief)
 
-    # Store parsed brief dict in session state for downstream workflow agents.
-    # briefing_agent also has output_key="machine_brief" which stores the raw
-    # JSON string â€” this overwrites that with the properly parsed dict.
-    tool_context.state["machine_brief"] = machine_brief
+    # Store the brief as a JSON string so downstream agents can reference
+    # {machine_brief} in their instruction templates directly. A dict would
+    # render as a Python repr (single quotes etc.) — the JSON string is clean.
+    tool_context.state["machine_brief"] = brief_json
     tool_context.state["machine_brief_saved"] = True
 
     logger.info("tool_save_brief_output", campaign_id=campaign_id, artifact=artifact_name)
@@ -194,18 +189,41 @@ async def generate_and_save_kv_image(
         )
 
         contents: list = []
-        for product_name, uri in product_image_map.items():
-            img_bytes = _load_asset_bytes(uri)
-            if img_bytes:
-                contents.append(
-                    types.Part.from_bytes(
-                        data      = img_bytes,
-                        mime_type = _guess_image_mime(uri),
+
+        # Only send product photos that the image_prompt explicitly references
+        # (e.g. "Product1", "Product3"). Sending every product in the brand
+        # folder bloats the request and confuses the model when the brief only
+        # calls for one hero product.
+        referenced_products = {
+            k: v for k, v in product_image_map.items() if k in image_prompt
+        }
+        # Safety fallback: if the prompt references no ProductN keys at all,
+        # send the full map so the model still has something to work with.
+        products_to_send = referenced_products or product_image_map
+
+        # Prepend product photos as labelled multimodal inputs.
+        # Text labels ("Product1:", "Product2:", ...) must immediately precede
+        # each image so the model knows which blob maps to which product key
+        # referenced in the image_prompt (e.g. "Reference Product1 above").
+        # Without labels the model sees anonymous images and ignores them.
+        if products_to_send:
+            contents.append(
+                "Reference product photography follows. "
+                "Each image is labelled by the product key used in the prompt:"
+            )
+            for product_name, uri in products_to_send.items():
+                img_bytes = _load_asset_bytes(uri)
+                if img_bytes:
+                    contents.append(f"{product_name}:")
+                    contents.append(
+                        types.Part.from_bytes(
+                            data      = img_bytes,
+                            mime_type = _guess_image_mime(uri),
+                        )
                     )
-                )
-                logger.info("product_photo_included", product=product_name, uri=uri)
-            else:
-                logger.warning("product_photo_skipped", product=product_name, uri=uri)
+                    logger.info("product_photo_included", product=product_name, uri=uri)
+                else:
+                    logger.warning("product_photo_skipped", product=product_name, uri=uri)
 
         contents.append(guarded_prompt)  # text prompt always last
 
@@ -262,262 +280,4 @@ async def generate_and_save_kv_image(
             concept_id   = concept_id,
             error        = str(exc),
         )
-        return {"status": "failed", "error": str(exc)}
-
-
-# â”€â”€ COPY RENDERER TOOL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-async def render_copy_overlay(
-    generator_id: int,
-    tool_context: ToolContext,
-) -> dict:
-    """
-    Load the raw KV background (kv_image_{N}.png) from the artifact service,
-    overlay typographic copy (headline, brand name, tagline) as a flat Pillow
-    reference layer, and save the result as kv_ref_{N}.png.
-
-    The reference image is intentionally plain â€” it acts as a pixel-precise
-    positional stencil for the subsequent refine_kv_image pass, showing the
-    image model exactly where each text element sits, at what size, without
-    requiring the Pillow layer to look production-quality.
-
-    Brand font is loaded from the brand Font/ directory (GCS or local).
-    Falls back to PIL's built-in default font if no brand font is available.
-
-    Reads state:  kv_concept_{N}  â€” KVConcept JSON (title, typography_guidance)
-                  brand_name      â€” for font loading and brand name copy
-                  brand_locks_json â€” for tagline + primary_colour
-    Artifact in:  kv_image_{N}.png
-    Artifact out: kv_ref_{N}.png
-    State out:    kv_ref_key_{N} = "kv_ref_{N}.png"
-
-    Args:
-        generator_id: 1â€“4 matching the concept branch
-
-    Returns:
-        {"artifact_key": "kv_ref_{N}.png", "status": "saved", "version": N}
-        or {"status": "failed", "error": "..."}
-    """
-    ref_key = f"kv_ref_{generator_id}.png"
-    src_key = f"kv_image_{generator_id}.png"
-
-    try:
-        from io import BytesIO
-        import os
-        import tempfile
-        from PIL import Image, ImageDraw, ImageFont  # type: ignore[import]
-
-        # â”€â”€ 1. Load the raw background from artifact service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        src_part = await tool_context.load_artifact(src_key)
-        if src_part is None or not src_part.inline_data:
-            raise ValueError(f"Artifact {src_key!r} not found or empty")
-        img        = Image.open(BytesIO(src_part.inline_data.data)).convert("RGBA")
-        width, height = img.size
-
-        # â”€â”€ 2. Read copy text from session state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        concept_raw = tool_context.state.get(f"kv_concept_{generator_id}", "{}")
-        try:
-            concept = json.loads(concept_raw) if isinstance(concept_raw, str) else concept_raw
-        except Exception:
-            concept = {}
-
-        headline            = concept.get("title", "")
-        if isinstance(headline, dict):
-            headline = headline.get("text", "") or headline.get("en", "") or ""
-        headline = str(headline)
-
-        brand_name          = tool_context.state.get("brand_name", "")
-        try:
-            locks = json.loads(tool_context.state.get("brand_locks_json", "{}"))
-        except Exception:
-            locks = {}
-
-        # tagline and primary_colour may be nested dicts in some brand guidelines schemas
-        tagline_raw    = locks.get("tagline") or ""
-        tagline        = (
-            tagline_raw.get("text", "") if isinstance(tagline_raw, dict) else str(tagline_raw)
-        )
-        colour_raw     = locks.get("primary_colour") or ""
-        primary_colour = (
-            colour_raw.get("rnorr_green", "#FFFFFF") if isinstance(colour_raw, dict)
-            else (str(colour_raw) if colour_raw else "#FFFFFF")
-        )
-        # If primary_colour is still a nested structure (e.g. colors.primary dict), fall back
-        if not primary_colour.startswith("#"):
-            # Try to pull first hex value from a colours dict stored elsewhere in locks
-            colours_block = locks.get("colors", {}).get("primary", {})
-            first_hex = next(
-                (v for v in colours_block.values() if isinstance(v, str) and v.startswith("#")),
-                "#FFFFFF",
-            )
-            primary_colour = first_hex
-
-        # â”€â”€ 3. Load brand font (fallback to PIL built-in) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        headline_size = max(36, height // 14)
-        body_size     = max(24, height // 22)
-
-        font_headline: object
-        font_body:     object
-        try:
-            from app.brand_assets import get_asset_loader
-            loader     = get_asset_loader()
-            font_paths = loader.list_fonts(brand_name) if brand_name else []
-            font_bytes = _load_asset_bytes(font_paths[0]) if font_paths else None
-            if font_bytes:
-                with tempfile.NamedTemporaryFile(suffix=".ttf", delete=False) as tmp:
-                    tmp.write(font_bytes)
-                    tmp_path = tmp.name
-                font_headline = ImageFont.truetype(tmp_path, headline_size)
-                font_body     = ImageFont.truetype(tmp_path, body_size)
-                os.unlink(tmp_path)
-            else:
-                raise ValueError("no brand font found")
-        except Exception:
-            font_headline = ImageFont.load_default(size=headline_size)
-            font_body     = ImageFont.load_default(size=body_size)
-
-        # â”€â”€ 4. Composite text overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-        draw    = ImageDraw.Draw(overlay)
-
-        def _hex_to_rgba(hex_colour: str, alpha: int = 240) -> tuple:
-            try:
-                h = hex_colour.lstrip("#")
-                return (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), alpha)
-            except Exception:
-                return (255, 255, 255, alpha)
-
-        shadow_offset = max(2, height // 300)
-
-        def _draw_shadowed(text: str, pos: tuple, font: object) -> None:
-            sx, sy = pos[0] + shadow_offset, pos[1] + shadow_offset
-            draw.text((sx, sy), text, font=font, fill=(0, 0, 0, 180))  # type: ignore[arg-type]
-            draw.text(pos, text, font=font, fill=_hex_to_rgba(primary_colour))  # type: ignore[arg-type]
-
-        margin = width // 16
-        top_y  = height // 12
-
-        # Headline â€” top-centre
-        if headline:
-            try:
-                bbox      = draw.textbbox((0, 0), headline, font=font_headline)  # type: ignore[arg-type]
-                text_w    = bbox[2] - bbox[0]
-                headline_x = (width - text_w) // 2
-            except Exception:
-                headline_x = margin
-            _draw_shadowed(headline, (headline_x, top_y), font_headline)
-
-        # Brand name â€” bottom-left (honouring token_placement default)
-        bottom_y = height - height // 8
-        if brand_name:
-            _draw_shadowed(brand_name, (margin, bottom_y), font_headline)
-
-        # Tagline â€” one line below brand name
-        if tagline:
-            tagline_y = bottom_y + headline_size + 8
-            _draw_shadowed(tagline, (margin, tagline_y), font_body)
-
-        img_out = Image.alpha_composite(img, overlay)
-
-        out_buf = BytesIO()
-        img_out.convert("RGB").save(out_buf, format="PNG")
-        ref_bytes = out_buf.getvalue()
-
-        # â”€â”€ 5. Save reference image via ADK artifact service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        version = await tool_context.save_artifact(
-            filename = ref_key,
-            artifact = types.Part.from_bytes(data=ref_bytes, mime_type="image/png"),
-        )
-        tool_context.state[f"kv_ref_key_{generator_id}"] = ref_key
-
-        logger.info("copy_overlay_saved", generator_id=generator_id, size=(width, height), version=version)
-        return {"artifact_key": ref_key, "status": "saved", "version": version}
-
-    except Exception as exc:
-        logger.warning("copy_overlay_failed", generator_id=generator_id, error=str(exc))
-        return {"status": "failed", "error": str(exc)}
-
-
-# â”€â”€ KV IMAGE REFINEMENT TOOL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-async def refine_kv_image(
-    generator_id:      int,
-    refinement_prompt: str,
-    tool_context:      ToolContext,
-) -> dict:
-    """
-    Load the Pillow reference image (kv_ref_{N}.png) and run it through Nano
-    Banana 2 (Gemini image model) as an image-to-image refinement pass.
-
-    The model sees the reference image â€” with the flat Pillow text as a positional
-    stencil â€” and re-renders the text elements so they appear physically integrated
-    with the scene: correct lighting, shadows, material reflections, and depth.
-
-    The background is preserved; only the text region is refined.
-
-    Artifact in:  kv_ref_{N}.png
-    Artifact out: kv_final_{N}.png
-    State out:    kv_final_key_{N} = "kv_final_{N}.png"
-
-    Args:
-        generator_id:      1â€“4 matching the concept branch
-        refinement_prompt: 80â€“120 word prompt describing how to integrate the
-                           text with the scene (composed by kv_swap_agent_N)
-
-    Returns:
-        {"artifact_key": "kv_final_{N}.png", "status": "saved", "version": N}
-        or {"status": "failed", "error": "..."}
-    """
-    ref_key   = f"kv_ref_{generator_id}.png"
-    final_key = f"kv_final_{generator_id}.png"
-
-    try:
-        from google import genai as _genai  # lazy import
-
-        # â”€â”€ 1. Load reference image from artifact service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        ref_part = await tool_context.load_artifact(ref_key)
-        if ref_part is None or not ref_part.inline_data:
-            raise ValueError(f"Reference artifact {ref_key!r} not found")
-        ref_bytes = ref_part.inline_data.data
-        ref_mime  = ref_part.inline_data.mime_type or "image/png"
-
-        # â”€â”€ 2. Image-to-image refinement via Nano Banana 2 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        # Pass the reference image first, then the text instruction.
-        # The model treats the image bytes as a visual layout guide and
-        # "bakes" the flat Pillow text into the scene lighting.
-        client   = _genai.Client()
-        response = client.models.generate_content(
-            model    = settings.gemini_model_image,
-            contents = [
-                types.Part.from_bytes(data=ref_bytes, mime_type=ref_mime),
-                refinement_prompt,
-            ],
-            config   = types.GenerateContentConfig(
-                response_modalities = ["IMAGE", "TEXT"],
-            ),
-        )
-
-        image_data: bytes | None = None
-        mime_type = "image/png"
-        for part in response.candidates[0].content.parts:
-            if hasattr(part, "inline_data") and part.inline_data is not None:
-                image_data = part.inline_data.data
-                mime_type  = part.inline_data.mime_type or "image/png"
-                break
-
-        if image_data is None:
-            raise ValueError("Gemini returned no image data on refinement pass")
-
-        # â”€â”€ 3. Save finished KV via ADK artifact service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        version = await tool_context.save_artifact(
-            filename = final_key,
-            artifact = types.Part.from_bytes(data=image_data, mime_type=mime_type),
-        )
-        tool_context.state[f"kv_final_key_{generator_id}"] = final_key
-
-        logger.info("kv_final_saved", generator_id=generator_id, version=version)
-        return {"artifact_key": final_key, "status": "saved", "version": version}
-
-    except Exception as exc:
-        logger.warning("kv_refine_failed", generator_id=generator_id, error=str(exc))
         return {"status": "failed", "error": str(exc)}

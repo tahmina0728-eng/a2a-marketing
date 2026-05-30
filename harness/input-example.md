@@ -1,7 +1,7 @@
 Brand: Rnorr
-Campaign name: Sachet Summer 2026
+Campaign name: Sauce Summer 2026
 Product: Product1
-Product category: Seasoning Sachets
+Product category: Cook-in Sauce
 Market: UK
 Season: Summer
 Channels: Instagram, TikTok, Web
@@ -9,6 +9,6 @@ Budget: £500,000
 Campaign start: 2026-07-01
 Campaign end: 2026-08-31
 Target audience: Home cooks aged 25-40
-Fan truth: That moment when you add just a few drops and the whole dish transforms
+Fan truth: NA
 KPI targets: Reach 5M, CTR 2.5%, ROAS 4.0
-Moment type: Day-to-Day
+Moment type: NA
