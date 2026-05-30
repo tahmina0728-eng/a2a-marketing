@@ -6,9 +6,9 @@ overhead — the Workflow engine calls them directly without any AI reasoning.
 
 Node list:
   load_brand_context    — loads all brand/search data sources before briefing_agent
-  aggregate_kv_concepts — fan-in aggregator: collects kv_concept_1..4 from state
+  aggregate_kv_concepts — fan-in aggregator: collects kv_concept_1..2 from state
                           into a single kv_concepts_all state entry for kv_ranker
-                          (kv_concept_N is now enriched with image_artifact_key by
+                          (kv_concept_N is enriched with image_artifact_key by
                            kv_image_agent_N before arriving here)
 
 ADK 2.0 mechanics used here:
@@ -206,55 +206,35 @@ def load_brand_context(
 
 def aggregate_kv_concepts(
     node_input=None,  # JoinNode passes a list of all upstream outputs — not used; we read from state
-    kv_concept_1:     str = "",
-    kv_concept_2:     str = "",
-    kv_concept_3:     str = "",
-    kv_concept_4:     str = "",
-    kv_final_key_1:   str = "",   # from kv_swap_agent_N (preferred — finished KV)
-    kv_final_key_2:   str = "",
-    kv_final_key_3:   str = "",
-    kv_final_key_4:   str = "",
-    kv_image_key_1:   str = "",   # fallback — raw background if swap stage failed
-    kv_image_key_2:   str = "",
-    kv_image_key_3:   str = "",
-    kv_image_key_4:   str = "",
+    kv_concept_1:   str = "",
+    kv_concept_2:   str = "",
+    kv_image_key_1: str = "",
+    kv_image_key_2: str = "",
 ) -> Event:
     """
-    Fan-in aggregator: collect all KV concept outputs into one batch.
+    Fan-in aggregator: collect both KV concept outputs into one batch.
 
-    Runs after all four kv_swap_agent_N nodes complete (via JoinNode). Each
-    concept JSON has been enriched with image_artifact_key by the swap agent.
-
-    image_artifact_key resolution order:
-      1. kv_final_key_{N}  — kv_final_{N}.png written by kv_swap_agent via refine_kv_image
-      2. kv_image_key_{N}  — kv_image_{N}.png written by kv_image_agent (raw background)
-                             used when the Pillow/swap stages failed but background exists
-      3. None              — no image available for this concept
+    Runs after kv_image_agent_1 and kv_image_agent_2 complete (via JoinNode).
+    Each concept JSON has been enriched with image_artifact_key by the image agent.
 
     Returns an Event that:
       - Passes the aggregated JSON string as output to kv_ranker
       - Persists kv_concepts_all to session state for {kv_concepts_all} in instructions
     """
     image_uris = {
-        1: kv_final_key_1 or kv_image_key_1,
-        2: kv_final_key_2 or kv_image_key_2,
-        3: kv_final_key_3 or kv_image_key_3,
-        4: kv_final_key_4 or kv_image_key_4,
+        1: kv_image_key_1,
+        2: kv_image_key_2,
     }
     concepts = []
     missing  = []
-    for i, raw in enumerate(
-        [kv_concept_1, kv_concept_2, kv_concept_3, kv_concept_4], start=1
-    ):
+    for i, raw in enumerate([kv_concept_1, kv_concept_2], start=1):
         if raw:
             try:
                 clean = raw.strip() if isinstance(raw, str) else raw
                 if isinstance(clean, str) and clean.startswith("```"):
-                    # Strip markdown code fence (```json ... ```)
                     clean = clean.split("\n", 1)[1] if "\n" in clean else clean
                     clean = clean.rsplit("```", 1)[0].strip()
                 concept = json.loads(clean) if isinstance(clean, str) else clean
-                # Backfill image_artifact_key from state if image agent wrote it separately
                 if image_uris.get(i) and not concept.get("image_artifact_key"):
                     concept["image_artifact_key"] = image_uris[i]
                 concepts.append(concept)

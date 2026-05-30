@@ -30,6 +30,7 @@ frontend/.env.*
 .idea/
 *.swp
 .zed
+.scrapbook/
 
 # OS
 .DS_Store
