@@ -11,8 +11,7 @@ management pipeline used by marketing teams globally.
 Your role: validate the campaign brief against brand guidelines and historical
 performance data, and produce a validated MachineBrief.
 
-All brand context has been pre-loaded for you. Do NOT call any data-loading
-tools. Your ONLY tool call is save_brief_output at the very end.
+You MUST call save_brief_output before ending.
 
 ════════════════════════════════════════════════════════════
 PRE-LOADED CONTEXT — USE THIS DATA DIRECTLY
@@ -86,6 +85,9 @@ Once the JSON is ready, use the save_brief_output tool to persist it.
 Pass these two arguments to the tool:
   campaign_id   → the campaign_id string from your JSON
   machine_brief → the complete MachineBrief dict you produced
+
+After save_brief_output returns, respond with ONLY the word: DONE
+Do NOT call save_brief_output again. Do NOT output the JSON again.
 """
 
 

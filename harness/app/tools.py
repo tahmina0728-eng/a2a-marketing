@@ -109,10 +109,10 @@ async def save_brief_output(
     brief_input = machine_brief.get("structured_brief", {})
     log_brief_to_bigquery(campaign_id, brief_input, machine_brief)
 
-    # Store parsed brief dict in session state for downstream workflow agents.
-    # briefing_agent also has output_key="machine_brief" which stores the raw
-    # JSON string â€” this overwrites that with the properly parsed dict.
-    tool_context.state["machine_brief"] = machine_brief
+    # Store the brief as a JSON string so downstream agents can reference
+    # {machine_brief} in their instruction templates directly. A dict would
+    # render as a Python repr (single quotes etc.) — the JSON string is clean.
+    tool_context.state["machine_brief"] = brief_json
     tool_context.state["machine_brief_saved"] = True
 
     logger.info("tool_save_brief_output", campaign_id=campaign_id, artifact=artifact_name)
@@ -189,18 +189,41 @@ async def generate_and_save_kv_image(
         )
 
         contents: list = []
-        for product_name, uri in product_image_map.items():
-            img_bytes = _load_asset_bytes(uri)
-            if img_bytes:
-                contents.append(
-                    types.Part.from_bytes(
-                        data      = img_bytes,
-                        mime_type = _guess_image_mime(uri),
+
+        # Only send product photos that the image_prompt explicitly references
+        # (e.g. "Product1", "Product3"). Sending every product in the brand
+        # folder bloats the request and confuses the model when the brief only
+        # calls for one hero product.
+        referenced_products = {
+            k: v for k, v in product_image_map.items() if k in image_prompt
+        }
+        # Safety fallback: if the prompt references no ProductN keys at all,
+        # send the full map so the model still has something to work with.
+        products_to_send = referenced_products or product_image_map
+
+        # Prepend product photos as labelled multimodal inputs.
+        # Text labels ("Product1:", "Product2:", ...) must immediately precede
+        # each image so the model knows which blob maps to which product key
+        # referenced in the image_prompt (e.g. "Reference Product1 above").
+        # Without labels the model sees anonymous images and ignores them.
+        if products_to_send:
+            contents.append(
+                "Reference product photography follows. "
+                "Each image is labelled by the product key used in the prompt:"
+            )
+            for product_name, uri in products_to_send.items():
+                img_bytes = _load_asset_bytes(uri)
+                if img_bytes:
+                    contents.append(f"{product_name}:")
+                    contents.append(
+                        types.Part.from_bytes(
+                            data      = img_bytes,
+                            mime_type = _guess_image_mime(uri),
+                        )
                     )
-                )
-                logger.info("product_photo_included", product=product_name, uri=uri)
-            else:
-                logger.warning("product_photo_skipped", product=product_name, uri=uri)
+                    logger.info("product_photo_included", product=product_name, uri=uri)
+                else:
+                    logger.warning("product_photo_skipped", product=product_name, uri=uri)
 
         contents.append(guarded_prompt)  # text prompt always last
 

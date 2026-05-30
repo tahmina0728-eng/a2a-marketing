@@ -8,27 +8,25 @@ DAG shape:
   START
     └── [fn] load_brand_context
           └── briefing_agent
-                └── hitl_brief_approval
-                      └── culture_analyst   ← Google Search grounding (multi-turn)
-                            └── culture_formatter   ← structures research into CultureAnalysis
-                                  └── creative_director   ← Big Idea + CreativeStrategy
-                                        ├── kv_generator_1 → kv_image_agent_1 ─┐
-                                        └── kv_generator_2 → kv_image_agent_2 ─┤
-                                                                                 ├── [fn] aggregate_kv_concepts
-                                                                                 │         └── kv_ranker
-                                                                                 │               └── hitl_kv_selection
-                                                                                 │                     └── channel_router
-                                                                                 │                           └── content_agent
-                                                                                 │                                 └── execution_agent
-                                                                                 │                                       └── aggregation_agent
-                                                                                 │                                             └── performance_agent
+                └── culture_analyst   ← Google Search grounding (multi-turn)
+                      └── culture_formatter   ← structures research into CultureAnalysis
+                            └── creative_director   ← Big Idea + CreativeStrategy
+                                  ├── kv_generator_1 → kv_image_agent_1 ─┐
+                                  └── kv_generator_2 → kv_image_agent_2 ─┤
+                                                                           ├── [fn] aggregate_kv_concepts
+                                                                           │         └── kv_ranker
+                                                                           │               └── hitl_kv_selection
+                                                                           │                     └── channel_router
+                                                                           │                           └── content_agent
+                                                                           │                                 └── execution_agent
+                                                                           │                                       └── aggregation_agent
+                                                                           │                                             └── performance_agent
 
 Function nodes (deterministic, zero LLM cost):
   load_brand_context    — loads brand guidelines, product map, benchmark data
   aggregate_kv_concepts — fan-in: merges both enriched concepts into kv_concepts_all
 
-HITL gates:
-  hitl_brief_approval  — waits for human approval of the validated brief
+HITL gates (hitl_brief_approval removed for development):
   hitl_kv_selection    — waits for human selection of a KV concept (1 of 2)
 """
 
@@ -37,7 +35,6 @@ from google.adk.workflow import JoinNode
 
 from app.agents import (
     briefing_agent,
-    hitl_brief_approval,
     culture_analyst,
     culture_formatter,
     creative_director,
@@ -61,8 +58,8 @@ kv_join_node = JoinNode(name="kv_join_node")
 root_agent = Workflow(
     name  = "campaignos_pipeline",
     edges = [
-        # ── Entry: load brand data → brief → HITL → cultural intelligence → creative strategy ──
-        ("START", load_brand_context, briefing_agent, hitl_brief_approval,
+        # ── Entry: load brand data → brief → cultural intelligence → creative strategy ──
+        ("START", load_brand_context, briefing_agent,
          culture_analyst, culture_formatter, creative_director),
 
         # ── KV fan-out: creative_director → 2 parallel art directors ───────────────────────

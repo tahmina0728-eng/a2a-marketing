@@ -57,7 +57,9 @@ briefing_agent = Agent(
     instruction  = BRIEFING_AGENT_INSTRUCTIONS,
     input_schema = BriefingContext,
     tools        = [save_brief_output],
-    output_key   = "machine_brief",   # always captures LLM output to state
+    # output_key removed: save_brief_output writes machine_brief (JSON string)
+    # to state directly. output_key would overwrite that with the agent's
+    # final text ("DONE"), breaking downstream template substitution.
     mode         = "single_turn",
 )
 
