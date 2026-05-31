@@ -27,10 +27,20 @@ import structlog
 import yaml
 
 from google.adk import Event
+from google.adk.agents.invocation_context import InvocationContext
+from google.genai import types
 
 from app.brand_assets import get_asset_loader
 from app.config import get_settings
-from app.models import BrandLocks, BriefingContext
+from app.data_loader import log_brief_to_bigquery
+from app.models import (
+    BrandLocks,
+    BriefingContext,
+    CampaignCopy,
+    CreativeStrategy,
+    CultureAnalysis,
+    MachineBrief,
+)
 from app.search_client import get_search_client
 
 logger   = structlog.get_logger()
@@ -145,8 +155,9 @@ def load_brand_context(
             moment_type_rules_summary = _stub_moment_type(moment_type)
 
     else:
-        # gcs_files / local mode — brand guidelines IS the brand rules reference
-        brand_rules_summary          = brand_guidelines
+        # gcs_files / local mode — brand_guidelines is the source of truth;
+        # brand_rules_summary is left empty to avoid duplicating it in state.
+        brand_rules_summary          = ""
         fan_truth_summary            = _stub_fan_truth()
         campaign_benchmarks_summary  = _stub_benchmarks()
         channel_benchmarks_summary   = _stub_channel_benchmarks()
@@ -158,14 +169,40 @@ def load_brand_context(
         for i, path in enumerate(product_paths)
     }
 
+    # Build Product1 / Product2 … name → human-readable description map ──
+    # Uses the brief's product field for the primary product (first image);
+    # falls back to the filename stem for additional images.
+    product_description_map: dict[str, str] = {}
+    for i, path in enumerate(product_paths):
+        key = f"Product{i + 1}"
+        if i == 0 and product:
+            label = product
+            if product_category:
+                label = f"{product} ({product_category})"
+            product_description_map[key] = label
+        else:
+            # Derive a readable name from the file path stem
+            stem  = (path.rstrip("/").rsplit("/", 1)[-1]).rsplit(".", 1)[0]
+            label = stem.replace("_", " ").replace("-", " ").title()
+            product_description_map[key] = label
+
+    # Extract compact visual/colour rules for KV agents ───────────────────
+    brand_visual_rules = _extract_brand_visual_rules(brand_guidelines)
+
     logger.info(
         "load_brand_context",
-        brand              = brand,
-        has_guidelines     = bool(brand_guidelines),
-        search_mode        = settings.search_mode,
-        channels           = channels,
-        brief_keys         = list(brief_dict.keys()),
-        product_image_map  = product_image_map,
+        brand                    = brand,
+        has_guidelines           = bool(brand_guidelines),
+        has_visual_rules         = bool(brand_visual_rules),
+        brand_locks_keys         = list(brand_locks_dict.keys()),
+        primary_colour           = brand_locks_dict.get("primary_colour"),
+        accent_colour            = brand_locks_dict.get("accent_colour"),
+        font                     = brand_locks_dict.get("font"),
+        search_mode              = settings.search_mode,
+        channels                 = channels,
+        brief_keys               = list(brief_dict.keys()),
+        product_image_map        = product_image_map,
+        product_description_map  = product_description_map,
     )
 
     briefing_context = BriefingContext(
@@ -185,21 +222,27 @@ def load_brand_context(
     # Emit key brand fields to session state so ALL downstream agents
     # (KV generators, ranker, content agent …) can reference them via
     # {brand_guidelines}, {brand_name}, {product_image_map} in instructions.
-    return Event(
-        output = briefing_context,
-        state  = {
-            "brand_guidelines":            brand_guidelines,
-            "brand_name":                  brand,
-            "brand_locks_json":            json.dumps(brand_locks_dict),
-            "product_image_map":           json.dumps(product_image_map),
-            "brief_request_json":          json.dumps(brief_dict),
-            "brand_rules_summary":         brand_rules_summary,
-            "fan_truth_summary":           fan_truth_summary,
-            "campaign_benchmarks_summary": campaign_benchmarks_summary,
-            "channel_benchmarks_summary":  channel_benchmarks_summary,
-            "moment_type_rules_summary":   moment_type_rules_summary,
-        },
-    )
+    # Only include brand_rules_summary in state when it differs from brand_guidelines
+    # (i.e. live mode returned a summarised search result). In local/gcs mode it
+    # would be a duplicate — brand_guidelines already covers it.
+    state_dict = {
+        "brand_guidelines":            brand_guidelines,
+        "brand_visual_rules":          brand_visual_rules,
+        "brand_name":                  brand,
+        "brand_locks_json":            json.dumps(brand_locks_dict),
+        "product_image_map":           json.dumps(product_image_map),
+        "product_description_map":     json.dumps(product_description_map),
+        "product_name":                product,
+        "brief_request_json":          json.dumps(brief_dict),
+        "fan_truth_summary":           fan_truth_summary,
+        "campaign_benchmarks_summary": campaign_benchmarks_summary,
+        "channel_benchmarks_summary":  channel_benchmarks_summary,
+        "moment_type_rules_summary":   moment_type_rules_summary,
+    }
+    if brand_rules_summary:
+        state_dict["brand_rules_summary"] = brand_rules_summary
+
+    return Event(output=briefing_context, state=state_dict)
 
 
 # ── KV FAN-IN FUNCTION NODE ───────────────────────────────────────────────
@@ -257,7 +300,129 @@ def aggregate_kv_concepts(
     )
 
 
-# ── Private helpers ───────────────────────────────────────────────────────
+# ── PERSISTENCE FUNCTION NODES ──────────────────────────────────────────────────
+#
+# Each node follows the dual-write pattern:
+#   1. ctx.state[key] = json_string     → available immediately in this invocation
+#   2. ctx.save_artifact(...)           → durable, downloadable, auditable
+#   3. return Event(state={key: ...})   → belt-and-suspenders state commit
+#
+# Agents generate; nodes persist. No tools on LLM agents for persistence.
+
+async def persist_brief(ctx: InvocationContext, node_input: MachineBrief) -> Event:
+    """
+    Persist briefing_agent output.
+    Runs between briefing_agent and culture_analyst.
+    Writes machine_brief to state and saves a JSON artifact.
+    Also logs to BigQuery for audit.
+    """
+    brief_json = json.dumps(node_input.model_dump(mode="json"))
+
+    # State write
+    ctx.state["machine_brief"] = brief_json
+
+    # Artifact save
+    try:
+        await ctx.save_artifact(
+            filename = f"machine_brief_{node_input.campaign_id}.json",
+            artifact = types.Part.from_bytes(
+                data      = brief_json.encode("utf-8"),
+                mime_type = "application/json",
+            ),
+        )
+    except Exception as e:
+        logger.warning("persist_brief_artifact_failed", error=str(e))
+
+    # BigQuery audit log (non-fatal)
+    try:
+        log_brief_to_bigquery(
+            node_input.campaign_id,
+            node_input.structured_brief.model_dump(mode="json"),
+            node_input.model_dump(mode="json"),
+        )
+    except Exception as e:
+        logger.warning("persist_brief_bq_failed", error=str(e))
+
+    logger.info("persist_brief", campaign_id=node_input.campaign_id)
+    return Event(state={"machine_brief": brief_json})
+
+
+async def persist_culture(ctx: InvocationContext, node_input: CultureAnalysis) -> Event:
+    """
+    Persist culture_formatter output.
+    Runs between culture_formatter and creative_director.
+    Writes culture_analysis to state and saves a JSON artifact.
+    """
+    culture_json = json.dumps(node_input.model_dump(mode="json"))
+
+    ctx.state["culture_analysis"] = culture_json
+
+    try:
+        await ctx.save_artifact(
+            filename = "culture_analysis.json",
+            artifact = types.Part.from_bytes(
+                data      = culture_json.encode("utf-8"),
+                mime_type = "application/json",
+            ),
+        )
+    except Exception as e:
+        logger.warning("persist_culture_artifact_failed", error=str(e))
+
+    logger.info("persist_culture")
+    return Event(state={"culture_analysis": culture_json})
+
+
+async def persist_strategy(ctx: InvocationContext, node_input: CreativeStrategy) -> Event:
+    """
+    Persist creative_director output.
+    Runs between creative_director and copy_agent.
+    Writes creative_strategy to state and saves a JSON artifact.
+    """
+    strategy_json = json.dumps(node_input.model_dump(mode="json"))
+
+    ctx.state["creative_strategy"] = strategy_json
+
+    try:
+        await ctx.save_artifact(
+            filename = f"creative_strategy_{node_input.campaign_id}.json",
+            artifact = types.Part.from_bytes(
+                data      = strategy_json.encode("utf-8"),
+                mime_type = "application/json",
+            ),
+        )
+    except Exception as e:
+        logger.warning("persist_strategy_artifact_failed", error=str(e))
+
+    logger.info("persist_strategy", campaign_id=node_input.campaign_id)
+    return Event(state={"creative_strategy": strategy_json})
+
+
+async def persist_copy(ctx: InvocationContext, node_input: CampaignCopy) -> Event:
+    """
+    Persist copy_agent output.
+    Runs between copy_agent and the KV generator fan-out.
+    Writes campaign_copy to state and saves a JSON artifact.
+    """
+    copy_json = json.dumps(node_input.model_dump(mode="json"))
+
+    ctx.state["campaign_copy"] = copy_json
+
+    try:
+        await ctx.save_artifact(
+            filename = f"campaign_copy_{node_input.campaign_id}.json",
+            artifact = types.Part.from_bytes(
+                data      = copy_json.encode("utf-8"),
+                mime_type = "application/json",
+            ),
+        )
+    except Exception as e:
+        logger.warning("persist_copy_artifact_failed", error=str(e))
+
+    logger.info("persist_copy", campaign_id=node_input.campaign_id)
+    return Event(state={"campaign_copy": copy_json})
+
+
+# ── Private helpers ────────────────────────────────────────────────────────────────────────────
 
 def _extract_text(node_input) -> str:
     """
@@ -349,24 +514,126 @@ def _parse_kv_brief(text: str) -> dict:
 
 
 def _parse_brand_locks(brand: str, guidelines_text: str) -> dict:
-    """Parse brand lock values from YAML fenced blocks in guidelines markdown.
-    Falls back to BrandLocks() defaults if no structured locks found."""
-    if guidelines_text:
-        try:
-            for block in re.findall(
-                r"```(?:yaml|YAML)\n(.*?)```", guidelines_text, re.DOTALL
+    """
+    Parse brand lock values from guidelines markdown.
+
+    Priority:
+      1. YAML fenced blocks (```yaml ... ```) — structured, authoritative
+      2. Markdown prose extraction — hex colour tables, font names, DO NOT rules
+      3. BrandLocks() defaults — empty placeholders
+    """
+    base = BrandLocks().model_dump()
+
+    if not guidelines_text:
+        logger.info("brand_locks_default", brand=brand)
+        return base
+
+    # Pass 1: YAML blocks ─────────────────────────────────────────────────
+    try:
+        for block in re.findall(
+            r"```(?:yaml|YAML)\n(.*?)```", guidelines_text, re.DOTALL
+        ):
+            data = yaml.safe_load(block)
+            if isinstance(data, dict) and any(
+                k in data for k in ("font", "primary_colour", "logo", "voice")
             ):
-                data = yaml.safe_load(block)
-                if isinstance(data, dict) and any(
-                    k in data for k in ("font", "primary_colour", "logo", "voice")
-                ):
-                    logger.info("brand_locks_parsed", brand=brand)
-                    return {**BrandLocks().model_dump(), **data}
-        except Exception as exc:
-            logger.warning("brand_locks_parse_failed", brand=brand, error=str(exc))
+                logger.info("brand_locks_parsed_yaml", brand=brand)
+                return {**base, **data}
+    except Exception as exc:
+        logger.warning("brand_locks_yaml_parse_failed", brand=brand, error=str(exc))
+
+    # Pass 2: Markdown prose extraction ──────────────────────────────────
+    # Extract colours from table rows: | **Name** | ... | **#RRGGBB** |
+    extracted: dict = {}
+    for name, hex_code in re.findall(
+        r"\*\*([^|*]+?)\*\*[^|]*\|[^|]*\|[^|]*\|[^|]*\*\*#([A-Fa-f0-9]{6})\*\*",
+        guidelines_text,
+    ):
+        name_lower = name.lower().strip()
+        if "green" in name_lower and "primary_colour" not in extracted:
+            extracted["primary_colour"] = f"#{hex_code}"
+        elif "yellow" in name_lower and "accent_colour" not in extracted:
+            extracted["accent_colour"] = f"#{hex_code}"
+
+    # Extract display font name from "#### FontName — Display" heading
+    font_match = re.search(r"####\s+(\w+)\s*[\u2014\u2013-]\s*Display", guidelines_text)
+    if font_match:
+        extracted["font"] = font_match.group(1)
+
+    # Extract forbidden colour pairings from accessibility prose
+    # Matches lines like: "**White on Rnorr Yellow** — **fails contrast.** Never use for type."
+    colour_fails = re.findall(
+        r"\*\*(\w[^*]+on[^*]+)\*\*\s*[\u2014\u2013-]\s*\*\*(?:fails|Never)[^*]*\*\*",
+        guidelines_text,
+        re.IGNORECASE,
+    )
+    if colour_fails:
+        extra_forbidden = [f"{c.strip()} — fails contrast, never use for type" for c in colour_fails]
+        extracted["forbidden"] = base.get("forbidden", []) + extra_forbidden
+
+    if extracted:
+        logger.info("brand_locks_parsed_prose", brand=brand, keys=list(extracted.keys()))
+        return {**base, **extracted}
 
     logger.info("brand_locks_default", brand=brand)
-    return BrandLocks().model_dump()
+    return base
+
+
+def _extract_brand_visual_rules(guidelines_text: str) -> str:
+    """
+    Extract a compact visual/colour reference card from brand guidelines markdown.
+
+    Pulls: colour DO/DO NOT section, Accessibility rules, Engagement-based
+    Colour Volume table, and Green-Yellow relationship. Capped at 3 000 chars
+    so it fits comfortably in a KV agent's prompt without dominating it.
+
+    This is the short-term substitute for a Vertex AI Search retrieval that
+    would let agents query specific rules on demand.
+    """
+    if not guidelines_text:
+        return ""
+
+    _TARGETS = {
+        "colour do",
+        "colour do / do not",
+        "accessibility",
+        "engagement-based colour",
+        "green\u2013yellow relationship",
+        "colour proportion",
+    }
+
+    lines        = guidelines_text.splitlines()
+    sections     = []
+    in_target    = False
+    current: list[str] = []
+
+    def _is_heading(line: str) -> bool:
+        s = line.strip()
+        return bool(re.match(r"^#{1,5}\s", s))
+
+    for line in lines:
+        stripped = line.strip()
+        lower    = stripped.lower()
+
+        if _is_heading(line):
+            if in_target and current:
+                sections.append("\n".join(current))
+                current = []
+            in_target = any(kw in lower for kw in _TARGETS)
+
+        if in_target:
+            current.append(line)
+
+    if in_target and current:
+        sections.append("\n".join(current))
+
+    if not sections:
+        return ""
+
+    result = "\n\n---\n\n".join(sections)
+    if len(result) > 3000:
+        result = result[:2997] + "..."
+    return result
 
 
 def _stub_fan_truth() -> str:
