@@ -314,6 +314,24 @@ class CreativeStrategy(BaseModel):
     handoff_message:     str                   = Field(..., description="Inspiring 3–4 sentence brief to the KV art directors about the Big Idea")
 
 
+# ── COPY STAGE ───────────────────────────────────────────────────────────
+
+class CopyVariant(BaseModel):
+    """A single length variant of campaign copy."""
+    headline: str            = Field(..., description="Primary headline")
+    subline:  Optional[str]  = Field(None, description="Optional supporting line")
+    body:     Optional[str]  = Field(None, description="Optional body copy (medium/long only)")
+
+
+class CampaignCopy(BaseModel):
+    """Output of copy_agent — three length variants for use across the pipeline."""
+    campaign_id: str
+    short:       CopyVariant = Field(..., description="KV/OOH headline: ≤6 words, no body")
+    medium:      CopyVariant = Field(..., description="Social/display: ≤10 word headline + ≤20 word subline")
+    long:        CopyVariant = Field(..., description="Press/editorial: headline + body up to 60 words total")
+    copy_notes:  str         = Field(..., description="Craft rationale — what emotional register these words are working in and why")
+
+
 # ── KV STAGE ─────────────────────────────────────────────────────────────
 
 class KVConcept(BaseModel):

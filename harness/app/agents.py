@@ -27,13 +27,14 @@ from google.adk import Agent
 from google.adk.tools import google_search
 
 from app.config import get_settings
-from app.models import BriefingContext, CultureAnalysis
+from app.models import BriefingContext, CultureAnalysis, CampaignCopy, MachineBrief, CreativeStrategy
 from app.instructions import (
     BRIEFING_AGENT_INSTRUCTIONS,
     HITL_BRIEF_APPROVAL_INSTRUCTIONS,
     CULTURE_ANALYST_INSTRUCTIONS,
     CULTURE_FORMATTER_INSTRUCTIONS,
     CREATIVE_DIRECTOR_INSTRUCTIONS,
+    COPY_AGENT_INSTRUCTIONS,
     KV_GENERATOR_INSTRUCTIONS,
     KV_IMAGE_AGENT_INSTRUCTIONS,
     KV_RANKER_INSTRUCTIONS,
@@ -44,23 +45,20 @@ from app.instructions import (
     AGGREGATION_AGENT_INSTRUCTIONS,
     PERFORMANCE_AGENT_INSTRUCTIONS,
 )
-from app.tools import save_brief_output, generate_and_save_kv_image
+from app.tools import generate_and_save_kv_image
 
 settings = get_settings()
 
 # ── BRIEFING STAGE ────────────────────────────────────────────────────────
 
 briefing_agent = Agent(
-    name         = "briefing_agent",
-    model        = settings.gemini_model_reasoning,
-    description  = "Validates and enriches the incoming campaign brief, scores the Fan Truth, flags KPIs, and produces a MachineBrief.",
-    instruction  = BRIEFING_AGENT_INSTRUCTIONS,
-    input_schema = BriefingContext,
-    tools        = [save_brief_output],
-    # output_key removed: save_brief_output writes machine_brief (JSON string)
-    # to state directly. output_key would overwrite that with the agent's
-    # final text ("DONE"), breaking downstream template substitution.
-    mode         = "single_turn",
+    name          = "briefing_agent",
+    model         = settings.gemini_model_reasoning,
+    description   = "Validates and enriches the incoming campaign brief, scores the Fan Truth, flags KPIs, and produces a MachineBrief.",
+    instruction   = BRIEFING_AGENT_INSTRUCTIONS,
+    input_schema  = BriefingContext,
+    output_schema = MachineBrief,
+    mode          = "single_turn",
 )
 
 hitl_brief_approval = Agent(
@@ -87,46 +85,58 @@ culture_formatter = Agent(
     description   = "Structures raw cultural research into a CultureAnalysis object.",
     instruction   = CULTURE_FORMATTER_INSTRUCTIONS,
     output_schema = CultureAnalysis,
-    output_key    = "culture_analysis",
     mode          = "single_turn",
 )
 
 creative_director = Agent(
-    name        = "creative_director",
-    model       = settings.gemini_model_reasoning,
-    description = "Synthesises brief, cultural intelligence, and brand guidelines into a Big Idea and CreativeStrategy.",
-    instruction = CREATIVE_DIRECTOR_INSTRUCTIONS,
-    output_key  = "creative_strategy",
-    mode        = "single_turn",
+    name          = "creative_director",
+    model         = settings.gemini_model_reasoning,
+    description   = "Synthesises brief, cultural intelligence, and brand guidelines into a Big Idea and CreativeStrategy.",
+    instruction   = CREATIVE_DIRECTOR_INSTRUCTIONS,
+    output_schema = CreativeStrategy,
+    mode          = "single_turn",
+)
+
+copy_agent = Agent(
+    name          = "copy_agent",
+    model         = settings.gemini_model_reasoning,
+    description   = "Distills the creative strategy into short, medium, and long copy variants.",
+    instruction   = COPY_AGENT_INSTRUCTIONS,
+    output_schema = CampaignCopy,
+    mode          = "single_turn",
 )
 
 # ── KV GENERATION STAGE (fan-out) ─────────────────────────────────────────
 
-_KV_COMPOSITION_LENSES = [
+_KV_DESIGN_APPROACHES = [
     (
-        "product-centred composition",
-        "The product is the unambiguous visual subject. It occupies a dominant, "
-        "commanding position. Background, props, and lighting exist only to flatter "
-        "and desire-ify the product. Think elevated editorial product photography — "
-        "the product earns the viewer's full attention from the first frame.",
+        "graphic-led design",
+        "Approach this as a graphic designer, not a photographer. The layout architecture "
+        "comes first: colour fields, typographic structure, grid, and negative space are the "
+        "primary design decisions. Photography or product imagery enters in service of the "
+        "graphic system — cropped, treated, or positioned to reinforce the design logic, "
+        "not to dominate it. Think award-winning poster design, editorial art direction, "
+        "or brand identity campaigns where the image and type are inseparable.",
     ),
     (
-        "scene-led composition",
-        "The scene, emotion, or human moment captures the viewer first. The product "
-        "is present but earns its place within the world being depicted — it is the "
-        "natural, inevitable resolution of the scene rather than its imposed subject. "
-        "Think lifestyle storytelling where the product is the rewarding detail.",
+        "image-led design",
+        "Start with the image: a single, powerful photographic or CGI moment that carries "
+        "the emotional weight of the Big Idea on its own. Then design the typographic and "
+        "colour layer so it amplifies rather than competes. The typography has intentional "
+        "mass and position within the image space — it is not placed, it is designed into "
+        "the composition. The result should feel like a complete designed artefact, not a "
+        "photo with text added in post.",
     ),
 ]
 
 kv_generator_1 = Agent(
     name        = "kv_generator_1",
     model       = settings.gemini_model_reasoning,
-    description = "KV Art Director 1: product-centred composition lens.",
+    description = "KV Art Director 1: graphic-led design approach.",
     instruction = KV_GENERATOR_INSTRUCTIONS(
         1,
-        _KV_COMPOSITION_LENSES[0][0],
-        _KV_COMPOSITION_LENSES[0][1],
+        _KV_DESIGN_APPROACHES[0][0],
+        _KV_DESIGN_APPROACHES[0][1],
     ),
     output_key  = "kv_concept_1",
     mode        = "single_turn",
@@ -135,11 +145,11 @@ kv_generator_1 = Agent(
 kv_generator_2 = Agent(
     name        = "kv_generator_2",
     model       = settings.gemini_model_reasoning,
-    description = "KV Art Director 2: scene-led composition lens.",
+    description = "KV Art Director 2: image-led design approach.",
     instruction = KV_GENERATOR_INSTRUCTIONS(
         2,
-        _KV_COMPOSITION_LENSES[1][0],
-        _KV_COMPOSITION_LENSES[1][1],
+        _KV_DESIGN_APPROACHES[1][0],
+        _KV_DESIGN_APPROACHES[1][1],
     ),
     output_key  = "kv_concept_2",
     mode        = "single_turn",

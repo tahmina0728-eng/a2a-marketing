@@ -1,12 +1,15 @@
 ﻿"""
 tools.py â€” ADK tool definitions for CampaignOS agents.
 
-All data-loading functions (brand assets, search, brand locks) have been
-moved to nodes.py as deterministic graph function nodes. This file contains
-only tools that require ADK's async ToolContext (artifact service, BigQuery).
+All data-loading and persistence functions have been moved out of this file:
+  - Data loading    → nodes.py (deterministic graph function nodes)
+  - State + artifact persistence → nodes.py persist_* function nodes
+                                    (InvocationContext-based, deterministic)
+
+This file contains ONLY the image generation tool that requires ADK's async
+ToolContext for Gemini image generation + artifact storage.
 
 Tool list:
-  save_brief_output          â€” ADK artifact service + BigQuery audit + session state
   generate_and_save_kv_image â€” Gemini image generation; saves PNG via ADK artifact
                                service (InMemory in dev, GCS in prod â€” zero code change).
                                Passes product photos as multi-modal image inputs so the
@@ -21,7 +24,6 @@ from google.adk.tools import ToolContext
 from google.genai import types
 
 from app.config import get_settings
-from app.data_loader import log_brief_to_bigquery
 
 logger   = structlog.get_logger()
 settings = get_settings()
@@ -60,70 +62,7 @@ def _guess_image_mime(path_or_uri: str) -> str:
     }.get(ext, "image/png")
 
 
-# â”€â”€ PERSISTENCE TOOL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-async def save_brief_output(
-    campaign_id: str,
-    machine_brief: dict,
-    tool_context: ToolContext,
-) -> dict:
-    """
-    Save the completed machine_brief via the ADK artifact service and log
-    it to BigQuery. Also stores the brief in session state so downstream
-    agents can access it without reloading.
-
-    In development (adk web) the artifact is stored in-memory and visible
-    in the Artifacts panel. In production set ARTIFACT_SERVICE_URI=gs://bucket
-    and the same code writes to GCS automatically.
-
-    ALWAYS call this as the FINAL step after the brief is fully validated
-    and structured.
-
-    Args:
-        campaign_id: Unique campaign identifier e.g. 'summer-drop-a1b2c3d4'
-        machine_brief: The complete validated machine_brief dict including
-                       all validation results, scores, flags, structured_brief,
-                       brand_locks, and handoff_message
-
-    Returns:
-        dict with 'status': 'saved', 'artifact_name', and 'campaign_id'
-    """
-    artifact_name = f"machine_brief_{campaign_id}.json"
-    brief_json    = json.dumps(machine_brief, indent=2, default=str)
-
-    # Save via ADK artifact service (InMemory in dev, GCS in prod).
-    # - Filename must be flat (no '/') â€” ADK web uses it as a URL path segment.
-    # - Must use inline_data (not types.Part(text=...)) â€” ADK artifact spec requires bytes + mime_type.
-    try:
-        await tool_context.save_artifact(
-            filename = artifact_name,
-            artifact = types.Part.from_bytes(
-                data      = brief_json.encode("utf-8"),
-                mime_type = "application/json",
-            ),
-        )
-    except Exception as e:
-        logger.warning("artifact_save_failed", campaign_id=campaign_id, error=str(e))
-
-    # BigQuery audit log (non-fatal -- kept separate from artifact storage)
-    brief_input = machine_brief.get("structured_brief", {})
-    log_brief_to_bigquery(campaign_id, brief_input, machine_brief)
-
-    # Store the brief as a JSON string so downstream agents can reference
-    # {machine_brief} in their instruction templates directly. A dict would
-    # render as a Python repr (single quotes etc.) — the JSON string is clean.
-    tool_context.state["machine_brief"] = brief_json
-    tool_context.state["machine_brief_saved"] = True
-
-    logger.info("tool_save_brief_output", campaign_id=campaign_id, artifact=artifact_name)
-    return {
-        "status":        "saved",
-        "artifact_name": artifact_name,
-        "campaign_id":   campaign_id,
-    }
-
-
-# â”€â”€ KV IMAGE GENERATION TOOL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── KV IMAGE GENERATION TOOL ──────────────────────────────────────────────
 
 async def generate_and_save_kv_image(
     generator_id: int,
