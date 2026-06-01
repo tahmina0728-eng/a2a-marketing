@@ -7,8 +7,11 @@ requires-python = ">=3.12"
 dependencies = [
     "google-adk==2.0.0b1",
     "google-cloud-storage>=3.10.1",
+    "litellm>=1.86.2",
     "pillow>=12.2.0",
+    "psycopg2-binary>=2.9.12",
     "python-multipart>=0.0.29",
+    "sentence-transformers>=5.5.1",
 ]
 
 [dependency-groups]

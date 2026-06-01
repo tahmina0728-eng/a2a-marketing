@@ -52,10 +52,21 @@ class Settings(BaseSettings):
     #              "gcs_files" → read guidelines from bucket; stub benchmark data
     search_mode:                 str = "live"
 
-    # ── Gemini models ─────────────────────────────────────────────────────
-    # Override via env vars: GEMINI_MODEL_REASONING / GEMINI_MODEL_IMAGE
+    # ── Models ────────────────────────────────────────────────────────────
+    # Supports Vertex AI (gemini-2.0-flash-001) or Groq via LiteLLM (groq/llama-3.3-70b-versatile)
     gemini_model_reasoning: str = "gemini-2.5-flash"
     gemini_model_image:     str = "gemini-3.1-flash-image-preview"
+    groq_api_key:           str = ""
+
+    @property
+    def reasoning_model(self):
+        if self.gemini_model_reasoning.startswith("groq/"):
+            import os
+            if self.groq_api_key:
+                os.environ.setdefault("GROQ_API_KEY", self.groq_api_key)
+            from google.adk.models.lite_llm import LiteLlm
+            return LiteLlm(model=self.gemini_model_reasoning)
+        return self.gemini_model_reasoning
 
     # ── Brand assets ──────────────────────────────────────────────────────
     # mode: "local"  → reads from brand_assets_local_path/brands/{brand}/

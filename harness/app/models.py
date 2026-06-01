@@ -241,6 +241,7 @@ class BriefingContext(BaseModel):
     campaign_benchmarks_summary: str       = Field(default="",            description="Historical campaign benchmark summary")
     channel_benchmarks_summary:  str       = Field(default="",            description="Per-channel performance benchmark summary")
     moment_type_rules_summary:   str       = Field(default="",            description="Moment type rules summary")
+    audience_insights:           str       = Field(default="",            description="CDP customer segment intelligence")
     brand_locks:                 dict           = Field(default_factory=dict,  description="Canonical brand lock values")
     product_paths:               list[str]      = Field(default_factory=list,  description="Product image paths / GCS URIs")
     logo_paths:                  list[str]      = Field(default_factory=list,  description="Logo file paths / GCS URIs")

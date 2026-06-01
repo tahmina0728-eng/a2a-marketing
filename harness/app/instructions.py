@@ -39,6 +39,9 @@ Per-channel performance benchmarks:
 Moment type rules:
 {BriefingContext.moment_type_rules_summary}
 
+Customer audience intelligence (from CDP / pgvector):
+{BriefingContext.audience_insights}
+
 Canonical brand locks — use EXACTLY these values in brand_locks:
 {BriefingContext.brand_locks}
 
@@ -64,6 +67,14 @@ benchmarks in campaign_benchmarks_summary and channel_benchmarks_summary:
                         include a recommendation
   flag as "UNREALISTIC" when the target is far above what the data supports;
                         include a recommendation explaining why
+
+Audience validation — cross-check the brief's audience against audience_insights:
+  - Does the segment size support the Reach KPI? If size < Reach target, flag UNREALISTIC.
+  - Do the behavioural signals validate the Fan Truth's "shared" score?
+    A Fan Truth only "shared" if the CDP data shows this segment actually holds it.
+  - Are the selected channels the top channels for this segment?
+    Flag any channel mismatch as a brand_warning.
+  - Use actual spend data to validate budget allocation realism.
 
 OOH rule — if OOH, Outdoor, or Digital Outdoor appears anywhere in the channel
 list, always add this exact string to flags:

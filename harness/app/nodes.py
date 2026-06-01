@@ -154,6 +154,34 @@ def load_brand_context(
         except Exception:
             moment_type_rules_summary = _stub_moment_type(moment_type)
 
+        # CDP audience insights — always from pgvector regardless of search mode
+        try:
+            from app.pgvector_client import search_audience_insights
+            age_range      = audience_raw.get("age_range", "") if isinstance(audience_raw, dict) else ""
+            audience_insights = search_audience_insights(brand, audience_segment, age_range, channels)
+        except Exception:
+            audience_insights = ""
+
+    elif settings.search_mode == "pgvector" and brand:
+        # pgvector mode — semantic search from PostgreSQL + pgvector
+        from app.pgvector_client import (
+            search_brand_guidelines,
+            search_fan_truths,
+            search_campaign_benchmarks,
+            search_channel_benchmarks,
+            search_audience_insights,
+        )
+        fan_truth_text = brief_dict.get("fan_truth", "")
+        age_range      = audience_raw.get("age_range", "") if isinstance(audience_raw, dict) else ""
+        # RAG: semantic search over chunked GCS brand guidelines
+        rag_guidelines  = search_brand_guidelines(brand, f"{product_category} {' '.join(channels)}")
+        brand_rules_summary         = rag_guidelines or ""
+        fan_truth_summary           = search_fan_truths(brand, product_category, fan_truth_text)
+        campaign_benchmarks_summary = search_campaign_benchmarks(brand, product_category, market, season)
+        channel_benchmarks_summary  = search_channel_benchmarks(channels, market, audience_segment)
+        audience_insights           = search_audience_insights(brand, audience_segment, age_range, channels)
+        moment_type_rules_summary   = _stub_moment_type(moment_type)
+
     else:
         # gcs_files / local mode — brand_guidelines is the source of truth;
         # brand_rules_summary is left empty to avoid duplicating it in state.
@@ -161,6 +189,7 @@ def load_brand_context(
         fan_truth_summary            = _stub_fan_truth()
         campaign_benchmarks_summary  = _stub_benchmarks()
         channel_benchmarks_summary   = _stub_channel_benchmarks()
+        audience_insights            = ""
         moment_type_rules_summary    = _stub_moment_type(moment_type)
 
     # Build Product1 / Product2 … name → GCS URI map ─────────────────────
@@ -212,6 +241,7 @@ def load_brand_context(
         fan_truth_summary           = fan_truth_summary,
         campaign_benchmarks_summary = campaign_benchmarks_summary,
         channel_benchmarks_summary  = channel_benchmarks_summary,
+        audience_insights           = audience_insights,
         moment_type_rules_summary   = moment_type_rules_summary,
         brand_locks                 = brand_locks_dict,
         product_paths               = product_paths,
@@ -237,6 +267,7 @@ def load_brand_context(
         "fan_truth_summary":           fan_truth_summary,
         "campaign_benchmarks_summary": campaign_benchmarks_summary,
         "channel_benchmarks_summary":  channel_benchmarks_summary,
+        "audience_insights":           audience_insights,
         "moment_type_rules_summary":   moment_type_rules_summary,
     }
     if brand_rules_summary:

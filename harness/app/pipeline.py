@@ -65,6 +65,13 @@ from app.nodes import aggregate_kv_concepts, load_brand_context, persist_brief, 
 # Fan-in join node: waits for both KV image agents before aggregation
 kv_join_node = JoinNode(name="kv_join_node")
 
+briefing_pipeline = Workflow(
+    name  = "campaignos_briefing",
+    edges = [
+        ("START", load_brand_context, briefing_agent, persist_brief),
+    ],
+)
+
 root_agent = Workflow(
     name  = "campaignos_pipeline",
     edges = [

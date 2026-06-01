@@ -29,10 +29,15 @@ class SearchResult:
 
     @property
     def summary(self) -> str:
+        # Try AI summary first, fall back to top snippets joined together
         try:
-            return self._raw.summary.summary_text or ""
+            text = self._raw.summary.summary_text or ""
+            if text:
+                return text
         except Exception:
-            return ""
+            pass
+        snippets = self.top_snippets
+        return "\n\n".join(snippets[:3]) if snippets else ""
 
     @property
     def citations(self) -> list[dict]:
@@ -98,6 +103,7 @@ class BriefingSearchClient:
         logger.info("search_client_init", engine_id=settings.search_engine_id)
 
     def _build_request(self, query: str, page_size: int | None = None) -> discoveryengine.SearchRequest:
+        # Standard Edition: summary + snippets only (no extractive answers/segments)
         return discoveryengine.SearchRequest(
             serving_config=self._serving_config,
             query=query,
@@ -105,18 +111,12 @@ class BriefingSearchClient:
             content_search_spec=discoveryengine.SearchRequest.ContentSearchSpec(
                 summary_spec=discoveryengine.SearchRequest.ContentSearchSpec.SummarySpec(
                     summary_result_count=settings.search_summary_result_count,
-                    include_citations=True,
+                    include_citations=False,
                     ignore_adversarial_query=True,
-                    model_spec=discoveryengine.SearchRequest.ContentSearchSpec.SummarySpec.ModelSpec(version="stable"),
                 ),
-                extractive_content_spec=discoveryengine.SearchRequest.ContentSearchSpec.ExtractiveContentSpec(
-                    max_extractive_answer_count=3,
-                    max_extractive_segment_count=5,
+                snippet_spec=discoveryengine.SearchRequest.ContentSearchSpec.SnippetSpec(
+                    return_snippet=True,
                 ),
-                snippet_spec=discoveryengine.SearchRequest.ContentSearchSpec.SnippetSpec(return_snippet=True),
-            ),
-            spell_correction_spec=discoveryengine.SearchRequest.SpellCorrectionSpec(
-                mode=discoveryengine.SearchRequest.SpellCorrectionSpec.Mode.AUTO
             ),
         )
 

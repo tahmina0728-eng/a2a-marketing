@@ -53,17 +53,16 @@ settings = get_settings()
 
 briefing_agent = Agent(
     name          = "briefing_agent",
-    model         = settings.gemini_model_reasoning,
+    model         = settings.reasoning_model,
     description   = "Validates and enriches the incoming campaign brief, scores the Fan Truth, flags KPIs, and produces a MachineBrief.",
     instruction   = BRIEFING_AGENT_INSTRUCTIONS,
-    input_schema  = BriefingContext,
-    output_schema = MachineBrief,
+    output_key    = "machine_brief",
     mode          = "single_turn",
 )
 
 hitl_brief_approval = Agent(
     name        = "hitl_brief_approval",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "HITL gate: presents the validated brief to the marketing team for approval before strategy begins.",
     instruction = HITL_BRIEF_APPROVAL_INSTRUCTIONS,
 )
@@ -72,7 +71,7 @@ hitl_brief_approval = Agent(
 
 culture_analyst = Agent(
     name        = "culture_analyst",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "Researches the cultural landscape surrounding the campaign using live Google Search.",
     instruction = CULTURE_ANALYST_INSTRUCTIONS,
     tools       = [google_search],
@@ -81,7 +80,7 @@ culture_analyst = Agent(
 
 culture_formatter = Agent(
     name          = "culture_formatter",
-    model         = settings.gemini_model_reasoning,
+    model         = settings.reasoning_model,
     description   = "Structures raw cultural research into a CultureAnalysis object.",
     instruction   = CULTURE_FORMATTER_INSTRUCTIONS,
     output_schema = CultureAnalysis,
@@ -90,7 +89,7 @@ culture_formatter = Agent(
 
 creative_director = Agent(
     name          = "creative_director",
-    model         = settings.gemini_model_reasoning,
+    model         = settings.reasoning_model,
     description   = "Synthesises brief, cultural intelligence, and brand guidelines into a Big Idea and CreativeStrategy.",
     instruction   = CREATIVE_DIRECTOR_INSTRUCTIONS,
     output_schema = CreativeStrategy,
@@ -99,7 +98,7 @@ creative_director = Agent(
 
 copy_agent = Agent(
     name          = "copy_agent",
-    model         = settings.gemini_model_reasoning,
+    model         = settings.reasoning_model,
     description   = "Distills the creative strategy into short, medium, and long copy variants.",
     instruction   = COPY_AGENT_INSTRUCTIONS,
     output_schema = CampaignCopy,
@@ -131,7 +130,7 @@ _KV_DESIGN_APPROACHES = [
 
 kv_generator_1 = Agent(
     name        = "kv_generator_1",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "KV Art Director 1: graphic-led design approach.",
     instruction = KV_GENERATOR_INSTRUCTIONS(
         1,
@@ -144,7 +143,7 @@ kv_generator_1 = Agent(
 
 kv_generator_2 = Agent(
     name        = "kv_generator_2",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "KV Art Director 2: image-led design approach.",
     instruction = KV_GENERATOR_INSTRUCTIONS(
         2,
@@ -159,7 +158,7 @@ kv_generator_2 = Agent(
 
 kv_image_agent_1 = Agent(
     name        = "kv_image_agent_1",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "Generates and saves the hero image for KV concept 1 via the ADK artifact service.",
     instruction = KV_IMAGE_AGENT_INSTRUCTIONS(1),
     tools       = [generate_and_save_kv_image],
@@ -169,7 +168,7 @@ kv_image_agent_1 = Agent(
 
 kv_image_agent_2 = Agent(
     name        = "kv_image_agent_2",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "Generates and saves the hero image for KV concept 2 via the ADK artifact service.",
     instruction = KV_IMAGE_AGENT_INSTRUCTIONS(2),
     tools       = [generate_and_save_kv_image],
@@ -182,7 +181,7 @@ kv_image_agent_2 = Agent(
 
 kv_ranker = Agent(
     name        = "kv_ranker",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "Evaluates both KV concepts and selects the stronger composition for HITL review.",
     instruction = KV_RANKER_INSTRUCTIONS,
     mode        = "single_turn",
@@ -190,7 +189,7 @@ kv_ranker = Agent(
 
 hitl_kv_selection = Agent(
     name        = "hitl_kv_selection",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "HITL gate: presents both KV concepts to the marketing team for final selection.",
     instruction = HITL_KV_SELECTION_INSTRUCTIONS,
 )
@@ -199,7 +198,7 @@ hitl_kv_selection = Agent(
 
 channel_router = Agent(
     name        = "channel_router",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "Maps the approved KV concept and channel list to a ChannelPlan with per-channel format specs.",
     instruction = CHANNEL_ROUTER_INSTRUCTIONS,
     mode        = "single_turn",
@@ -207,7 +206,7 @@ channel_router = Agent(
 
 content_agent = Agent(
     name        = "content_agent",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "Generates production-ready copy and image prompts for every channel in the ChannelPlan.",
     instruction = CONTENT_AGENT_INSTRUCTIONS,
     mode        = "single_turn",
@@ -217,7 +216,7 @@ content_agent = Agent(
 
 execution_agent = Agent(
     name        = "execution_agent",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "Stub activation layer — produces execution notes per channel ready for platform API integration.",
     instruction = EXECUTION_AGENT_INSTRUCTIONS,
     mode        = "single_turn",
@@ -225,7 +224,7 @@ execution_agent = Agent(
 
 aggregation_agent = Agent(
     name        = "aggregation_agent",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "Consolidates all pipeline outputs into a single CampaignAggregation record.",
     instruction = AGGREGATION_AGENT_INSTRUCTIONS,
     mode        = "single_turn",
@@ -233,7 +232,7 @@ aggregation_agent = Agent(
 
 performance_agent = Agent(
     name        = "performance_agent",
-    model       = settings.gemini_model_reasoning,
+    model       = settings.reasoning_model,
     description = "Generates the initial KPI tracking framework and first-48h monitoring plan.",
     instruction = PERFORMANCE_AGENT_INSTRUCTIONS,
     mode        = "single_turn",

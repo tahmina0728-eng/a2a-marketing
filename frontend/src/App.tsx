@@ -1,79 +1,74 @@
-/**
- * CampaignOS — Complete React UI
- * Live campaign pipeline with streaming agent output,
- * asset cards, and human approval gates.
- */
 import { useState } from "react";
 import "./App.css";
 import { usePipeline } from "./hooks/usePipeline";
-import type {
-  AssetReadyEvent,
-  HumanGateEvent,
-  AgentName,
-  KVConcept,
-} from "./types/pipeline";
+import type { HarnessBriefRequest } from "./types/pipeline";
 
-// ── Agent colours ───────────────────────────────────────────
-const AGENT_COLORS: Record<AgentName | string, string> = {
-  briefing_agent:    "#3b82f6",
-  strategy_agent:    "#8b5cf6",
-  kv_agent:          "#f59e0b",
-  content_agent:     "#10b981",
-  execution_agent:   "#ef4444",
-  performance_agent: "#06b6d4",
-  pipeline:          "#6b7280",
-};
+// ── Wizard constants ─────────────────────────────────────────
 
-const AGENT_LABELS: Record<string, string> = {
-  briefing_agent:    "Briefing Agent",
-  strategy_agent:    "Strategy Agent",
-  kv_agent:          "KV Agent",
-  content_agent:     "Content Agent",
-  execution_agent:   "Execution Agent",
-  performance_agent: "Performance Agent",
-};
-
-// ── Wizard data ─────────────────────────────────────────────
 type GoalId = "launch" | "sales" | "community" | "reengagement" | "expansion" | "custom";
 
 const GOALS = [
-  { id: "launch"       as GoalId, icon: "🚀", label: "Launch Awareness", desc: "Introduce a new product" },
-  { id: "sales"        as GoalId, icon: "📈", label: "Drive Sales",       desc: "Increase transactions & ROAS" },
-  { id: "community"    as GoalId, icon: "👥", label: "Build Community",   desc: "Grow brand advocates" },
-  { id: "reengagement" as GoalId, icon: "🎯", label: "Re-engagement",     desc: "Win back lapsed customers" },
-  { id: "expansion"    as GoalId, icon: "🌍", label: "Market Expansion",  desc: "Enter new territories" },
-  { id: "custom"       as GoalId, icon: "✏️", label: "Custom",            desc: "Write your own goal" },
+  { id: "launch"       as GoalId, icon: "🚀", label: "Launch Awareness",  desc: "Introduce a new product" },
+  { id: "sales"        as GoalId, icon: "📈", label: "Drive Sales",        desc: "Increase transactions & ROAS" },
+  { id: "community"    as GoalId, icon: "👥", label: "Build Community",    desc: "Grow brand advocates" },
+  { id: "reengagement" as GoalId, icon: "🎯", label: "Re-engagement",      desc: "Win back lapsed customers" },
+  { id: "expansion"    as GoalId, icon: "🌍", label: "Market Expansion",   desc: "Enter new territories" },
+  { id: "custom"       as GoalId, icon: "✏️", label: "Custom",             desc: "Write your own goal" },
 ];
 
-const MCD_PRODUCTS = [
-  "McSpicy", "McSpicy Deluxe", "Big Mac", "McDouble", "McVeggie",
-  "Happy Meal", "McFlurry", "McCafé", "Chicken McNuggets", "McValue Menu",
+const BRANDS = [
+  { id: "McDonalds", label: "McDonald's", emoji: "🍔" },
+  { id: "Rnorr",     label: "Rnorr",      emoji: "🥣" },
 ];
 
-const FAN_TRUTHS = [
-  "McDonald's fans love the ritual of the first bite of something new",
-  "Friday nights belong to McDonald's",
-  "Nostalgia is the most powerful flavour",
-  "McDonald's is the social glue between friends",
-  "McDonald's is the reward after a long day",
-];
+const BRAND_PRODUCTS: Record<string, string[]> = {
+  McDonalds: ["McSpicy", "McSpicy Deluxe", "Big Mac", "McDouble", "McVeggie",
+              "Happy Meal", "McFlurry", "McCafé", "Chicken McNuggets", "McValue Menu"],
+  Rnorr:     ["Chicken Stock Cubes", "Beef Stock Cubes", "Vegetable Stock Cubes",
+              "Stock Pots", "Bouillon Powder", "Concentrated Liquid Stock",
+              "Soup Range", "Gravy Granules", "Seasoning Sachets"],
+};
 
-const AGE_GROUPS    = ["13–17", "18–24", "25–34", "35–44", "45–54", "55+"];
-const INTERESTS     = ["Spicy food lovers", "Families", "Students", "Deal hunters", "Night owls", "Health-conscious", "Gamers", "Sports fans"];
-const REGIONS       = ["Australia", "New Zealand", "United States", "United Kingdom", "SEA", "Global"];
+const BRAND_CATEGORY: Record<string, string> = {
+  McDonalds: "Burgers & Chicken",
+  Rnorr:     "Dry Cook-In Sauces",
+};
+
+const BRAND_FAN_TRUTHS: Record<string, string[]> = {
+  McDonalds: [
+    "McDonald's fans love the ritual of the first bite of something new",
+    "Friday nights belong to McDonald's",
+    "Nostalgia is the most powerful flavour",
+    "McDonald's is the social glue between friends",
+    "McDonald's is the reward after a long day",
+  ],
+  Rnorr: [
+    "That moment when a weeknight dinner smells like it took all day",
+    "Real flavour shouldn't take real time",
+    "The shortcut that feels like cheating — but isn't",
+    "Home cooking is how you say 'I care' without saying it",
+    "A stock cube is the secret ingredient every great cook pretends isn't there",
+  ],
+};
+
+const AGE_GROUPS  = ["13–17", "18–24", "25–34", "35–44", "45–54", "55+"];
+const INTERESTS   = ["Spicy food lovers", "Families", "Students", "Deal hunters", "Night owls", "Gamers", "Sports fans"];
+const REGIONS     = ["United Kingdom", "Australia", "United States", "New Zealand", "SEA", "Global"];
+const SEASONS     = ["Spring", "Summer", "Autumn", "Winter", "All Year"];
+const MOMENT_TYPES = ["Day-to-Day", "Brand Moment", "Partnership Moment"];
 
 const CHANNELS_LIST = [
-  { id: "instagram", icon: "📸", label: "Instagram" },
-  { id: "tiktok",    icon: "🎵", label: "TikTok" },
-  { id: "youtube",   icon: "▶️", label: "YouTube" },
-  { id: "email",     icon: "✉️", label: "Email" },
-  { id: "google_ads",icon: "🎯", label: "Google Ads" },
-  { id: "meta_ads",  icon: "📘", label: "Meta Ads" },
+  { id: "Instagram",  icon: "📸", label: "Instagram" },
+  { id: "TikTok",     icon: "🎵", label: "TikTok" },
+  { id: "YouTube",    icon: "▶️", label: "YouTube" },
+  { id: "OOH",        icon: "🏙️", label: "OOH" },
+  { id: "Google Ads", icon: "🎯", label: "Google Ads" },
+  { id: "Meta Ads",   icon: "📘", label: "Meta Ads" },
 ];
 
 const KPI_OPTIONS = [
   { id: "reach",       label: "5M Reach" },
-  { id: "ctr",         label: "2% CTR" },
+  { id: "ctr",         label: "2.5% CTR" },
   { id: "roas",        label: "3x ROAS" },
   { id: "conversions", label: "+10% Conv." },
   { id: "engagement",  label: "4% Engagement" },
@@ -81,15 +76,17 @@ const KPI_OPTIONS = [
 ];
 
 const BUDGETS = [
-  { value: 50000,   label: "$50K",  desc: "Pilot" },
-  { value: 100000,  label: "$100K", desc: "Regional" },
-  { value: 250000,  label: "$250K", desc: "Multi-channel" },
-  { value: 500000,  label: "$500K", desc: "Full campaign" },
-  { value: 1000000, label: "$1M",   desc: "Flagship" },
-  { value: -1,      label: "Custom",desc: "Enter amount" },
+  { value: "£50,000",   label: "£50K",  desc: "Pilot" },
+  { value: "£100,000",  label: "£100K", desc: "Regional" },
+  { value: "£250,000",  label: "£250K", desc: "Multi-channel" },
+  { value: "£500,000",  label: "£500K", desc: "Full campaign" },
+  { value: "£1,000,000",label: "£1M",   desc: "Flagship" },
+  { value: "custom",    label: "Custom", desc: "Enter amount" },
 ];
 
 interface WizardData {
+  campaignName: string;
+  brand: string;
   goal: GoalId | "";
   goalCustom: string;
   product: string;
@@ -99,26 +96,41 @@ interface WizardData {
   audienceAge: string[];
   audienceInterests: string[];
   audienceRegions: string[];
+  season: string;
+  momentType: string;
   channels: string[];
   kpis: string[];
-  budget: number;
+  budget: string;
   budgetCustom: string;
 }
 
-// ── Brief Form (Wizard) ──────────────────────────────────────
-function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
+// ── Harness pipeline agents (for loading display) ────────────
+const HARNESS_STAGES = [
+  { key: "briefing",  icon: "📋", label: "Briefing Agent",    desc: "Validating campaign brief & fan truth" },
+  { key: "culture",   icon: "🌍", label: "Culture Analyst",   desc: "Researching cultural trends" },
+  { key: "strategy",  icon: "💡", label: "Creative Director", desc: "Building big idea & strategy" },
+  { key: "copy",      icon: "✍️", label: "Copy Agent",        desc: "Writing copy variants" },
+  { key: "kv",        icon: "🎨", label: "KV Generator",      desc: "Creating key visuals" },
+  { key: "channel",   icon: "📡", label: "Channel Adapter",   desc: "Adapting assets for channels" },
+];
+
+// ── Brief Form (6-step wizard) ───────────────────────────────
+function BriefForm({ onStart }: { onStart: (brief: HarnessBriefRequest) => void }) {
   const [step, setStep] = useState(0);
   const [d, setD] = useState<WizardData>({
+    campaignName: "",
+    brand: "McDonalds",
     goal: "", goalCustom: "",
     product: "", productCustom: "",
     fanTruth: "", fanTruthCustom: "",
     audienceAge: [], audienceInterests: [], audienceRegions: [],
-    channels: ["instagram", "tiktok", "youtube", "email"],
+    season: "Summer", momentType: "Day-to-Day",
+    channels: ["Instagram", "TikTok"],
     kpis: ["reach", "ctr", "roas"],
-    budget: 500000, budgetCustom: "",
+    budget: "£500,000", budgetCustom: "",
   });
 
-  const TOTAL_STEPS = 6;
+  const TOTAL_STEPS = 7;
 
   function toggle<T>(arr: T[], val: T): T[] {
     return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
@@ -126,32 +138,52 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
 
   function canProceed(): boolean {
     switch (step) {
-      case 0: return !!d.goal && (d.goal !== "custom" || !!d.goalCustom.trim());
-      case 1: return !!d.product || !!d.productCustom.trim();
-      case 2: return !!d.fanTruth || !!d.fanTruthCustom.trim();
-      case 3: return true;
-      case 4: return d.channels.length > 0 && d.kpis.length > 0;
-      case 5: return d.budget > 0 || !!d.budgetCustom.trim();
+      case 0: return !!d.brand;
+      case 1: return !!d.goal && (d.goal !== "custom" || !!d.goalCustom.trim());
+      case 2: return !!d.product || !!d.productCustom.trim();
+      case 3: return !!d.fanTruth || !!d.fanTruthCustom.trim();
+      case 4: return true;
+      case 5: return d.channels.length > 0 && d.kpis.length > 0;
+      case 6: return d.budget !== "" || !!d.budgetCustom.trim();
+      case 7: return d.campaignName.trim().length >= 3;
       default: return true;
     }
   }
 
   function handleLaunch() {
-    const goal     = d.goal === "custom" ? d.goalCustom : GOALS.find((g) => g.id === d.goal)?.label ?? "";
-    const product  = d.product === "custom" ? d.productCustom : d.product;
-    const fanTruth = d.fanTruth === "custom" ? d.fanTruthCustom : d.fanTruth;
-    const audience = [...d.audienceAge, ...d.audienceInterests, ...d.audienceRegions];
-    const kpisLabels = d.kpis.map((k) => KPI_OPTIONS.find((o) => o.id === k)?.label ?? k);
-    const budget   = d.budget === -1 ? parseFloat(d.budgetCustom) || 0 : d.budget;
-    onStart({
-      goal, product,
-      fan_truth: fanTruth,
-      kpis: kpisLabels,
-      channels: d.channels,
+    const goal       = d.goal === "custom" ? d.goalCustom : GOALS.find((g) => g.id === d.goal)?.label ?? "";
+    const product    = d.product === "custom" ? d.productCustom : d.product;
+    const fanTruth   = d.fanTruth === "custom" ? d.fanTruthCustom : d.fanTruth;
+    const kpisStr    = d.kpis.map((k) => KPI_OPTIONS.find((o) => o.id === k)?.label ?? k).join(", ");
+    const budget     = d.budget === "custom" ? `£${d.budgetCustom}` : d.budget;
+    const ageRange   = d.audienceAge.length > 0 ? d.audienceAge[0].replace("–", "-") : "All ages";
+    const market     = d.audienceRegions[0] ?? "UK";
+    const category   = BRAND_CATEGORY[d.brand] ?? "Food & Beverage";
+
+    const brief: HarnessBriefRequest = {
+      campaign_name:    d.campaignName.trim(),
+      brand:            d.brand,
+      goal,
       budget,
-      audience: audience.length > 0 ? audience.join(", ") : "General audience",
-      additional_notes: "",
-    });
+      kpis:             kpisStr,
+      product,
+      product_category: category,
+      fan_truth:        fanTruth,
+      channels:         d.channels,
+      market,
+      season:           d.season,
+      moment_type:      d.momentType,
+      audience: {
+        segment:  d.audienceInterests.join(", ") || "General audience",
+        location: market,
+        age_range: ageRange,
+        gender:   "All genders",
+        interests: d.audienceInterests.join(", ") || undefined,
+      },
+      tone: "Warm & friendly",
+    };
+
+    onStart(brief);
   }
 
   const stepContent = () => {
@@ -159,7 +191,25 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
       case 0:
         return (
           <>
-            <div className="wizard-step-label">Step 1 of 6</div>
+            <div className="wizard-step-label">Step 1 of 7</div>
+            <h2 className="wizard-heading">Select your <span className="gradient-text">brand</span></h2>
+            <p className="wizard-subheading">Which brand is this campaign for?</p>
+            <div className="goal-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+              {BRANDS.map((b) => (
+                <div key={b.id} className={`goal-tile${d.brand === b.id ? " selected" : ""}`}
+                  onClick={() => setD((p) => ({ ...p, brand: b.id, product: "", productCustom: "" }))}>
+                  <span className="goal-tile-icon">{b.emoji}</span>
+                  <div className="goal-tile-label">{b.label}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        );
+
+      case 1:
+        return (
+          <>
+            <div className="wizard-step-label">Step 2 of 7</div>
             <h2 className="wizard-heading">What's your <span className="gradient-text">campaign goal?</span></h2>
             <p className="wizard-subheading">Choose the primary objective for this campaign</p>
             <div className="goal-grid">
@@ -181,14 +231,14 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
           </>
         );
 
-      case 1:
+      case 2:
         return (
           <>
-            <div className="wizard-step-label">Step 2 of 6</div>
+            <div className="wizard-step-label">Step 3 of 7</div>
             <h2 className="wizard-heading">What are we <span className="gradient-text">promoting?</span></h2>
             <p className="wizard-subheading">Select a product or enter your own</p>
             <div className="chip-group">
-              {MCD_PRODUCTS.map((p) => (
+              {(BRAND_PRODUCTS[d.brand] ?? []).map((p: string) => (
                 <button key={p} className={`chip${d.product === p ? " selected" : ""}`}
                   onClick={() => setD((prev) => ({ ...prev, product: prev.product === p ? "" : p, productCustom: "" }))}>
                   {p}
@@ -207,14 +257,14 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
           </>
         );
 
-      case 2:
+      case 3:
         return (
           <>
-            <div className="wizard-step-label">Step 3 of 6</div>
+            <div className="wizard-step-label">Step 4 of 7</div>
             <h2 className="wizard-heading">What <span className="gradient-text">fan truth</span> drives this?</h2>
-            <p className="wizard-subheading">Pick a McDonald's fan truth or write your own</p>
+            <p className="wizard-subheading">Pick a {d.brand} fan truth or write your own</p>
             <div className="truth-stack">
-              {FAN_TRUTHS.map((ft) => (
+              {(BRAND_FAN_TRUTHS[d.brand] ?? []).map((ft) => (
                 <div key={ft} className={`truth-card${d.fanTruth === ft ? " selected" : ""}`}
                   onClick={() => setD((p) => ({ ...p, fanTruth: ft, fanTruthCustom: "" }))}>
                   <span style={{ marginRight: 8, opacity: 0.4 }}>❝</span>{ft}
@@ -234,12 +284,12 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
           </>
         );
 
-      case 3:
+      case 4:
         return (
           <>
-            <div className="wizard-step-label">Step 4 of 6</div>
+            <div className="wizard-step-label">Step 5 of 7</div>
             <h2 className="wizard-heading">Who are you <span className="gradient-text">targeting?</span></h2>
-            <p className="wizard-subheading">Select all that apply — this step is optional</p>
+            <p className="wizard-subheading">Select all that apply</p>
             <div className="section-label">Age groups</div>
             <div className="chip-group">
               {AGE_GROUPS.map((a) => (
@@ -258,7 +308,7 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
                 </button>
               ))}
             </div>
-            <div className="section-label">Region</div>
+            <div className="section-label">Market / Region</div>
             <div className="chip-group">
               {REGIONS.map((r) => (
                 <button key={r} className={`chip${d.audienceRegions.includes(r) ? " selected" : ""}`}
@@ -267,13 +317,22 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
                 </button>
               ))}
             </div>
+            <div className="section-label">Season</div>
+            <div className="chip-group">
+              {SEASONS.map((s) => (
+                <button key={s} className={`chip${d.season === s ? " selected" : ""}`}
+                  onClick={() => setD((p) => ({ ...p, season: s }))}>
+                  {s}
+                </button>
+              ))}
+            </div>
           </>
         );
 
-      case 4:
+      case 5:
         return (
           <>
-            <div className="wizard-step-label">Step 5 of 6</div>
+            <div className="wizard-step-label">Step 6 of 7</div>
             <h2 className="wizard-heading">Channels <span className="gradient-text">&amp; KPIs</span></h2>
             <p className="wizard-subheading">Where will the campaign run and how will we measure success?</p>
             <div className="section-label">Channels</div>
@@ -295,15 +354,24 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
                 </button>
               ))}
             </div>
+            <div className="section-label">Campaign moment</div>
+            <div className="chip-group">
+              {MOMENT_TYPES.map((m) => (
+                <button key={m} className={`chip${d.momentType === m ? " selected" : ""}`}
+                  onClick={() => setD((p) => ({ ...p, momentType: m }))}>
+                  {m}
+                </button>
+              ))}
+            </div>
           </>
         );
 
-      case 5:
+      case 6:
         return (
           <>
-            <div className="wizard-step-label">Step 6 of 6</div>
+            <div className="wizard-step-label">Step 7 of 7</div>
             <h2 className="wizard-heading">What's your <span className="gradient-text">budget?</span></h2>
-            <p className="wizard-subheading">Total campaign spend in USD</p>
+            <p className="wizard-subheading">Total campaign spend</p>
             <div className="budget-grid">
               {BUDGETS.map((b) => (
                 <div key={b.value} className={`budget-card${d.budget === b.value ? " selected" : ""}`}
@@ -313,28 +381,35 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
                 </div>
               ))}
             </div>
-            {d.budget === -1 && (
-              <input className="dark-input" type="number" placeholder="Enter budget in USD"
+            {d.budget === "custom" && (
+              <input className="dark-input" placeholder="Enter budget (e.g. £750,000)"
                 value={d.budgetCustom}
                 onChange={(e) => setD((p) => ({ ...p, budgetCustom: e.target.value }))} />
             )}
           </>
         );
 
-      case 6: {
+      case 7: {
         const reviewGoal    = d.goal === "custom" ? d.goalCustom : GOALS.find((g) => g.id === d.goal)?.label ?? "";
         const reviewProduct = d.product === "custom" ? d.productCustom : d.product;
         const reviewTruth   = d.fanTruth === "custom" ? d.fanTruthCustom : d.fanTruth;
         const reviewAud     = [...d.audienceAge, ...d.audienceInterests, ...d.audienceRegions];
         const reviewKpis    = d.kpis.map((k) => KPI_OPTIONS.find((o) => o.id === k)?.label ?? k);
-        const reviewBudget  = d.budget === -1
-          ? `$${parseInt(d.budgetCustom).toLocaleString()}`
-          : BUDGETS.find((b) => b.value === d.budget)?.label;
+        const reviewBudget  = d.budget === "custom" ? `£${d.budgetCustom}` : d.budget;
         return (
           <>
             <div className="wizard-step-label">Review</div>
             <h2 className="wizard-heading">Ready to <span className="gradient-text">launch?</span></h2>
-            <p className="wizard-subheading">Confirm your campaign brief before the agents start</p>
+            <p className="wizard-subheading">Name your campaign then send it to the agents</p>
+            <input className="dark-input" placeholder="Campaign name (e.g. McSpicy Summer 2026)"
+              value={d.campaignName}
+              onChange={(e) => setD((p) => ({ ...p, campaignName: e.target.value }))}
+              style={{ marginBottom: 4, fontSize: 16 }} />
+            {d.campaignName.trim().length < 3 && (
+              <p style={{ fontSize: 12, color: "#f59e0b", marginBottom: 16, marginTop: 0 }}>
+                ⚠ Campaign name must be at least 3 characters
+              </p>
+            )}
             <div className="review-grid">
               <div className="review-item review-item-full">
                 <div className="review-item-label">Goal</div>
@@ -354,11 +429,15 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
               </div>
               <div className="review-item">
                 <div className="review-item-label">Channels</div>
-                <div className="review-item-value">{d.channels.map((ch) => CHANNELS_LIST.find((c) => c.id === ch)?.label).join(", ")}</div>
+                <div className="review-item-value">{d.channels.join(", ")}</div>
               </div>
               <div className="review-item">
                 <div className="review-item-label">KPIs</div>
                 <div className="review-item-value">{reviewKpis.join(", ")}</div>
+              </div>
+              <div className="review-item">
+                <div className="review-item-label">Season</div>
+                <div className="review-item-value">{d.season} · {d.momentType}</div>
               </div>
               {reviewAud.length > 0 && (
                 <div className="review-item review-item-full">
@@ -392,787 +471,599 @@ function BriefForm({ onStart }: { onStart: (brief: any) => void }) {
             ? <button className="wizard-next-btn" disabled={!canProceed()} onClick={() => setStep((s) => s + 1)}>
                 {step === TOTAL_STEPS - 1 ? "Review →" : "Continue →"}
               </button>
-            : <button className="wizard-launch-btn" onClick={handleLaunch}>⚡ Launch Campaign</button>}
+            : <button className="wizard-launch-btn" disabled={!canProceed()} onClick={handleLaunch}>
+                ⚡ Launch Campaign
+              </button>}
         </div>
       </div>
     </div>
   );
 }
 
-// ── Agent Activity Sidebar ──────────────────────────────────
-function ActivitySidebar({
-  events,
-  liveTokens,
-  currentAgent,
-}: {
-  events: any[];
-  liveTokens: Record<string, string>;
-  currentAgent: string | null;
-}) {
-  // Group by agent activity
-  const activities = events.filter((e) =>
-    ["agent_start", "thinking", "agent_done", "error", "gate_resumed",
-     "pipeline_start", "done"].includes(e.type)
-  );
-
+// ── Running view (pipeline in progress) ─────────────────────
+function RunningView() {
   return (
-    <div style={styles.sidebar}>
-      <div style={styles.sidebarHeader}>Agent Activity</div>
-      <div style={styles.activityList}>
-        {activities.map((ev, i) => (
-          <div key={i} className="activity-item-enter" style={styles.activityItem}>
-            {ev.type === "agent_start" && (
-              <div>
-                <div
-                  style={{
-                    ...styles.agentDot,
-                    background: AGENT_COLORS[ev.agent] || "#6b7280",
-                  }}
-                />
-                <span style={styles.agentName}>
-                  {AGENT_LABELS[ev.agent] || ev.agent}
-                </span>
-                <div style={styles.activityDesc}>{ev.description}</div>
+    <div style={styles.runningPage}>
+      <div style={styles.runningCard}>
+        <div style={styles.runningTitle}>🤖 Agents are working…</div>
+        <p style={styles.runningSubtitle}>
+          The pipeline is generating your campaign. This typically takes 2–5 minutes.
+        </p>
+        <div style={styles.stageList}>
+          {HARNESS_STAGES.map((s, i) => (
+            <div key={s.key} className="stage-row" style={{ animationDelay: `${i * 0.8}s` }}>
+              <span style={styles.stageIcon}>{s.icon}</span>
+              <div style={styles.stageInfo}>
+                <div style={styles.stageName}>{s.label}</div>
+                <div style={styles.stageDesc}>{s.desc}</div>
               </div>
-            )}
-            {ev.type === "agent_done" && (
-              <div style={{ color: "#10b981", fontSize: 11 }}>
-                ✓ {AGENT_LABELS[ev.agent]} complete
-              </div>
-            )}
-            {ev.type === "thinking" && (
-              <div style={styles.thoughtBubble}>{ev.thought}</div>
-            )}
-            {ev.type === "error" && (
-              <div style={{ color: "#ef4444", fontSize: 11 }}>
-                ⚠ {ev.message}
-              </div>
-            )}
-            {ev.type === "done" && (
-              <div style={{ color: "#10b981", fontSize: 12, fontWeight: 500 }}>
-                🎉 Campaign is live!
-              </div>
-            )}
-          </div>
-        ))}
-
-        {/* Live token stream */}
-        {currentAgent && liveTokens[currentAgent] && (
-          <div style={styles.liveTokens}>
-            <div style={styles.liveIndicator}>
-              <span className="pulse-dot" />
-              {AGENT_LABELS[currentAgent]} thinking...
+              <div className="stage-pulse" style={{ animationDelay: `${i * 0.8}s` }} />
             </div>
-            <div style={styles.tokenText}>
-              {liveTokens[currentAgent].slice(-300)}
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Asset Cards ─────────────────────────────────────────────
-function AssetCard({ asset }: { asset: AssetReadyEvent }) {
-  const color = AGENT_COLORS[asset.agent] || "#6b7280";
-  const payload = asset.payload as any;
-
-  return (
-    <div className="asset-card-enter" style={{ ...styles.assetCard, borderColor: color + "40" }}>
-      <div style={{ ...styles.assetHeader, color }}>
-        <span style={styles.assetType}>{asset.asset_type.replace("_", " ")}</span>
-        <span style={styles.assetLabel}>{asset.label}</span>
-      </div>
-
-      {asset.url && (
-        <img
-          src={asset.url}
-          alt={asset.label}
-          style={styles.assetImage}
-        />
-      )}
-
-      {asset.asset_type === "kv_concept" && payload && (
-        <KVConceptCard concept={payload as KVConcept} />
-      )}
-
-      {asset.asset_type === "machine_brief" && payload && (
-        <BriefCard brief={payload} />
-      )}
-
-      {asset.asset_type === "copy" && payload && (
-        <CopyCard copy={payload} />
-      )}
-
-      {!asset.url &&
-        asset.asset_type !== "kv_concept" &&
-        asset.asset_type !== "machine_brief" &&
-        asset.asset_type !== "copy" && (
-          <pre style={styles.jsonPre}>
-            {JSON.stringify(payload, null, 2).slice(0, 800)}
-            {JSON.stringify(payload, null, 2).length > 800 ? "\n..." : ""}
-          </pre>
-        )}
-    </div>
-  );
-}
-
-function BriefCard({ brief }: { brief: any }) {
-  const ft = brief.fan_truth || {};
-  return (
-    <div>
-      <div style={styles.briefRow}>
-        <span style={styles.briefLabel}>Status</span>
-        <span
-          style={{
-            ...styles.statusBadge,
-            background: brief.validation_status === "approved" ? "#d1fae5" : "#fef3c7",
-            color: brief.validation_status === "approved" ? "#065f46" : "#92400e",
-          }}
-        >
-          {brief.validation_status}
-        </span>
-      </div>
-      {ft.statement && (
-        <div style={styles.briefRow}>
-          <span style={styles.briefLabel}>Fan Truth</span>
-          <span style={styles.briefValue}>{ft.statement}</span>
+          ))}
         </div>
-      )}
-      {ft.total !== undefined && (
-        <div style={styles.briefRow}>
-          <span style={styles.briefLabel}>FT Score</span>
-          <span style={{ ...styles.briefValue, fontWeight: 600 }}>
-            {ft.total}/30 {ft.passed ? "✓ Passed" : "✗ Below threshold"}
+      </div>
+    </div>
+  );
+}
+
+// ── Fan Truth Score Gauge ─────────────────────────────────────
+function ScoreGauge({ score, verdict }: { score: number; verdict: string }) {
+  const r = 36;
+  const circ = 2 * Math.PI * r;
+  const pct  = Math.min(score, 100) / 100;
+  const dash = circ * pct;
+  const color = score >= 75 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+      <svg width="88" height="88" viewBox="0 0 88 88">
+        <circle cx="44" cy="44" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+        <circle cx="44" cy="44" r={r} fill="none" stroke={color} strokeWidth="8"
+          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+          transform="rotate(-90 44 44)" style={{ transition: "stroke-dasharray 1s ease" }} />
+        <text x="44" y="41" textAnchor="middle" fill={color} fontSize="18" fontWeight="700" fontFamily="Inter,sans-serif">{score}</text>
+        <text x="44" y="56" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="Inter,sans-serif">/100</text>
+      </svg>
+      <div>
+        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Fan Truth Score</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 20, fontWeight: 700, color }}>{score}/100</span>
+          <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 20,
+            background: verdict === "PASS" ? "rgba(16,185,129,0.15)" : "rgba(239,68,68,0.15)",
+            color: verdict === "PASS" ? "#10b981" : "#ef4444",
+            border: `1px solid ${verdict === "PASS" ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}` }}>
+            {verdict}
           </span>
         </div>
-      )}
-      {brief.revision_notes && (
-        <div style={styles.revisionNote}>{brief.revision_notes}</div>
-      )}
+      </div>
     </div>
   );
 }
 
-function KVConceptCard({ concept }: { concept: KVConcept }) {
-  const palette = concept.visual_direction?.colour_palette;
+// ── KPI Row ───────────────────────────────────────────────────
+function KPIRow({ metric, target, flag }: { metric: string; target: string; flag: string; note?: string }) {
+  const cfg: Record<string, { bg: string; color: string; border: string; icon: string }> = {
+    OK:          { bg: "rgba(16,185,129,0.1)",  color: "#10b981", border: "rgba(16,185,129,0.25)",  icon: "✓" },
+    AMBITIOUS:   { bg: "rgba(245,158,11,0.1)",  color: "#f59e0b", border: "rgba(245,158,11,0.25)",  icon: "↑" },
+    UNREALISTIC: { bg: "rgba(239,68,68,0.1)",   color: "#ef4444", border: "rgba(239,68,68,0.25)",   icon: "✗" },
+  };
+  const c = cfg[flag] ?? cfg.OK;
   return (
-    <div>
-      <div style={{ fontWeight: 600, marginBottom: 4, fontSize: 14 }}>
-        Concept {concept.concept_id}: {concept.concept_name}
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px",
+      borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, marginBottom: 6 }}>
+      <span style={{ fontSize: 16, fontWeight: 700, color: c.color, width: 20, textAlign: "center" as const }}>{c.icon}</span>
+      <div style={{ flex: 1 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{metric}</span>
+        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginLeft: 6 }}>— {target}</span>
       </div>
-      <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 8 }}>
-        {concept.logline}
-      </div>
-      {palette && (
-        <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-          {Object.values(palette)
-            .filter((v) => typeof v === "string" && v.startsWith("#"))
-            .map((color, i) => (
-              <div
-                key={i}
-                title={color as string}
-                style={{
-                  width: 24, height: 24, borderRadius: 6,
-                  background: color as string,
-                  border: "1px solid rgba(0,0,0,0.1)",
-                }}
-              />
-            ))}
-        </div>
-      )}
-      <div style={{ fontSize: 11, color: "#6b7280" }}>
-        {concept.visual_direction?.photography_style}
-      </div>
-      {concept.reel_script_10s?.music_cue && (
-        <div style={styles.musicCue}>
-          🎵 {concept.reel_script_10s.music_cue}
-        </div>
-      )}
+      <span style={{ fontSize: 11, fontWeight: 700, color: c.color, padding: "2px 8px",
+        background: `${c.color}18`, borderRadius: 12 }}>{flag}</span>
     </div>
   );
 }
 
-function CopyCard({ copy }: { copy: any }) {
-  const entries = Object.entries(copy).filter(
-    ([k]) => !["campaign_id", "generated_at"].includes(k)
-  );
-  return (
-    <div>
-      {entries.slice(0, 4).map(([key, val]) => (
-        <div key={key} style={styles.copyRow}>
-          <div style={styles.copyKey}>{key.replace(/_/g, " ")}</div>
-          <div style={styles.copyVal}>
-            {typeof val === "string" ? val : JSON.stringify(val)}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ── Human Gate Modal ────────────────────────────────────────
-function GateModal({
-  gate,
-  onDecide,
-}: {
-  gate: HumanGateEvent;
-  onDecide: (decision: string, notes?: string, idx?: number) => void;
+// ── Results view ─────────────────────────────────────────────
+function ResultsView({ output, campaignId, onReset }: {
+  output: Record<string, unknown> | null;
+  campaignId: string | null;
+  onReset: () => void;
 }) {
-  const [notes, setNotes] = useState("");
-  const [selectedKV, setSelectedKV] = useState<string | null>(null);
-  const data = gate.data as any;
-  const isKVSelect = gate.gate === "select_kv";
-  const concepts: KVConcept[] = isKVSelect ? data.concepts || [] : [];
+  const [expanded, setExpanded] = useState(false);
+  const brief    = (output?.machine_brief ?? (output?.status ? output : null)) as any;
+  const strategy = output?.creative_strategy as any;
+  const copy     = output?.campaign_copy as any;
+
+  const isReady  = brief?.status === "READY";
+  const statusColor = isReady ? "#10b981" : brief?.status === "INCOMPLETE" ? "#ef4444" : "#f59e0b";
+
+  // Parse CDP insights into readable lines
+  const cdpLines = output?.audience_insights
+    ? String(output.audience_insights).split("\n").filter(l => l.trim())
+    : [];
 
   return (
-    <div style={styles.modalOverlay}>
-      <div className="modal-enter" style={styles.modal}>
-        <div style={styles.modalHeader}>
-          <div style={styles.modalIcon}>👤</div>
-          <div>
-            <div style={styles.modalTitle}>{data.title || "Review required"}</div>
-            <div style={styles.modalSub}>Human approval gate</div>
-          </div>
-        </div>
-
-        {data.warning && (
-          <div style={styles.modalWarning}>{data.warning}</div>
-        )}
-
-        {/* KV Concept selection */}
-        {isKVSelect && concepts.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={styles.modalSectionLabel}>Select a concept:</div>
-            <div style={{ display: "flex", gap: 10 }}>
-              {concepts.map((c: KVConcept) => (
-                <div
-                  key={c.concept_id}
-                  onClick={() => setSelectedKV(c.concept_id)}
-                  className="kv-option"
-                  style={{
-                    borderColor:
-                      selectedKV === c.concept_id ? "#3b82f6" : "#e5e7eb",
-                    background:
-                      selectedKV === c.concept_id ? "#eff6ff" : "#fff",
-                  }}
-                >
-                  <div style={{ fontWeight: 600, fontSize: 13 }}>
-                    {c.concept_id}: {c.concept_name}
-                  </div>
-                  <div style={{ fontSize: 11, color: "#6b7280", marginTop: 4 }}>
-                    {c.logline}
-                  </div>
-                </div>
-              ))}
+    <div style={styles.resultsPage}>
+      {/* Header */}
+      <div style={styles.resultsHero}>
+        <div style={styles.resultsHeroInner}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(16,185,129,0.15)",
+              border: "1px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center",
+              justifyContent: "center", fontSize: 20 }}>✅</div>
+            <div>
+              <div style={styles.resultsTitle}>Campaign Brief Validated</div>
+              {campaignId && <div style={styles.campaignIdTag}>#{campaignId}</div>}
             </div>
           </div>
-        )}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ padding: "6px 16px", borderRadius: 20, fontSize: 12, fontWeight: 700,
+              background: `${statusColor}18`, color: statusColor,
+              border: `1px solid ${statusColor}30`, letterSpacing: "0.05em" }}>
+              {brief?.status ?? "—"}
+            </div>
+            <button className="reset-btn" onClick={onReset}>New Campaign</button>
+          </div>
+        </div>
+      </div>
 
-        {/* Fan truth score for brief gate */}
-        {gate.gate === "approve_brief" && data.fan_truth_score && (
-          <div style={styles.scoreBox}>
-            Fan Truth Score: <strong>{data.fan_truth_score}/30</strong>
-            {data.validation_status && (
-              <span
-                style={{
-                  ...styles.statusBadge,
-                  marginLeft: 8,
-                  background: data.validation_status === "approved" ? "#d1fae5" : "#fef3c7",
-                  color: data.validation_status === "approved" ? "#065f46" : "#92400e",
-                }}
-              >
-                {data.validation_status}
-              </span>
+      <div style={styles.resultsGrid}>
+        {/* ── Brief Validation card ── */}
+        {brief && (
+          <div style={styles.resultCard}>
+            <div style={styles.cardHeader}>📋 Brief Validation</div>
+
+            {/* Fan Truth Gauge */}
+            {brief.fan_truth && (
+              <ScoreGauge score={brief.fan_truth.overall ?? 0} verdict={brief.fan_truth.verdict ?? "FAIL"} />
+            )}
+
+            {/* Fan Truth statement */}
+            {brief.fan_truth?.statement && (
+              <div style={{ padding: "12px 16px", borderRadius: 10, marginBottom: 16,
+                background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)" }}>
+                <div style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600, letterSpacing: "0.06em",
+                  textTransform: "uppercase" as const, marginBottom: 6 }}>Fan Truth</div>
+                <div style={{ fontSize: 14, color: "#e2e8f0", fontStyle: "italic", lineHeight: 1.6 }}>
+                  "{brief.fan_truth.statement}"
+                </div>
+                {brief.fan_truth.notes && (
+                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 8, lineHeight: 1.5 }}>
+                    {brief.fan_truth.notes}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* KPIs */}
+            {brief.kpis?.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 600,
+                  letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 8 }}>KPIs</div>
+                {brief.kpis.map((k: any, i: number) => (
+                  <KPIRow key={i} metric={k.metric} target={k.target} flag={k.flag} note={k.note} />
+                ))}
+              </div>
+            )}
+
+            {/* Summary */}
+            {(brief.validation_notes || brief.brief_summary) && (
+              <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.7, margin: 0, paddingTop: 12,
+                borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                {brief.validation_notes || brief.brief_summary}
+              </p>
             )}
           </div>
         )}
 
-        <textarea
-          placeholder="Notes or revision instructions (optional)..."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={3}
-          style={styles.notesInput}
-        />
+        {/* ── CDP Audience Intelligence ── */}
+        {cdpLines.length > 0 && (() => {
+          const getText = (key: string) => {
+            const l = cdpLines.find(l => l.toLowerCase().includes(key.toLowerCase()));
+            return l ? l.split(":").slice(1).join(":").trim() : null;
+          };
+          const profilesLine = cdpLines.find(l => l.includes("profiles"));
+          const profileCount = profilesLine?.match(/(\d[\d,]+)\s+\w+\s+profiles/)?.[1] ?? "—";
+          const matchLine    = cdpLines.find(l => l.includes("matched"));
+          const income       = getText("household income");
+          const meatSpend    = getText("meat/protein spend");
+          const deals        = getText("deal purchases");
+          const webVisits    = getText("web visits");
+          const channelsRaw  = getText("Top channels");
+          const channels     = channelsRaw?.split(",").map(c => c.trim()) ?? [];
+          const crmIdx       = cdpLines.findIndex(l => l.includes("CRM notes"));
+          const crmNote      = crmIdx >= 0 ? cdpLines.slice(crmIdx + 1).join(" ").slice(0, 200) : null;
 
-        <div style={styles.gateButtons}>
-          {gate.options.map((opt) => {
-            const isApprove = opt === "approve" || opt.startsWith("select_");
-            const isReject = opt === "reject";
-            const label = isKVSelect && opt.startsWith("select_")
-              ? `Select ${opt.replace("select_", "").toUpperCase()}`
-              : opt.charAt(0).toUpperCase() + opt.slice(1);
+          const stat = (label: string, val: string | null, accent = "#7c3aed") => val ? (
+            <div style={{ flex: 1, minWidth: 100, padding: "10px 12px", borderRadius: 10,
+              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ fontSize: 10, color: "#475569", fontWeight: 600, letterSpacing: "0.08em",
+                textTransform: "uppercase" as const, marginBottom: 4 }}>{label}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: accent }}>{val}</div>
+            </div>
+          ) : null;
 
-            return (
-              <button
-                key={opt}
-                onClick={() =>
-                  onDecide(
-                    isKVSelect && selectedKV ? `select_${selectedKV.toLowerCase()}` : opt,
-                    notes
-                  )
-                }
-                disabled={isKVSelect && opt.startsWith("select_") && !selectedKV}
-                className="gate-btn"
-                style={{
-                  background: isApprove ? "#10b981" : isReject ? "#ef4444" : "#6b7280",
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+          return (
+            <div style={styles.resultCard}>
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div style={styles.cardHeader}>👥 Audience Intelligence</div>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 12,
+                  background: "rgba(124,58,237,0.15)", color: "#a78bfa",
+                  border: "1px solid rgba(124,58,237,0.25)", letterSpacing: "0.06em" }}>
+                  KAGGLE CDP
+                </span>
+              </div>
+
+              {/* Profile count */}
+              <div style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10,
+                background: "linear-gradient(135deg, rgba(124,58,237,0.1), rgba(37,99,235,0.08))",
+                border: "1px solid rgba(124,58,237,0.2)" }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#a78bfa" }}>{profileCount}</div>
+                <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
+                  {matchLine?.trim() ?? "customer profiles analysed"}
+                </div>
+              </div>
+
+              {/* Stats grid */}
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 14 }}>
+                {stat("Avg Income", income, "#10b981")}
+                {stat("Meat Spend/yr", meatSpend, "#10b981")}
+                {stat("Deal Purchases", deals, "#f59e0b")}
+                {stat("Web Visits/mo", webVisits, "#3b82f6")}
+              </div>
+
+              {/* Channels */}
+              {channels.length > 0 && (
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, color: "#475569", fontWeight: 600,
+                    letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>
+                    Top Channels
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                    {channels.map((ch, i) => (
+                      <span key={i} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 12,
+                        background: "rgba(59,130,246,0.12)", color: "#60a5fa",
+                        border: "1px solid rgba(59,130,246,0.25)", fontWeight: 600 }}>
+                        {ch}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* CRM Quote */}
+              {crmNote && (
+                <div style={{ padding: "10px 12px", borderRadius: 8,
+                  background: "rgba(0,0,0,0.2)", borderLeft: "2px solid #7c3aed" }}>
+                  <div style={{ fontSize: 10, color: "#7c3aed", fontWeight: 600,
+                    letterSpacing: "0.08em", marginBottom: 4 }}>CRM NOTE</div>
+                  <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.6, fontStyle: "italic" }}>
+                    "{crmNote}..."
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Pipeline Output ── */}
+        {brief && (
+          <div style={styles.resultCard}>
+            <div style={styles.cardHeader}>⚡ Pipeline Output</div>
+
+            {/* Campaign details */}
+            {[
+              { label: "Campaign",  value: brief.campaign_name },
+              { label: "Channels",  value: Array.isArray(brief.channels) ? brief.channels.join(" · ") : brief.channels },
+              { label: "Market",    value: brief.market },
+              { label: "Season",    value: brief.season },
+              { label: "Budget",    value: brief.budget },
+              { label: "Moment",    value: brief.moment_type },
+              { label: "Audience",  value: brief.audience },
+            ].filter(r => r.value).map((row, i, arr) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between",
+                alignItems: "flex-start", padding: "8px 0",
+                borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
+                <span style={{ fontSize: 11, color: "#475569", fontWeight: 600,
+                  textTransform: "uppercase" as const, letterSpacing: "0.07em", flexShrink: 0, paddingRight: 12 }}>
+                  {row.label}
+                </span>
+                <span style={{ fontSize: 12, color: "#cbd5e1", textAlign: "right" as const }}>
+                  {String(row.value)}
+                </span>
+              </div>
+            ))}
+
+            {/* Brief summary */}
+            {brief.brief_summary && (
+              <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 8,
+                background: "rgba(255,255,255,0.03)", borderLeft: "2px solid #3b82f6" }}>
+                <div style={{ fontSize: 10, color: "#3b82f6", fontWeight: 600,
+                  letterSpacing: "0.08em", marginBottom: 6 }}>BRIEF SUMMARY</div>
+                <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
+                  {brief.brief_summary}
+                </div>
+              </div>
+            )}
+
+            {/* Warnings */}
+            {brief.brand_warnings?.length > 0 && (
+              <div style={{ marginTop: 12 }}>
+                {brief.brand_warnings.map((w: string, i: number) => (
+                  <div key={i} style={{ fontSize: 12, color: "#f59e0b", display: "flex",
+                    gap: 6, padding: "4px 0" }}>
+                    <span>⚠</span><span>{w}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Creative Strategy ── */}
+        {strategy && (strategy.hero_message || strategy.big_idea || strategy.strategic_framework) && (
+          <div style={{ ...styles.resultCard, gridColumn: "1 / -1",
+            background: "linear-gradient(135deg, rgba(124,58,237,0.08), rgba(37,99,235,0.05))",
+            border: "1px solid rgba(124,58,237,0.2)" }}>
+            <div style={styles.cardHeader}>💡 Creative Strategy</div>
+            {/* Hero message / Big Idea */}
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#a78bfa",
+              fontStyle: "italic", lineHeight: 1.4, marginBottom: 20,
+              borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: 16 }}>
+              "{strategy.big_idea || strategy.hero_message}"
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+              {strategy.strategic_framework && (
+                <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                  <div style={styles.cardLabel}>Strategic Framework</div>
+                  <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6, marginTop: 6 }}>{strategy.strategic_framework}</div>
+                </div>
+              )}
+              {strategy.culture_context && (
+                <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                  <div style={styles.cardLabel}>Cultural Context</div>
+                  <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6, marginTop: 6 }}>{strategy.culture_context}</div>
+                </div>
+              )}
+              {strategy.handoff_message && (
+                <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                  <div style={styles.cardLabel}>Creative Brief</div>
+                  <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6, marginTop: 6 }}>{strategy.handoff_message}</div>
+                </div>
+              )}
+            </div>
+            {strategy.messaging_pillars?.length > 0 && (
+              <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                {strategy.messaging_pillars.map((p: string, i: number) => (
+                  <span key={i} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 20,
+                    background: "rgba(124,58,237,0.12)", color: "#a78bfa",
+                    border: "1px solid rgba(124,58,237,0.25)" }}>{p}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Campaign Copy ── */}
+        {copy && (copy.short || copy.medium || copy.long || copy.short_copy) && (
+          <div style={{ ...styles.resultCard, gridColumn: "1 / -1" }}>
+            <div style={styles.cardHeader}>✍️ Campaign Copy</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
+              {/* Short */}
+              {(copy.short?.headline || copy.short_copy) && (
+                <div style={{ padding: "14px 16px", borderRadius: 12,
+                  background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)" }}>
+                  <div style={{ fontSize: 10, color: "#10b981", fontWeight: 700,
+                    letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>SHORT · OOH / KV</div>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#f1f5f9", lineHeight: 1.3 }}>
+                    {copy.short?.headline || copy.short_copy}
+                  </div>
+                  {copy.short?.subline && <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>{copy.short.subline}</div>}
+                </div>
+              )}
+              {/* Medium */}
+              {(copy.medium?.headline || copy.medium_copy) && (
+                <div style={{ padding: "14px 16px", borderRadius: 12,
+                  background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.15)" }}>
+                  <div style={{ fontSize: 10, color: "#3b82f6", fontWeight: 700,
+                    letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>MEDIUM · SOCIAL / DISPLAY</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.4 }}>
+                    {copy.medium?.headline || copy.medium_copy}
+                  </div>
+                  {copy.medium?.subline && <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>{copy.medium.subline}</div>}
+                </div>
+              )}
+              {/* Long */}
+              {(copy.long?.headline || copy.long_copy) && (
+                <div style={{ padding: "14px 16px", borderRadius: 12,
+                  background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)" }}>
+                  <div style={{ fontSize: 10, color: "#f59e0b", fontWeight: 700,
+                    letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>LONG · PRESS / EDITORIAL</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.4 }}>
+                    {copy.long?.headline || copy.long_copy}
+                  </div>
+                  {copy.long?.body && <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 8, lineHeight: 1.7 }}>{copy.long.body}</div>}
+                </div>
+              )}
+            </div>
+            {/* CTA + Platform copy */}
+            {(copy.cta || copy.instagram_caption || copy.tiktok_hook) && (
+              <div style={{ marginTop: 16, display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+                {copy.cta && (
+                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)", textAlign: "center" as const }}>
+                    <div style={styles.cardLabel}>CTA</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", marginTop: 4 }}>{copy.cta}</div>
+                  </div>
+                )}
+                {copy.instagram_caption && (
+                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div style={styles.cardLabel}>Instagram Caption</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4, lineHeight: 1.5 }}>{copy.instagram_caption}</div>
+                  </div>
+                )}
+                {copy.tiktok_hook && (
+                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)" }}>
+                    <div style={styles.cardLabel}>TikTok Hook (3s)</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4, lineHeight: 1.5 }}>{copy.tiktok_hook}</div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Raw output ── */}
+        {output && (
+          <div style={{ ...styles.resultCard, gridColumn: "1 / -1" }}>
+            <button style={styles.expandBtn} onClick={() => setExpanded(e => !e)}>
+              {expanded ? "▲ Hide" : "▼ Show"} full pipeline output
+            </button>
+            {expanded && <pre style={styles.jsonPre}>{JSON.stringify(output, null, 2)}</pre>}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ── Agent Pipeline Progress Bar ─────────────────────────────
-const AGENT_PIPELINE: AgentName[] = [
-  "briefing_agent",
-  "strategy_agent",
-  "kv_agent",
-  "content_agent",
-  "execution_agent",
-  "performance_agent",
-];
-
-function AgentPipelineBar({
-  currentAgent,
-  status,
-}: {
-  currentAgent: string | null;
-  status: string;
-}) {
-  const currentIdx = currentAgent
-    ? AGENT_PIPELINE.indexOf(currentAgent as AgentName)
-    : -1;
-
-  return (
-    <div className="pipeline-bar">
-      {AGENT_PIPELINE.map((agent, i) => {
-        const isDone = status === "done" || (currentIdx !== -1 && i < currentIdx);
-        const isActive = agent === currentAgent;
-        const color = AGENT_COLORS[agent];
-        const connectorFilled = status === "done" || (currentIdx !== -1 && i < currentIdx);
-
-        return (
-          <div key={agent} className="pipeline-step">
-            <div
-              className={`pipeline-dot${isActive ? " is-active" : ""}`}
-              title={AGENT_LABELS[agent]}
-              style={{
-                background: isDone || isActive ? color : "transparent",
-                borderColor: isDone || isActive ? color : "#334155",
-                color,
-              }}
-            />
-            {i < AGENT_PIPELINE.length - 1 && (
-              <div
-                className="pipeline-connector"
-                style={{ background: connectorFilled ? color : "#334155" }}
-              />
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Main App ────────────────────────────────────────────────
+// ── Main App ─────────────────────────────────────────────────
 export default function App() {
-  const { state, startCampaign, approve, reset } = usePipeline();
+  const { state, startCampaign, reset } = usePipeline();
 
   if (state.status === "idle") {
     return <BriefForm onStart={startCampaign} />;
   }
 
-  return (
-    <div style={styles.app}>
-      {/* Top bar */}
-      <div style={styles.topBar}>
-        <div style={styles.topBarLeft}>
-          <span style={styles.logo}>🍔</span>
-          <span style={styles.topBarTitle}>CampaignOS</span>
-          {state.campaign_id && (
-            <span style={styles.campaignId}>#{state.campaign_id}</span>
+  if (state.status === "running") {
+    return <RunningView />;
+  }
+
+  if (state.status === "error") {
+    const isAuthError = state.error?.includes("credentials") || state.error?.includes("auth");
+    return (
+      <div style={styles.errorPage}>
+        <div style={styles.errorCard}>
+          <div style={styles.errorTitle}>⚠️ Pipeline Error</div>
+          <div style={styles.errorMsg}>{state.error}</div>
+          {isAuthError && (
+            <div style={styles.authHint}>
+              <strong>Fix:</strong> Run this in your terminal, then restart the harness:
+              <pre style={styles.authCmd}>gcloud auth application-default login</pre>
+            </div>
           )}
-        </div>
-        <AgentPipelineBar
-          currentAgent={state.current_agent}
-          status={state.status}
-        />
-        <div style={styles.topBarRight}>
-          <div
-            style={{
-              ...styles.statusPill,
-              background:
-                state.status === "done" ? "#d1fae5" :
-                state.status === "error" ? "#fee2e2" :
-                state.status === "waiting_for_approval" ? "#fef3c7" :
-                "#dbeafe",
-              color:
-                state.status === "done" ? "#065f46" :
-                state.status === "error" ? "#991b1b" :
-                state.status === "waiting_for_approval" ? "#92400e" :
-                "#1e40af",
-            }}
-          >
-            {state.status === "running" && "⚡ Running"}
-            {state.status === "waiting_for_approval" && "⏸ Awaiting approval"}
-            {state.status === "done" && "✓ Live"}
-            {state.status === "error" && "✗ Error"}
-          </div>
-          <button onClick={reset} className="reset-btn">
-            New Campaign
+          <button className="reset-btn" onClick={reset} style={{ marginTop: 20 }}>
+            Try Again
           </button>
         </div>
       </div>
+    );
+  }
 
-      {/* Main content */}
-      <div style={styles.content}>
-        {/* Left: Activity sidebar */}
-        <ActivitySidebar
-          events={state.events}
-          liveTokens={state.live_tokens}
-          currentAgent={state.current_agent}
-        />
-
-        {/* Centre: Assets feed */}
-        <div style={styles.assetsFeed}>
-          <div style={styles.assetsFeedHeader}>
-            Assets ({state.assets.length})
-          </div>
-          {state.assets.length === 0 && state.status === "running" && (
-            <div style={styles.waitingMsg}>
-              <div className="spinner" />
-              Waiting for first asset...
-            </div>
-          )}
-          <div style={styles.assetsGrid}>
-            {state.assets.map((asset, i) => (
-              <AssetCard key={i} asset={asset} />
-            ))}
-          </div>
-          {state.error && (
-            <div style={styles.errorBox}>{state.error}</div>
-          )}
-        </div>
-      </div>
-
-      {/* Human gate modal */}
-      {state.pending_gate && (
-        <GateModal gate={state.pending_gate} onDecide={approve} />
-      )}
-    </div>
+  // done
+  return (
+    <ResultsView
+      output={state.pipeline_output}
+      campaignId={state.campaign_id}
+      onReset={reset}
+    />
   );
 }
 
-// ── Styles ──────────────────────────────────────────────────
+// ── Styles ───────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
-  formHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 24,
+  // Running
+  runningPage: {
+    minHeight: "100vh", display: "flex", alignItems: "center",
+    justifyContent: "center", background: "#0a0a0f", padding: 24,
   },
-  logo: { fontSize: 32 },
-  formTitle: { fontSize: 22, fontWeight: 700, margin: 0 },
-  formSub: { fontSize: 13, color: "#6b7280", margin: 0 },
-  label: {
-    display: "block",
-    fontSize: 12,
-    fontWeight: 600,
-    color: "#374151",
-    marginBottom: 4,
-    textTransform: "uppercase",
-    letterSpacing: "0.04em",
+  runningCard: {
+    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 20, padding: "40px 48px", maxWidth: 560, width: "100%",
+    backdropFilter: "blur(12px)",
   },
-  app: {
-    display: "flex",
-    flexDirection: "column",
-    height: "100vh",
-    background: "#0f172a",
-    color: "#e2e8f0",
+  runningTitle: {
+    fontSize: 24, fontWeight: 700, color: "#f1f5f9", marginBottom: 8,
   },
-  topBar: {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: "12px 20px",
-    background: "#1e293b",
-    borderBottom: "1px solid #334155",
-    flexShrink: 0,
+  runningSubtitle: {
+    fontSize: 14, color: "#94a3b8", marginBottom: 32, lineHeight: 1.6,
   },
-  topBarLeft: { display: "flex", alignItems: "center", gap: 10 },
-  topBarTitle: { fontSize: 16, fontWeight: 700 },
-  campaignId: {
-    fontSize: 12,
-    color: "#64748b",
-    background: "#0f172a",
-    padding: "2px 8px",
-    borderRadius: 100,
+  stageList: { display: "flex", flexDirection: "column", gap: 16 },
+  stageIcon: { fontSize: 22, width: 32, flexShrink: 0 },
+  stageInfo: { flex: 1 },
+  stageName: { fontSize: 14, fontWeight: 600, color: "#e2e8f0" },
+  stageDesc: { fontSize: 12, color: "#64748b", marginTop: 2 },
+
+  // Results
+  resultsPage: {
+    minHeight: "100vh", background: "#0a0a0f",
   },
-  topBarRight: { display: "flex", alignItems: "center", gap: 10 },
-  statusPill: {
-    fontSize: 12,
-    fontWeight: 500,
-    padding: "4px 10px",
-    borderRadius: 100,
+  resultsHero: {
+    background: "linear-gradient(180deg, rgba(124,58,237,0.08) 0%, transparent 100%)",
+    borderBottom: "1px solid rgba(255,255,255,0.06)",
+    padding: "24px 32px",
   },
-  content: {
-    display: "flex",
-    flex: 1,
-    overflow: "hidden",
+  resultsHeroInner: {
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    maxWidth: 1200, margin: "0 auto",
   },
-  sidebar: {
-    width: 280,
-    borderRight: "1px solid #1e293b",
-    display: "flex",
-    flexDirection: "column",
-    flexShrink: 0,
+  resultsTitle: { fontSize: 20, fontWeight: 700, color: "#f1f5f9" },
+  campaignIdTag: {
+    fontSize: 11, color: "#475569", marginTop: 3, fontFamily: "monospace",
+    letterSpacing: "0.05em",
   },
-  sidebarHeader: {
-    padding: "12px 16px",
-    fontSize: 11,
-    fontWeight: 600,
-    color: "#64748b",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    borderBottom: "1px solid #1e293b",
-  },
-  activityList: {
-    flex: 1,
-    overflowY: "auto",
-    padding: 12,
-    display: "flex",
-    flexDirection: "column",
-    gap: 8,
-  },
-  activityItem: {
-    fontSize: 12,
-  },
-  agentDot: {
-    display: "inline-block",
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-    marginRight: 6,
-  },
-  agentName: { fontWeight: 600, fontSize: 12 },
-  activityDesc: { color: "#64748b", fontSize: 11, marginTop: 2, marginLeft: 14 },
-  thoughtBubble: {
-    fontSize: 11,
-    color: "#94a3b8",
-    background: "#1e293b",
-    borderRadius: 6,
-    padding: "4px 8px",
-    borderLeft: "2px solid #334155",
-    marginLeft: 14,
-  },
-  liveTokens: {
-    background: "#1e293b",
-    borderRadius: 8,
-    padding: 10,
-    marginTop: 8,
-  },
-  liveIndicator: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: 10,
-    color: "#64748b",
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-  },
-  tokenText: {
-    fontSize: 10,
-    color: "#94a3b8",
-    fontFamily: "monospace",
-    lineHeight: 1.5,
-    overflowWrap: "break-word",
-  },
-  assetsFeed: {
-    flex: 1,
-    overflowY: "auto",
-    padding: 20,
-  },
-  assetsFeedHeader: {
-    fontSize: 11,
-    fontWeight: 600,
-    color: "#64748b",
-    textTransform: "uppercase",
-    letterSpacing: "0.08em",
-    marginBottom: 16,
-  },
-  assetsGrid: {
+  resultsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-    gap: 16,
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: 20,
+    maxWidth: 1200,
+    margin: "28px auto",
+    padding: "0 32px",
   },
-  assetCard: {
-    background: "#1e293b",
-    borderRadius: 12,
-    border: "1px solid",
-    padding: 16,
+  resultCard: {
+    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
+    borderRadius: 16, padding: 24,
   },
-  assetHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
+  cardHeader: { fontSize: 15, fontWeight: 700, color: "#e2e8f0", marginBottom: 16 },
+  cardRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  cardLabel: { fontSize: 12, color: "#64748b", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.04em" },
+  cardValue: { fontSize: 13, color: "#cbd5e1" },
+  cardText: { fontSize: 13, color: "#94a3b8", lineHeight: 1.6, marginTop: 12 },
+  badge: {
+    fontSize: 11, fontWeight: 700, padding: "3px 10px",
+    borderRadius: 20, textTransform: "uppercase" as const,
   },
-  assetType: {
-    fontSize: 10,
-    textTransform: "uppercase",
-    letterSpacing: "0.1em",
-    fontWeight: 700,
+  bigIdea: {
+    fontSize: 18, fontWeight: 600, color: "#a78bfa",
+    fontStyle: "italic", lineHeight: 1.5, marginBottom: 16,
   },
-  assetLabel: { fontSize: 12, color: "#94a3b8" },
-  assetImage: {
-    width: "100%",
-    borderRadius: 8,
-    marginBottom: 12,
+  copyGrid: { display: "flex", flexDirection: "column" as const, gap: 16 },
+  copyBlock: {},
+  copyLabel: { fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, marginBottom: 6 },
+  copyText: { fontSize: 14, color: "#cbd5e1", lineHeight: 1.6 },
+  expandBtn: {
+    background: "none", border: "none", color: "#64748b", fontSize: 13,
+    cursor: "pointer", padding: 0, marginBottom: 12,
   },
   jsonPre: {
-    fontSize: 10,
-    color: "#94a3b8",
-    fontFamily: "monospace",
-    overflowX: "auto",
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-all",
-    lineHeight: 1.5,
-    margin: 0,
+    fontSize: 11, color: "#64748b", background: "rgba(0,0,0,0.3)",
+    borderRadius: 8, padding: 16, overflowX: "auto" as const,
+    whiteSpace: "pre-wrap" as const, maxHeight: 400, overflowY: "auto" as const,
   },
-  briefRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-    gap: 8,
+
+  // Error
+  errorPage: {
+    minHeight: "100vh", display: "flex", alignItems: "center",
+    justifyContent: "center", background: "#0a0a0f",
   },
-  briefLabel: { fontSize: 10, color: "#64748b", flexShrink: 0, paddingTop: 2 },
-  briefValue: { fontSize: 12, textAlign: "right" as const },
-  statusBadge: {
-    fontSize: 10,
-    padding: "2px 8px",
-    borderRadius: 100,
-    fontWeight: 600,
+  errorCard: {
+    background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
+    borderRadius: 20, padding: 40, maxWidth: 480, textAlign: "center" as const,
   },
-  revisionNote: {
-    fontSize: 11,
-    color: "#fbbf24",
-    background: "#451a03",
-    borderRadius: 6,
-    padding: "6px 8px",
-    marginTop: 8,
-  },
-  scoreBox: {
-    background: "#0f172a",
-    borderRadius: 8,
-    padding: "8px 12px",
-    fontSize: 13,
-    marginBottom: 12,
-  },
-  musicCue: {
-    fontSize: 11,
-    color: "#a78bfa",
-    marginTop: 8,
-    background: "#1e1b4b",
-    borderRadius: 6,
-    padding: "4px 8px",
-  },
-  copyRow: { marginBottom: 8 },
-  copyKey: {
-    fontSize: 10,
-    color: "#64748b",
-    textTransform: "capitalize" as const,
-    marginBottom: 2,
-  },
-  copyVal: { fontSize: 12, lineHeight: 1.5 },
-  waitingMsg: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    color: "#64748b",
-    fontSize: 13,
-    padding: 20,
-  },
-  errorBox: {
-    background: "#450a0a",
-    border: "1px solid #991b1b",
-    borderRadius: 8,
-    padding: 12,
-    color: "#fca5a5",
-    fontSize: 13,
-    marginTop: 16,
-  },
-  modalOverlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.7)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1000,
-    padding: 20,
-  },
-  modal: {
-    background: "#1e293b",
-    borderRadius: 16,
-    border: "1px solid #334155",
-    padding: 24,
-    width: "100%",
-    maxWidth: 600,
-    maxHeight: "80vh",
-    overflowY: "auto",
-  },
-  modalHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    marginBottom: 16,
-  },
-  modalIcon: { fontSize: 24 },
-  modalTitle: { fontSize: 16, fontWeight: 700 },
-  modalSub: { fontSize: 12, color: "#64748b" },
-  modalWarning: {
-    background: "#450a0a",
-    border: "1px solid #991b1b",
-    borderRadius: 8,
-    padding: "8px 12px",
-    fontSize: 12,
-    color: "#fca5a5",
-    marginBottom: 16,
-  },
-  modalSectionLabel: {
-    fontSize: 11,
-    color: "#64748b",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.06em",
-    marginBottom: 8,
-  },
-  notesInput: {
-    width: "100%",
-    background: "#0f172a",
-    border: "1px solid #334155",
-    borderRadius: 8,
-    padding: "8px 12px",
-    color: "#e2e8f0",
-    fontSize: 13,
-    fontFamily: "inherit",
-    resize: "vertical" as const,
-    boxSizing: "border-box",
-    marginBottom: 16,
-  },
-  gateButtons: {
-    display: "flex",
-    gap: 10,
-  },
+  errorTitle: { fontSize: 20, fontWeight: 700, color: "#fca5a5", marginBottom: 12 },
+  errorMsg: { fontSize: 14, color: "#f87171", lineHeight: 1.6 },
+  authHint: { marginTop: 16, fontSize: 13, color: "#94a3b8", lineHeight: 1.6, textAlign: "left" as const },
+  authCmd: { marginTop: 8, background: "rgba(0,0,0,0.4)", padding: "10px 14px", borderRadius: 8, fontSize: 12, color: "#7dd3fc", fontFamily: "monospace" },
 };

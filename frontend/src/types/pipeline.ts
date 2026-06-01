@@ -1,11 +1,15 @@
-// CampaignOS — TypeScript types for all pipeline events and assets
+// CampaignOS — TypeScript types for harness pipeline
 
 export type AgentName =
   | "briefing_agent"
-  | "strategy_agent"
-  | "kv_agent"
+  | "culture_analyst"
+  | "creative_director"
+  | "copy_agent"
+  | "kv_generator_1"
+  | "kv_generator_2"
+  | "kv_ranker"
+  | "channel_router"
   | "content_agent"
-  | "execution_agent"
   | "performance_agent"
   | "pipeline";
 
@@ -19,122 +23,41 @@ export type AssetType =
   | "execution_report"
   | "performance_report";
 
-export type GateName =
-  | "approve_brief"
-  | "approve_strategy"
-  | "select_kv"
-  | "approve_content";
+// ── Harness API types ────────────────────────────────────────
 
-// ── SSE Event types ─────────────────────────────────────────
-
-export interface PipelineStartEvent {
-  type: "pipeline_start";
-  campaign_id: string;
-  brief: Record<string, unknown>;
-  ts: string;
+export interface HarnessAudience {
+  segment: string;
+  location: string;
+  age_range: string;
+  gender: string;
+  interests?: string;
 }
 
-export interface AgentStartEvent {
-  type: "agent_start";
-  agent: AgentName;
-  description: string;
-  ts: string;
-}
-
-export interface AgentDoneEvent {
-  type: "agent_done";
-  agent: AgentName;
-  ts: string;
-}
-
-export interface TokenEvent {
-  type: "token";
-  agent: AgentName;
-  text: string;
-  ts: string;
-}
-
-export interface ThinkingEvent {
-  type: "thinking";
-  agent: AgentName;
-  thought: string;
-  ts: string;
-}
-
-export interface AssetGeneratingEvent {
-  type: "asset_generating";
-  agent: AgentName;
-  asset_type: AssetType;
-  label: string;
-  ts: string;
-}
-
-export interface AssetReadyEvent {
-  type: "asset_ready";
-  agent: AgentName;
-  asset_type: AssetType;
-  label: string;
-  payload: unknown;
-  url?: string;
-  ts: string;
-}
-
-export interface HumanGateEvent {
-  type: "human_gate";
-  gate: GateName;
-  data: Record<string, unknown>;
-  options: string[];
-  ts: string;
-}
-
-export interface GateResumedEvent {
-  type: "gate_resumed";
-  gate: GateName;
-  decision: string;
-  ts: string;
-}
-
-export interface ErrorEvent {
-  type: "error";
-  agent: AgentName;
-  message: string;
-  recoverable: boolean;
-  ts: string;
-}
-
-export interface DoneEvent {
-  type: "done";
-  campaign_id: string;
-  report: Record<string, unknown>;
-  ts: string;
-}
-
-export type PipelineEvent =
-  | PipelineStartEvent
-  | AgentStartEvent
-  | AgentDoneEvent
-  | TokenEvent
-  | ThinkingEvent
-  | AssetGeneratingEvent
-  | AssetReadyEvent
-  | HumanGateEvent
-  | GateResumedEvent
-  | ErrorEvent
-  | DoneEvent;
-
-// ── Domain types ────────────────────────────────────────────
-
-export interface CampaignBrief {
+export interface HarnessBriefRequest {
+  campaign_name: string;
+  brand: string;
   goal: string;
+  budget: string;
+  kpis: string;
   product: string;
+  product_category: string;
   fan_truth: string;
-  kpis: string[];
   channels: string[];
-  budget: number;
-  audience: string;
-  timing?: { start_date?: string; end_date?: string };
-  additional_notes?: string;
+  market: string;
+  season: string;
+  moment_type: string;
+  audience: HarnessAudience;
+  tone: string;
 }
+
+export interface HarnessPipelineResponse {
+  status: string;
+  campaign_id: string;
+  pipeline_output: Record<string, unknown>;
+  processing_time_ms: number;
+}
+
+// ── Pipeline UI state ────────────────────────────────────────
 
 export interface KVConcept {
   concept_id: "A" | "B" | "C";
@@ -153,33 +76,11 @@ export interface KVConcept {
     photography_style: string;
     motion_style: string;
   };
-  reel_script_10s: {
-    scenes: Array<{
-      scene_number: number;
-      duration: string;
-      visual: string;
-      action: string;
-      text_on_screen: string;
-      vo_line: string;
-    }>;
-    music_cue: string;
-    vo_direction: string;
-    end_frame: { super: string; cta: string };
-  };
 }
 
 export interface PipelineState {
   campaign_id: string | null;
-  status:
-    | "idle"
-    | "running"
-    | "waiting_for_approval"
-    | "done"
-    | "error";
-  current_agent: AgentName | null;
-  events: PipelineEvent[];
-  assets: AssetReadyEvent[];
-  pending_gate: HumanGateEvent | null;
-  live_tokens: Record<AgentName, string>;
+  status: "idle" | "running" | "done" | "error";
+  pipeline_output: Record<string, unknown> | null;
   error: string | null;
 }

@@ -1,169 +1,64 @@
-/**
- * CampaignOS — usePipeline hook
- * Manages SSE connection, pipeline state, and approval submissions.
- * This single hook drives the entire live campaign UI.
- */
-import { useState, useRef, useCallback } from "react";
-import type {
-  PipelineState,
-  PipelineEvent,
-  AssetReadyEvent,
-  HumanGateEvent,
-  AgentName,
-  CampaignBrief,
-} from "../types/pipeline";
+import { useState, useCallback } from "react";
+import type { PipelineState, HarnessBriefRequest } from "../types/pipeline";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 const INITIAL_STATE: PipelineState = {
   campaign_id: null,
   status: "idle",
-  current_agent: null,
-  events: [],
-  assets: [],
-  pending_gate: null,
-  live_tokens: {} as Record<AgentName, string>,
+  pipeline_output: null,
   error: null,
 };
 
 export function usePipeline() {
   const [state, setState] = useState<PipelineState>(INITIAL_STATE);
-  const esRef = useRef<EventSource | null>(null);
 
-  // ── Start a new campaign ──────────────────────────────────
-  const startCampaign = useCallback(async (brief: CampaignBrief) => {
-    // Reset state
+  const startCampaign = useCallback(async (brief: HarnessBriefRequest) => {
     setState({ ...INITIAL_STATE, status: "running" });
-    esRef.current?.close();
 
-    // POST to start pipeline
-    const res = await fetch(`${API_BASE}/campaign/start`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(brief),
-    });
-    if (!res.ok) throw new Error(`Failed to start campaign: ${res.statusText}`);
-    const { campaign_id } = await res.json();
-
-    setState((s) => ({ ...s, campaign_id }));
-
-    // Connect SSE stream
-    const es = new EventSource(`${API_BASE}/campaign/${campaign_id}/stream`);
-    esRef.current = es;
-
-    es.onmessage = (e) => {
-      const event = JSON.parse(e.data) as PipelineEvent;
-      handleEvent(event, campaign_id);
-    };
-
-    es.onerror = () => {
-      setState((s) => ({
-        ...s,
-        status: "error",
-        error: "Lost connection to pipeline. Check backend.",
-      }));
-      es.close();
-    };
-  }, []);
-
-  // ── Handle each SSE event ─────────────────────────────────
-  const handleEvent = useCallback(
-    (event: PipelineEvent, _campaign_id: string) => {
-      setState((s) => {
-        const next = { ...s, events: [...s.events, event] };
-
-        switch (event.type) {
-          case "agent_start":
-            next.current_agent = event.agent;
-            // Clear token buffer for this agent
-            next.live_tokens = { ...s.live_tokens, [event.agent]: "" };
-            break;
-
-          case "token":
-            // Accumulate streaming tokens per agent
-            next.live_tokens = {
-              ...s.live_tokens,
-              [event.agent]: (s.live_tokens[event.agent] || "") + event.text,
-            };
-            break;
-
-          case "agent_done":
-            // Clear token buffer when agent finishes
-            next.live_tokens = { ...s.live_tokens, [event.agent]: "" };
-            break;
-
-          case "asset_ready":
-            next.assets = [...s.assets, event as AssetReadyEvent];
-            break;
-
-          case "human_gate":
-            next.status = "waiting_for_approval";
-            next.pending_gate = event as HumanGateEvent;
-            // Close SSE — pipeline is paused
-            esRef.current?.close();
-            break;
-
-          case "gate_resumed":
-            next.status = "running";
-            next.pending_gate = null;
-            break;
-
-          case "error":
-            if (!event.recoverable) {
-              next.status = "error";
-              next.error = event.message;
-            }
-            break;
-
-          case "done":
-            next.status = "done";
-            next.current_agent = null;
-            esRef.current?.close();
-            break;
-        }
-
-        return next;
-      });
-    },
-    []
-  );
-
-  // ── Submit approval decision ──────────────────────────────
-  const approve = useCallback(
-    async (decision: string, notes?: string, selected_index?: number) => {
-      const { campaign_id, pending_gate } = state;
-      if (!campaign_id || !pending_gate) return;
-
-      await fetch(`${API_BASE}/campaign/${campaign_id}/approve`, {
+    try {
+      const res = await fetch(`${API_BASE}/brief-full`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          gate: pending_gate.gate,
-          decision,
-          notes,
-          selected_index,
-        }),
+        body: JSON.stringify(brief),
       });
 
-      // Reconnect SSE — pipeline will resume within 5s
-      setState((s) => ({ ...s, status: "running", pending_gate: null }));
-      const es = new EventSource(
-        `${API_BASE}/campaign/${campaign_id}/stream`
-      );
-      esRef.current = es;
-      es.onmessage = (e) => {
-        const event = JSON.parse(e.data) as PipelineEvent;
-        handleEvent(event, campaign_id);
-      };
-    },
-    [state, handleEvent]
-  );
+      if (!res.ok) {
+        const text = await res.text();
+        let msg = text;
+        try {
+          const json = JSON.parse(text);
+          if (json.detail && Array.isArray(json.detail)) {
+            msg = json.detail.map((e: any) => e.msg).join(", ");
+          } else if (json.detail) {
+            msg = json.detail;
+          }
+        } catch {}
+        setState((s) => ({ ...s, status: "error", error: msg }));
+        return;
+      }
 
-  // ── Reset ─────────────────────────────────────────────────
-  const reset = useCallback(() => {
-    esRef.current?.close();
-    setState(INITIAL_STATE);
+      const result = await res.json();
+      // Merge all stages into pipeline_output for the UI
+      const output = {
+        ...(result.machine_brief ?? {}),
+        creative_strategy: result.creative_strategy,
+        campaign_copy:     result.campaign_copy,
+        audience_insights: result.machine_brief?.audience_insights,
+      };
+      setState({
+        campaign_id: result.campaign_id ?? null,
+        status: "done",
+        pipeline_output: Object.keys(output).length > 0 ? output : result,
+        error: null,
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Connection failed — is the harness running?";
+      setState((s) => ({ ...s, status: "error", error: msg }));
+    }
   }, []);
 
-  return { state, startCampaign, approve, reset };
+  const reset = useCallback(() => setState(INITIAL_STATE), []);
+
+  return { state, startCampaign, reset };
 }

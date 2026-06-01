@@ -1,0 +1,17 @@
+services:
+  pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: campaignos-pgvector
+    environment:
+      POSTGRES_USER: campaignos
+      POSTGRES_PASSWORD: campaignos
+      POSTGRES_DB: marketing
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:

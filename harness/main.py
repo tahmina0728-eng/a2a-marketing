@@ -12,16 +12,24 @@ Authentication: --no-allow-unauthenticated on Cloud Run.
 Callers must pass: Authorization: Bearer $(gcloud auth print-identity-token)
 """
 
+import os
 import uuid
 import structlog
 from contextlib import asynccontextmanager
+
+# Load .env early so GROQ_API_KEY is in os.environ before agents.py imports
+from dotenv import load_dotenv
+load_dotenv()
+if os.getenv("GROQ_API_KEY"):
+    os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.models import BriefRequest
 from app.pipeline import briefing_pipeline, root_agent
-from app.runner import run_agent
+from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq
 
 logger   = structlog.get_logger()
 settings = get_settings()
@@ -58,6 +66,30 @@ app = FastAPI(
     version     = "3.1.0",
     lifespan    = lifespan,
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.middleware("http")
+async def cors_middleware(request: Request, call_next):
+    if request.method == "OPTIONS":
+        return JSONResponse(
+            content={},
+            headers={
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+                "Access-Control-Allow-Headers": "*",
+                "Access-Control-Max-Age": "86400",
+            },
+        )
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
 
 
 # ── ROUTES ─────────────────────────────────────────────────────────────────
@@ -134,6 +166,55 @@ async def process_brief(brief: BriefRequest):
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@app.options("/brief-full")
+async def brief_full_preflight():
+    return JSONResponse(content={}, headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+    })
+
+
+@app.post("/brief-full")
+async def run_brief_full(brief: BriefRequest):
+    """
+    Full Groq-powered pipeline: Brief → Strategy → Copy.
+    Returns machine_brief + creative_strategy + campaign_copy in one call.
+    """
+    campaign_id = (
+        f"{brief.campaign_name.lower().replace(' ', '-')[:25]}"
+        f"-{str(uuid.uuid4())[:8]}"
+    )
+    try:
+        # Stage 1: Brief validation
+        machine_brief, ms1 = await run_agent(
+            agent       = briefing_pipeline,
+            input_data  = brief.model_dump(),
+            campaign_id = campaign_id,
+        )
+        machine_brief.setdefault("campaign_id", campaign_id)
+
+        # Stage 2: Creative strategy
+        brand_guidelines = machine_brief.pop("brand_guidelines", "")
+        brand_locks      = machine_brief.pop("brand_locks_json", "{}")
+        strategy = await run_strategy_with_groq(machine_brief, brand_guidelines, brand_locks)
+
+        # Stage 3: Campaign copy
+        copy = await run_copy_with_groq(machine_brief, strategy, brand_locks)
+
+        return {
+            "status":            "ok",
+            "campaign_id":       campaign_id,
+            "machine_brief":     machine_brief,
+            "creative_strategy": strategy,
+            "campaign_copy":     copy,
+            "processing_time_ms": ms1,
+        }
+    except Exception as e:
+        logger.error("brief_full_error", error=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/pipeline")
 async def run_pipeline(brief: BriefRequest):
     """
@@ -194,172 +275,3 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
-logger   = structlog.get_logger()
-settings = get_settings()
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Pre-warm all agents and the Search App client on startup."""
-    logger.info(
-        "campaignos_adk_startup",
-        environment     = settings.environment,
-        model_reasoning = settings.gemini_model_reasoning,
-        model_image     = settings.gemini_model_image,
-        search_engine   = settings.search_engine_id,
-    )
-    try:
-        from app.search_client import get_search_client
-        get_search_client()
-        logger.info("agents_and_search_client_ready")
-    except Exception as e:
-        logger.warning("prewarm_failed", error=str(e))
-    yield
-    logger.info("campaignos_adk_shutdown")
-
-
-app = FastAPI(
-    title       = "CampaignOS — ADK Pipeline",
-    description = (
-        "CampaignOS powered by Google ADK 2.0 + Vertex AI. "
-        "Workflow DAG campaign production pipeline with HITL gates."
-    ),
-    version     = "3.0.0",
-    lifespan    = lifespan,
-)
-
-
-# ── ROUTES ─────────────────────────────────────────────────────────────────
-
-@app.get("/health")
-def health():
-    """Liveness probe — returns 200 while server is running."""
-    return {
-        "status":          "healthy",
-        "service":         settings.service_name,
-        "version":         "3.0.0",
-        "framework":       "Google ADK 2.0 Workflow",
-        "model_reasoning": settings.gemini_model_reasoning,
-        "model_image":     settings.gemini_model_image,
-        "search_engine":   settings.search_engine_id,
-        "environment":     settings.environment,
-    }
-
-
-@app.get("/readiness")
-def readiness():
-    """Readiness probe — checks pipeline and search client are available."""
-    from app.search_client import _client as _search_client
-
-    ready = all([
-        root_agent     is not None,
-        briefing_agent is not None,
-    ])
-    return {
-        "ready":           ready,
-        "briefing_agent":  briefing_agent is not None,
-        "pipeline":        root_agent     is not None,
-        "search_client":   _search_client is not None,
-    }
-
-
-@app.post("/brief")
-async def process_brief(brief: BriefRequest):
-    """
-    Run the Briefing Agent on a campaign brief.
-
-    The agent will:
-    1. Search brand guidelines (GCS datastore)
-    2. Search Fan Truth examples (BigQuery datastore)
-    3. Search campaign benchmarks (BigQuery datastore)
-    4. Search channel benchmarks (BigQuery datastore)
-    5. Search moment type rules (GCS datastore)
-    6. Get canonical brand locks
-    7. Return validated machine_brief.json
-    8. Save to GCS + log to BigQuery
-
-    Returns machine_brief.json ready for the Strategy Agent.
-    """
-    campaign_id = (
-        f"{brief.campaign_name.lower().replace(' ', '-')[:25]}"
-        f"-{str(uuid.uuid4())[:8]}"
-    )
-    try:
-        result, ms   = await run_agent(
-            agent       = briefing_agent,
-            input_data  = brief.model_dump(),
-            campaign_id = campaign_id,
-        )
-        return {
-            "status":             "ok",
-            "campaign_id":        campaign_id,
-            "machine_brief":      result,
-            "processing_time_ms": ms,
-        }
-    except ValueError as e:
-        logger.error("brief_validation_error", error=str(e))
-        raise HTTPException(status_code=422, detail=str(e))
-    except RuntimeError as e:
-        logger.error("brief_runtime_error", error=str(e))
-        raise HTTPException(status_code=503, detail=str(e))
-    except Exception as e:
-        logger.error("brief_unexpected_error", error=str(e))
-        raise HTTPException(status_code=500, detail="Internal server error")
-
-
-@app.post("/pipeline")
-async def run_pipeline(brief: BriefRequest):
-    """
-    Run the full CampaignOS Workflow DAG pipeline.
-
-    Runs the complete ADK 2.0 Workflow:
-    Briefing → HITL Approval → Strategy → KV fan-out (x4) → KV Ranker
-    → HITL KV Selection → Channel Router → Content → Execution
-    → Aggregation → Performance
-
-    HITL gates require VertexAiSessionService for cross-request persistence.
-    """
-    campaign_id = (
-        f"pipeline-{brief.campaign_name.lower().replace(' ', '-')[:20]}"
-        f"-{str(uuid.uuid4())[:6]}"
-    )
-    try:
-        result, ms   = await run_agent(
-            agent       = root_agent,
-            input_data  = brief.model_dump(),
-            campaign_id = campaign_id,
-        )
-        return {
-            "status":             "ok",
-            "campaign_id":        campaign_id,
-            "pipeline_output":    result,
-            "processing_time_ms": ms,
-        }
-    except Exception as e:
-        logger.error("pipeline_error", campaign_id=campaign_id, error=str(e))
-        raise HTTPException(status_code=500, detail=f"Pipeline error: {e}")
-
-
-@app.post("/refresh")
-async def refresh():
-    """
-    Re-initialise all agents and the Search App client.
-    Call after updating brand guidelines, adding new CSV data,
-    or changing Search App configuration.
-    """
-    import app.search_client as sc
-    sc._client = None
-    try:
-        sc.get_search_client()
-        return {"status": "refreshed", "search_client": "re-initialised"}
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=f"Refresh failed: {e}")
-
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.error("unhandled_exception", path=request.url.path, error=str(exc))
-    return JSONResponse(
-        status_code=500,
-        content={"status": "error", "detail": "Internal server error"},
-    )
