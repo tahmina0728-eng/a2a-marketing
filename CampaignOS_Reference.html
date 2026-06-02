@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CampaignOS — Complete Reference</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a2e; background: #fff; line-height: 1.6; }
+  @media print {
+    .page-break { page-break-before: always; }
+    body { font-size: 11px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 15px; }
+  }
+
+  /* Cover */
+  .cover { background: linear-gradient(135deg, #0a0a0f 0%, #1e1b4b 50%, #0a0a0f 100%);
+    color: white; padding: 80px 60px; min-height: 100vh; display: flex;
+    flex-direction: column; justify-content: center; }
+  .cover-logo { font-size: 48px; margin-bottom: 16px; }
+  .cover-title { font-size: 42px; font-weight: 800; color: #a78bfa; margin-bottom: 8px; }
+  .cover-sub { font-size: 20px; color: #94a3b8; margin-bottom: 48px; }
+  .cover-meta { display: flex; gap: 32px; flex-wrap: wrap; }
+  .cover-badge { background: rgba(124,58,237,0.2); border: 1px solid rgba(124,58,237,0.4);
+    border-radius: 8px; padding: 12px 20px; }
+  .cover-badge-label { font-size: 10px; color: #7c3aed; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+  .cover-badge-value { font-size: 14px; color: #e2e8f0; font-weight: 600; margin-top: 2px; }
+
+  /* Sections */
+  .section { padding: 40px 60px; border-bottom: 1px solid #e5e7eb; }
+  .section:last-child { border-bottom: none; }
+  h1 { font-size: 28px; font-weight: 800; color: #1e1b4b; margin-bottom: 8px; }
+  h2 { font-size: 18px; font-weight: 700; color: #1e1b4b; margin: 28px 0 12px;
+    padding-left: 12px; border-left: 4px solid #7c3aed; }
+  h3 { font-size: 14px; font-weight: 700; color: #374151; margin: 20px 0 8px; }
+  p { color: #4b5563; margin-bottom: 10px; }
+  .section-intro { font-size: 14px; color: #6b7280; margin-bottom: 24px;
+    padding: 12px 16px; background: #f9fafb; border-radius: 8px; border-left: 3px solid #7c3aed; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 12px; }
+  th { background: #1e1b4b; color: white; padding: 8px 12px; text-align: left; font-weight: 600; }
+  td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #f9fafb; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; }
+  .tag-green { background: #d1fae5; color: #065f46; }
+  .tag-blue  { background: #dbeafe; color: #1e40af; }
+  .tag-purple{ background: #ede9fe; color: #5b21b6; }
+  .tag-amber { background: #fef3c7; color: #92400e; }
+  .tag-red   { background: #fee2e2; color: #991b1b; }
+
+  /* Code blocks */
+  pre { background: #1e1b4b; color: #a78bfa; padding: 16px 20px; border-radius: 8px;
+    font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 11px; margin: 12px 0;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all; }
+  code { background: #ede9fe; color: #5b21b6; padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+
+  /* Cards */
+  .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin: 16px 0; }
+  .card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }
+  .card-title { font-size: 12px; font-weight: 700; color: #7c3aed; text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 8px; }
+  .card-body { font-size: 12px; color: #374151; line-height: 1.6; }
+
+  /* Architecture diagram */
+  .arch { font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 11px;
+    background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px;
+    padding: 20px; color: #334155; line-height: 1.8; }
+
+  /* Flow steps */
+  .flow { display: flex; flex-direction: column; gap: 0; margin: 16px 0; }
+  .flow-step { display: flex; align-items: flex-start; gap: 16px; padding: 12px 0; }
+  .flow-step:not(:last-child) { border-bottom: 1px solid #e5e7eb; }
+  .flow-num { min-width: 28px; height: 28px; border-radius: 50%; background: #7c3aed;
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .flow-content h4 { font-size: 13px; font-weight: 700; color: #1e1b4b; margin-bottom: 3px; }
+  .flow-content p { font-size: 12px; color: #6b7280; margin: 0; }
+
+  /* Status indicators */
+  .status-row { display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    border-bottom: 1px solid #f3f4f6; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green { background: #10b981; }
+  .dot-amber { background: #f59e0b; }
+  .dot-blue  { background: #3b82f6; }
+  .dot-purple{ background: #7c3aed; }
+  .status-label { font-size: 12px; color: #374151; font-weight: 600; min-width: 160px; }
+  .status-val { font-size: 12px; color: #6b7280; }
+</style>
+</head>
+<body>
+
+<!-- ── COVER ── -->
+<div class="cover">
+  <div class="cover-logo">🚀</div>
+  <div class="cover-title">CampaignOS</div>
+  <div class="cover-sub">AI-Powered Campaign Generation Platform — Complete Reference</div>
+  <div class="cover-meta">
+    <div class="cover-badge">
+      <div class="cover-badge-label">AI Framework</div>
+      <div class="cover-badge-value">Google ADK 2.0 + Groq Llama 3.3</div>
+    </div>
+    <div class="cover-badge">
+      <div class="cover-badge-label">Data Sources</div>
+      <div class="cover-badge-value">BigQuery · pgvector · GCS · Vertex AI Search</div>
+    </div>
+    <div class="cover-badge">
+      <div class="cover-badge-label">Brands</div>
+      <div class="cover-badge-value">Rnorr · McDonald's</div>
+    </div>
+    <div class="cover-badge">
+      <div class="cover-badge-label">Repository</div>
+      <div class="cover-badge-value">github.com/tahmina0728-eng/a2a-marketing</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 1. SYSTEM OVERVIEW ── -->
+<div class="section page-break">
+  <h1>1. System Overview</h1>
+  <p class="section-intro">CampaignOS is a multi-agent AI pipeline that takes a marketing brief (selected via a 7-step wizard UI) and produces a validated brief, creative strategy, and campaign copy — all grounded in real brand guidelines, customer data, and performance benchmarks.</p>
+
+  <h2>What it does</h2>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">Input</div>
+      <div class="card-body">Marketer selects brand, goal, product, fan truth, audience, channels and budget via a click-based wizard (no typing required)</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Brief Validation</div>
+      <div class="card-body">AI validates the brief against real brand guidelines, scores the Fan Truth (0-100), flags unrealistic KPIs, checks audience vs CDP data</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Creative Strategy</div>
+      <div class="card-body">Generates the Big Idea, hero message, messaging pillars, channel priorities and budget allocation based on validated brief</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Campaign Copy</div>
+      <div class="card-body">Writes short (OOH/KV), medium (social), long (press/editorial) copy variants plus CTA, Instagram caption, and TikTok hook</div>
+    </div>
+  </div>
+
+  <h2>Technology Stack</h2>
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr>
+    <tr><td>Frontend</td><td>React 18 + TypeScript + Vite</td><td>7-step wizard UI, results display</td></tr>
+    <tr><td>Backend</td><td>FastAPI + Google ADK 2.0</td><td>API server, agent orchestration</td></tr>
+    <tr><td>LLM</td><td>Groq Llama 3.3 70B (via LiteLLM)</td><td>All 3 AI agents (free tier, 14,400 req/day)</td></tr>
+    <tr><td>Vector DB</td><td>PostgreSQL + pgvector (Docker)</td><td>CDP customer segments, benchmark embeddings, RAG chunks</td></tr>
+    <tr><td>Search</td><td>Vertex AI Search (Discovery Engine)</td><td>Semantic search over brand guidelines</td></tr>
+    <tr><td>Storage</td><td>Google Cloud Storage</td><td>Brand assets, logos, fonts, product images</td></tr>
+    <tr><td>Database</td><td>BigQuery</td><td>Fan truths, benchmarks, historical campaigns, Kaggle CDP</td></tr>
+    <tr><td>Package manager</td><td>uv (Python) + npm (Node)</td><td>Dependency management</td></tr>
+  </table>
+</div>
+
+<!-- ── 2. ARCHITECTURE ── -->
+<div class="section page-break">
+  <h1>2. Architecture & Data Flow</h1>
+
+  <h2>Full Pipeline Flow</h2>
+  <div class="arch">
+USER WIZARD (React UI)
+  └── POST /brief-full
+        │
+        ├── 1. load_brand_context  [FUNCTION NODE — zero LLM cost]
+        │     ├── GCS Bucket        → logos, fonts, product images (BRAND_ASSETS_MODE=gcs)
+        │     ├── Vertex AI Search  → brand guidelines text (SEARCH_MODE=live)
+        │     ├── pgvector          → fan truth benchmarks, channel benchmarks
+        │     └── pgvector CDP      → Kaggle customer segments (2,216 real customers)
+        │
+        ├── 2. Briefing Agent  [Groq Llama 3.3 70B]
+        │     Input:  Brief + all context from load_brand_context
+        │     Output: MachineBrief JSON
+        │       ├── Fan Truth score (Specific/Shared/Special, 0-100)
+        │       ├── KPI flags (OK / AMBITIOUS / UNREALISTIC)
+        │       ├── Brand locks applied
+        │       ├── Brand warnings
+        │       └── Status (READY / NEEDS_REVIEW / INCOMPLETE)
+        │
+        ├── 3. Strategy Agent  [Groq Llama 3.3 70B]
+        │     Input:  MachineBrief + brand guidelines
+        │     Output: CreativeStrategy JSON
+        │       ├── Hero message (≤8 words)
+        │       ├── Strategic framework (2-3 sentences)
+        │       ├── Messaging pillars (3-4 key messages)
+        │       ├── Channel priorities (ranked 1-10)
+        │       └── Budget allocation per channel
+        │
+        └── 4. Copy Agent  [Groq Llama 3.3 70B]
+              Input:  MachineBrief + CreativeStrategy + brand locks
+              Output: CampaignCopy JSON
+                ├── Short copy: headline ≤6 words (for OOH/KV)
+                ├── Medium copy: headline + subline (for social/display)
+                ├── Long copy: headline + body ≤60 words (for press)
+                ├── CTA: ≤3 words, verb-led
+                ├── Instagram caption with hashtags
+                └── TikTok hook (first 3 seconds)
+  </div>
+
+  <h2>Data Sources Architecture</h2>
+  <table>
+    <tr><th>Data Source</th><th>What it stores</th><th>How it's queried</th><th>Used for</th></tr>
+    <tr>
+      <td><strong>GCS Bucket</strong><br><code>gs://dauntless-karma-497108-b0-campaignos</code></td>
+      <td>Brand guidelines (.txt), logos, product images, fonts, banners</td>
+      <td>Direct GCS SDK download</td>
+      <td>Brand assets for agents + KV generation</td>
+    </tr>
+    <tr>
+      <td><strong>Vertex AI Search</strong><br><code>campaignos-briefing-search</code></td>
+      <td>Indexed brand guidelines text + asset manifests</td>
+      <td>Semantic search queries</td>
+      <td>brand_rules_summary, fan_truth_summary, moment type rules</td>
+    </tr>
+    <tr>
+      <td><strong>pgvector (Docker port 5433)</strong></td>
+      <td>fan_truths, channel_benchmarks, campaign_benchmarks, customer_segments, customer_insights (2,216 Kaggle rows), brand_guidelines_chunks</td>
+      <td>Vector cosine similarity search (384-dim embeddings)</td>
+      <td>Fan Truth scoring, KPI benchmarks, CDP audience validation</td>
+    </tr>
+    <tr>
+      <td><strong>BigQuery</strong><br><code>briefing_agent</code> dataset</td>
+      <td>fan_truth_library, channel_benchmarks, historical_campaigns, customer_personality (Kaggle raw)</td>
+      <td>SQL queries (index_bigquery.py pulls into pgvector)</td>
+      <td>Source of truth for benchmark data, Kaggle CDP raw data</td>
+    </tr>
+  </table>
+</div>
+
+<!-- ── 3. DATA SOURCES ── -->
+<div class="section page-break">
+  <h1>3. Data Sources Detail</h1>
+
+  <h2>Kaggle Customer Personality Analysis (CDP)</h2>
+  <p>Dataset: <code>imakash3011/customer-personality-analysis</code> — 2,240 real customers, 29 columns</p>
+  <table>
+    <tr><th>Column</th><th>Type</th><th>Used for</th></tr>
+    <tr><td>Income</td><td>Numeric</td><td>Income band segmentation, KPI budget validation</td></tr>
+    <tr><td>MntMeatProducts</td><td>Numeric</td><td>Maps to Rnorr brand (home cooks spend on meat)</td></tr>
+    <tr><td>NumDealsPurchases</td><td>Integer</td><td>Price sensitivity signal → Fan Truth Shared score</td></tr>
+    <tr><td>NumWebVisitsMonth</td><td>Integer</td><td>Digital channel preference → channel validation</td></tr>
+    <tr><td>Kidhome / Teenhome</td><td>Integer</td><td>Family segment → audience matching</td></tr>
+    <tr><td>Year_Birth</td><td>Integer</td><td>Age calculation → age range matching</td></tr>
+    <tr><td>MntWines</td><td>Numeric</td><td>Premium segment identification</td></tr>
+    <tr><td>AcceptedCmp1-5</td><td>Binary</td><td>Campaign responsiveness signals</td></tr>
+  </table>
+  <p>The <code>seed_kaggle_cdp.py</code> script converts each row into a natural language CRM note, embeds it with SentenceTransformer (all-MiniLM-L6-v2, 384 dimensions), and stores in pgvector for semantic search.</p>
+
+  <h2>Brand Guidelines (Rnorr)</h2>
+  <p>Stored at: <code>gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Guidelines/brand_guidelines.md</code></p>
+  <p>Contains: Brand promise, visual identity, typography (Antonio / Rubik fonts), colour palette (Rnorr green #00AA00), voice guidelines, channel-specific rules, forbidden treatments, YAML brand locks block.</p>
+
+  <h2>pgvector Tables</h2>
+  <table>
+    <tr><th>Table</th><th>Rows</th><th>Content</th></tr>
+    <tr><td>customer_insights</td><td>2,216</td><td>Real Kaggle customers with CRM notes + embeddings</td></tr>
+    <tr><td>customer_segments</td><td>7</td><td>Synthetic segment profiles (Rnorr + McDonald's)</td></tr>
+    <tr><td>fan_truths</td><td>14</td><td>Validated fan truth statements with scores</td></tr>
+    <tr><td>channel_benchmarks</td><td>6</td><td>CTR, CPM, engagement per channel (UK)</td></tr>
+    <tr><td>campaign_benchmarks</td><td>4</td><td>Historical FMCG campaign performance</td></tr>
+    <tr><td>brand_guidelines_chunks</td><td>~30</td><td>GCS guidelines chunked into ~500-char RAG segments</td></tr>
+  </table>
+</div>
+
+<!-- ── 4. PIPELINE OUTPUT EXPLAINED ── -->
+<div class="section page-break">
+  <h1>4. Pipeline Output Explained</h1>
+  <p class="section-intro">Example output from "Rnorr Spicy" campaign — families 35-44, Instagram + TikTok, £500K budget, Summer</p>
+
+  <h2>Brief Validation Fields</h2>
+  <table>
+    <tr><th>Field</th><th>Value</th><th>How generated</th></tr>
+    <tr><td>status</td><td><span class="tag tag-amber">NEEDS_REVIEW</span></td><td>Fan truth PASS but CTR is AMBITIOUS → review required</td></tr>
+    <tr><td>fan_truth.specific</td><td>80/100</td><td>Groq scored: "shortcut that feels like cheating" = clear, named moment</td></tr>
+    <tr><td>fan_truth.shared</td><td>70/100</td><td>CDP data: 4.0 deal purchases/yr = moderate price sensitivity, convenience resonates</td></tr>
+    <tr><td>fan_truth.special</td><td>90/100</td><td>Emotionally powerful, brand-positive, memorable</td></tr>
+    <tr><td>fan_truth.overall</td><td>80/100 PASS</td><td>Average of three dimensions ≥ 70</td></tr>
+    <tr><td>kpis[CTR].flag</td><td><span class="tag tag-amber">AMBITIOUS</span></td><td>pgvector channel_benchmarks: typical CTR = 0.5-2%, target is 2.5%</td></tr>
+    <tr><td>brand_locks_applied</td><td>4 locks</td><td>Parsed from YAML block in Rnorr brand_guidelines.md via Vertex AI Search</td></tr>
+    <tr><td>audience_insights</td><td>858 Rnorr profiles, 3 matched</td><td>pgvector cosine search over 2,216 Kaggle customers</td></tr>
+  </table>
+
+  <h2>Creative Strategy Fields</h2>
+  <table>
+    <tr><th>Field</th><th>Value</th><th>How generated</th></tr>
+    <tr><td>hero_message</td><td>"Cheating just got easier"</td><td>Groq derived from fan truth "feels like cheating" + brand promise of convenience</td></tr>
+    <tr><td>strategic_framework</td><td>Convenience + flavor for families</td><td>Groq synthesised brief + CDP data showing families are deal-responsive</td></tr>
+    <tr><td>messaging_pillars</td><td>3 pillars</td><td>Laddering from fan truth → brand promise → audience insight</td></tr>
+    <tr><td>channel_priorities</td><td>Instagram 8/10, TikTok 6/10</td><td>CDP shows Instagram + Facebook as top channels for 35-44 segment</td></tr>
+    <tr><td>budget_allocation</td><td>Instagram 55%, TikTok 45%</td><td>Proportional to channel priority scores</td></tr>
+  </table>
+
+  <h2>Campaign Copy Fields</h2>
+  <table>
+    <tr><th>Format</th><th>Copy</th><th>Channel</th></tr>
+    <tr><td>Short headline</td><td>"Cheating just got easier"</td><td>OOH / Key Visual — ≤6 words, billboard-ready</td></tr>
+    <tr><td>Medium headline</td><td>"Cheating just got easier" + "No guilt, all flavor"</td><td>Social / Display — headline + subline pair</td></tr>
+    <tr><td>Long body</td><td>"Savor the taste of homemade, without the hassle..."</td><td>Press / Editorial — sensory, present tense, ≤60 words</td></tr>
+    <tr><td>CTA</td><td>"Get Cooking"</td><td>All channels — ≤3 words, verb-led</td></tr>
+    <tr><td>Instagram caption</td><td>"Elevate your meals... #RnorrSpicy"</td><td>Instagram — platform-appropriate with hashtags</td></tr>
+    <tr><td>TikTok hook</td><td>"You won't believe this kitchen hack!"</td><td>TikTok — stops scroll in first 3 seconds</td></tr>
+  </table>
+</div>
+
+<!-- ── 5. UI COMPONENTS ── -->
+<div class="section page-break">
+  <h1>5. Frontend UI Components</h1>
+
+  <h2>7-Step Wizard</h2>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-num">1</div>
+      <div class="flow-content">
+        <h4>Brand Selection</h4>
+        <p>Choose brand: McDonald's 🍔 or Rnorr 🥣. Clears product selection when changed.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">2</div>
+      <div class="flow-content">
+        <h4>Campaign Goal</h4>
+        <p>6 tile cards: Launch Awareness, Drive Sales, Build Community, Re-engagement, Market Expansion, Custom</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">3</div>
+      <div class="flow-content">
+        <h4>Product</h4>
+        <p>Brand-specific chip list (Rnorr: stock cubes, bouillon, etc. / McDonald's: McSpicy, Big Mac, etc.)</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">4</div>
+      <div class="flow-content">
+        <h4>Fan Truth</h4>
+        <p>Brand-specific pre-written truths or "Write your own". Rnorr truths are different from McDonald's truths.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">5</div>
+      <div class="flow-content">
+        <h4>Audience</h4>
+        <p>Age groups, interests, market/region chips. Season selection (Spring/Summer/Autumn/Winter/All Year)</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">6</div>
+      <div class="flow-content">
+        <h4>Channels &amp; KPIs</h4>
+        <p>Channel tiles (Instagram, TikTok, YouTube, OOH, Google Ads, Meta Ads) + success metrics + moment type</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">7</div>
+      <div class="flow-content">
+        <h4>Budget &amp; Review</h4>
+        <p>Budget cards (£50K to £1M). Campaign name input (min 3 chars to enable Launch). Full brief review.</p>
+      </div>
+    </div>
+  </div>
+
+  <h2>Results Page — 3 Main Cards</h2>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-title">📋 Brief Validation</div>
+      <div class="card-body">
+        • SVG circular gauge showing Fan Truth score (color-coded: green ≥75, amber ≥60, red &lt;60)<br>
+        • PASS/FAIL badge<br>
+        • Fan truth statement in purple highlight box<br>
+        • Color-coded KPI rows (✓ OK, ↑ AMBITIOUS, ✗ UNREALISTIC)<br>
+        • Validation notes
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">👥 Audience Intelligence</div>
+      <div class="card-body">
+        • Profile count (858 Rnorr profiles)<br>
+        • 4 metric blocks: Avg Income, Meat Spend, Deal Purchases, Web Visits<br>
+        • Channel chips (Instagram, TikTok, Facebook)<br>
+        • CRM quote from most similar Kaggle customer
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚡ Pipeline Output</div>
+      <div class="card-body">
+        • Campaign name, channels, market, season, budget, moment, audience<br>
+        • Brief summary in blue quote box<br>
+        • Brand warnings (if any) in amber
+      </div>
+    </div>
+  </div>
+  <h3>Full-width sections below the cards:</h3>
+  <p><strong>💡 Creative Strategy</strong> — gradient card with hero message, strategic framework, cultural context, creative brief, messaging pillars as chips</p>
+  <p><strong>✍️ Campaign Copy</strong> — 3 format cards (green SHORT, blue MEDIUM, amber LONG) + CTA, Instagram, TikTok row</p>
+</div>
+
+<!-- ── 6. COMMANDS REFERENCE ── -->
+<div class="section page-break">
+  <h1>6. Commands Reference</h1>
+
+  <h2>Docker / pgvector</h2>
+  <pre>
+# Start pgvector (port 5433 — avoids conflict with local PostgreSQL on 5432)
+cd d:\campaignos\harness
+docker compose -f docker-compose.pgvector.yml up -d
+
+# Stop and remove
+docker compose -f docker-compose.pgvector.yml down -v
+
+# Enable pgvector extension (run once)
+docker exec campaignos-pgvector psql -U campaignos -d marketing -c "CREATE EXTENSION IF NOT EXISTS vector;"
+
+# Check tables
+docker exec campaignos-pgvector psql -U campaignos -d marketing -c "\dt"</pre>
+
+  <h2>Data Setup Scripts</h2>
+  <pre>
+cd d:\campaignos\harness
+
+# 1. Create pgvector schema + seed synthetic data
+uv run python scripts/setup_pgvector.py
+
+# 2. Load Kaggle CSV into pgvector (2,216 customer records)
+#    Requires: scripts/marketing_campaign.csv
+uv run python scripts/seed_kaggle_cdp.py
+
+# 3. Upload Kaggle CSV to GCS + BigQuery
+uv run python scripts/upload_kaggle_to_bq.py
+
+# 4. Index GCS brand guidelines as RAG chunks
+uv run python scripts/index_gcs_guidelines.py
+
+# 5. Pull BigQuery tables into pgvector with embeddings
+uv run python scripts/index_bigquery.py
+
+# 6. Create Vertex AI Search app + import GCS documents
+uv run python scripts/setup_search.py
+
+# 7. Upload asset manifests to GCS + re-index in Search
+uv run python scripts/index_brand_assets.py
+
+# 8. Create BigQuery dataset + tables
+uv run python scripts/setup_bigquery.py</pre>
+
+  <h2>Running the Application</h2>
+  <pre>
+# Install uv (Windows)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# Install Python deps (downloads Python 3.12 automatically)
+cd d:\campaignos\harness
+uv sync
+
+# Add new packages
+uv add psycopg2-binary sentence-transformers litellm fpdf2
+
+# Run harness API server (port 8000)
+uv run uvicorn main:app --port 8000
+
+# Run ADK web UI for testing agents
+uv run adk web .
+
+# Frontend
+cd d:\campaignos\frontend
+npm install
+npm run dev       # dev server on port 5173
+npm run build     # production build</pre>
+
+  <h2>GCP Commands</h2>
+  <pre>
+# Authenticate for Vertex AI / GCS / BigQuery
+gcloud auth application-default login
+
+# List GCS bucket contents
+gsutil ls gs://dauntless-karma-497108-b0-campaignos/brands/
+
+# Download brand assets from GCS
+gsutil -m cp -r "gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr" "d:\campaignos\harness\bucket\brands\"
+
+# Upload brand guidelines as .txt (required for Vertex AI Search)
+gsutil cp -h "Content-Type:text/plain" brand_guidelines.md "gs://bucket/brands/Rnorr/Guidelines/brand_guidelines.txt"
+
+# BigQuery
+gcloud bigquery datasets list --project=dauntless-karma-497108-b0
+gcloud bigquery tables list --dataset-id=briefing_agent --project=dauntless-karma-497108-b0</pre>
+
+  <h2>Git</h2>
+  <pre>
+# Create feature branch
+git checkout -b feature/groq-cdp-pgvector-ui
+
+# Stage + commit
+git add &lt;files&gt;
+git commit -m "feat: description"
+
+# Push to remote
+git push -u origin feature/groq-cdp-pgvector-ui</pre>
+</div>
+
+<!-- ── 7. ENVIRONMENT VARIABLES ── -->
+<div class="section page-break">
+  <h1>7. Environment Variables</h1>
+  <p class="section-intro">File: <code>harness/.env</code> — never commit to git (in .gitignore)</p>
+
+  <table>
+    <tr><th>Variable</th><th>Value</th><th>Purpose</th></tr>
+    <tr><td>GOOGLE_CLOUD_PROJECT</td><td>dauntless-karma-497108-b0</td><td>GCP project ID</td></tr>
+    <tr><td>GOOGLE_CLOUD_LOCATION</td><td>us-central1</td><td>GCP region</td></tr>
+    <tr><td>GCS_BUCKET</td><td>dauntless-karma-497108-b0-campaignos</td><td>Cloud Storage bucket for brand assets</td></tr>
+    <tr><td>SEARCH_MODE</td><td>live</td><td>live=Vertex AI Search, pgvector=local, gcs_files=stub</td></tr>
+    <tr><td>SEARCH_ENGINE_ID</td><td>campaignos-briefing-search</td><td>Vertex AI Search engine ID</td></tr>
+    <tr><td>PGVECTOR_HOST</td><td>127.0.0.1</td><td>pgvector host (IPv4 — avoid localhost→IPv6 issue)</td></tr>
+    <tr><td>PGVECTOR_PORT</td><td>5433</td><td>Port (5433 avoids conflict with local PostgreSQL)</td></tr>
+    <tr><td>PGVECTOR_USER/PASSWORD/DB</td><td>campaignos / campaignos / marketing</td><td>pgvector credentials</td></tr>
+    <tr><td>GEMINI_MODEL_REASONING</td><td>groq/llama-3.3-70b-versatile</td><td>LLM for all agents (Groq free tier)</td></tr>
+    <tr><td>GROQ_API_KEY</td><td>gsk_...</td><td>Groq API key — get at console.groq.com</td></tr>
+    <tr><td>BRAND_ASSETS_MODE</td><td>gcs</td><td>gcs=load from GCS bucket, local=load from harness/bucket/</td></tr>
+    <tr><td>BQ_DATASET</td><td>briefing_agent</td><td>BigQuery dataset name</td></tr>
+    <tr><td>BQ_LOGGING_ENABLED</td><td>false</td><td>Set true to write pipeline outputs to BigQuery</td></tr>
+    <tr><td>LOG_LEVEL</td><td>DEBUG</td><td>DEBUG for development, INFO for production</td></tr>
+    <tr><td>ENVIRONMENT</td><td>development</td><td>development or production</td></tr>
+  </table>
+</div>
+
+<!-- ── 8. API ENDPOINTS ── -->
+<div class="section">
+  <h1>8. API Endpoints</h1>
+
+  <table>
+    <tr><th>Method</th><th>Endpoint</th><th>Purpose</th><th>Response</th></tr>
+    <tr>
+      <td><span class="tag tag-green">POST</span></td>
+      <td><code>/brief-full</code></td>
+      <td>Full pipeline: Brief → Strategy → Copy (3 Groq agents)</td>
+      <td>machine_brief + creative_strategy + campaign_copy</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-green">POST</span></td>
+      <td><code>/brief</code></td>
+      <td>Briefing agent only (validation + Fan Truth scoring)</td>
+      <td>machine_brief only</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-green">POST</span></td>
+      <td><code>/pipeline</code></td>
+      <td>Full ADK Workflow DAG (requires Vertex AI Gemini)</td>
+      <td>pipeline_output</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-blue">GET</span></td>
+      <td><code>/health</code></td>
+      <td>Liveness probe — always returns 200</td>
+      <td>Service info JSON</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-blue">GET</span></td>
+      <td><code>/readiness</code></td>
+      <td>Readiness probe — checks agents loaded</td>
+      <td>Ready status JSON</td>
+    </tr>
+    <tr>
+      <td><span class="tag tag-green">POST</span></td>
+      <td><code>/refresh</code></td>
+      <td>Re-initialise Search client after data updates</td>
+      <td>Refresh status</td>
+    </tr>
+  </table>
+
+  <h2>Request Body — BriefRequest</h2>
+  <pre>
+{
+  "campaign_name":    "Rnorr Spicy Summer 2026",   // 3-100 chars required
+  "brand":            "Rnorr",                      // must match bucket/brands/{brand}/
+  "goal":             "Launch Awareness",
+  "budget":           "£500,000",
+  "kpis":             "5M Reach, 2.5% CTR, 3x ROAS",
+  "product":          "Vegetable Stock Cubes",
+  "product_category": "Dry Cook-In Sauces",
+  "fan_truth":        "The shortcut that feels like cheating — but isn't",
+  "channels":         ["Instagram", "TikTok"],
+  "market":           "United Kingdom",
+  "season":           "Summer",
+  "moment_type":      "Day-to-Day",
+  "audience": {
+    "segment":    "Families",
+    "location":   "United Kingdom",
+    "age_range":  "35-44",
+    "gender":     "All genders",
+    "interests":  "Families"
+  },
+  "tone": "Warm &amp; friendly"
+}</pre>
+
+  <h2>Known Limitations</h2>
+  <table>
+    <tr><th>Issue</th><th>Cause</th><th>Workaround</th></tr>
+    <tr>
+      <td>Vertex AI Gemini 404</td>
+      <td>GCP free trial project doesn't have Gemini publisher models enabled in Model Garden</td>
+      <td>Using Groq/LiteLLM instead for all agents</td>
+    </tr>
+    <tr>
+      <td>Google AI free tier limit:0</td>
+      <td>API key from billing-enabled project zeroes free tier quota</td>
+      <td>Groq provides genuinely free tier (14,400 req/day)</td>
+    </tr>
+    <tr>
+      <td>HITL gates not persistent</td>
+      <td>Using InMemorySessionService — state lost on restart</td>
+      <td>For production: swap to VertexAiSessionService</td>
+    </tr>
+    <tr>
+      <td>Vertex AI Search Standard Edition</td>
+      <td>Extractive answers/segments require Enterprise Edition</td>
+      <td>Using snippets + summary only (Standard Edition compatible)</td>
+    </tr>
+    <tr>
+      <td>pgvector port 5433</td>
+      <td>Local PostgreSQL already occupies port 5432</td>
+      <td>Docker container mapped to 5433 instead</td>
+    </tr>
+  </table>
+</div>
+
+<div style="padding: 20px 60px; background: #1e1b4b; color: #94a3b8; font-size: 11px; text-align: center;">
+  CampaignOS — AI Campaign Generation Platform &nbsp;|&nbsp;
+  github.com/tahmina0728-eng/a2a-marketing &nbsp;|&nbsp;
+  Branch: feature/groq-cdp-pgvector-ui
+</div>
+
+</body>
+</html>

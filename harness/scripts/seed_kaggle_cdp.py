@@ -100,10 +100,32 @@ def generate_crm_note(row: dict) -> str:
     is_digital   = web_visits > 6 or web_orders > 5
     is_churned   = recency > 60
 
+    # Detect beauty/styling profile (proxy for Sunglow/Boozt)
+    brand_detected = map_to_brand(row)
+    is_beauty = brand_detected in ("Sunglow", "Boozt")
+
     notes = []
 
+    # Beauty/hair care profile notes
+    if is_beauty and brand_detected == "Sunglow":
+        notes.append("Premium self-care buyer profile. High spend on gold/luxury products.")
+        notes.append("No dependants — high personal care budget. Values quality and visible results.")
+        if gold > 200:
+            notes.append("Frequent luxury product buyer — premium hair treatment and care routine likely.")
+        if age < 40:
+            notes.append("Younger premium buyer. Social media-influenced purchases. Responds to before/after content.")
+        else:
+            notes.append("Established premium consumer. Brand loyalty high once trust earned.")
+    elif is_beauty and brand_detected == "Boozt":
+        notes.append("Young styling-conscious consumer profile. High digital engagement.")
+        notes.append("Fast beauty buyer — values instant results and on-trend products.")
+        if web_visits > 7:
+            notes.append(f"Very high site visit frequency ({web_visits}/month). Browses before buying. Responds to reviews and demos.")
+        if gold > 50:
+            notes.append("Moderate luxury spend — willing to pay for proven styling results.")
+
     # Profile identity
-    if is_premium:
+    if not is_beauty and is_premium:
         notes.append(random.choice(PREMIUM_INTROS))
         if wines > 400:
             notes.append("Strong affinity for premium and curated product selections.")
@@ -162,21 +184,46 @@ def generate_crm_note(row: dict) -> str:
 
 
 def map_to_brand(row: dict) -> str:
-    """Map a Kaggle row to the most relevant brand based on product spend profile."""
-    meat   = float(row.get("MntMeatProducts", 0) or 0)
-    fish   = float(row.get("MntFishProducts", 0) or 0)
-    sweets = float(row.get("MntSweetProducts", 0) or 0)
-    wines  = float(row.get("MntWines", 0) or 0)
-    income = float(row.get("Income", 0) or 0)
-    kids   = int(row.get("Kidhome", 0) or 0)
-    deals  = int(row.get("NumDealsPurchases", 0) or 0)
+    """
+    Map a Kaggle row to the most relevant brand based on product spend profile.
+
+    Proxy signals used (dataset has no direct hair/beauty column):
+      Rnorr:    high meat/fish spend → home cooking
+      McDonalds: convenience/sweets/kids/deal-seeking
+      Sunglow:  premium income + high gold (luxury self-care) + no kids → Black hair care buyer proxy
+      Boozt:    young (18-35) + high digital + moderate gold → styling-conscious, fast beauty
+    """
+    meat       = float(row.get("MntMeatProducts", 0) or 0)
+    fish       = float(row.get("MntFishProducts", 0) or 0)
+    sweets     = float(row.get("MntSweetProducts", 0) or 0)
+    wines      = float(row.get("MntWines", 0) or 0)
+    gold       = float(row.get("MntGoldProds", 0) or 0)
+    income     = float(row.get("Income", 0) or 0)
+    kids       = int(row.get("Kidhome", 0) or 0)
+    teens      = int(row.get("Teenhome", 0) or 0)
+    deals      = int(row.get("NumDealsPurchases", 0) or 0)
+    web_visits = int(row.get("NumWebVisitsMonth", 0) or 0)
+    web_orders = int(row.get("NumWebPurchases", 0) or 0)
+    birth_year = int(row.get("Year_Birth", 1985) or 1985)
+    age        = 2024 - birth_year
+
+    # Sunglow: premium self-care buyer — high income, spends on luxury/gold products,
+    # no young children (free to spend on personal care), 25-55 age range
+    if income > 55000 and gold > 100 and (kids + teens) == 0 and 25 <= age <= 55:
+        return "Sunglow"
+
+    # Boozt: styling-conscious young buyer — under 35, high digital, moderate gold spend
+    if age < 36 and (web_visits > 5 or web_orders > 3) and gold > 30 and income > 25000:
+        return "Boozt"
 
     # Rnorr: home cooking — meat, fish, budget-conscious
     if (meat + fish) > 200 or (income < 50000 and (meat + fish) > 80):
         return "Rnorr"
+
     # McDonald's: convenience, sweets, younger, deal-seeking
     if sweets > 100 or (kids > 0 and deals > 3) or wines < 50:
         return "McDonalds"
+
     return "All"
 
 

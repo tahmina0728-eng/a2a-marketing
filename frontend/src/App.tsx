@@ -19,6 +19,8 @@ const GOALS = [
 const BRANDS = [
   { id: "McDonalds", label: "McDonald's", emoji: "🍔" },
   { id: "Rnorr",     label: "Rnorr",      emoji: "🥣" },
+  { id: "Sunglow",   label: "Sunglow",    emoji: "✨" },
+  { id: "Boozt",     label: "Boozt",      emoji: "💨" },
 ];
 
 const BRAND_PRODUCTS: Record<string, string[]> = {
@@ -27,11 +29,18 @@ const BRAND_PRODUCTS: Record<string, string[]> = {
   Rnorr:     ["Chicken Stock Cubes", "Beef Stock Cubes", "Vegetable Stock Cubes",
               "Stock Pots", "Bouillon Powder", "Concentrated Liquid Stock",
               "Soup Range", "Gravy Granules", "Seasoning Sachets"],
+  Sunglow:   ["Moisture Shampoo", "Moisture Conditioner", "Deep Repair Treatment",
+              "Scalp Nourish Oil", "Define & Glow Serum", "Leave-In Conditioner",
+              "Curl Refresh Spray", "Edge Control", "Protective Style Serum"],
+  Boozt:     ["Root Lift Spray", "Volumising Mousse", "Thickening Shampoo",
+              "Thickening Conditioner", "Texturising Powder", "Volume Setting Spray"],
 };
 
 const BRAND_CATEGORY: Record<string, string> = {
   McDonalds: "Burgers & Chicken",
   Rnorr:     "Dry Cook-In Sauces",
+  Sunglow:   "Hair Care",
+  Boozt:     "Hair Styling & Volume",
 };
 
 const BRAND_FAN_TRUTHS: Record<string, string[]> = {
@@ -49,10 +58,30 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
     "Home cooking is how you say 'I care' without saying it",
     "A stock cube is the secret ingredient every great cook pretends isn't there",
   ],
+  Sunglow: [
+    "The first look in the mirror after wash day — that's your glow",
+    "Your crown is not a problem to manage, it's a conversation to have",
+    "Good hair day isn't luck — it's science built for you from the start",
+    "Hair that glows because it's healthy, not because it's hidden",
+    "When your hair does exactly what it wants to — and you let it",
+  ],
+  Boozt: [
+    "Flat hair is a choice. So is not having it.",
+    "Volume isn't vanity — it's the energy you walk in with",
+    "The five seconds that change your whole morning",
+    "Your roots called. They want their lift back.",
+    "When your hair has more energy than you do",
+  ],
 };
 
 const AGE_GROUPS  = ["13–17", "18–24", "25–34", "35–44", "45–54", "55+"];
-const INTERESTS   = ["Spicy food lovers", "Families", "Students", "Deal hunters", "Night owls", "Gamers", "Sports fans"];
+const INTERESTS: Record<string, string[]> = {
+  McDonalds: ["Spicy food lovers", "Families", "Students", "Deal hunters", "Night owls", "Gamers", "Sports fans"],
+  Rnorr:     ["Home cooks", "Families", "Students", "Budget shoppers", "Food lovers", "Meal preppers", "Time-poor professionals"],
+  Sunglow:   ["Natural hair community", "Protective styles", "Wash day routines", "Scalp health", "Curl definition", "Black hair care", "Beauty enthusiasts"],
+  Boozt:     ["Fine hair", "Volume seekers", "On-the-go styling", "Beauty enthusiasts", "Festival-goers", "Bridal & occasion"],
+  default:   ["Families", "Students", "Young professionals", "Beauty lovers", "Lifestyle"],
+};
 const REGIONS     = ["United Kingdom", "Australia", "United States", "New Zealand", "SEA", "Global"];
 const SEASONS     = ["Spring", "Summer", "Autumn", "Winter", "All Year"];
 const MOMENT_TYPES = ["Day-to-Day", "Brand Moment", "Partnership Moment"];
@@ -301,7 +330,7 @@ function BriefForm({ onStart }: { onStart: (brief: HarnessBriefRequest) => void 
             </div>
             <div className="section-label">Interests</div>
             <div className="chip-group">
-              {INTERESTS.map((i) => (
+              {(INTERESTS[d.brand as keyof typeof INTERESTS] ?? INTERESTS.default).map((i: string) => (
                 <button key={i} className={`chip${d.audienceInterests.includes(i) ? " selected" : ""}`}
                   onClick={() => setD((p) => ({ ...p, audienceInterests: toggle(p.audienceInterests, i) }))}>
                   {i}
