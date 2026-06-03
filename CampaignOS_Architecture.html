@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CampaignOS — Architecture & Technical Documentation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a2e; background: #fff; line-height: 1.7; }
+
+  @media print {
+    .page-break { page-break-before: always; }
+    body { font-size: 11px; }
+  }
+
+  /* Cover */
+  .cover { background: linear-gradient(135deg, #0a0a0f 0%, #1e1b4b 60%, #0f172a 100%);
+    color: white; padding: 80px 60px; min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center; }
+  .cover-tag { font-size: 11px; color: #7c3aed; font-weight: 700; letter-spacing: 0.15em;
+    text-transform: uppercase; margin-bottom: 16px; }
+  .cover-title { font-size: 48px; font-weight: 900; color: #a78bfa; margin-bottom: 12px; line-height: 1.1; }
+  .cover-sub { font-size: 22px; color: #94a3b8; margin-bottom: 48px; }
+  .cover-desc { font-size: 15px; color: #64748b; max-width: 700px; line-height: 1.8; margin-bottom: 40px; }
+  .cover-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 700px; }
+  .cover-chip { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 8px; padding: 10px 16px; font-size: 12px; color: #c4b5fd; }
+
+  /* Layout */
+  .section { padding: 48px 60px; border-bottom: 1px solid #e5e7eb; }
+  h1 { font-size: 30px; font-weight: 900; color: #1e1b4b; margin-bottom: 8px; }
+  h2 { font-size: 20px; font-weight: 800; color: #1e1b4b; margin: 32px 0 12px;
+    padding-left: 14px; border-left: 5px solid #7c3aed; }
+  h3 { font-size: 15px; font-weight: 700; color: #374151; margin: 22px 0 8px; }
+  p { color: #4b5563; margin-bottom: 10px; max-width: 900px; }
+  .intro { font-size: 14px; color: #6b7280; margin-bottom: 28px; padding: 14px 18px;
+    background: #f8f7ff; border-radius: 8px; border-left: 4px solid #7c3aed; max-width: 900px; }
+
+  /* Code */
+  pre { background: #1e1b4b; color: #a78bfa; padding: 18px 22px; border-radius: 10px;
+    font-family: 'Cascadia Code','Consolas',monospace; font-size: 11px; margin: 12px 0 20px;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all; max-width: 960px; }
+  code { background: #ede9fe; color: #5b21b6; padding: 1px 6px; border-radius: 4px; font-size: 11px; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0 24px; font-size: 12px; max-width: 960px; }
+  th { background: #1e1b4b; color: white; padding: 9px 13px; text-align: left; font-weight: 700; }
+  td { padding: 9px 13px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+  tr:nth-child(even) td { background: #f9fafb; }
+
+  /* Cards */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin: 16px 0 24px; }
+  .card { background: #f8f7ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 18px; }
+  .card-icon { font-size: 28px; margin-bottom: 10px; }
+  .card-title { font-size: 14px; font-weight: 800; color: #1e1b4b; margin-bottom: 6px; }
+  .card-body { font-size: 12px; color: #6b7280; line-height: 1.6; }
+
+  /* Architecture boxes */
+  .arch { font-family: 'Cascadia Code','Consolas',monospace; font-size: 11px;
+    background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 10px;
+    padding: 22px; color: #334155; line-height: 1.9; max-width: 960px; }
+
+  /* Flow steps */
+  .flow { display: flex; flex-direction: column; gap: 0; margin: 16px 0 24px; max-width: 800px; }
+  .flow-step { display: flex; gap: 18px; padding: 14px 0; border-bottom: 1px solid #f1f5f9; }
+  .flow-num { min-width: 32px; height: 32px; border-radius: 50%; background: #7c3aed;
+    color: white; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; flex-shrink: 0; margin-top: 2px; }
+  .flow-content h4 { font-size: 14px; font-weight: 700; color: #1e1b4b; margin-bottom: 4px; }
+  .flow-content p { font-size: 12px; color: #6b7280; margin: 0; }
+
+  /* Tags */
+  .tag { display: inline-block; padding: 2px 9px; border-radius: 12px; font-size: 10px; font-weight: 700; margin: 2px; }
+  .tag-purple { background: #ede9fe; color: #5b21b6; }
+  .tag-blue   { background: #dbeafe; color: #1e40af; }
+  .tag-green  { background: #d1fae5; color: #065f46; }
+  .tag-amber  { background: #fef3c7; color: #92400e; }
+  .tag-red    { background: #fee2e2; color: #991b1b; }
+
+  /* Highlight box */
+  .highlight { background: #fdf4ff; border: 1px solid #e9d5ff; border-radius: 10px;
+    padding: 16px 20px; margin: 16px 0; max-width: 900px; }
+  .highlight-title { font-size: 11px; font-weight: 700; color: #7c3aed;
+    text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+
+  /* Service badge */
+  .service-row { display: flex; align-items: flex-start; gap: 16px; padding: 14px 0;
+    border-bottom: 1px solid #f1f5f9; max-width: 900px; }
+  .service-icon { font-size: 24px; flex-shrink: 0; width: 36px; text-align: center; margin-top: 2px; }
+  .service-name { font-weight: 700; color: #1e1b4b; font-size: 14px; }
+  .service-desc { font-size: 12px; color: #6b7280; margin-top: 3px; line-height: 1.6; }
+
+  footer { padding: 20px 60px; background: #1e1b4b; color: #475569; font-size: 11px; text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════ COVER ═══ -->
+<div class="cover">
+  <div class="cover-tag">Technical Architecture Document</div>
+  <div class="cover-title">CampaignOS</div>
+  <div class="cover-sub">AI-Powered Campaign Generation Platform</div>
+  <div class="cover-desc">
+    A complete technical explanation of how the CampaignOS briefing agent was built,
+    how every GCP service integrates, why each technology was chosen,
+    and how the system runs both locally and in production on Cloud Run.
+  </div>
+  <div class="cover-grid">
+    <div class="cover-chip">🤖 Google ADK 2.0</div>
+    <div class="cover-chip">⚡ Groq Llama 3.3 70B</div>
+    <div class="cover-chip">🗃️ pgvector + Cloud SQL</div>
+    <div class="cover-chip">🔍 Vertex AI Search</div>
+    <div class="cover-chip">🪣 Google Cloud Storage</div>
+    <div class="cover-chip">📊 BigQuery</div>
+    <div class="cover-chip">🐳 Docker</div>
+    <div class="cover-chip">🏗️ Cloud Build</div>
+    <div class="cover-chip">☁️ Cloud Run</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ 1. OVERVIEW ═══ -->
+<div class="section page-break">
+  <h1>1. System Overview</h1>
+  <p class="intro">
+    CampaignOS is a multi-agent AI platform that takes a marketing brief (selected via a 7-step wizard)
+    and produces a validated brief, creative strategy, and campaign copy — all grounded in real brand guidelines,
+    customer data, and performance benchmarks from multiple GCP data sources.
+  </p>
+
+  <h2>What the System Does</h2>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">📋</div>
+      <div class="card-title">Brief Validation</div>
+      <div class="card-body">Validates the campaign brief against real brand guidelines. Scores the Fan Truth (0-100), flags unrealistic KPIs, applies brand locks, cross-checks audience against CDP data.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">💡</div>
+      <div class="card-title">Creative Strategy</div>
+      <div class="card-body">Generates the Big Idea, hero message, messaging pillars, channel priorities and budget allocation based on the validated brief and brand identity.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">✍️</div>
+      <div class="card-title">Campaign Copy</div>
+      <div class="card-body">Writes short (OOH/KV), medium (social), and long (press) copy variants, plus CTA, Instagram caption, and TikTok hook — all brand-voice compliant.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">👥</div>
+      <div class="card-title">Audience Intelligence</div>
+      <div class="card-body">Queries 2,216 real Kaggle customers + 1,597 Sephora products from pgvector to ground audience validation in real behavioural data.</div>
+    </div>
+  </div>
+
+  <h2>Technology Stack</h2>
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>Why chosen</th></tr>
+    <tr><td>Frontend</td><td>React 18 + TypeScript + Vite</td><td>Fast 7-step wizard UI, type-safe, hot-reload dev server</td></tr>
+    <tr><td>Backend API</td><td>FastAPI (Python 3.12)</td><td>Async Python, automatic OpenAPI docs, Cloud Run ready</td></tr>
+    <tr><td>Agent Framework</td><td>Google ADK 2.0</td><td>Workflow DAG orchestration, HITL gates, session state</td></tr>
+    <tr><td>LLM</td><td>Groq Llama 3.3 70B via LiteLLM</td><td>Free tier (100K tokens/day), fast inference, no GCP billing needed</td></tr>
+    <tr><td>Vector Search</td><td>PostgreSQL + pgvector</td><td>Semantic similarity search over customer/benchmark embeddings</td></tr>
+    <tr><td>Brand Search</td><td>Vertex AI Search (Discovery Engine)</td><td>Semantic search over brand guidelines from GCS</td></tr>
+    <tr><td>Asset Storage</td><td>Google Cloud Storage</td><td>Brand logos, fonts, product images, guidelines — source of truth</td></tr>
+    <tr><td>Structured Data</td><td>BigQuery</td><td>Fan truths, benchmarks, historical campaigns, Kaggle + Sephora raw data</td></tr>
+    <tr><td>Vector DB (prod)</td><td>Cloud SQL (PostgreSQL 15)</td><td>Managed pgvector on GCP — same schema as local Docker</td></tr>
+    <tr><td>CI/CD</td><td>Cloud Build</td><td>Builds Docker images in GCP — fast uploads to Container Registry</td></tr>
+    <tr><td>Hosting</td><td>Cloud Run</td><td>Serverless containers, auto-scales to zero, pay-per-request</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════ 2. BRIEFING AGENT ═══ -->
+<div class="section page-break">
+  <h1>2. The Briefing Agent — How It Was Built</h1>
+  <p class="intro">
+    The briefing agent is the first and most critical agent in the pipeline. It validates every incoming
+    campaign brief against real data before any creative work begins. Here is exactly how it was constructed
+    and why each decision was made.
+  </p>
+
+  <h2>Agent Architecture</h2>
+  <p>The briefing agent uses the <strong>Google ADK 2.0</strong> framework with a two-stage design:</p>
+
+  <div class="arch">
+POST /brief-full  (FastAPI endpoint)
+        │
+        ▼
+┌─────────────────────────────────────────────────────────┐
+│  briefing_pipeline  (ADK Workflow)                      │
+│                                                         │
+│  Stage 1: load_brand_context  [FUNCTION NODE — no LLM] │
+│    ├── Load brand_guidelines.md from GCS               │
+│    ├── Query Vertex AI Search → brand rules summary    │
+│    ├── Query Vertex AI Search → fan truth examples     │
+│    ├── Query Vertex AI Search → channel benchmarks     │
+│    ├── Query pgvector CDP → audience insights          │
+│    └── Returns: BriefingContext (all data in one obj)  │
+│                                                         │
+│  Stage 2: briefing_agent  [LLM — Groq Llama 3.3 70B]  │
+│    ├── Receives: BriefingContext + campaign brief      │
+│    ├── Scores Fan Truth (Specific/Shared/Special 0-100)│
+│    ├── Validates KPIs vs benchmarks                    │
+│    ├── Applies brand locks from guidelines             │
+│    ├── Cross-checks audience against CDP data          │
+│    └── Outputs: MachineBrief JSON                      │
+└─────────────────────────────────────────────────────────┘
+        │
+        ▼ (if Groq/LiteLlm — direct fallback)
+┌─────────────────────────────────────────────────────────┐
+│  _run_briefing_with_groq()  (runner.py)                 │
+│    Constructs a single large prompt with ALL context    │
+│    Calls litellm.acompletion() → Groq API              │
+│    Parses JSON response → MachineBrief dict            │
+└─────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────────────────┐
+│  run_strategy_with_groq()  → CreativeStrategy JSON     │
+│  run_copy_with_groq()      → CampaignCopy JSON         │
+└─────────────────────────────────────────────────────────┘
+</div>
+
+  <h2>Why Two Stages (Function Node + LLM)?</h2>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-num">1</div>
+      <div class="flow-content">
+        <h4>Data loading is deterministic — no LLM needed</h4>
+        <p>Loading brand guidelines from GCS, querying Vertex AI Search, and fetching pgvector results are pure Python operations. Running them as a function node costs zero tokens and is 10× faster than asking an LLM to call tools.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">2</div>
+      <div class="flow-content">
+        <h4>All context pre-loaded → single LLM call</h4>
+        <p>By the time the LLM runs, every piece of context (brand rules, fan truth benchmarks, channel benchmarks, audience CDP data) is already in memory. The LLM makes ONE call with complete information — no tool-calling loops needed.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">3</div>
+      <div class="flow-content">
+        <h4>ADK Workflow handles orchestration</h4>
+        <p>The Google ADK Workflow DAG manages session state, data passing between nodes, and error handling. Each node's output becomes the next node's input automatically.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">4</div>
+      <div class="flow-content">
+        <h4>Groq direct fallback for LiteLLM compatibility</h4>
+        <p>ADK's LiteLlm model integration has a known issue with Pydantic input_schema in Workflow DAGs. When the ADK agent returns no output, the runner detects this and calls Groq directly with the same context — ensuring reliable output regardless.</p>
+      </div>
+    </div>
+  </div>
+
+  <h2>What the Agent Validates</h2>
+  <table>
+    <tr><th>Validation</th><th>Data Source</th><th>Output</th></tr>
+    <tr><td>Fan Truth Scoring</td><td>pgvector fan_truths table + Vertex AI Search</td><td>Specific/Shared/Special scores (0-100), PASS/FAIL verdict</td></tr>
+    <tr><td>KPI Flags</td><td>pgvector channel_benchmarks + campaign_benchmarks</td><td>OK / AMBITIOUS / UNREALISTIC flags per KPI</td></tr>
+    <tr><td>Brand Locks</td><td>GCS brand_guidelines.md YAML block</td><td>Applied locks list (font, colours, logo rules)</td></tr>
+    <tr><td>Audience vs CDP</td><td>pgvector customer_insights (Kaggle + Sephora)</td><td>Segment size, channel match, CRM behavioural note</td></tr>
+    <tr><td>Brand Rules</td><td>Vertex AI Search over brand guidelines</td><td>Channel-specific rules, OOH crop requirements</td></tr>
+    <tr><td>Moment Type</td><td>Vertex AI Search over guidelines</td><td>Day-to-Day / Brand Moment / Partnership rules</td></tr>
+  </table>
+
+  <h2>Agent Instructions (System Prompt Design)</h2>
+  <p>The briefing agent's instructions follow the ADK 2.0 principle: <strong>instructions describe ROLE + BEHAVIOUR only</strong>. Data is injected via BriefingContext template variables — the LLM never needs to call tools to fetch data.</p>
+  <div class="highlight">
+    <div class="highlight-title">Key Design Principle</div>
+    <p style="margin:0;font-size:12px;">The prompt uses <code>{BriefingContext.brand_guidelines}</code>, <code>{BriefingContext.fan_truth_summary}</code> etc. as placeholders. These are filled by <code>load_brand_context()</code> before the LLM ever runs. This makes the LLM faster (no tool calls), cheaper (one API call), and more reliable (context is guaranteed to be present).</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ 3. PGVECTOR ═══ -->
+<div class="section page-break">
+  <h1>3. pgvector — Why, What, and How</h1>
+  <p class="intro">
+    pgvector is a PostgreSQL extension that adds a <code>vector</code> data type and similarity search operators.
+    It enables "semantic search" — finding records by meaning rather than exact keyword match.
+    This is the foundation of the CDP (Customer Data Platform) layer in CampaignOS.
+  </p>
+
+  <h2>Why pgvector Instead of a Dedicated Vector Database?</h2>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">🐘</div>
+      <div class="card-title">Familiar SQL Interface</div>
+      <div class="card-body">pgvector uses standard PostgreSQL. All existing SQL tools, psycopg2 drivers, and BigQuery connectors work as-is. No new SDK to learn.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">💰</div>
+      <div class="card-title">Cost Effective</div>
+      <div class="card-body">Dedicated vector DBs (Pinecone, Weaviate) cost $70-200/month. pgvector on Cloud SQL db-f1-micro costs ~$9/month. Same functionality.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔗</div>
+      <div class="card-title">Combines Structured + Vector</div>
+      <div class="card-body">A single query can filter by brand, age range, AND rank by embedding similarity. Impossible to do this efficiently across separate databases.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">☁️</div>
+      <div class="card-title">GCP Native</div>
+      <div class="card-body">Cloud SQL with pgvector integrates with Cloud Run via Unix socket (Cloud SQL Auth Proxy) — no VPC, no firewall rules, no public IP exposure needed.</div>
+    </div>
+  </div>
+
+  <h2>What is an Embedding?</h2>
+  <p>An <strong>embedding</strong> is a list of 384 numbers (a vector) that represents the meaning of a piece of text. Texts with similar meaning have embeddings that are close together in 384-dimensional space.</p>
+  <pre>
+"Value-conscious student cook buys stock cubes for budget meals"
+        ↓  SentenceTransformer('all-MiniLM-L6-v2')
+[0.023, -0.187, 0.412, 0.091, ..., -0.334]   ← 384 numbers
+
+"Budget-aware young cook uses flavour shortcuts"
+        ↓
+[0.031, -0.179, 0.398, 0.087, ..., -0.321]   ← similar numbers = similar meaning
+
+Cosine similarity = 0.94 (very close!)  ← pgvector finds this instantly
+</pre>
+
+  <h2>How Semantic Search Works in CampaignOS</h2>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-num">1</div>
+      <div class="flow-content">
+        <h4>Seeding — generate embeddings for all records</h4>
+        <p>When seeding the database, each row (customer, product, benchmark) is converted to a natural language description, then embedded into a 384-dim vector using <code>SentenceTransformer('all-MiniLM-L6-v2')</code>. The vector is stored in the <code>embedding vector(384)</code> column.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">2</div>
+      <div class="flow-content">
+        <h4>Query — embed the search query</h4>
+        <p>When a campaign brief comes in with audience "Students 18-25, Instagram, TikTok", this text is also embedded into a 384-dim vector using the same model.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">3</div>
+      <div class="flow-content">
+        <h4>Search — cosine similarity with HNSW index</h4>
+        <p>pgvector uses an HNSW (Hierarchical Navigable Small World) index to find the 3 most similar customer records in milliseconds. The <code>&lt;=&gt;</code> operator computes cosine distance.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">4</div>
+      <div class="flow-content">
+        <h4>Aggregate — extract meaningful insights</h4>
+        <p>The top 3 matching customers are aggregated: average income, deal purchases per year, web visit frequency, channels inferred from behaviour. This real data is injected into the briefing agent's context.</p>
+      </div>
+    </div>
+  </div>
+
+  <pre>
+-- How pgvector similarity search works:
+SELECT brand, age_range, income, crm_notes, top_channels
+FROM customer_insights
+WHERE brand = 'Rnorr'
+ORDER BY embedding &lt;=&gt; '[0.031, -0.179, 0.398, ...]'::vector   -- cosine distance
+LIMIT 3;
+
+-- Returns the 3 customers whose CRM notes are most similar
+-- to the campaign brief's audience description
+</pre>
+
+  <h2>pgvector Tables in CampaignOS</h2>
+  <table>
+    <tr><th>Table</th><th>Rows</th><th>Source</th><th>Used for</th></tr>
+    <tr><td>customer_insights</td><td>2,216 + 1,597</td><td>Kaggle + Sephora via BigQuery</td><td>CDP audience intelligence — real customer behaviour</td></tr>
+    <tr><td>customer_segments</td><td>7</td><td>Hand-crafted brand profiles</td><td>Fallback when Kaggle data has no match</td></tr>
+    <tr><td>fan_truths</td><td>14</td><td>Seeded via setup_pgvector.py</td><td>Fan Truth scoring benchmarks and examples</td></tr>
+    <tr><td>channel_benchmarks</td><td>6</td><td>Seeded via setup_pgvector.py</td><td>CTR, CPM, engagement rates per channel</td></tr>
+    <tr><td>campaign_benchmarks</td><td>4</td><td>Seeded via setup_pgvector.py</td><td>Historical FMCG campaign performance</td></tr>
+    <tr><td>brand_guidelines_chunks</td><td>~30</td><td>GCS .md files chunked into ~500 chars</td><td>RAG: semantic search over brand guideline sections</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════ 4. DATA SOURCES ═══ -->
+<div class="section page-break">
+  <h1>4. Data Sources — GCS, BigQuery, Vertex AI Search</h1>
+
+  <h2>Google Cloud Storage (GCS)</h2>
+  <p class="intro">GCS is the source of truth for all brand assets. Every brand has a standardised folder structure in the bucket.</p>
+
+  <div class="service-row">
+    <div class="service-icon">🪣</div>
+    <div>
+      <div class="service-name">gs://dauntless-karma-497108-b0-campaignos/brands/{brand}/</div>
+      <div class="service-desc">
+        <strong>Guidelines/brand_guidelines.md</strong> — full brand guidelines (voice, locks, visual rules, channel rules)<br>
+        <strong>Logos/</strong> — PNG/SVG logo variants (default, colour variants)<br>
+        <strong>Products/</strong> — product photography for KV generation<br>
+        <strong>Font/</strong> — .ttf/.otf brand fonts for Pillow text rendering<br>
+        <strong>Assets/</strong> — campaign banners and supporting images<br>
+        <strong>Colours/</strong> — colour palette swatches
+      </div>
+    </div>
+  </div>
+
+  <p>The <code>BrandAssetLoader</code> class in <code>app/brand_assets.py</code> supports two modes controlled by <code>BRAND_ASSETS_MODE</code> in <code>.env</code>:</p>
+  <table>
+    <tr><th>Mode</th><th>When used</th><th>Path</th></tr>
+    <tr><td><code>local</code></td><td>Local development</td><td><code>harness/bucket/brands/{brand}/</code></td></tr>
+    <tr><td><code>gcs</code></td><td>Production (Cloud Run)</td><td><code>gs://bucket/brands/{brand}/</code></td></tr>
+  </table>
+
+  <p>The switching is seamless — the same <code>load_guidelines(brand)</code>, <code>list_products(brand)</code>, <code>list_logos(brand)</code> methods work identically in both modes. Production uses GCS so any brand guideline update takes effect immediately without redeployment.</p>
+
+  <h2>BigQuery</h2>
+  <p class="intro">BigQuery stores structured campaign data and acts as the long-term source of truth for benchmarks, fan truths, and CDP raw data.</p>
+
+  <table>
+    <tr><th>Dataset</th><th>Table</th><th>Contents</th><th>How populated</th></tr>
+    <tr><td>briefing_agent</td><td>fan_truth_library</td><td>Validated fan truth examples with scores</td><td>setup_pgvector.py + upload to BQ</td></tr>
+    <tr><td>briefing_agent</td><td>channel_benchmarks</td><td>CTR, CPM, engagement per channel/market</td><td>setup_pgvector.py + upload to BQ</td></tr>
+    <tr><td>briefing_agent</td><td>historical_campaigns</td><td>Past FMCG campaign performance data</td><td>setup_pgvector.py + upload to BQ</td></tr>
+    <tr><td>briefing_agent</td><td>customer_personality</td><td>2,216 Kaggle customer records (raw)</td><td>upload_kaggle_to_bq.py</td></tr>
+    <tr><td>briefing_agent</td><td>sephora_products</td><td>8,494 Sephora beauty products</td><td>upload_sephora_to_bq.py</td></tr>
+    <tr><td>campaign_outputs</td><td>machine_briefs</td><td>All validated briefs (audit log)</td><td>Written by briefing agent</td></tr>
+  </table>
+
+  <p>BigQuery is queried by the seed scripts to pull data into pgvector. The flow is: <strong>BigQuery (raw data) → Python script → embed with SentenceTransformer → pgvector (searchable)</strong>. This separation means raw data is always queryable via SQL in BigQuery, while pgvector provides the fast semantic search layer.</p>
+
+  <h2>Vertex AI Search (Discovery Engine)</h2>
+  <p class="intro">Vertex AI Search indexes the brand guidelines text from GCS and provides AI-powered semantic search with summarisation. This is used in <code>SEARCH_MODE=live</code>.</p>
+
+  <div class="service-row">
+    <div class="service-icon">🔍</div>
+    <div>
+      <div class="service-name">Search App: campaignos-briefing-search</div>
+      <div class="service-desc">
+        <strong>Datastore:</strong> campaignos-brand-guidelines → indexes <code>brands/*/Guidelines/*.txt</code> from GCS<br>
+        <strong>Engine:</strong> Standard Edition — semantic search with snippet extraction<br>
+        <strong>Queries run at runtime:</strong> brand rules, fan truth examples, channel benchmarks, moment type rules<br>
+        <strong>Why .txt not .md?</strong> Vertex AI Search only accepts text/plain MIME type — markdown files must be renamed .txt before import
+      </div>
+    </div>
+  </div>
+
+  <p>The <code>BriefingSearchClient</code> class in <code>app/search_client.py</code> makes 5 search queries per brief:</p>
+  <pre>
+1. get_brand_rules(product_category, channels)
+   → "brand guidelines: logo colour font voice guardrails for Dry Cook-In Sauces on Instagram..."
+
+2. get_fan_truth_examples(product, product_category, audience)
+   → "Fan Truth examples for Beef Stock Cubes targeting Students..."
+
+3. get_campaign_benchmarks(product_category, market, season)
+   → "Historical campaign performance for Dry Cook-In Sauces in UK during Summer..."
+
+4. get_channel_benchmarks(channels, market, audience_segment)
+   → "Channel benchmarks for Instagram, TikTok in UK targeting Students..."
+
+5. get_moment_type_rules(moment_type)
+   → "Day-to-Day campaign rules: budget weighting, approval requirements..."
+</pre>
+
+  <p>Search results are injected into the <code>BriefingContext</code> and passed to the briefing agent as pre-loaded context. The agent never calls the Search API directly — all data arrives pre-loaded.</p>
+</div>
+
+<!-- ══════════════════════════════════════════════ 5. LOCAL vs PROD ═══ -->
+<div class="section page-break">
+  <h1>5. Local vs Production — How They Differ</h1>
+
+  <h2>Local Development Setup</h2>
+  <div class="arch">
+Developer Laptop (Windows)
+  │
+  ├── Frontend (npm run dev, port 5173)
+  │     React + Vite → hot reload
+  │     VITE_API_URL = http://localhost:8000
+  │
+  ├── Harness (uv run uvicorn main:app, port 8000)
+  │     FastAPI + Google ADK
+  │     .env file with all config
+  │
+  ├── Docker pgvector (port 5433)
+  │     docker compose -f docker-compose.pgvector.yml up -d
+  │     PostgreSQL 16 + pgvector extension
+  │     Data: Kaggle + Sephora + benchmarks
+  │
+  └── External GCP Services
+        GCS Bucket → brand assets (BRAND_ASSETS_MODE=gcs or local)
+        Vertex AI Search → brand guidelines (SEARCH_MODE=live)
+        BigQuery → source data
+        Groq API → LLM inference
+</div>
+
+  <h2>Production Cloud Run Setup</h2>
+  <div class="arch">
+Internet
+  │
+  ├── Cloud Run: campaignos-frontend (nginx, port 8080)
+  │     Docker image: gcr.io/PROJECT/campaignos-frontend:latest
+  │     Built with: VITE_API_URL = harness Cloud Run URL
+  │     Static React app served by nginx
+  │
+  ├── Cloud Run: campaignos-harness (uvicorn, port 8080)
+  │     Docker image: gcr.io/PROJECT/campaignos-harness:latest
+  │     Env vars: from Cloud Run config + Secret Manager
+  │     Cloud SQL connection: Unix socket via Auth Proxy
+  │
+  ├── Cloud SQL: campaignos-pgvector (PostgreSQL 15 + pgvector)
+  │     Connection: Unix socket /cloudsql/PROJECT:REGION:INSTANCE
+  │     Auth: Cloud SQL Auth Proxy (via --add-cloudsql-instances)
+  │
+  └── Shared GCP Services (same as local)
+        GCS Bucket, Vertex AI Search, BigQuery, Groq API
+</div>
+
+  <h2>Key Differences: Local vs Production</h2>
+  <table>
+    <tr><th>Aspect</th><th>Local</th><th>Production</th></tr>
+    <tr><td>Frontend</td><td>Vite dev server (port 5173)</td><td>nginx in Docker on Cloud Run</td></tr>
+    <tr><td>Harness</td><td>uvicorn with --reload</td><td>uvicorn in Docker, Cloud Build deployed</td></tr>
+    <tr><td>pgvector</td><td>Docker container (port 5433)</td><td>Cloud SQL (Unix socket)</td></tr>
+    <tr><td>Connection</td><td>127.0.0.1:5433 TCP</td><td>/cloudsql/PROJECT:REGION:INSTANCE socket</td></tr>
+    <tr><td>Brand assets</td><td>local OR gcs mode</td><td>gcs mode (always live)</td></tr>
+    <tr><td>Secrets</td><td>.env file (git-ignored)</td><td>Secret Manager + Cloud Run env vars</td></tr>
+    <tr><td>Logging</td><td>Console (structlog)</td><td>Cloud Logging (auto-captured)</td></tr>
+    <tr><td>CORS</td><td>localhost:5173 allowed</td><td>allow_origins=["*"] (any Cloud Run)</td></tr>
+    <tr><td>Cold start</td><td>None (always warm)</td><td>~15 seconds first request</td></tr>
+  </table>
+
+  <h2>Environment Variables</h2>
+  <table>
+    <tr><th>Variable</th><th>Local value</th><th>Production value</th><th>Purpose</th></tr>
+    <tr><td>SEARCH_MODE</td><td>live / pgvector / gcs_files</td><td>live</td><td>Which data source for benchmarks</td></tr>
+    <tr><td>BRAND_ASSETS_MODE</td><td>local / gcs</td><td>gcs</td><td>Where to load logos/fonts/images</td></tr>
+    <tr><td>PGVECTOR_HOST</td><td>127.0.0.1</td><td>/cloudsql/PROJECT:REGION:INSTANCE</td><td>pgvector connection</td></tr>
+    <tr><td>PGVECTOR_PORT</td><td>5433</td><td>5432</td><td>pgvector port</td></tr>
+    <tr><td>GROQ_API_KEY</td><td>In .env file</td><td>Secret Manager (GROQ_API_KEY:latest)</td><td>Groq API authentication</td></tr>
+    <tr><td>GEMINI_MODEL_REASONING</td><td>groq/llama-3.3-70b-versatile</td><td>groq/llama-3.3-70b-versatile</td><td>LLM for all agents</td></tr>
+    <tr><td>ENVIRONMENT</td><td>development</td><td>production</td><td>Logging behaviour</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════════ 6. DOCKER ═══ -->
+<div class="section page-break">
+  <h1>6. Docker — Local pgvector & Production Images</h1>
+
+  <h2>Docker for Local pgvector</h2>
+  <p class="intro">Docker is used locally to run PostgreSQL with the pgvector extension — the same database engine that runs in Cloud SQL production. This means zero schema differences between dev and prod.</p>
+
+  <pre>
+# docker-compose.pgvector.yml
+services:
+  pgvector:
+    image: pgvector/pgvector:pg16      # PostgreSQL 16 with pgvector pre-installed
+    container_name: campaignos-pgvector
+    environment:
+      POSTGRES_USER: campaignos
+      POSTGRES_PASSWORD: campaignos
+      POSTGRES_DB: marketing
+      POSTGRES_HOST_AUTH_METHOD: trust  # No password needed from localhost
+    ports:
+      - "5433:5432"                     # 5433 on host → 5432 in container
+                                        # 5433 avoids clash with local PostgreSQL on 5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data # Persistent data across restarts</pre>
+
+  <p><strong>Why port 5433 and not 5432?</strong> The user's machine already had a native PostgreSQL installation running on port 5432. Mapping Docker to 5433 avoids the conflict. The production Cloud SQL always uses 5432 (the standard PostgreSQL port).</p>
+
+  <h2>Docker for Production — Harness Image</h2>
+  <p>The harness Docker image is designed to be small and fast to build. Key decisions:</p>
+  <table>
+    <tr><th>Decision</th><th>Reason</th></tr>
+    <tr><td>python:3.12-slim base image</td><td>Minimal OS — no dev tools, smaller attack surface</td></tr>
+    <tr><td>sentence-transformers excluded</td><td>PyTorch alone is 1.5GB. Excluded from image since Cloud Run uses Vertex AI Search + pre-seeded pgvector embeddings at runtime</td></tr>
+    <tr><td>Only Guidelines/ folder copied</td><td>Product images (300MB+) are loaded from GCS at runtime — no need in the image</td></tr>
+    <tr><td>uv for dependency management</td><td>uv installs Python deps 10× faster than pip and handles Python 3.12 download automatically</td></tr>
+  </table>
+
+  <pre>
+# Dockerfile (harness)
+FROM python:3.12-slim
+WORKDIR /app
+RUN pip install uv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev            # Install prod deps only
+COPY main.py ./
+COPY app/ ./app/
+COPY bucket/brands/*/Guidelines/ ...     # Copy only text guidelines
+ENV PORT=8080
+CMD uv run uvicorn main:app --host 0.0.0.0 --port $PORT</pre>
+
+  <h2>Docker for Production — Frontend Image</h2>
+  <pre>
+# Dockerfile (frontend) — Multi-stage build
+FROM node:20-alpine AS builder           # Stage 1: Build React app
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci                               # Clean install (faster than npm install)
+COPY . .
+ARG VITE_API_URL                         # Harness URL baked into the JS bundle at build time
+RUN npm run build                        # Produces /app/dist/
+
+FROM nginx:alpine                        # Stage 2: Serve with nginx (tiny ~20MB image)
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 8080
+CMD ["nginx", "-g", "daemon off;"]</pre>
+
+  <p>The multi-stage build means the final image only contains nginx + the static JS/CSS files. The Node.js toolchain (~500MB) is discarded after building. Final image size: ~30MB.</p>
+</div>
+
+<!-- ═══════════════════════════════════════ 7. CLOUD BUILD ═══ -->
+<div class="section page-break">
+  <h1>7. Cloud Build — Why and How</h1>
+
+  <h2>Why Cloud Build Instead of Local Docker Build?</h2>
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <div class="card-title">Speed</div>
+      <div class="card-body">Cloud Build runs in Google's data centre. Pushing a 400MB image to Container Registry (GCR) is a local network transfer for Cloud Build, versus uploading from your laptop over home broadband.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏗️</div>
+      <div class="card-title">No Docker Desktop Needed</div>
+      <div class="card-body">Local Docker builds require Docker Desktop running. Cloud Build only requires the gcloud CLI — no local Docker daemon, no WSL, no memory overhead.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">📦</div>
+      <div class="card-title">Small Upload</div>
+      <div class="card-body">With .gcloudignore excluding .venv (1GB) and brand assets (300MB+), only the source code (~1MB) is uploaded to Cloud Build. Much faster than uploading a full Docker context.</div>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔄</div>
+      <div class="card-title">CI/CD Ready</div>
+      <div class="card-body">Cloud Build can be triggered automatically from GitHub pushes, pull requests, or tags — enabling full automated deployment pipelines.</div>
+    </div>
+  </div>
+
+  <h2>How Cloud Build Works</h2>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-num">1</div>
+      <div class="flow-content">
+        <h4>gcloud builds submit — uploads source to GCS</h4>
+        <p>The gcloud CLI zips the local directory (respecting .gcloudignore) and uploads it to a Cloud Storage bucket. For our harness, this is ~1MB after exclusions.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">2</div>
+      <div class="flow-content">
+        <h4>Cloud Build fetches source and runs build steps</h4>
+        <p>A Cloud Build worker (8 CPU high-performance machine) downloads the source, runs each step in cloudbuild.yaml sequentially: docker build → docker push → gcloud run deploy.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">3</div>
+      <div class="flow-content">
+        <h4>Docker image pushed to Container Registry (GCR)</h4>
+        <p>The built image is pushed to <code>gcr.io/PROJECT/campaignos-harness:latest</code>. This is a local network transfer within GCP — much faster than uploading from a laptop.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">4</div>
+      <div class="flow-content">
+        <h4>gcloud run deploy creates a new Cloud Run revision</h4>
+        <p>Cloud Run pulls the new image from GCR and creates a new revision. Traffic is shifted to the new revision automatically once health checks pass.</p>
+      </div>
+    </div>
+  </div>
+
+  <pre>
+# cloudbuild.yaml (harness)
+steps:
+  # Step 1: Build Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/campaignos-harness:latest', '.']
+
+  # Step 2: Push to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/campaignos-harness:latest']
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - 'gcloud', 'run', 'deploy', 'campaignos-harness'
+      - '--image=gcr.io/$PROJECT_ID/campaignos-harness:latest'
+      - '--region=us-central1'
+      - '--set-env-vars=PGVECTOR_HOST=/cloudsql/...,SEARCH_MODE=live,...'
+      - '--set-secrets=GROQ_API_KEY=GROQ_API_KEY:latest'
+      - '--add-cloudsql-instances=PROJECT:REGION:INSTANCE'
+
+options:
+  machineType: 'E2_HIGHCPU_8'   # 8 CPU build machine — faster than default</pre>
+</div>
+
+<!-- ═══════════════════════════════════════════ 8. CLOUD RUN ═══ -->
+<div class="section page-break">
+  <h1>8. Cloud Run — Production Hosting</h1>
+
+  <h2>Why Cloud Run?</h2>
+  <table>
+    <tr><th>Feature</th><th>How CampaignOS uses it</th></tr>
+    <tr><td>Serverless containers</td><td>No server management — just push a Docker image and it runs</td></tr>
+    <tr><td>Auto-scales to zero</td><td>When no requests come in, Cloud Run shuts down. No idle cost.</td></tr>
+    <tr><td>Scales on demand</td><td>If 10 users hit the frontend at once, Cloud Run spins up 10 instances automatically</td></tr>
+    <tr><td>Built-in HTTPS</td><td>Free TLS/SSL certificate — no nginx/certbot setup</td></tr>
+    <tr><td>Cloud SQL Auth Proxy</td><td>--add-cloudsql-instances creates a secure Unix socket — no public IP, no VPN</td></tr>
+    <tr><td>Secret Manager integration</td><td>--set-secrets mounts secrets as env vars — keys never in code or Dockerfile</td></tr>
+    <tr><td>Pay per request</td><td>First 2M requests/month free. CampaignOS at demo scale = effectively free.</td></tr>
+  </table>
+
+  <h2>Cloud SQL Auth Proxy — How the Connection Works</h2>
+  <p>The Cloud SQL Auth Proxy is the recommended way to connect Cloud Run to Cloud SQL. It creates a secure Unix socket file that your code connects to as if it were a local database.</p>
+  <div class="arch">
+Cloud Run Container
+  │
+  ├── Your code (uvicorn + FastAPI)
+  │     connects to: host=/cloudsql/PROJECT:REGION:INSTANCE
+  │                  user=campaignos, password=campaignos123
+  │
+  └── Cloud SQL Auth Proxy (auto-started by Cloud Run)
+        │  Authenticates using the Container's service account
+        │  Creates Unix socket at /cloudsql/PROJECT:REGION:INSTANCE/.s.PGSQL.5432
+        │
+        └── Cloud SQL (campaignos-pgvector)
+              Receives connection as if from localhost
+              No public IP exposure needed
+</div>
+
+  <p>This is configured with two Cloud Run settings:</p>
+  <pre>
+# 1. Add Cloud SQL instance (creates the Unix socket)
+--add-cloudsql-instances=dauntless-karma-497108-b0:us-central1:campaignos-pgvector
+
+# 2. Tell pgvector_client.py to use the socket path
+PGVECTOR_HOST=/cloudsql/dauntless-karma-497108-b0:us-central1:campaignos-pgvector
+PGVECTOR_PORT=5432</pre>
+
+  <h2>Two Cloud Run Services</h2>
+  <table>
+    <tr><th>Service</th><th>URL</th><th>Image</th><th>Resources</th></tr>
+    <tr><td>campaignos-harness</td><td>campaignos-harness-958438970145.us-central1.run.app</td><td>gcr.io/PROJECT/campaignos-harness:latest</td><td>2 CPU, 4GB RAM, 300s timeout</td></tr>
+    <tr><td>campaignos-frontend</td><td>campaignos-frontend-958438970145.us-central1.run.app</td><td>gcr.io/PROJECT/campaignos-frontend:latest</td><td>1 CPU, 256MB RAM</td></tr>
+  </table>
+</div>
+
+<!-- ════════════════════════════════════════ 9. INTEGRATION MAP ═══ -->
+<div class="section page-break">
+  <h1>9. How All Services Integrate — Complete Data Flow</h1>
+
+  <div class="arch">
+════════════════════════════════════════════════════════════════
+                    CAMPAIGNOS — FULL DATA FLOW
+════════════════════════════════════════════════════════════════
+
+USER (Browser)
+  └── campaignos-frontend (Cloud Run / nginx)
+        React 7-step wizard: Brand → Goal → Product → Fan Truth
+                              → Audience → Channels → Budget
+        POST /brief-full ──────────────────────────────────────►
+
+HARNESS API (Cloud Run)
+  └── FastAPI /brief-full endpoint
+        │
+        ├─► STAGE 1: load_brand_context() [zero LLM cost]
+        │     │
+        │     ├── GCS Bucket ──────────────────────────────────►
+        │     │   BRAND_ASSETS_MODE=gcs
+        │     │   Load brand_guidelines.md, product image paths
+        │     │   ◄── brand text, logo paths, font paths ───────
+        │     │
+        │     ├── Vertex AI Search ────────────────────────────►
+        │     │   SEARCH_MODE=live, engine: campaignos-briefing-search
+        │     │   Datastore: brands/*/Guidelines/*.txt from GCS
+        │     │   5 semantic queries (brand rules, fan truths,
+        │     │                       benchmarks, channels, moment)
+        │     │   ◄── search results + snippets ────────────────
+        │     │
+        │     └── Cloud SQL pgvector ──────────────────────────►
+        │         Unix socket via Cloud SQL Auth Proxy
+        │         Query: customer_insights WHERE brand='Rnorr'
+        │         ORDER BY embedding <==> query_vector
+        │         ◄── top 3 similar customers: income, channels,
+        │              deal purchases, CRM notes ────────────────
+        │
+        ├─► STAGE 2: Briefing Agent [Groq Llama 3.3 70B]
+        │     Input: BriefingContext (all data from Stage 1)
+        │     + Campaign brief from wizard
+        │     │
+        │     └── Groq API ─────────────────────────────────────►
+        │         litellm.acompletion(model='groq/llama-3.3-70b-versatile')
+        │         ◄── MachineBrief JSON:
+        │              Fan Truth: 85/100 PASS
+        │              KPIs: OK / AMBITIOUS / UNREALISTIC
+        │              Brand locks applied
+        │              Validation notes ───────────────────────
+        │
+        ├─► STAGE 3: Strategy Agent [Groq Llama 3.3 70B]
+        │     Input: MachineBrief + brand guidelines
+        │     ◄── CreativeStrategy JSON:
+        │          hero_message, pillars, channel priorities ─
+        │
+        └─► STAGE 4: Copy Agent [Groq Llama 3.3 70B]
+              Input: MachineBrief + CreativeStrategy
+              ◄── CampaignCopy JSON:
+                   short/medium/long copy
+                   CTA, Instagram caption, TikTok hook ──────
+
+RESPONSE to browser: machine_brief + creative_strategy + campaign_copy
+  └── React renders:
+       📋 Brief Validation (Fan Truth gauge, KPI rows, validation notes)
+       👥 Audience Intelligence (CDP data from Kaggle/Sephora)
+       ⚡ Pipeline Output (campaign details, brief summary)
+       💡 Creative Strategy (big idea, framework, pillars)
+       ✍️ Campaign Copy (short/medium/long + platform copy)
+</div>
+
+  <h2>Service Dependency Map</h2>
+  <table>
+    <tr><th>Service</th><th>Depends on</th><th>Provides to</th></tr>
+    <tr><td>Cloud Run (Frontend)</td><td>Cloud Run (Harness) API</td><td>User browser</td></tr>
+    <tr><td>Cloud Run (Harness)</td><td>GCS, Vertex AI Search, Cloud SQL, Groq API, BigQuery, Secret Manager</td><td>Frontend API responses</td></tr>
+    <tr><td>Cloud SQL (pgvector)</td><td>Cloud Build (seeded via seed scripts)</td><td>Harness (CDP queries)</td></tr>
+    <tr><td>Vertex AI Search</td><td>GCS (indexes brand guidelines .txt files)</td><td>Harness (brand rules search)</td></tr>
+    <tr><td>GCS Bucket</td><td>Brand team (uploads assets)</td><td>Harness (brand assets), Vertex AI Search (guidelines)</td></tr>
+    <tr><td>BigQuery</td><td>Kaggle/Sephora CSVs uploaded via scripts</td><td>Seed scripts (pull data into pgvector)</td></tr>
+    <tr><td>Secret Manager</td><td>Admin (stores GROQ_API_KEY)</td><td>Cloud Run (mounted as env vars)</td></tr>
+    <tr><td>Cloud Build</td><td>Source code (git push)</td><td>Container Registry (Docker images)</td></tr>
+    <tr><td>Container Registry</td><td>Cloud Build (pushes images)</td><td>Cloud Run (pulls images to deploy)</td></tr>
+    <tr><td>Groq API</td><td>API key from Secret Manager</td><td>Harness (LLM inference for all 3 agents)</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════ 10. ADDING A NEW BRAND ═══ -->
+<div class="section page-break">
+  <h1>10. Adding a New Brand</h1>
+  <p class="intro">The system is designed so adding a new brand requires no code changes — only data and configuration.</p>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-num">1</div>
+      <div class="flow-content">
+        <h4>Upload brand assets to GCS</h4>
+        <p>Create folder <code>gs://bucket/brands/{BrandName}/</code> with subfolders: Guidelines/, Logos/, Products/, Font/, Assets/, Colours/. The guidelines file MUST be named <code>brand_guidelines.md</code>.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">2</div>
+      <div class="flow-content">
+        <h4>Upload .txt version for Vertex AI Search</h4>
+        <p><code>gsutil -h "Content-Type:text/plain" cp brand_guidelines.md gs://bucket/brands/{Brand}/Guidelines/brand_guidelines.txt</code> — required because Vertex AI Search rejects .md files.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">3</div>
+      <div class="flow-content">
+        <h4>Re-index Search datastore</h4>
+        <p>Run <code>uv run python scripts/index_brand_assets.py</code> to upload asset manifests and trigger a Vertex AI Search re-import to pick up the new brand guidelines.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">4</div>
+      <div class="flow-content">
+        <h4>Add brand to the React wizard (App.tsx)</h4>
+        <p>Add to BRANDS array, BRAND_PRODUCTS, BRAND_CATEGORY, BRAND_FAN_TRUTHS, and INTERESTS — 5 constants, ~15 lines of code.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">5</div>
+      <div class="flow-content">
+        <h4>Seed CDP data for the new brand</h4>
+        <p>Update <code>map_to_brand()</code> in seed_kaggle_cdp.py and seed_sephora_cdp.py with proxy signals for the new brand, then re-run both seed scripts.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-num">6</div>
+      <div class="flow-content">
+        <h4>Redeploy</h4>
+        <p><code>gcloud builds submit --config cloudbuild.yaml</code> for the frontend (new brand in wizard). No harness redeploy needed — harness reads brand data from GCS at runtime.</p>
+      </div>
+    </div>
+  </div>
+
+  <h2>Brands Currently Configured</h2>
+  <table>
+    <tr><th>Brand</th><th>Category</th><th>Products</th><th>CDP Source</th></tr>
+    <tr><td>McDonald's 🍔</td><td>QSR / Burgers & Chicken</td><td>McSpicy, Big Mac, Happy Meal, McCafé...</td><td>Kaggle (sweets, kids, convenience)</td></tr>
+    <tr><td>Rnorr 🥣</td><td>Dry Cook-In Sauces</td><td>Beef/Chicken/Veg Stock Cubes, Bouillon...</td><td>Kaggle (high meat/fish spend)</td></tr>
+    <tr><td>Sunglow ✨</td><td>Hair Care</td><td>Moisture Shampoo, Curl Serum, Scalp Oil...</td><td>Sephora natural/curl hair products</td></tr>
+    <tr><td>Boozt 💨</td><td>Hair Styling & Volume</td><td>Root Lift Spray, Volumising Mousse...</td><td>Sephora volume/styling products</td></tr>
+  </table>
+</div>
+
+<!-- ══════════════════════════════════════ 11. QUICK REFERENCE ═══ -->
+<div class="section">
+  <h1>11. Quick Reference — Commands</h1>
+
+  <h2>Local Development</h2>
+  <pre>
+# Start pgvector (Docker)
+cd d:\campaignos\harness
+docker compose -f docker-compose.pgvector.yml up -d
+
+# Start harness
+uv run uvicorn main:app --port 8000
+
+# Start frontend
+cd d:\campaignos\frontend
+npm run dev
+
+# Seed all data (run once after first setup)
+uv run python scripts/setup_pgvector.py
+uv run python scripts/seed_kaggle_cdp.py
+uv run python scripts/seed_sephora_cdp.py</pre>
+
+  <h2>Production Deployment</h2>
+  <pre>
+# Deploy harness to Cloud Run
+cd d:\campaignos\harness
+gcloud builds submit --config cloudbuild.yaml --project=dauntless-karma-497108-b0
+
+# Get harness URL then deploy frontend
+$URL = gcloud run services describe campaignos-harness --region=us-central1 --format="value(status.url)"
+cd d:\campaignos\frontend
+gcloud builds submit --config cloudbuild.yaml --substitutions="_HARNESS_URL=$URL" --project=...
+
+# Update a secret cleanly (no BOM)
+$tmp = [System.IO.Path]::GetTempFileName()
+[System.IO.File]::WriteAllText($tmp, "secret-value", [System.Text.Encoding]::ASCII)
+gcloud secrets versions add SECRET_NAME --data-file=$tmp --project=...
+Remove-Item $tmp</pre>
+
+  <h2>Production URLs</h2>
+  <table>
+    <tr><th>Service</th><th>URL</th></tr>
+    <tr><td>Frontend</td><td>https://campaignos-frontend-958438970145.us-central1.run.app</td></tr>
+    <tr><td>Harness API</td><td>https://campaignos-harness-958438970145.us-central1.run.app</td></tr>
+    <tr><td>Health check</td><td>https://campaignos-harness-958438970145.us-central1.run.app/health</td></tr>
+    <tr><td>GitHub</td><td>github.com/tahmina0728-eng/a2a-marketing (branch: feature/groq-cdp-pgvector-ui)</td></tr>
+  </table>
+</div>
+
+<footer>
+  CampaignOS — AI Campaign Generation Platform &nbsp;|&nbsp;
+  github.com/tahmina0728-eng/a2a-marketing &nbsp;|&nbsp;
+  Branch: feature/groq-cdp-pgvector-ui &nbsp;|&nbsp;
+  GCP Project: dauntless-karma-497108-b0
+</footer>
+
+</body>
+</html>

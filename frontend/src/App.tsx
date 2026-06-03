@@ -3,6 +3,18 @@ import "./App.css";
 import { usePipeline } from "./hooks/usePipeline";
 import type { HarnessBriefRequest } from "./types/pipeline";
 
+// ── Infosys Aster Logo ───────────────────────────────────────
+function AsterLogo({ size = 1 }: { size?: number }) {
+  return (
+    <svg width={120 * size} height={52 * size} viewBox="0 0 120 52" xmlns="http://www.w3.org/2000/svg">
+      <text x="4" y="18" fontFamily="Inter,Arial,sans-serif" fontWeight="400"
+        fontSize="13" fill="#0055A4" letterSpacing="0.3">Infosys</text>
+      <text x="2" y="46" fontFamily="Inter,Arial,sans-serif" fontWeight="700"
+        fontSize="30" fill="#173563" letterSpacing="-0.5">aster</text>
+    </svg>
+  );
+}
+
 // ── Wizard constants ─────────────────────────────────────────
 
 type GoalId = "launch" | "sales" | "community" | "reengagement" | "expansion" | "custom";
@@ -430,7 +442,7 @@ function BriefForm({ onStart }: { onStart: (brief: HarnessBriefRequest) => void 
             <div className="wizard-step-label">Review</div>
             <h2 className="wizard-heading">Ready to <span className="gradient-text">launch?</span></h2>
             <p className="wizard-subheading">Name your campaign then send it to the agents</p>
-            <input className="dark-input" placeholder="Campaign name (e.g. McSpicy Summer 2026)"
+            <input className="dark-input" placeholder="Campaign name (e.g. Summer Awareness 2026)"
               value={d.campaignName}
               onChange={(e) => setD((p) => ({ ...p, campaignName: e.target.value }))}
               style={{ marginBottom: 4, fontSize: 16 }} />
@@ -485,6 +497,11 @@ function BriefForm({ onStart }: { onStart: (brief: HarnessBriefRequest) => void 
 
   return (
     <div className="wizard-page">
+      {/* Infosys Aster Header */}
+      <div className="aster-header">
+        <AsterLogo />
+        <span className="aster-tagline">The AI-Amplified Marketing Suite</span>
+      </div>
       <div className="wizard-container">
         <div className="wizard-progress">
           <div className="wizard-progress-fill" style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
@@ -513,6 +530,7 @@ function BriefForm({ onStart }: { onStart: (brief: HarnessBriefRequest) => void 
 function RunningView() {
   return (
     <div style={styles.runningPage}>
+      <div className="aster-header"><AsterLogo /><span className="aster-tagline">The AI-Amplified Marketing Suite</span></div>
       <div style={styles.runningCard}>
         <div style={styles.runningTitle}>🤖 Agents are working…</div>
         <p style={styles.runningSubtitle}>
@@ -602,7 +620,8 @@ function ResultsView({ output, campaignId, onReset }: {
   const copy     = output?.campaign_copy as any;
 
   const isReady  = brief?.status === "READY";
-  const statusColor = isReady ? "#10b981" : brief?.status === "INCOMPLETE" ? "#ef4444" : "#f59e0b";
+  // statusColor kept for potential future use
+  // const statusColor = isReady ? "#10b981" : brief?.status === "INCOMPLETE" ? "#ef4444" : "#f59e0b";
 
   // Parse CDP insights into readable lines
   const cdpLines = output?.audience_insights
@@ -614,19 +633,24 @@ function ResultsView({ output, campaignId, onReset }: {
       {/* Header */}
       <div style={styles.resultsHero}>
         <div style={styles.resultsHeroInner}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, background: "rgba(16,185,129,0.15)",
-              border: "1px solid rgba(16,185,129,0.3)", display: "flex", alignItems: "center",
-              justifyContent: "center", fontSize: 20 }}>✅</div>
-            <div>
-              <div style={styles.resultsTitle}>Campaign Brief Validated</div>
-              {campaignId && <div style={styles.campaignIdTag}>#{campaignId}</div>}
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <AsterLogo size={0.8} />
+            <div style={{ width: 1, height: 36, background: "#e2e8f0" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#d1fae5",
+                border: "1px solid #a7f3d0", display: "flex", alignItems: "center",
+                justifyContent: "center", fontSize: 16 }}>✅</div>
+              <div>
+                <div style={styles.resultsTitle}>Campaign Brief Validated</div>
+                {campaignId && <div style={styles.campaignIdTag}>#{campaignId}</div>}
+              </div>
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{ padding: "6px 16px", borderRadius: 20, fontSize: 12, fontWeight: 700,
-              background: `${statusColor}18`, color: statusColor,
-              border: `1px solid ${statusColor}30`, letterSpacing: "0.05em" }}>
+              background: isReady ? "#d1fae5" : "#fef3c7",
+              color: isReady ? "#065f46" : "#92400e",
+              border: `1px solid ${isReady ? "#a7f3d0" : "#fde68a"}`, letterSpacing: "0.05em" }}>
               {brief?.status ?? "—"}
             </div>
             <button className="reset-btn" onClick={onReset}>New Campaign</button>
@@ -1004,43 +1028,46 @@ export default function App() {
 // ── Styles ───────────────────────────────────────────────────
 const styles: Record<string, React.CSSProperties> = {
   // Running
+  // ── Infosys Aster light theme ──────────────────────────────
+
   runningPage: {
-    minHeight: "100vh", display: "flex", alignItems: "center",
-    justifyContent: "center", background: "#0a0a0f", padding: 24,
+    minHeight: "100vh", display: "flex", flexDirection: "column" as const,
+    alignItems: "center", background: "#f4f6f9", padding: 0,
   },
   runningCard: {
-    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 20, padding: "40px 48px", maxWidth: 560, width: "100%",
-    backdropFilter: "blur(12px)",
+    background: "#ffffff", border: "1px solid #e2e8f0",
+    borderRadius: 16, padding: "40px 48px", maxWidth: 560, width: "100%",
+    boxShadow: "0 4px 24px rgba(0,0,0,0.08)", marginTop: 40,
   },
   runningTitle: {
-    fontSize: 24, fontWeight: 700, color: "#f1f5f9", marginBottom: 8,
+    fontSize: 22, fontWeight: 700, color: "#173563", marginBottom: 8,
   },
   runningSubtitle: {
-    fontSize: 14, color: "#94a3b8", marginBottom: 32, lineHeight: 1.6,
+    fontSize: 14, color: "#64748b", marginBottom: 32, lineHeight: 1.6,
   },
-  stageList: { display: "flex", flexDirection: "column", gap: 16 },
-  stageIcon: { fontSize: 22, width: 32, flexShrink: 0 },
+  stageList: { display: "flex", flexDirection: "column", gap: 12 },
+  stageIcon: { fontSize: 20, width: 32, flexShrink: 0 },
   stageInfo: { flex: 1 },
-  stageName: { fontSize: 14, fontWeight: 600, color: "#e2e8f0" },
-  stageDesc: { fontSize: 12, color: "#64748b", marginTop: 2 },
+  stageName: { fontSize: 13, fontWeight: 600, color: "#1a2332" },
+  stageDesc: { fontSize: 12, color: "#94a3b8", marginTop: 2 },
 
   // Results
   resultsPage: {
-    minHeight: "100vh", background: "#0a0a0f",
+    minHeight: "100vh", background: "#f4f6f9",
   },
   resultsHero: {
-    background: "linear-gradient(180deg, rgba(124,58,237,0.08) 0%, transparent 100%)",
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
-    padding: "24px 32px",
+    background: "#ffffff",
+    borderBottom: "1px solid #e2e8f0",
+    padding: "20px 32px",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
   },
   resultsHeroInner: {
     display: "flex", alignItems: "center", justifyContent: "space-between",
     maxWidth: 1200, margin: "0 auto",
   },
-  resultsTitle: { fontSize: 20, fontWeight: 700, color: "#f1f5f9" },
+  resultsTitle: { fontSize: 18, fontWeight: 700, color: "#173563" },
   campaignIdTag: {
-    fontSize: 11, color: "#475569", marginTop: 3, fontFamily: "monospace",
+    fontSize: 11, color: "#94a3b8", marginTop: 3, fontFamily: "monospace",
     letterSpacing: "0.05em",
   },
   resultsGrid: {
@@ -1048,36 +1075,38 @@ const styles: Record<string, React.CSSProperties> = {
     gridTemplateColumns: "repeat(3, 1fr)",
     gap: 20,
     maxWidth: 1200,
-    margin: "28px auto",
+    margin: "24px auto",
     padding: "0 32px",
   },
   resultCard: {
-    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",
-    borderRadius: 16, padding: 24,
+    background: "#ffffff", border: "1px solid #e2e8f0",
+    borderRadius: 14, padding: 22,
+    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
   },
-  cardHeader: { fontSize: 15, fontWeight: 700, color: "#e2e8f0", marginBottom: 16 },
+  cardHeader: { fontSize: 14, fontWeight: 700, color: "#173563", marginBottom: 14 },
   cardRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  cardLabel: { fontSize: 12, color: "#64748b", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.04em" },
-  cardValue: { fontSize: 13, color: "#cbd5e1" },
-  cardText: { fontSize: 13, color: "#94a3b8", lineHeight: 1.6, marginTop: 12 },
+  cardLabel: { fontSize: 11, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.06em" },
+  cardValue: { fontSize: 13, color: "#1a2332" },
+  cardText: { fontSize: 13, color: "#4a5568", lineHeight: 1.6, marginTop: 12 },
   badge: {
     fontSize: 11, fontWeight: 700, padding: "3px 10px",
     borderRadius: 20, textTransform: "uppercase" as const,
   },
   bigIdea: {
-    fontSize: 18, fontWeight: 600, color: "#a78bfa",
+    fontSize: 20, fontWeight: 700, color: "#0055A4",
     fontStyle: "italic", lineHeight: 1.5, marginBottom: 16,
   },
   copyGrid: { display: "flex", flexDirection: "column" as const, gap: 16 },
   copyBlock: {},
-  copyLabel: { fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase" as const, marginBottom: 6 },
-  copyText: { fontSize: 14, color: "#cbd5e1", lineHeight: 1.6 },
+  copyLabel: { fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, marginBottom: 6, letterSpacing: "0.08em" },
+  copyText: { fontSize: 14, color: "#1a2332", lineHeight: 1.6 },
   expandBtn: {
-    background: "none", border: "none", color: "#64748b", fontSize: 13,
+    background: "none", border: "none", color: "#94a3b8", fontSize: 12,
     cursor: "pointer", padding: 0, marginBottom: 12,
   },
   jsonPre: {
-    fontSize: 11, color: "#64748b", background: "rgba(0,0,0,0.3)",
+    fontSize: 11, color: "#4a5568", background: "#f8fafc",
+    border: "1px solid #e2e8f0",
     borderRadius: 8, padding: 16, overflowX: "auto" as const,
     whiteSpace: "pre-wrap" as const, maxHeight: 400, overflowY: "auto" as const,
   },
@@ -1085,14 +1114,15 @@ const styles: Record<string, React.CSSProperties> = {
   // Error
   errorPage: {
     minHeight: "100vh", display: "flex", alignItems: "center",
-    justifyContent: "center", background: "#0a0a0f",
+    justifyContent: "center", background: "#f4f6f9",
   },
   errorCard: {
-    background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)",
-    borderRadius: 20, padding: 40, maxWidth: 480, textAlign: "center" as const,
+    background: "#ffffff", border: "1px solid #fecaca",
+    borderRadius: 16, padding: 40, maxWidth: 480, textAlign: "center" as const,
+    boxShadow: "0 4px 24px rgba(239,68,68,0.08)",
   },
-  errorTitle: { fontSize: 20, fontWeight: 700, color: "#fca5a5", marginBottom: 12 },
-  errorMsg: { fontSize: 14, color: "#f87171", lineHeight: 1.6 },
-  authHint: { marginTop: 16, fontSize: 13, color: "#94a3b8", lineHeight: 1.6, textAlign: "left" as const },
-  authCmd: { marginTop: 8, background: "rgba(0,0,0,0.4)", padding: "10px 14px", borderRadius: 8, fontSize: 12, color: "#7dd3fc", fontFamily: "monospace" },
+  errorTitle: { fontSize: 20, fontWeight: 700, color: "#dc2626", marginBottom: 12 },
+  errorMsg: { fontSize: 14, color: "#ef4444", lineHeight: 1.6 },
+  authHint: { marginTop: 16, fontSize: 13, color: "#64748b", lineHeight: 1.6, textAlign: "left" as const },
+  authCmd: { marginTop: 8, background: "#f1f5f9", border: "1px solid #e2e8f0", padding: "10px 14px", borderRadius: 8, fontSize: 12, color: "#0055A4", fontFamily: "monospace" },
 };
