@@ -20,6 +20,13 @@ import random
 import psycopg2
 from psycopg2.extras import execute_values
 
+# Load .env file so USE_GEMINI_EMBEDDINGS and GOOGLE_API_KEY are available
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+except ImportError:
+    pass
+
 PG_HOST = os.getenv("PG_HOST", "127.0.0.1")
 PG_PORT = int(os.getenv("PG_PORT", "5433"))
 PG_USER = os.getenv("PG_USER", "campaignos")
@@ -28,13 +35,91 @@ PG_DB   = os.getenv("PG_DB", "marketing")
 
 CSV_PATH = os.path.join(os.path.dirname(__file__), "marketing_campaign.csv")
 
-_model = None
+# ── Embedding backend (mirrors pgvector_client.py) ────────────────────────────
+USE_GEMINI = os.getenv("USE_GEMINI_EMBEDDINGS", "false").lower() == "true"
+GEMINI_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "text-embedding-004")
+VECTOR_DIM = 768 if USE_GEMINI else 384  # gemini-embedding-2 with output_dimensionality=768, ST=384
+
+
+def get_embedding(text: str) -> list[float]:
+    """Single text embedding — delegates to batch function."""
+    return get_embeddings_batch([text])[0]
+
+
+def get_embeddings_batch(texts: list[str], batch_size: int = 50) -> list[list[float]]:
+    """
+    Batch embedding — much faster than individual calls.
+
+    Option A — Gemini text-embedding-004 (USE_GEMINI_EMBEDDINGS=true):
+      Processes up to 50 texts per API call
+      768 dims, ~300ms per batch vs 300ms per individual call
+      Free tier: 1,500 req/day — use batches to stay within limit
+
+    Option B — sentence-transformers (USE_GEMINI_EMBEDDINGS=false):
+      384 dims, all texts processed locally in one pass
+      Original code preserved:
+      #   from sentence_transformers import SentenceTransformer
+      #   model = SentenceTransformer("all-MiniLM-L6-v2")
+      #   return [model.encode(t).tolist() for t in texts]
+    """
+    if USE_GEMINI:
+        import google.genai as genai
+        import time
+        api_key = os.getenv("GOOGLE_API_KEY", "")
+        client = genai.Client(api_key=api_key if api_key else None)
+        all_embeddings = []
+        print(f"  Rate limit: ~15 RPM free tier — adding 4s delay between batches")
+
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            try:
+                result = client.models.embed_content(
+                    model   = GEMINI_MODEL,
+                    contents= batch,
+                    config  = {"task_type": "RETRIEVAL_DOCUMENT", "output_dimensionality": VECTOR_DIM},
+                )
+                all_embeddings.extend([list(e.values) for e in result.embeddings])
+            except Exception as e:
+                if "429" in str(e):
+                    print(f"  Rate limit hit at batch {i//batch_size+1} — waiting 60s...")
+                    time.sleep(60)
+                    # Retry once after waiting
+                    try:
+                        result = client.models.embed_content(
+                            model   = GEMINI_MODEL,
+                            contents= batch,
+                            config  = {"task_type": "RETRIEVAL_DOCUMENT", "output_dimensionality": VECTOR_DIM},
+                        )
+                        all_embeddings.extend([list(e.values) for e in result.embeddings])
+                        print(f"  Retry succeeded for batch {i//batch_size+1}")
+                        time.sleep(4)
+                        continue
+                    except Exception as e2:
+                        print(f"  Retry failed: {e2} — zero vectors")
+                        all_embeddings.extend([[0.0] * VECTOR_DIM] * len(batch))
+                else:
+                    print(f"  WARNING: Gemini batch {i//batch_size+1} failed ({e}) — zero vectors")
+                    all_embeddings.extend([[0.0] * VECTOR_DIM] * len(batch))
+            # 4s pause between batches = ~15 RPM (free tier limit)
+            time.sleep(4)
+
+        return all_embeddings
+    else:
+        # ── sentence-transformers batch (original implementation) ───────────
+        # from sentence_transformers import SentenceTransformer
+        # model = SentenceTransformer("all-MiniLM-L6-v2")
+        # return [model.encode(t).tolist() for t in texts]
+        try:
+            from sentence_transformers import SentenceTransformer
+            model = SentenceTransformer("all-MiniLM-L6-v2")
+            return [model.encode(t).tolist() for t in texts]
+        except ImportError:
+            return [[0.0] * 384] * len(texts)
+
+
+# kept for backward compat
 def get_model():
-    global _model
-    if _model is None:
-        from sentence_transformers import SentenceTransformer
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
-    return _model
+    return None
 
 
 # ── CRM note generation (from Kaggle columns → qualitative text) ─────────────
@@ -266,7 +351,7 @@ def infer_channels(row: dict) -> list[str]:
 # ── Schema ────────────────────────────────────────────────────────────────────
 
 def setup_schema(cur):
-    cur.execute("""
+    cur.execute(f"""
         CREATE TABLE IF NOT EXISTS customer_insights (
             id              INT PRIMARY KEY,
             brand           TEXT,
@@ -279,7 +364,7 @@ def setup_schema(cur):
             has_children    BOOL,
             top_channels    TEXT[],
             crm_notes       TEXT,
-            embedding       vector(384)
+            embedding       vector({VECTOR_DIM})
         );
         CREATE INDEX IF NOT EXISTS ci_emb_idx
             ON customer_insights USING hnsw (embedding vector_cosine_ops);
@@ -314,34 +399,48 @@ if __name__ == "__main__":
     setup_schema(cur)
     conn.commit()
 
-    model = get_model()
-    print(f"Embedding model loaded. Processing {len(rows)} customers...\n")
+    backend = f"Gemini {GEMINI_MODEL} ({VECTOR_DIM} dims)" if USE_GEMINI else "sentence-transformers all-MiniLM-L6-v2 (384 dims)"
+    print(f"Embedding backend: {backend}")
+    print(f"Processing {len(rows)} customers...\n")
+
+    # Pre-generate all CRM notes
+    print("Generating CRM notes...")
+    records = []
+    for i, row in enumerate(rows):
+        records.append({
+            "id":        int(row.get("ID", i)),
+            "brand":     map_to_brand(row),
+            "age_range": infer_age_range(row),
+            "channels":  infer_channels(row),
+            "crm_note":  generate_crm_note(row),
+            "row":       row,
+        })
+
+    # Batch embed all CRM notes (50 texts per API call)
+    crm_notes = [r["crm_note"] for r in records]
+    EMBED_BATCH = 50
+    total_batches = (len(crm_notes) + EMBED_BATCH - 1) // EMBED_BATCH
+    print(f"Embedding {len(crm_notes)} records in {total_batches} batches of {EMBED_BATCH}...")
+    all_embeddings = get_embeddings_batch(crm_notes, batch_size=EMBED_BATCH)
+    print(f"Embeddings done. Building insert batch...")
 
     batch = []
-    for i, row in enumerate(rows):
-        crm_note  = generate_crm_note(row)
-        brand     = map_to_brand(row)
-        age_range = infer_age_range(row)
-        channels  = infer_channels(row)
-        embedding = model.encode(crm_note).tolist()
-
+    for i, (rec, embedding) in enumerate(zip(records, all_embeddings)):
+        row = rec["row"]
         batch.append((
-            int(row.get("ID", i)),
-            brand,
-            age_range,
+            rec["id"],
+            rec["brand"],
+            rec["age_range"],
             float(row.get("Income", 0) or 0),
             float(row.get("MntWines", 0) or 0),
             float(row.get("MntMeatProducts", 0) or 0),
             int(row.get("NumDealsPurchases", 0) or 0),
             int(row.get("NumWebVisitsMonth", 0) or 0),
             (int(row.get("Kidhome", 0) or 0) + int(row.get("Teenhome", 0) or 0)) > 0,
-            channels,
-            crm_note,
+            rec["channels"],
+            rec["crm_note"],
             embedding,
         ))
-
-        if (i + 1) % 100 == 0:
-            print(f"  Processed {i + 1}/{len(rows)}...")
 
     print(f"\nInserting {len(batch)} records into pgvector...")
     execute_values(cur,

@@ -563,15 +563,15 @@ function ScoreGauge({ score, verdict }: { score: number; verdict: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
       <svg width="88" height="88" viewBox="0 0 88 88">
-        <circle cx="44" cy="44" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+        <circle cx="44" cy="44" r={r} fill="none" stroke="#e2e8f0" strokeWidth="8" />
         <circle cx="44" cy="44" r={r} fill="none" stroke={color} strokeWidth="8"
           strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
           transform="rotate(-90 44 44)" style={{ transition: "stroke-dasharray 1s ease" }} />
         <text x="44" y="41" textAnchor="middle" fill={color} fontSize="18" fontWeight="700" fontFamily="Inter,sans-serif">{score}</text>
-        <text x="44" y="56" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="10" fontFamily="Inter,sans-serif">/100</text>
+        <text x="44" y="56" textAnchor="middle" fill="#94a3b8" fontSize="10" fontFamily="Inter,sans-serif">/100</text>
       </svg>
       <div>
-        <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Fan Truth Score</div>
+        <div style={{ fontSize: 12, color: "#64748b", textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>Fan Truth Score</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 20, fontWeight: 700, color }}>{score}/100</span>
           <span style={{ fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 20,
@@ -599,8 +599,8 @@ function KPIRow({ metric, target, flag }: { metric: string; target: string; flag
       borderRadius: 10, background: c.bg, border: `1px solid ${c.border}`, marginBottom: 6 }}>
       <span style={{ fontSize: 16, fontWeight: 700, color: c.color, width: 20, textAlign: "center" as const }}>{c.icon}</span>
       <div style={{ flex: 1 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0" }}>{metric}</span>
-        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.4)", marginLeft: 6 }}>— {target}</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "#1a2332" }}>{metric}</span>
+        <span style={{ fontSize: 12, color: "#64748b", marginLeft: 6 }}>— {target}</span>
       </div>
       <span style={{ fontSize: 11, fontWeight: 700, color: c.color, padding: "2px 8px",
         background: `${c.color}18`, borderRadius: 12 }}>{flag}</span>
@@ -675,7 +675,7 @@ function ResultsView({ output, campaignId, onReset }: {
                 background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)" }}>
                 <div style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600, letterSpacing: "0.06em",
                   textTransform: "uppercase" as const, marginBottom: 6 }}>Fan Truth</div>
-                <div style={{ fontSize: 14, color: "#e2e8f0", fontStyle: "italic", lineHeight: 1.6 }}>
+                <div style={{ fontSize: 14, color: "#1a2332", fontStyle: "italic", lineHeight: 1.6 }}>
                   "{brief.fan_truth.statement}"
                 </div>
                 {brief.fan_truth.notes && (
@@ -689,7 +689,7 @@ function ResultsView({ output, campaignId, onReset }: {
             {/* KPIs */}
             {brief.kpis?.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: "rgba(255,255,255,0.35)", fontWeight: 600,
+                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600,
                   letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 8 }}>KPIs</div>
                 {brief.kpis.map((k: any, i: number) => (
                   <KPIRow key={i} metric={k.metric} target={k.target} flag={k.flag} note={k.note} />
@@ -700,7 +700,7 @@ function ResultsView({ output, campaignId, onReset }: {
             {/* Summary */}
             {(brief.validation_notes || brief.brief_summary) && (
               <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.7, margin: 0, paddingTop: 12,
-                borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                borderTop: "1px solid #e2e8f0" }}>
                 {brief.validation_notes || brief.brief_summary}
               </p>
             )}
@@ -725,9 +725,9 @@ function ResultsView({ output, campaignId, onReset }: {
           const crmIdx       = cdpLines.findIndex(l => l.includes("CRM notes"));
           const crmNote      = crmIdx >= 0 ? cdpLines.slice(crmIdx + 1).join(" ").slice(0, 200) : null;
 
-          const stat = (label: string, val: string | null, accent = "#7c3aed") => val ? (
+          const stat = (label: string, val: string | null, accent = "#0055A4") => val ? (
             <div style={{ flex: 1, minWidth: 100, padding: "10px 12px", borderRadius: 10,
-              background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              background: "#f8fafc", border: "1px solid #e2e8f0" }}>
               <div style={{ fontSize: 10, color: "#475569", fontWeight: 600, letterSpacing: "0.08em",
                 textTransform: "uppercase" as const, marginBottom: 4 }}>{label}</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: accent }}>{val}</div>
@@ -740,17 +740,17 @@ function ResultsView({ output, campaignId, onReset }: {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                 <div style={styles.cardHeader}>👥 Audience Intelligence</div>
                 <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 12,
-                  background: "rgba(124,58,237,0.15)", color: "#a78bfa",
-                  border: "1px solid rgba(124,58,237,0.25)", letterSpacing: "0.06em" }}>
+                  background: "#e8f0fb", color: "#0055A4",
+                  border: "1px solid rgba(0,85,164,0.2)", letterSpacing: "0.06em" }}>
                   KAGGLE CDP
                 </span>
               </div>
 
               {/* Profile count */}
               <div style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10,
-                background: "linear-gradient(135deg, rgba(124,58,237,0.1), rgba(37,99,235,0.08))",
-                border: "1px solid rgba(124,58,237,0.2)" }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: "#a78bfa" }}>{profileCount}</div>
+                background: "linear-gradient(135deg, #e8f0fb, #eff6ff)",
+                border: "1px solid rgba(0,85,164,0.15)" }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#0055A4" }}>{profileCount}</div>
                 <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
                   {matchLine?.trim() ?? "customer profiles analysed"}
                 </div>
@@ -774,8 +774,8 @@ function ResultsView({ output, campaignId, onReset }: {
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
                     {channels.map((ch, i) => (
                       <span key={i} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 12,
-                        background: "rgba(59,130,246,0.12)", color: "#60a5fa",
-                        border: "1px solid rgba(59,130,246,0.25)", fontWeight: 600 }}>
+                        background: "#e8f0fb", color: "#0055A4",
+                        border: "1px solid rgba(0,85,164,0.2)", fontWeight: 600 }}>
                         {ch}
                       </span>
                     ))}
@@ -815,12 +815,12 @@ function ResultsView({ output, campaignId, onReset }: {
             ].filter(r => r.value).map((row, i, arr) => (
               <div key={i} style={{ display: "flex", justifyContent: "space-between",
                 alignItems: "flex-start", padding: "8px 0",
-                borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
-                <span style={{ fontSize: 11, color: "#475569", fontWeight: 600,
+                borderBottom: i < arr.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600,
                   textTransform: "uppercase" as const, letterSpacing: "0.07em", flexShrink: 0, paddingRight: 12 }}>
                   {row.label}
                 </span>
-                <span style={{ fontSize: 12, color: "#cbd5e1", textAlign: "right" as const }}>
+                <span style={{ fontSize: 12, color: "#1a2332", textAlign: "right" as const }}>
                   {String(row.value)}
                 </span>
               </div>
@@ -829,8 +829,8 @@ function ResultsView({ output, campaignId, onReset }: {
             {/* Brief summary */}
             {brief.brief_summary && (
               <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 8,
-                background: "rgba(255,255,255,0.03)", borderLeft: "2px solid #3b82f6" }}>
-                <div style={{ fontSize: 10, color: "#3b82f6", fontWeight: 600,
+                background: "#eff6ff", borderLeft: "2px solid #0055A4" }}>
+                <div style={{ fontSize: 10, color: "#0055A4", fontWeight: 600,
                   letterSpacing: "0.08em", marginBottom: 6 }}>BRIEF SUMMARY</div>
                 <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
                   {brief.brief_summary}
@@ -855,32 +855,31 @@ function ResultsView({ output, campaignId, onReset }: {
         {/* ── Creative Strategy ── */}
         {strategy && (strategy.hero_message || strategy.big_idea || strategy.strategic_framework) && (
           <div style={{ ...styles.resultCard, gridColumn: "1 / -1",
-            background: "linear-gradient(135deg, rgba(124,58,237,0.08), rgba(37,99,235,0.05))",
-            border: "1px solid rgba(124,58,237,0.2)" }}>
+            background: "linear-gradient(135deg, #f0f7ff, #eff6ff)",
+            border: "1px solid rgba(0,85,164,0.15)" }}>
             <div style={styles.cardHeader}>💡 Creative Strategy</div>
-            {/* Hero message / Big Idea */}
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#a78bfa",
+            <div style={{ fontSize: 22, fontWeight: 800, color: "#0055A4",
               fontStyle: "italic", lineHeight: 1.4, marginBottom: 20,
-              borderBottom: "1px solid rgba(255,255,255,0.06)", paddingBottom: 16 }}>
+              borderBottom: "1px solid #e2e8f0", paddingBottom: 16 }}>
               "{strategy.big_idea || strategy.hero_message}"
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
               {strategy.strategic_framework && (
-                <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                <div style={{ padding: "12px 14px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
                   <div style={styles.cardLabel}>Strategic Framework</div>
-                  <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6, marginTop: 6 }}>{strategy.strategic_framework}</div>
+                  <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, marginTop: 6 }}>{strategy.strategic_framework}</div>
                 </div>
               )}
               {strategy.culture_context && (
-                <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                <div style={{ padding: "12px 14px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
                   <div style={styles.cardLabel}>Cultural Context</div>
-                  <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6, marginTop: 6 }}>{strategy.culture_context}</div>
+                  <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, marginTop: 6 }}>{strategy.culture_context}</div>
                 </div>
               )}
               {strategy.handoff_message && (
-                <div style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)" }}>
+                <div style={{ padding: "12px 14px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
                   <div style={styles.cardLabel}>Creative Brief</div>
-                  <div style={{ fontSize: 13, color: "#cbd5e1", lineHeight: 1.6, marginTop: 6 }}>{strategy.handoff_message}</div>
+                  <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, marginTop: 6 }}>{strategy.handoff_message}</div>
                 </div>
               )}
             </div>
@@ -888,8 +887,8 @@ function ResultsView({ output, campaignId, onReset }: {
               <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
                 {strategy.messaging_pillars.map((p: string, i: number) => (
                   <span key={i} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 20,
-                    background: "rgba(124,58,237,0.12)", color: "#a78bfa",
-                    border: "1px solid rgba(124,58,237,0.25)" }}>{p}</span>
+                    background: "#e8f0fb", color: "#0055A4",
+                    border: "1px solid rgba(0,85,164,0.2)" }}>{p}</span>
                 ))}
               </div>
             )}
@@ -907,7 +906,7 @@ function ResultsView({ output, campaignId, onReset }: {
                   background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)" }}>
                   <div style={{ fontSize: 10, color: "#10b981", fontWeight: 700,
                     letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>SHORT · OOH / KV</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#f1f5f9", lineHeight: 1.3 }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: "#1a2332", lineHeight: 1.3 }}>
                     {copy.short?.headline || copy.short_copy}
                   </div>
                   {copy.short?.subline && <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>{copy.short.subline}</div>}
@@ -919,7 +918,7 @@ function ResultsView({ output, campaignId, onReset }: {
                   background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.15)" }}>
                   <div style={{ fontSize: 10, color: "#3b82f6", fontWeight: 700,
                     letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>MEDIUM · SOCIAL / DISPLAY</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#1a2332", lineHeight: 1.4 }}>
                     {copy.medium?.headline || copy.medium_copy}
                   </div>
                   {copy.medium?.subline && <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>{copy.medium.subline}</div>}
@@ -931,10 +930,10 @@ function ResultsView({ output, campaignId, onReset }: {
                   background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)" }}>
                   <div style={{ fontSize: 10, color: "#f59e0b", fontWeight: 700,
                     letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>LONG · PRESS / EDITORIAL</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.4 }}>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#1a2332", lineHeight: 1.4 }}>
                     {copy.long?.headline || copy.long_copy}
                   </div>
-                  {copy.long?.body && <div style={{ fontSize: 13, color: "#94a3b8", marginTop: 8, lineHeight: 1.7 }}>{copy.long.body}</div>}
+                  {copy.long?.body && <div style={{ fontSize: 13, color: "#4a5568", marginTop: 8, lineHeight: 1.7 }}>{copy.long.body}</div>}
                 </div>
               )}
             </div>
@@ -943,24 +942,24 @@ function ResultsView({ output, campaignId, onReset }: {
               <div style={{ marginTop: 16, display: "grid",
                 gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
                 {copy.cta && (
-                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.06)", textAlign: "center" as const }}>
+                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "#f8fafc",
+                    border: "1px solid #e2e8f0", textAlign: "center" as const }}>
                     <div style={styles.cardLabel}>CTA</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#e2e8f0", marginTop: 4 }}>{copy.cta}</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#173563", marginTop: 4 }}>{copy.cta}</div>
                   </div>
                 )}
                 {copy.instagram_caption && (
-                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "#f8fafc",
+                    border: "1px solid #e2e8f0" }}>
                     <div style={styles.cardLabel}>Instagram Caption</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4, lineHeight: 1.5 }}>{copy.instagram_caption}</div>
+                    <div style={{ fontSize: 12, color: "#374151", marginTop: 4, lineHeight: 1.5 }}>{copy.instagram_caption}</div>
                   </div>
                 )}
                 {copy.tiktok_hook && (
-                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "#f8fafc",
+                    border: "1px solid #e2e8f0" }}>
                     <div style={styles.cardLabel}>TikTok Hook (3s)</div>
-                    <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4, lineHeight: 1.5 }}>{copy.tiktok_hook}</div>
+                    <div style={{ fontSize: 12, color: "#374151", marginTop: 4, lineHeight: 1.5 }}>{copy.tiktok_hook}</div>
                   </div>
                 )}
               </div>

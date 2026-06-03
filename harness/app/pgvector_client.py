@@ -15,27 +15,88 @@ from app.config import get_settings
 logger   = structlog.get_logger()
 settings = get_settings()
 
-_embedding_model = None
+# ── Embedding configuration ───────────────────────────────────────────────────
+# Set USE_GEMINI_EMBEDDINGS=true in .env to use Gemini Embedding 2
+# Model: text-embedding-004 (768 dims) — stable, free tier via Google AI
+# Requires GOOGLE_API_KEY or GOOGLE_GENAI_USE_VERTEXAI=TRUE + ADC
+USE_GEMINI_EMBEDDINGS = os.getenv("USE_GEMINI_EMBEDDINGS", "false").lower() == "true"
+GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2")
+GEMINI_EMBEDDING_DIM = 768   # gemini-embedding-2 with output_dimensionality=768 (under HNSW 2000 limit)
+
+# ── Option A: Gemini Embedding 2 (text-embedding-004) ────────────────────────
+def _embed_gemini(text: str) -> list[float]:
+    """
+    Call Gemini Embedding 2 via google-genai SDK.
+
+    Model: text-embedding-004
+      - 768 dimensions
+      - Requires API version v1 (not v1beta — text-embedding-004 not on v1beta)
+      - Task type: RETRIEVAL_QUERY for search queries
+      - Free tier: 1,500 requests/day via Google AI API key
+
+    Authentication:
+      Google AI:  set GOOGLE_API_KEY in .env
+      Vertex AI:  set GOOGLE_GENAI_USE_VERTEXAI=TRUE + gcloud auth application-default login
+    """
+    try:
+        import google.genai as genai
+
+        api_key = os.getenv("GOOGLE_API_KEY", "")
+        client = genai.Client(api_key=api_key if api_key else None)
+
+        result = client.models.embed_content(
+            model   = GEMINI_EMBEDDING_MODEL,
+            contents= text,
+            config  = {"task_type": "RETRIEVAL_QUERY", "output_dimensionality": 768},
+        )
+        embedding = result.embeddings[0].values
+        logger.debug("gemini_embedding_ok", model=GEMINI_EMBEDDING_MODEL, dim=len(embedding))
+        return list(embedding)
+
+    except Exception as e:
+        logger.warning("gemini_embedding_failed", error=str(e),
+                       fallback="zero_vector")
+        return [0.0] * GEMINI_EMBEDDING_DIM
 
 
-def _get_model():
-    global _embedding_model
-    if _embedding_model is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-            _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
-        except ImportError:
-            # sentence-transformers not installed in production image
-            # Use zero vector — queries fall back to brand/age filters
-            _embedding_model = None
-    return _embedding_model
+# ── Option B: sentence-transformers (all-MiniLM-L6-v2) — 384 dims ────────────
+# Commented out but preserved for reference / local fallback
+#
+# _embedding_model = None
+#
+# def _get_model():
+#     global _embedding_model
+#     if _embedding_model is None:
+#         try:
+#             from sentence_transformers import SentenceTransformer
+#             _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+#         except ImportError:
+#             _embedding_model = None
+#     return _embedding_model
+#
+# def _embed_st(text: str) -> list[float]:
+#     model = _get_model()
+#     if model is None:
+#         return [0.0] * 384
+#     return model.encode(text).tolist()
 
 
+# ── Active embedding function ─────────────────────────────────────────────────
 def _embed(text: str) -> list[float]:
-    model = _get_model()
-    if model is None:
-        return [0.0] * 384  # zero vector — filters still work
-    return model.encode(text).tolist()
+    """
+    Route to the configured embedding backend.
+    USE_GEMINI_EMBEDDINGS=true  → Gemini text-embedding-004 (768 dims)
+    USE_GEMINI_EMBEDDINGS=false → zero vector fallback (384 dims)
+
+    NOTE: If you switch USE_GEMINI_EMBEDDINGS, you MUST rebuild all pgvector
+    tables because the vector dimensions change (384 → 768).
+    Run: uv run python scripts/setup_pgvector.py (drops + recreates tables)
+    Then re-seed all data: seed_kaggle_cdp.py, seed_sephora_cdp.py
+    """
+    if USE_GEMINI_EMBEDDINGS:
+        return _embed_gemini(text)
+    # Fallback: zero vector (sentence-transformers not installed in prod image)
+    return [0.0] * 384
 
 
 def _clean(val: str) -> str:
