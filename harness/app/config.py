@@ -6,74 +6,45 @@ Copy .env.example to .env for local development.
 In Cloud Run / Agent Engine these are set via deployment config.
 """
 
-from pydantic_settings import BaseSettings
-from pydantic import Field, AliasChoices
 from functools import lru_cache
+
+from pydantic import AliasChoices, Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-
     # ── GCP project ───────────────────────────────────────────────────────
     # Reads GCP_PROJECT or the standard GOOGLE_CLOUD_PROJECT — whichever is set.
     gcp_project: str = Field(
         default="campaignos-prod",
         validation_alias=AliasChoices("gcp_project", "google_cloud_project"),
     )
-    gcp_region:  str = "europe-west2"
-
-    # ── Cloud Storage ─────────────────────────────────────────────────────
-    # gs://{gcs_bucket}/brands/{brand}/Guidelines/brand_guidelines.md  ← brand rules
-    # gs://{gcs_bucket}/outputs/{campaign_id}/machine_brief.json        ← agent outputs
-    gcs_bucket:   str = "campaignos-assets"
-    outputs_path: str = "outputs"
-
-    # ── BigQuery ──────────────────────────────────────────────────────────
-    # Source data (read via Vertex AI Search — not queried directly by agent)
-    bq_dataset:          str = "briefing_agent"
-    bq_campaigns_table:  str = "historical_campaigns"
-    bq_fan_truths_table: str = "fan_truth_library"
-    bq_channels_table:   str = "channel_benchmarks"
-    # Output audit log (written directly by save tool)
-    bq_output_dataset:   str = "campaign_outputs"
-    bq_output_table:     str = "machine_briefs"
-    # Set BQ_LOGGING_ENABLED=false to skip BigQuery writes (dev / before table exists)
-    bq_logging_enabled:  bool = True
-
-    # ── Vertex AI Search ──────────────────────────────────────────────────
-    # One Search App with two datastores:
-    #   Datastore 1 (GCS):      brands/{brand}/Guidelines/brand_guidelines.md
-    #   Datastore 2 (BigQuery): historical_campaigns, fan_truth_library,
-    #                           channel_benchmarks
-    search_engine_id:            str = "campaignos-briefing-search"
-    search_location:             str = "global"
-    search_max_results:          int = 10
-    search_summary_result_count: int = 5
-    # search_mode: "live"      → Vertex AI Search (requires datastore setup)
-    #              "gcs_files" → read guidelines from bucket; stub benchmark data
-    search_mode:                 str = "live"
+    gcp_region: str = "europe-west2"
 
     # ── Gemini models ─────────────────────────────────────────────────────
     # Override via env vars: GEMINI_MODEL_REASONING / GEMINI_MODEL_IMAGE
-    gemini_model_reasoning: str = "gemini-2.5-flash"
-    gemini_model_image:     str = "gemini-3.1-flash-image-preview"
+    gemini_model_reasoning: str = "gemini-3.5-flash"
+    gemini_model_image: str = "gemini-3.1-flash-image-preview"
+    gemini_model_image_adapter: str = "gemini-3.1-flash-image-preview"
+    gemini_model_tts: str = "gemini-3.1-flash-tts-preview"
 
     # ── Brand assets ──────────────────────────────────────────────────────
     # mode: "local"  → reads from brand_assets_local_path/brands/{brand}/
     #        "gcs"   → reads from gs://{gcs_bucket}/brands/{brand}/
-    brand_assets_mode:       str = "local"
+    brand_assets_mode: str = "gcs"
     # Relative path from the project root to the local brand bucket folder.
     # Resolves to rebuild/bucket when running from the rebuild/ directory.
     brand_assets_local_path: str = "bucket"
 
     # ── Service ───────────────────────────────────────────────────────────
     service_name: str = "campaignos-adk"
-    log_level:    str = "INFO"
-    environment:  str = "production"
+    log_level: str = "INFO"
+    environment: str = "production"
 
     class Config:
-        env_file          = ".env"
+        env_file = ".env"
         env_file_encoding = "utf-8"
-        extra             = "ignore"
+        extra = "ignore"
 
 
 @lru_cache()
