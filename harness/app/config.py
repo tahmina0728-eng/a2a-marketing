@@ -63,7 +63,10 @@ class Settings(BaseSettings):
         if self.gemini_model_reasoning.startswith("groq/"):
             import os
             if self.groq_api_key:
-                os.environ.setdefault("GROQ_API_KEY", self.groq_api_key)
+                # Strip BOM, newlines and non-ASCII characters from API key
+                clean_key = self.groq_api_key.encode("utf-8").decode("utf-8-sig").strip()
+                clean_key = "".join(c for c in clean_key if c.isascii())
+                os.environ["GROQ_API_KEY"] = clean_key
             from google.adk.models.lite_llm import LiteLlm
             return LiteLlm(model=self.gemini_model_reasoning)
         return self.gemini_model_reasoning

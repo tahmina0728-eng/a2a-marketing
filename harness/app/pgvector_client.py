@@ -21,23 +21,46 @@ _embedding_model = None
 def _get_model():
     global _embedding_model
     if _embedding_model is None:
-        from sentence_transformers import SentenceTransformer
-        _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        try:
+            from sentence_transformers import SentenceTransformer
+            _embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        except ImportError:
+            # sentence-transformers not installed in production image
+            # Use zero vector — queries fall back to brand/age filters
+            _embedding_model = None
     return _embedding_model
 
 
 def _embed(text: str) -> list[float]:
-    return _get_model().encode(text).tolist()
+    model = _get_model()
+    if model is None:
+        return [0.0] * 384  # zero vector — filters still work
+    return model.encode(text).tolist()
+
+
+def _clean(val: str) -> str:
+    """Strip BOM, newlines and non-printable chars."""
+    import re
+    val = val.encode("utf-8").decode("utf-8-sig")
+    return re.sub(r"[^\x20-\x7E]", "", val).strip()
 
 
 def _connect():
+    host     = _clean(os.getenv("PGVECTOR_HOST",     "127.0.0.1"))
+    user     = _clean(os.getenv("PGVECTOR_USER",     "campaignos"))
+    password = _clean(os.getenv("PGVECTOR_PASSWORD", "campaignos"))
+    dbname   = _clean(os.getenv("PGVECTOR_DB",       "marketing"))
+
+    # Unix socket path (Cloud SQL Auth Proxy) — no port needed
+    if host.startswith("/"):
+        return psycopg2.connect(
+            host=host, user=user, password=password,
+            dbname=dbname, cursor_factory=RealDictCursor,
+        )
     return psycopg2.connect(
-        host     = os.getenv("PGVECTOR_HOST",     "127.0.0.1"),
-        port     = int(os.getenv("PGVECTOR_PORT", "5433")),
-        user     = os.getenv("PGVECTOR_USER",     "campaignos"),
-        password = os.getenv("PGVECTOR_PASSWORD", "campaignos"),
-        dbname   = os.getenv("PGVECTOR_DB",       "marketing"),
-        cursor_factory = RealDictCursor,
+        host=host, port=int(os.getenv("PGVECTOR_PORT", "5433")),
+        user=user, password=password,
+        dbname=dbname, cursor_factory=RealDictCursor,
     )
 
 

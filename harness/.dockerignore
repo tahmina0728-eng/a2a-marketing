@@ -1,0 +1,16 @@
+.venv/
+.adk/
+app/.adk/
+__pycache__/
+*.pyc
+.env
+*.env
+scripts/
+*.csv
+.DS_Store
+# Exclude large binary assets from image (loaded from GCS at runtime)
+bucket/brands/*/Assets/
+bucket/brands/*/Font/
+bucket/brands/*/Colours/
+bucket/brands/*/Products/
+bucket/brands/*/Logos/

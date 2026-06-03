@@ -159,7 +159,10 @@ def load_brand_context(
             from app.pgvector_client import search_audience_insights
             age_range      = audience_raw.get("age_range", "") if isinstance(audience_raw, dict) else ""
             audience_insights = search_audience_insights(brand, audience_segment, age_range, channels)
-        except Exception:
+            logger.info("cdp_query_success", brand=brand, length=len(audience_insights))
+        except Exception as e:
+            logger.warning("cdp_query_failed", error=str(e), brand=brand,
+                           pgvector_host=__import__("os").getenv("PGVECTOR_HOST", "NOT_SET"))
             audience_insights = ""
 
     elif settings.search_mode == "pgvector" and brand:

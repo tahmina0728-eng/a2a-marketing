@@ -9,8 +9,16 @@ model handoff incompatibility.
 
 import json
 import os
+import re
 import time
 import uuid
+
+
+def _clean_api_key(key: str) -> str:
+    """Strip BOM, newlines, carriage returns, null bytes and non-ASCII from API keys."""
+    key = key.encode("utf-8").decode("utf-8-sig")  # strip BOM
+    key = re.sub(r"[^\x20-\x7E]", "", key)         # keep only printable ASCII
+    return key.strip()
 import structlog
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
@@ -162,7 +170,7 @@ Apply brand locks. Return ONLY valid JSON — no markdown, no explanation:
     response = await litellm.acompletion(
         model    = "groq/llama-3.3-70b-versatile",
         messages = [{"role": "user", "content": prompt}],
-        api_key  = os.environ.get("GROQ_API_KEY", ""),
+        api_key  = _clean_api_key(os.environ.get("GROQ_API_KEY", "")),
         temperature = 0.3,
     )
     raw = response.choices[0].message.content
