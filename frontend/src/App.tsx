@@ -912,30 +912,78 @@ function CulturePanel({ m }: { m?: Record<string,unknown> }) {
   );
 }
 
-function KVPanel({ liveMsg }: { liveMsg: string|null }) {
-  const steps = [
-    { icon: "🎨", label: "Brand locks extracted" },
-    { icon: "💡", label: "Big Idea developed" },
-    { icon: "🖼️", label: "Image prompt crafted" },
-    { icon: "✨", label: "Imagen 4 generating" },
+function KVPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
+  const brandLocks  = m?.brand_locks  ? String(m.brand_locks)  : "";
+  const bigIdea     = m?.big_idea     ? String(m.big_idea)     : "";
+  const imagePrompt = m?.image_prompt ? String(m.image_prompt) : "";
+  const imageB64    = m?.image_b64    ? String(m.image_b64)    : "";
+
+  // Derive active step from what data has arrived
+  const activeStep = imageB64 ? 3 : imagePrompt ? 3 : bigIdea ? 2 : brandLocks ? 1 : 0;
+  const isGenerating = !imageB64 && (liveMsg?.toLowerCase().includes("imagen") || !!imagePrompt);
+
+  const KV_STEPS = [
+    { icon: "🔒", label: "Brand locks extracted",  dataKey: "brand_locks",  content: brandLocks },
+    { icon: "💡", label: "Big Idea developed",      dataKey: "big_idea",     content: bigIdea },
+    { icon: "🖼️", label: "Image prompt crafted",   dataKey: "image_prompt", content: imagePrompt },
+    { icon: "✨", label: "Imagen 4 generating",     dataKey: "image_b64",    content: imageB64 },
   ];
-  const active = liveMsg?.toLowerCase().includes("imagen") ? 3
-    : liveMsg?.toLowerCase().includes("prompt") ? 2
-    : liveMsg?.toLowerCase().includes("idea") ? 1 : 0;
+
   return (
     <div style={{ width: "100%" }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#be123c", letterSpacing: "0.09em", textTransform: "uppercase" as const, marginBottom: 12 }}>Image Generation Pipeline</div>
-      {steps.map((s, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, marginBottom: 8,
-          background: i < active ? "#f0fdf4" : i === active ? "#fff1f2" : "#f8fafc",
-          border: `1px solid ${i < active ? "#86efac" : i === active ? "#fecdd3" : "#e2e8f0"}` }}>
-          <span style={{ fontSize: 18 }}>{s.icon}</span>
-          <span style={{ fontSize: 13, fontWeight: i <= active ? 600 : 400, color: i < active ? "#065f46" : i === active ? "#be123c" : "#94a3b8" }}>{s.label}</span>
-          {i < active && <span style={{ marginLeft: "auto", color: "#10b981", fontSize: 14 }}>✓</span>}
-          {i === active && <span style={{ marginLeft: "auto" }} className="source-dot" />}
-        </div>
-      ))}
-      {liveMsg && <div style={{ marginTop: 10, fontSize: 12, color: "#64748b", fontStyle: "italic" }}>{liveMsg}</div>}
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#be123c", letterSpacing: "0.09em",
+        textTransform: "uppercase" as const, marginBottom: 10 }}>Image Generation Pipeline</div>
+
+      {KV_STEPS.map((step, i) => {
+        const isDone   = i < activeStep || (i === 3 && !!imageB64);
+        const isActive = !isDone && (i === activeStep || (i === 3 && isGenerating));
+        const showContent = !!step.content;
+
+        return (
+          <div key={i} style={{ marginBottom: 8 }}>
+            {/* Step header row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10,
+              padding: "9px 12px", borderRadius: showContent ? "10px 10px 0 0" : 10,
+              background: isDone ? "#f0fdf4" : isActive ? "#fff1f2" : "#f8fafc",
+              border: `1px solid ${isDone ? "#86efac" : isActive ? "#fecdd3" : "#e2e8f0"}`,
+              borderBottom: showContent ? "none" : undefined }}>
+              <span style={{ fontSize: 16 }}>{step.icon}</span>
+              <span style={{ fontSize: 12, fontWeight: isDone || isActive ? 700 : 400,
+                color: isDone ? "#065f46" : isActive ? "#be123c" : "#94a3b8" }}>{step.label}</span>
+              {isDone && <span style={{ marginLeft: "auto", color: "#10b981", fontWeight: 700, fontSize: 13 }}>✓</span>}
+              {isActive && !showContent && (
+                <div style={{ marginLeft: "auto", display: "flex", gap: 3 }}>
+                  {[0,1,2].map(d => <span key={d} className="source-dot" style={{ animationDelay: `${d * 0.2}s`, background: "#be123c" }} />)}
+                </div>
+              )}
+            </div>
+
+            {/* Step content reveal */}
+            {showContent && (
+              <div className="msg-fade" style={{
+                padding: "10px 12px", borderRadius: "0 0 10px 10px",
+                background: isDone ? "#f0fdf4" : "#fff8f8",
+                border: `1px solid ${isDone ? "#86efac" : "#fecdd3"}`,
+                borderTop: "none",
+              }}>
+                {i === 3 && imageB64 ? (
+                  /* Generated image */
+                  <img src={`data:image/jpeg;base64,${imageB64}`} alt="Generated key visual"
+                    style={{ width: "100%", borderRadius: 8, display: "block" }} />
+                ) : (
+                  /* Text content — show first few lines */
+                  <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6,
+                    maxHeight: 90, overflow: "hidden", position: "relative" as const }}>
+                    {step.content.slice(0, 220)}{step.content.length > 220 ? "…" : ""}
+                    <div style={{ position: "absolute" as const, bottom: 0, left: 0, right: 0, height: 24,
+                      background: `linear-gradient(transparent, ${isDone ? "#f0fdf4" : "#fff8f8"})` }} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -1127,7 +1175,7 @@ function RunningView({
               {displayKey === "culture" && milestones.culture
                 ? <CulturePanel m={milestones.culture} />
                 : displayKey === "culture" && <div style={{ fontSize: 14, color: "#64748b", fontStyle: "italic" }}>{liveMsg ?? "Researching cultural trends…"}</div>}
-              {displayKey === "kv" && <KVPanel liveMsg={liveMsg} />}
+              {displayKey === "kv" && <KVPanel m={milestones.kv} liveMsg={liveMsg} />}
               {displayKey === "channel" && <ChannelPanel m={milestones.channel} liveMsg={liveMsg} />}
             </div>
 

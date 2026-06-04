@@ -584,6 +584,8 @@ Brand guidelines for {brand}:
 Distil these into exactly 5 brand lock points that any creative execution must honour.
 Format as a numbered list. Be specific about colours, tone, logo rules, forbidden treatments.""")
     log.info("p2_brand_summariser_done")
+    import json as _json2
+    await _emit("kv", "step_data", _json2.dumps({"brand_locks": brand_summary[:500]}))
     await _emit("kv", "running", "Brand locks extracted — building Big Idea…")
     await _asyncio.sleep(10)
 
@@ -603,6 +605,7 @@ Create a Big Idea for this campaign. Output:
 - Hero message (â‰¤8 words, Fan-to-Fan voice)
 - Creative tension (1 sentence â€” the cultural hook)""", temp=0.7)
     log.info("p2_creative_director_done")
+    await _emit("kv", "step_data", _json2.dumps({"big_idea": big_idea[:400]}))
     await _emit("kv", "running", "Big Idea ready — crafting image prompt…")
     await _asyncio.sleep(10)
 
@@ -625,6 +628,8 @@ The prompt must:
 
 Output only the prompt text, no commentary.""", temp=0.6)
     log.info("p2_prompt_agent_done")
+    await _emit("kv", "step_data", _json2.dumps({"image_prompt": image_prompt[:350]}))
+    await _emit("kv", "running", "Generating key visual with Imagen 4…")
 
     # Stage 5: Image generation via Google AI
     image_b64 = None
@@ -708,6 +713,9 @@ Output only the prompt text, no commentary.""", temp=0.6)
             )
             image_b64 = base64.b64encode(img_data).decode("utf-8")
             log.info("p2_generate_image_done", size_kb=len(img_data) // 1024)
+            # Push image as step_data so KV panel shows it before moving on
+            await _emit("kv", "step_data", _json2.dumps({"image_b64": image_b64}))
+            await _asyncio.sleep(5)  # Let UI display image before channel agent
             await _emit("kv", "done", "Key visual generated ✓")
     except Exception as e:
         image_error = str(e)

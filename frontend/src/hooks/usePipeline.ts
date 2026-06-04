@@ -123,13 +123,28 @@ export function usePipeline() {
           return;
         }
 
-        // Milestone event — parse JSON payload and store per agent
+        // Milestone — replace agent's milestone data
         if (ev.status === "milestone") {
           try {
             const payload = JSON.parse(ev.message);
             setState((s) => ({
               ...s,
               milestones: { ...s.milestones, [ev.agent]: payload },
+            }));
+          } catch {}
+          return;
+        }
+
+        // Step data — merge into agent's milestone (used by KV pipeline steps)
+        if (ev.status === "step_data") {
+          try {
+            const payload = JSON.parse(ev.message);
+            setState((s) => ({
+              ...s,
+              milestones: {
+                ...s.milestones,
+                [ev.agent]: { ...(s.milestones[ev.agent] ?? {}), ...payload },
+              },
             }));
           } catch {}
           return;
