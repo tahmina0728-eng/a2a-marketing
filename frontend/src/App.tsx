@@ -29,15 +29,12 @@ const GOALS = [
 ];
 
 const BRANDS = [
-  { id: "McDonalds", label: "McDonald's", emoji: "🍔" },
   { id: "Rnorr",     label: "Rnorr",      emoji: "🥣" },
   { id: "Sunglow",   label: "Sunglow",    emoji: "✨" },
   { id: "Boozt",     label: "Boozt",      emoji: "💨" },
 ];
 
 const BRAND_PRODUCTS: Record<string, string[]> = {
-  McDonalds: ["McSpicy", "McSpicy Deluxe", "Big Mac", "McDouble", "McVeggie",
-              "Happy Meal", "McFlurry", "McCafé", "Chicken McNuggets", "McValue Menu"],
   Rnorr:     ["Chicken Stock Cubes", "Beef Stock Cubes", "Vegetable Stock Cubes",
               "Stock Pots", "Bouillon Powder", "Concentrated Liquid Stock",
               "Soup Range", "Gravy Granules", "Seasoning Sachets"],
@@ -49,20 +46,12 @@ const BRAND_PRODUCTS: Record<string, string[]> = {
 };
 
 const BRAND_CATEGORY: Record<string, string> = {
-  McDonalds: "Burgers & Chicken",
   Rnorr:     "Dry Cook-In Sauces",
   Sunglow:   "Hair Care",
   Boozt:     "Hair Styling & Volume",
 };
 
 const BRAND_FAN_TRUTHS: Record<string, string[]> = {
-  McDonalds: [
-    "McDonald's fans love the ritual of the first bite of something new",
-    "Friday nights belong to McDonald's",
-    "Nostalgia is the most powerful flavour",
-    "McDonald's is the social glue between friends",
-    "McDonald's is the reward after a long day",
-  ],
   Rnorr: [
     "That moment when a weeknight dinner smells like it took all day",
     "Real flavour shouldn't take real time",
@@ -88,7 +77,6 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
 
 const AGE_GROUPS  = ["13–17", "18–24", "25–34", "35–44", "45–54", "55+"];
 const INTERESTS: Record<string, string[]> = {
-  McDonalds: ["Spicy food lovers", "Families", "Students", "Deal hunters", "Night owls", "Gamers", "Sports fans"],
   Rnorr:     ["Home cooks", "Families", "Students", "Budget shoppers", "Food lovers", "Meal preppers", "Time-poor professionals"],
   Sunglow:   ["Natural hair community", "Protective styles", "Wash day routines", "Scalp health", "Curl definition", "Black hair care", "Beauty enthusiasts"],
   Boozt:     ["Fine hair", "Volume seekers", "On-the-go styling", "Beauty enthusiasts", "Festival-goers", "Bridal & occasion"],
@@ -164,7 +152,7 @@ function BriefForm({ onStart, onFullCampaign }: {
   const [step, setStep] = useState(0);
   const [d, setD] = useState<WizardData>({
     campaignName: "",
-    brand: "McDonalds",
+    brand: "Rnorr",
     goal: "", goalCustom: "",
     product: "", productCustom: "",
     fanTruth: "", fanTruthCustom: "",
@@ -267,7 +255,7 @@ function BriefForm({ onStart, onFullCampaign }: {
             <div className="wizard-step-label">Step 1 of 7</div>
             <h2 className="wizard-heading">Select your <span className="gradient-text">brand</span></h2>
             <p className="wizard-subheading">Which brand is this campaign for?</p>
-            <div className="goal-grid" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+            <div className="goal-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
               {BRANDS.map((b) => (
                 <div key={b.id} className={`goal-tile${d.brand === b.id ? " selected" : ""}`}
                   onClick={() => setD((p) => ({ ...p, brand: b.id, product: "", productCustom: "" }))}>
@@ -1126,7 +1114,7 @@ function RunningView({
 
         {/* Spotlight card — re-animates on agent/mode change */}
         {displayMode !== "idle" ? (
-          <div key={`${displayKey}-${displayMode}`} className="spotlight-card" style={{
+          <div key={displayKey ?? "idle"} className="spotlight-card" style={{
             position: "relative" as const, zIndex: 2,
             background: "rgba(255,255,255,0.82)",
             backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)",
@@ -1176,7 +1164,7 @@ function RunningView({
             </div>
 
             {/* Agent-specific content panel */}
-            <div key={`${displayKey}-content`} className="msg-fade">
+            <div key={displayKey ?? "idle"} className="msg-fade">
               {displayKey === "briefing" && <BriefingPanel m={milestones.briefing} liveMsg={liveMsg} />}
               {displayKey === "strategy" && milestones.strategy
                 ? <StrategyPanel m={milestones.strategy} />
@@ -1200,10 +1188,110 @@ function RunningView({
             )}
           </div>
         ) : (
-          <div style={{ position: "relative" as const, zIndex: 1, textAlign: "center" as const, padding: 48 }}>
-            <div style={{ fontSize: 72, marginBottom: 24, animation: "icon-breathe 2.5s ease-in-out infinite" }}>🤖</div>
-            <div style={{ fontSize: 28, fontWeight: 800, color: "#1a2332", marginBottom: 12 }}>Agents are starting…</div>
-            <div style={{ fontSize: 15, color: "#64748b" }}>The pipeline is warming up. This typically takes 2–5 minutes.</div>
+          /* ── Idle: animated agent network ── */
+          <div style={{ position: "relative" as const, zIndex: 1, display: "flex",
+            flexDirection: "column" as const, alignItems: "center", justifyContent: "center",
+            width: "100%", gap: 28 }}>
+
+            {/* Network graph */}
+            <div style={{ position: "relative" as const, width: 400, height: 400, flexShrink: 0 }}>
+
+              {/* SVG: rings + connecting lines */}
+              <svg viewBox="0 0 400 400" style={{ position: "absolute" as const, inset: 0, width: "100%", height: "100%", overflow: "visible" }}>
+                {/* Pulsing rings */}
+                {[60, 95, 140].map((r, ri) => (
+                  <circle key={ri} cx="200" cy="200" r={r} fill="none"
+                    stroke="rgba(0,85,164,0.12)" strokeWidth="1"
+                    style={{ animation: `ring-out ${2.5 + ri * 0.8}s ${ri * 0.4}s ease-out infinite` }} />
+                ))}
+                {/* Connecting lines from center to each agent */}
+                {HARNESS_STAGES.map((s, i) => {
+                  const a = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
+                  const x2 = 200 + Math.cos(a) * 158;
+                  const y2 = 200 + Math.sin(a) * 158;
+                  const vis = AGENT_VISUALS[s.key] ?? DEFAULT_VISUAL;
+                  return (
+                    <line key={s.key} x1="200" y1="200" x2={x2} y2={y2}
+                      stroke={vis.g1} strokeOpacity="0.25" strokeWidth="1.5"
+                      strokeDasharray="6 5"
+                      style={{ animation: `dash-move 2s ${i * 0.22}s linear infinite` }} />
+                  );
+                })}
+              </svg>
+
+              {/* Central hub */}
+              <div style={{
+                position: "absolute" as const, left: "50%", top: "50%",
+                transform: "translate(-50%,-50%)",
+                width: 72, height: 72, borderRadius: "50%", zIndex: 3,
+                background: "linear-gradient(135deg, #0055A4, #4f46e5)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 32,
+                boxShadow: "0 0 0 8px rgba(0,85,164,0.12), 0 0 40px rgba(0,85,164,0.35)",
+                animation: "hub-beat 2s ease-in-out infinite",
+              }}>🤖</div>
+
+              {/* Agent nodes */}
+              {HARNESS_STAGES.map((s, i) => {
+                const a    = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
+                const r    = 158;
+                const cx   = 200 + Math.cos(a) * r;
+                const cy   = 200 + Math.sin(a) * r;
+                const vis  = AGENT_VISUALS[s.key] ?? DEFAULT_VISUAL;
+                // Label offset away from center
+                const lx   = Math.cos(a) * 32;
+                const ly   = Math.sin(a) * 32;
+                return (
+                  <div key={s.key} style={{
+                    position: "absolute" as const,
+                    left: cx, top: cy,
+                    transform: "translate(-50%,-50%)",
+                    zIndex: 2,
+                    animation: `node-in 0.5s ${0.15 + i * 0.12}s cubic-bezier(0.22,1,0.36,1) both`,
+                  }}>
+                    {/* Node circle */}
+                    <div style={{
+                      width: 46, height: 46, borderRadius: "50%",
+                      background: `linear-gradient(135deg, ${vis.g1}22, ${vis.g2}14)`,
+                      border: `2px solid ${vis.g1}45`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 20,
+                      boxShadow: `0 0 16px ${vis.g1}28`,
+                      animation: `node-glow 2.4s ${i * 0.35}s ease-in-out infinite`,
+                    }}>{s.icon}</div>
+                    {/* Label */}
+                    <div style={{
+                      position: "absolute" as const,
+                      left: `calc(50% + ${lx}px)`,
+                      top: `calc(50% + ${ly}px)`,
+                      transform: "translate(-50%,-50%)",
+                      fontSize: 9, fontWeight: 700, color: vis.g1,
+                      whiteSpace: "nowrap" as const,
+                      background: "rgba(255,255,255,0.9)",
+                      padding: "2px 6px", borderRadius: 6,
+                      border: `1px solid ${vis.g1}25`,
+                    }}>{s.label}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Title */}
+            <div style={{ textAlign: "center" as const }}>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#0f172a",
+                letterSpacing: "-0.02em", marginBottom: 8 }}>
+                Launching AI Campaign Pipeline
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+                {[0,1,2].map(d => (
+                  <div key={d} style={{ width: 6, height: 6, borderRadius: "50%", background: "#0055A4",
+                    opacity: 0.6, animation: `wave-dot 1.4s ${d * 0.2}s ease-in-out infinite` }} />
+                ))}
+                <span style={{ fontSize: 13, color: "#64748b", marginLeft: 4 }}>
+                  {HARNESS_STAGES.length} agents connecting
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </div>

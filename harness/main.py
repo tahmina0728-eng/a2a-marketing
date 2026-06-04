@@ -222,6 +222,17 @@ async def run_brief_full(brief: BriefRequest):
         # Stage 2: Creative strategy
         brand_guidelines = machine_brief.pop("brand_guidelines", "")
         brand_locks      = machine_brief.pop("brand_locks_json", "{}")
+
+        # Fallback: load guidelines directly from GCS if search returned nothing
+        if not brand_guidelines or len(brand_guidelines.strip()) < 100:
+            try:
+                from app.brand_assets import get_asset_loader as _gal2
+                _gl2 = _gal2().load_guidelines(brief.brand)
+                if _gl2 and len(_gl2.strip()) > 100:
+                    brand_guidelines = _gl2
+            except Exception:
+                pass
+
         strategy = await run_strategy_with_groq(machine_brief, brand_guidelines, brand_locks)
 
         # Stage 3: Campaign copy
@@ -275,17 +286,29 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         brand_guidelines  = machine_brief.pop("brand_guidelines", "")
         brand_locks       = machine_brief.pop("brand_locks_json", "{}")
         audience_insights = machine_brief.pop("audience_insights", "")
+
+        # Fallback: load guidelines directly from GCS if search returned nothing
+        if not brand_guidelines or len(brand_guidelines.strip()) < 100:
+            try:
+                from app.brand_assets import get_asset_loader as _gal
+                _gl = _gal().load_guidelines(brief.brand)
+                if _gl and len(_gl.strip()) > 100:
+                    brand_guidelines = _gl
+                    logger.info("brand_guidelines_loaded_from_gcs",
+                                brand=brief.brand, chars=len(brand_guidelines))
+            except Exception as _ge:
+                logger.warning("brand_guidelines_gcs_fallback_failed", error=str(_ge))
+
         ft = machine_brief.get("fan_truth", {})
         ft_score   = ft.get("overall", 0)   if isinstance(ft, dict) else 0
         ft_verdict = ft.get("verdict", "—") if isinstance(ft, dict) else "—"
-        await push_event(campaign_id, "briefing", "done",
-            f"Brief validated ✓ — Fan Truth {ft_verdict} {ft_score}/100")
-        # Milestone: push structured fan truth + audience data for rich UI card
+        # Single "done" event carries both display text AND milestone data
         aud_lines = [l for l in audience_insights.split("\n") if l.strip()]
         def _extract(lines, key):
             l = next((x for x in lines if key.lower() in x.lower()), "")
             return l.split(":")[-1].strip() if ":" in l else ""
-        await push_event(campaign_id, "briefing", "milestone", json.dumps({
+        await push_event(campaign_id, "briefing", "done", json.dumps({
+            "_text": f"Brief validated ✓ — Fan Truth {ft_verdict} {ft_score}/100",
             "fan_truth": ft if isinstance(ft, dict) else {},
             "kpis": machine_brief.get("kpis", []),
             "validation_notes": machine_brief.get("validation_notes", ""),
@@ -293,10 +316,9 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
                 "count":    _extract(aud_lines, "profiles"),
                 "income":   _extract(aud_lines, "income"),
                 "channels": _extract(aud_lines, "channels"),
-                "crm":      next((l for l in aud_lines if "crm" in l.lower() or '"' in l), ""),
             },
         }))
-        await asyncio.sleep(4)  # Pause so UI shows Fan Truth gauge before strategy takes over
+        await asyncio.sleep(10)  # 10 s so user can read fan truth + CDP results
 
         # ── Stage 1b: Creative strategy ───────────────────────────────────
         await push_event(campaign_id, "strategy", "running", "Building creative strategy & hero message…")
@@ -309,8 +331,6 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             strategy = await run_strategy_with_groq(machine_brief, brand_guidelines, brand_locks)
         finally:
             hb2.cancel()
-        await push_event(campaign_id, "strategy", "done",
-            f'Strategy ready — "{strategy.get("hero_message", "")}"')
         # Try to load a brand asset thumbnail for the strategy visual
         _hero_img_b64 = ""
         try:
@@ -333,15 +353,16 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         except Exception as _e:
             logger.debug("hero_image_thumb_failed", error=str(_e))
 
-        await push_event(campaign_id, "strategy", "milestone", json.dumps({
+        await push_event(campaign_id, "strategy", "done", json.dumps({
+            "_text":               f'Strategy ready — "{strategy.get("hero_message", "")}"',
             "hero_message":        strategy.get("hero_message", ""),
             "big_idea":            strategy.get("big_idea", ""),
             "tagline":             strategy.get("tagline", ""),
             "strategic_framework": strategy.get("strategic_framework", ""),
-            "messaging_pillars":  strategy.get("messaging_pillars", []),
+            "messaging_pillars":   strategy.get("messaging_pillars", []),
             "hero_image_b64":      _hero_img_b64,
         }))
-        await asyncio.sleep(4)  # Pause so UI shows strategy banner before copy takes over
+        await asyncio.sleep(8)  # Let user read the strategy banner
 
         # ── Stage 1c: Campaign copy ───────────────────────────────────────
         await push_event(campaign_id, "copy", "running", "Writing headline, body & social copy variants…")
@@ -356,9 +377,8 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             hb3.cancel()
         short_hl  = (copy.get("short")  or {}).get("headline", "")
         medium_hl = (copy.get("medium") or {}).get("headline", "")
-        await push_event(campaign_id, "copy", "done",
-            f'Copy ready — "{short_hl}"' if short_hl else "Copy variants ready ✓")
-        await push_event(campaign_id, "copy", "milestone", json.dumps({
+        await push_event(campaign_id, "copy", "done", json.dumps({
+            "_text":           f'Copy ready — "{short_hl}"' if short_hl else "Copy variants ready ✓",
             "short_headline":  short_hl,
             "medium_headline": medium_hl,
             "long_headline":   (copy.get("long") or {}).get("headline", ""),
@@ -367,7 +387,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "instagram":       copy.get("instagram_caption", "")[:120] if copy.get("instagram_caption") else "",
             "tiktok_hook":     copy.get("tiktok_hook", ""),
         }))
-        await asyncio.sleep(4)  # Pause so UI shows copy deck before culture starts
+        await asyncio.sleep(8)  # Let user read copy deck
 
         if audience_insights:
             machine_brief["audience_insights"] = audience_insights

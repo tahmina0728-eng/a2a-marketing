@@ -292,7 +292,7 @@ MACHINE BRIEF (validated):
 {json.dumps(machine_brief, indent=2)[:3000]}
 
 BRAND GUIDELINES:
-{brand_guidelines[:2000]}
+{brand_guidelines[:4000]}
 
 BRAND LOCKS:
 {brand_locks[:500]}
@@ -579,7 +579,7 @@ Be specific, avoid generic boilerplate.""")
     brand_summary = await _groq(f"""You are a brand strategist.
 
 Brand guidelines for {brand}:
-{brand_guidelines[:2000]}
+{brand_guidelines[:4000]}
 
 Distil these into exactly 5 brand lock points that any creative execution must honour.
 Format as a numbered list. Be specific about colours, tone, logo rules, forbidden treatments.""")

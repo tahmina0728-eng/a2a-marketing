@@ -831,6 +831,28 @@ body {
   30%            { transform: translateY(-9px); opacity: 1; }
 }
 
+/* ── Network graph (idle state) ── */
+@keyframes ring-out {
+  0%   { transform: scale(0.6); opacity: 0.8; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+@keyframes dash-move {
+  from { stroke-dashoffset: 0; }
+  to   { stroke-dashoffset: -22; }
+}
+@keyframes hub-beat {
+  0%, 100% { box-shadow: 0 0 0 8px rgba(0,85,164,0.12), 0 0 40px rgba(0,85,164,0.35); transform: translate(-50%,-50%) scale(1); }
+  50%       { box-shadow: 0 0 0 16px rgba(0,85,164,0.07), 0 0 60px rgba(0,85,164,0.5); transform: translate(-50%,-50%) scale(1.06); }
+}
+@keyframes node-in {
+  from { opacity: 0; transform: translate(-50%,-50%) scale(0.4); }
+  to   { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+}
+@keyframes node-glow {
+  0%, 100% { box-shadow: 0 0 10px currentColor; opacity: 0.85; }
+  50%       { box-shadow: 0 0 22px currentColor; opacity: 1; }
+}
+
 /* Card entrance */
 @keyframes card-rise {
   from { opacity: 0; transform: translateY(24px) scale(0.97); }

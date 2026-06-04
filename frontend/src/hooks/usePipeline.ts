@@ -150,6 +150,25 @@ export function usePipeline() {
           return;
         }
 
+        // For "done" events: message may be JSON with "_text" + milestone data embedded
+        let displayMsg = ev.message;
+        if (ev.status === "done") {
+          try {
+            const parsed = JSON.parse(ev.message);
+            if (parsed && typeof parsed === "object" && parsed._text) {
+              displayMsg = parsed._text;
+              // Extract milestone data from the done event (minus _text)
+              const { _text, ...milestoneData } = parsed;
+              if (Object.keys(milestoneData).length > 0) {
+                setState((s) => ({
+                  ...s,
+                  milestones: { ...s.milestones, [ev.agent]: milestoneData },
+                }));
+              }
+            }
+          } catch {}
+        }
+
         // Regular progress event — update agentStatus + liveLog
         setState((s) => ({
           ...s,
@@ -157,7 +176,7 @@ export function usePipeline() {
             ...s.agentStatus,
             [ev.agent]: ev.status as AgentStatus,
           },
-          liveLog: [...s.liveLog, ev],
+          liveLog: [...s.liveLog, { ...ev, message: displayMsg }],
         }));
       };
 
