@@ -146,13 +146,14 @@ interface WizardData {
 }
 
 // ── Harness pipeline agents (for loading display) ────────────
-// Order matches actual backend execution: Stage 1 (briefing→strategy→copy) then Stage 2 (culture→kv)
+// Order matches actual backend execution
 const HARNESS_STAGES = [
   { key: "briefing", icon: "📋", label: "Briefing Agent",    desc: "Validating brief & Fan Truth score" },
   { key: "strategy", icon: "💡", label: "Creative Director", desc: "Building big idea & strategy" },
   { key: "copy",     icon: "✍️", label: "Copy Agent",        desc: "Writing campaign copy variants" },
   { key: "culture",  icon: "🌍", label: "Culture Analyst",   desc: "Researching cultural intelligence" },
   { key: "kv",       icon: "🎨", label: "KV Generator",      desc: "Generating key visual with Imagen 4" },
+  { key: "channel",  icon: "📡", label: "Channel Adapter",   desc: "Publishing to Instagram, TikTok & more" },
 ];
 
 // ── Brief Form (6-step wizard) ───────────────────────────────
@@ -593,127 +594,181 @@ function BriefingPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: st
   const kpis = (m?.kpis      ?? []) as any[];
   const hasData = !!ft?.overall;
 
-  const score      = ft.overall ?? 0;
-  const verdict    = ft.verdict ?? "—";
-  const scoreColor = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
-  const r = 26, circ = 2 * Math.PI * r, dash = circ * Math.min(score, 100) / 100;
-
-  return (
+  // ── Phase 1: running, no data yet ─────────────────────────────────────────
+  if (!hasData) return (
     <div style={{ width: "100%" }}>
-      {/* Data sources — always visible */}
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", letterSpacing: "0.09em", textTransform: "uppercase" as const, marginBottom: 10 }}>
-        {hasData ? "Data Sources ✓" : "Querying Data Sources"}
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 12 }}>Querying Data Sources</div>
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
         {DATA_SOURCES.map((src, idx) => (
-          <div key={src.id} className="source-card" style={{ animationDelay: `${src.delay}ms`, padding: "10px 12px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 18 }}>{src.icon}</span>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#1a2332" }}>{src.label}</div>
-                <div style={{ fontSize: 9, color: "#94a3b8" }}>← {src.from}</div>
+          <div key={src.id} className="source-card" style={{ animationDelay: `${src.delay}ms` }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f3f0ff",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{src.icon}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2332" }}>{src.label}</div>
+                <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 1 }}>← {src.from}</div>
               </div>
-              {hasData
-                ? <span style={{ marginLeft: "auto", color: "#10b981", fontSize: 12, fontWeight: 700 }}>✓</span>
-                : <span style={{ marginLeft: "auto" }}><span className="source-dot" style={{ animationDelay: `${idx * 0.15}s` }} /></span>}
+              <div style={{ display: "flex", gap: 3 }}>
+                {[0,1,2].map(d => <span key={d} className="source-dot" style={{ animationDelay: `${idx * 0.15 + d * 0.2}s` }} />)}
+              </div>
             </div>
           </div>
         ))}
       </div>
+      {liveMsg && <div style={{ marginTop: 12, fontSize: 12, color: "#7c3aed", fontStyle: "italic" }}>{liveMsg}</div>}
+    </div>
+  );
 
-      {/* Fan Truth + KPIs — appear after milestone */}
-      {hasData && (
-        <div className="msg-fade">
-          <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", letterSpacing: "0.09em", textTransform: "uppercase" as const, marginBottom: 8 }}>Fan Truth Score</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <svg width="60" height="60" viewBox="0 0 60 60">
-                <circle cx="30" cy="30" r={r} fill="none" stroke="#e2e8f0" strokeWidth="5"/>
-                <circle cx="30" cy="30" r={r} fill="none" stroke={scoreColor} strokeWidth="5"
-                  strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" transform="rotate(-90 30 30)"
-                  style={{ transition: "stroke-dasharray 1.2s ease" }}/>
-                <text x="30" y="27" textAnchor="middle" fill={scoreColor} fontSize="13" fontWeight="800">{score}</text>
-                <text x="30" y="39" textAnchor="middle" fill="#94a3b8" fontSize="8">/100</text>
-              </svg>
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 20, fontWeight: 800, color: scoreColor }}>{score}/100</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
-                    background: verdict === "PASS" ? "#d1fae5" : "#fee2e2",
-                    color: verdict === "PASS" ? "#065f46" : "#991b1b",
-                    border: `1px solid ${verdict === "PASS" ? "#86efac" : "#fca5a5"}` }}>{verdict}</span>
-                </div>
-                {ft.statement && <div style={{ fontSize: 11, color: "#475569", fontStyle: "italic", lineHeight: 1.4 }}>"{String(ft.statement).slice(0, 72)}{String(ft.statement).length > 72 ? "…" : ""}"</div>}
-              </div>
+  // ── Phase 2: milestone arrived — show fan truth + KPIs + CDP ──────────────
+  const score      = ft.overall ?? 0;
+  const verdict    = ft.verdict ?? "—";
+  const scoreColor = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
+  const r = 32, circ = 2 * Math.PI * r, dash = circ * Math.min(score, 100) / 100;
+
+  return (
+    <div style={{ width: "100%" }} className="msg-fade">
+      {/* Fan Truth — full width, prominent */}
+      <div style={{ borderRadius: 16, overflow: "hidden", marginBottom: 12, border: `2px solid ${scoreColor}30` }}>
+        <div style={{ background: `linear-gradient(135deg, ${scoreColor}15, ${scoreColor}06)`,
+          padding: "16px 18px", display: "flex", alignItems: "center", gap: 16 }}>
+          <svg width="80" height="80" viewBox="0 0 80 80" style={{ flexShrink: 0 }}>
+            <circle cx="40" cy="40" r={r} fill="none" stroke="#e2e8f0" strokeWidth="7"/>
+            <circle cx="40" cy="40" r={r} fill="none" stroke={scoreColor} strokeWidth="7"
+              strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" transform="rotate(-90 40 40)"
+              style={{ transition: "stroke-dasharray 1.4s ease" }}/>
+            <text x="40" y="36" textAnchor="middle" fill={scoreColor} fontSize="17" fontWeight="900">{score}</text>
+            <text x="40" y="51" textAnchor="middle" fill="#94a3b8" fontSize="10">/100</text>
+          </svg>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span style={{ fontSize: 26, fontWeight: 900, color: scoreColor }}>{score}/100</span>
+              <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 12px", borderRadius: 20,
+                background: verdict === "PASS" ? "#dcfce7" : "#fee2e2",
+                color: verdict === "PASS" ? "#065f46" : "#991b1b",
+                border: `1px solid ${verdict === "PASS" ? "#86efac" : "#fca5a5"}` }}>{verdict}</span>
             </div>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "#64748b", letterSpacing: "0.1em",
+              textTransform: "uppercase" as const, marginBottom: 4 }}>Fan Truth</div>
+            {ft.statement && <div style={{ fontSize: 12, color: "#475569", fontStyle: "italic", lineHeight: 1.5, maxWidth: 240 }}>
+              "{String(ft.statement).slice(0, 90)}{String(ft.statement).length > 90 ? "…" : ""}"
+            </div>}
           </div>
+        </div>
 
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        {/* KPIs strip */}
+        {kpis.length > 0 && (
+          <div style={{ display: "flex", borderTop: `1px solid ${scoreColor}20` }}>
             {kpis.slice(0, 3).map((k: any, i: number) => {
               const fc = k.flag === "OK" ? "#10b981" : k.flag === "AMBITIOUS" ? "#f59e0b" : "#ef4444";
               return (
-                <div key={i} style={{ flex: 1, padding: "7px 10px", borderRadius: 10, background: `${fc}12`, border: `1px solid ${fc}28`, textAlign: "center" as const }}>
-                  <div style={{ fontSize: 10, fontWeight: 600, color: "#475569" }}>{k.metric}</div>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: fc, marginTop: 2 }}>{k.flag}</div>
+                <div key={i} style={{ flex: 1, padding: "9px 10px", borderRight: i < 2 ? `1px solid ${scoreColor}15` : "none",
+                  textAlign: "center" as const, background: `${fc}08` }}>
+                  <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600 }}>{k.metric}</div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: fc, marginTop: 2 }}>{k.target || k.flag}</div>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: fc }}>{k.flag}</div>
                 </div>
               );
             })}
           </div>
+        )}
+      </div>
 
-          {(aud.count || aud.income) && (
-            <div style={{ padding: "8px 12px", borderRadius: 10, background: "#eff6ff", border: "1px solid #bfdbfe", display: "flex", gap: 14, flexWrap: "wrap" as const }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#0055A4", width: "100%", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>CDP Audience</div>
-              {aud.count && <span style={{ fontSize: 11, color: "#1e40af" }}>👥 {String(aud.count).replace(/\D.*/, "")} profiles</span>}
-              {aud.income && <span style={{ fontSize: 11, color: "#1e40af" }}>💰 {aud.income}</span>}
-              {aud.channels && <span style={{ fontSize: 11, color: "#64748b" }}>📡 {aud.channels}</span>}
-            </div>
-          )}
+      {/* CDP audience */}
+      {(aud.count || aud.income) && (
+        <div style={{ padding: "10px 14px", borderRadius: 12, background: "#eff6ff", border: "1px solid #bfdbfe" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "#0055A4", letterSpacing: "0.1em",
+            textTransform: "uppercase" as const, marginBottom: 8 }}>Audience Intelligence · Kaggle CDP</div>
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const }}>
+            {aud.count && <div style={{ textAlign: "center" as const }}>
+              <div style={{ fontSize: 18, fontWeight: 900, color: "#0055A4" }}>{String(aud.count).replace(/\D.*/, "")}</div>
+              <div style={{ fontSize: 9, color: "#64748b" }}>profiles matched</div>
+            </div>}
+            {aud.income && <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af" }}>💰 {aud.income}</div>
+              <div style={{ fontSize: 9, color: "#64748b" }}>avg household income</div>
+            </div>}
+            {aud.channels && <div>
+              <div style={{ fontSize: 11, color: "#1e40af" }}>📡 {aud.channels}</div>
+              <div style={{ fontSize: 9, color: "#64748b" }}>top channels</div>
+            </div>}
+          </div>
         </div>
       )}
 
-      {!hasData && liveMsg && <div style={{ fontSize: 12, color: "#64748b", fontStyle: "italic", marginTop: 4 }}>{liveMsg}</div>}
+      {/* Source confirmation chips */}
+      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginTop: 10 }}>
+        {DATA_SOURCES.map(src => (
+          <span key={src.id} style={{ fontSize: 9, padding: "3px 8px", borderRadius: 99,
+            background: "#f0fdf4", border: "1px solid #86efac", color: "#15803d", fontWeight: 600 }}>
+            {src.icon} {src.label} ✓
+          </span>
+        ))}
+      </div>
     </div>
   );
 }
 
 function StrategyPanel({ m }: { m?: Record<string,unknown> }) {
-  const hero    = String(m?.hero_message ?? "");
-  const big     = String(m?.big_idea ?? "");
-  const tagline = String(m?.tagline ?? "");
-  const fw      = String(m?.strategic_framework ?? "");
-  const pillars = (m?.messaging_pillars ?? []) as string[];
+  const hero     = String(m?.hero_message ?? "");
+  const big      = String(m?.big_idea ?? "");
+  const tagline  = String(m?.tagline ?? "");
+  const fw       = String(m?.strategic_framework ?? "");
+  const pillars  = (m?.messaging_pillars ?? []) as string[];
+  const imgB64   = m?.hero_image_b64 ? String(m.hero_image_b64) : "";
   if (!hero) return null;
 
   return (
-    <div style={{ width: "100%", borderRadius: 16, overflow: "hidden", border: "1px solid #fde68a" }}>
-      {/* Campaign concept banner */}
-      <div style={{ background: "linear-gradient(135deg, #d97706 0%, #ea580c 100%)", padding: "24px 22px", position: "relative" as const, overflow: "hidden" }}>
-        <div style={{ position: "absolute" as const, top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
-        <div style={{ position: "absolute" as const, bottom: -20, left: -20, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
-        <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.65)", letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 6 }}>
-          Campaign Concept · {big || "Big Idea"}
+    <div style={{ width: "100%", borderRadius: 18, overflow: "hidden", border: "1px solid #fde68a",
+      boxShadow: "0 8px 32px rgba(217,119,6,0.15)" }}>
+      {/* Hero visual — brand image OR gradient */}
+      <div style={{ position: "relative" as const, minHeight: 160, overflow: "hidden" }}>
+        {imgB64 ? (
+          <img src={`data:image/jpeg;base64,${imgB64}`} alt="brand asset"
+            style={{ width: "100%", height: 180, objectFit: "cover", display: "block" }} />
+        ) : (
+          <div style={{ height: 160, background: "linear-gradient(135deg, #d97706 0%, #ea580c 100%)", position: "relative" as const }}>
+            <div style={{ position: "absolute" as const, top: -40, right: -40, width: 160, height: 160,
+              borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
+            <div style={{ position: "absolute" as const, bottom: -30, left: -30, width: 100, height: 100,
+              borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+          </div>
+        )}
+        {/* Hero message overlay */}
+        <div style={{ position: "absolute" as const, inset: 0,
+          background: imgB64 ? "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)" : "none",
+          display: "flex", flexDirection: "column" as const, justifyContent: "flex-end", padding: "16px 18px" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: imgB64 ? "rgba(255,255,255,0.7)" : "rgba(255,255,255,0.65)",
+            letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 4 }}>
+            {big || "Campaign Concept"}
+          </div>
+          <div style={{ fontSize: imgB64 ? 18 : 22, fontWeight: 900,
+            color: "white", lineHeight: 1.25, textShadow: "0 2px 8px rgba(0,0,0,0.3)" }}>
+            "{hero}"
+          </div>
+          {tagline && <div style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", marginTop: 4, fontStyle: "italic" }}>{tagline}</div>}
         </div>
-        <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.2, marginBottom: 10, position: "relative" as const }}>
-          "{hero}"
-        </div>
-        {tagline && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontStyle: "italic" }}>{tagline}</div>}
       </div>
 
       {/* Strategic framework */}
       {fw && (
-        <div style={{ padding: "12px 16px", background: "#fffbeb", borderTop: "1px solid #fde68a" }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#92400e", letterSpacing: "0.09em", textTransform: "uppercase" as const, marginBottom: 6 }}>Strategic Framework</div>
-          <div style={{ fontSize: 12, color: "#78350f", lineHeight: 1.6 }}>{fw.slice(0, 200)}{fw.length > 200 ? "…" : ""}</div>
+        <div style={{ padding: "12px 16px", background: "#fffbeb" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "#92400e", letterSpacing: "0.1em",
+            textTransform: "uppercase" as const, marginBottom: 5 }}>Strategic Framework</div>
+          <div style={{ fontSize: 12, color: "#78350f", lineHeight: 1.6 }}>
+            {fw.slice(0, 220)}{fw.length > 220 ? "…" : ""}
+          </div>
         </div>
       )}
 
       {/* Messaging pillars */}
       {pillars.length > 0 && (
-        <div style={{ padding: "10px 16px", background: "#fff7ed", display: "flex", flexWrap: "wrap" as const, gap: 6, borderTop: "1px solid #fed7aa" }}>
+        <div style={{ padding: "10px 14px", background: "#fff7ed", borderTop: "1px solid #fed7aa",
+          display: "flex", flexWrap: "wrap" as const, gap: 5 }}>
           {pillars.slice(0, 3).map((p, i) => (
-            <span key={i} style={{ fontSize: 10, padding: "4px 10px", borderRadius: 99,
+            <span key={i} style={{ fontSize: 10, padding: "3px 10px", borderRadius: 99,
               background: "#fef3c7", border: "1px solid #fde68a", color: "#92400e", fontWeight: 600 }}>
-              {String(p).slice(0, 45)}{String(p).length > 45 ? "…" : ""}
+              {String(p).slice(0, 42)}{String(p).length > 42 ? "…" : ""}
             </span>
           ))}
         </div>
@@ -764,6 +819,77 @@ function CopyPanel({ m }: { m?: Record<string,unknown> }) {
             <div style={{ fontSize: 11, color: "#9d174d", lineHeight: 1.4 }}>{String(m.tiktok_hook).slice(0, 80)}{String(m.tiktok_hook).length > 80 ? "…" : ""}</div>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+const CHANNEL_CFG: Record<string, { icon: string; color: string; bg: string; border: string }> = {
+  instagram: { icon: "📸", color: "#c026d3", bg: "#fdf4ff", border: "#e9d5ff" },
+  tiktok:    { icon: "🎵", color: "#0f172a", bg: "#f8fafc", border: "#e2e8f0" },
+  google:    { icon: "🔍", color: "#1967d2", bg: "#eff6ff", border: "#bfdbfe" },
+  email:     { icon: "📧", color: "#059669", bg: "#f0fdf4", border: "#86efac" },
+  ooh:       { icon: "🪧", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+  youtube:   { icon: "▶️", color: "#dc2626", bg: "#fff1f2", border: "#fecdd3" },
+};
+
+function ChannelPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
+  const hasData = m && Object.keys(m).length > 0;
+
+  if (!hasData) return (
+    <div style={{ width: "100%" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#4338ca", letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 12 }}>Adapting for Channels</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        {["📸 Instagram", "🎵 TikTok", "🔍 Google Ads", "📧 Email"].map((ch, i) => (
+          <div key={i} className="source-card" style={{ animationDelay: `${i * 250}ms`, padding: "12px 14px" }}>
+            <div style={{ fontSize: 14, marginBottom: 6 }}>{ch}</div>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[0,1,2].map(d => <span key={d} className="source-dot" style={{ animationDelay: `${d * 0.2}s` }} />)}
+            </div>
+          </div>
+        ))}
+      </div>
+      {liveMsg && <div style={{ marginTop: 10, fontSize: 12, color: "#4338ca", fontStyle: "italic" }}>{liveMsg}</div>}
+    </div>
+  );
+
+  return (
+    <div style={{ width: "100%" }} className="msg-fade">
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#4338ca", letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 12 }}>
+        {Object.keys(m!).length} Channels Ready to Publish
+      </div>
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+        {Object.entries(m!).map(([key, val]) => {
+          const ch  = val as any;
+          const cfg = CHANNEL_CFG[key] ?? { icon: "📢", color: "#64748b", bg: "#f8fafc", border: "#e2e8f0" };
+          return (
+            <div key={key} style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${cfg.border}` }}>
+              <div style={{ padding: "7px 12px", background: cfg.bg, borderBottom: `1px solid ${cfg.border}`,
+                display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 15 }}>{cfg.icon}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: cfg.color }}>{ch.platform}</span>
+                <span style={{ marginLeft: "auto", fontSize: 9, padding: "2px 8px", borderRadius: 99,
+                  background: cfg.border, color: cfg.color, fontWeight: 700 }}>{ch.format}</span>
+                <span style={{ fontSize: 10, color: "#10b981", fontWeight: 700 }}>✓ Ready</span>
+              </div>
+              <div style={{ padding: "8px 12px", background: "white" }}>
+                {(ch.headline || ch.hook) && (
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", marginBottom: 4 }}>
+                    "{String(ch.headline || ch.hook).slice(0, 60)}{String(ch.headline || ch.hook).length > 60 ? "…" : ""}"
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  {ch.cta && <span style={{ fontSize: 10, padding: "2px 10px", borderRadius: 99,
+                    background: cfg.color, color: "white", fontWeight: 700 }}>{ch.cta}</span>}
+                  {ch.caption && <span style={{ fontSize: 10, color: "#64748b" }}>{String(ch.caption).slice(0, 50)}…</span>}
+                  {ch.subject && <span style={{ fontSize: 10, color: "#64748b" }}>Subject: {ch.subject}</span>}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1002,10 +1128,11 @@ function RunningView({
                 ? <CulturePanel m={milestones.culture} />
                 : displayKey === "culture" && <div style={{ fontSize: 14, color: "#64748b", fontStyle: "italic" }}>{liveMsg ?? "Researching cultural trends…"}</div>}
               {displayKey === "kv" && <KVPanel liveMsg={liveMsg} />}
+              {displayKey === "channel" && <ChannelPanel m={milestones.channel} liveMsg={liveMsg} />}
             </div>
 
             {/* Wave dots (running, no rich content yet) */}
-            {displayMode === "running" && !milestones[displayKey ?? ""] && displayKey !== "briefing" && displayKey !== "kv" && (
+            {displayMode === "running" && !milestones[displayKey ?? ""] && displayKey !== "briefing" && displayKey !== "kv" && displayKey !== "channel" && (
               <div style={{ display: "flex", gap: 7, marginTop: 20 }}>
                 {[0,1,2,3].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%",
                   background: v.g1, opacity: 0.7, animation: `wave-dot 1.4s ease-in-out ${i*0.18}s infinite` }} />)}

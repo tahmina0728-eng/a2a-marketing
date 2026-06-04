@@ -311,12 +311,35 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             hb2.cancel()
         await push_event(campaign_id, "strategy", "done",
             f'Strategy ready — "{strategy.get("hero_message", "")}"')
+        # Try to load a brand asset thumbnail for the strategy visual
+        _hero_img_b64 = ""
+        try:
+            from app.creative_pipeline import _load_bytes
+            from app.brand_assets import get_asset_loader as _gal
+            import io as _io, base64 as _b64
+            from PIL import Image as _Image
+            _ldr = _gal()
+            _assets = _ldr.list_assets(brief.brand) if brief.brand else []
+            _products = _ldr.list_products(brief.brand) if brief.brand else []
+            _img_uri = (_assets + _products)[0] if (_assets + _products) else ""
+            if _img_uri:
+                _data = _load_bytes(_img_uri)
+                if _data and len(_data) > 1024:
+                    _img = _Image.open(_io.BytesIO(_data)).convert("RGB")
+                    _img.thumbnail((480, 320))
+                    _buf = _io.BytesIO()
+                    _img.save(_buf, format="JPEG", quality=68)
+                    _hero_img_b64 = _b64.b64encode(_buf.getvalue()).decode()
+        except Exception as _e:
+            logger.debug("hero_image_thumb_failed", error=str(_e))
+
         await push_event(campaign_id, "strategy", "milestone", json.dumps({
             "hero_message":        strategy.get("hero_message", ""),
             "big_idea":            strategy.get("big_idea", ""),
             "tagline":             strategy.get("tagline", ""),
             "strategic_framework": strategy.get("strategic_framework", ""),
             "messaging_pillars":  strategy.get("messaging_pillars", []),
+            "hero_image_b64":      _hero_img_b64,
         }))
         await asyncio.sleep(4)  # Pause so UI shows strategy banner before copy takes over
 
@@ -344,7 +367,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "instagram":       copy.get("instagram_caption", "")[:120] if copy.get("instagram_caption") else "",
             "tiktok_hook":     copy.get("tiktok_hook", ""),
         }))
-        await asyncio.sleep(4)  # Pause so UI shows copy deck before culture takes over
+        await asyncio.sleep(4)  # Pause so UI shows copy deck before culture starts
 
         if audience_insights:
             machine_brief["audience_insights"] = audience_insights
@@ -383,6 +406,36 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         ms2 = int((time.time() - t2) * 1000)
         logger.info("campaign_stage2_done", campaign_id=campaign_id, ms2=ms2,
                     has_image=bool(creative_result.get("image_b64")))
+
+        # ── Channel Adapter (final step — after key visual generated) ─────
+        await push_event(campaign_id, "channel", "running", "Packaging key visual for each channel…")
+        channels_list = [c.lower() for c in brief.channels] if brief.channels else []
+        channel_data: dict = {}
+        if "instagram" in channels_list or not channels_list:
+            channel_data["instagram"] = {"platform": "Instagram", "format": "Stories + Feed",
+                "headline": short_hl, "cta": copy.get("cta",""),
+                "caption": (copy.get("instagram_caption","") or "")[:100]}
+        if "tiktok" in channels_list or not channels_list:
+            channel_data["tiktok"] = {"platform": "TikTok", "format": "Video 15–30s",
+                "hook": copy.get("tiktok_hook","") or short_hl, "cta": copy.get("cta","")}
+        if any(c in channels_list for c in ["google", "youtube", "search"]) or not channels_list:
+            channel_data["google"] = {"platform": "Google Ads", "format": "Responsive Search",
+                "headline": short_hl, "description": medium_hl}
+        if "email" in channels_list or not channels_list:
+            channel_data["email"] = {"platform": "Email", "format": "Newsletter",
+                "subject": short_hl, "preview": medium_hl or short_hl}
+        if "ooh" in channels_list:
+            channel_data["ooh"] = {"platform": "OOH / Billboard", "format": "Large Format",
+                "headline": short_hl, "cta": copy.get("cta","")}
+        if not channel_data:
+            channel_data["instagram"] = {"platform": "Instagram", "format": "Stories + Feed",
+                "headline": short_hl, "cta": copy.get("cta","")}
+            channel_data["tiktok"] = {"platform": "TikTok", "format": "Video 15–30s",
+                "hook": short_hl, "cta": copy.get("cta","")}
+        await asyncio.sleep(2)
+        await push_event(campaign_id, "channel", "done", f"Campaign ready for {len(channel_data)} channels ✓")
+        await push_event(campaign_id, "channel", "milestone", json.dumps(channel_data))
+        await asyncio.sleep(3)
 
         result = {
             "status":             "ok",
