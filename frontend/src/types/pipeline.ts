@@ -94,4 +94,5 @@ export interface PipelineState {
   error: string | null;
   agentStatus: Record<string, AgentStatus>;
   liveLog: AgentEvent[];
+  milestones: Record<string, Record<string, unknown>>;  // agent_key → parsed milestone payload
 }

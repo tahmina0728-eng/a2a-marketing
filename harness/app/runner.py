@@ -569,6 +569,8 @@ Write a concise cultural intelligence brief (max 300 words):
 Be specific, avoid generic boilerplate.""")
     log.info("p2_culture_researcher_done")
     await _emit("culture", "done", "Cultural intelligence ready ✓")
+    import json as _json
+    await _emit("culture", "milestone", _json.dumps({"brief": culture[:600]}))
     await _asyncio.sleep(10)
 
     # Stage 2: Brand summariser
@@ -644,28 +646,37 @@ Output only the prompt text, no commentary.""", temp=0.6)
         # â”€â”€ Step A: Analyze existing brand campaign banners (reference ads) â”€â”€
         # Load asset images from GCS and ask Gemini Vision to extract visual style
         from app.creative_pipeline import _load_bytes, _mime_for
+        SUPPORTED_MIME = {"image/jpeg", "image/png", "image/gif", "image/webp"}
         ref_parts = []
-        for uri in (asset_uris or [])[:4]:  # use up to 4 reference banners
+        for uri in (asset_uris or [])[:4]:
+            mime = _mime_for(uri)
+            if mime not in SUPPORTED_MIME:
+                log.debug("p2_asset_skipped", uri=uri, mime=mime)
+                continue
             data = _load_bytes(uri)
-            if data:
-                ref_parts.append(_gtypes.Part.from_bytes(data=data, mime_type=_mime_for(uri)))
+            if data and len(data) > 1024:  # skip empty/corrupt files
+                ref_parts.append(_gtypes.Part.from_bytes(data=data, mime_type=mime))
 
         style_analysis = ""
         if ref_parts:
             log.info("p2_analyze_brand_assets", n_refs=len(ref_parts))
             await _emit("kv", "running", f"Analyzing {len(ref_parts)} brand reference images…")
-            vision_contents = [
-                "These are existing campaign images for this brand. Analyze them and describe in 3-4 sentences: "
-                "the photography style, color palette, mood, lighting, composition, and the type of subjects/scenes used. "
-                "This will guide generating a NEW campaign image consistent with this brand's visual identity.",
-                *ref_parts,
-            ]
-            vision_resp = client.models.generate_content(
-                model    = "gemini-2.5-flash",
-                contents = vision_contents,
-            )
-            style_analysis = vision_resp.text.strip()
-            log.info("p2_brand_style_extracted", style=style_analysis[:120])
+            try:
+                vision_contents = [
+                    "These are existing campaign images for this brand. Analyze them and describe in 3-4 sentences: "
+                    "the photography style, color palette, mood, lighting, composition, and the type of subjects/scenes used. "
+                    "This will guide generating a NEW campaign image consistent with this brand's visual identity.",
+                    *ref_parts,
+                ]
+                vision_resp = client.models.generate_content(
+                    model    = "gemini-2.5-flash",
+                    contents = vision_contents,
+                )
+                style_analysis = vision_resp.text.strip()
+                log.info("p2_brand_style_extracted", style=style_analysis[:120])
+            except Exception as vision_err:
+                log.warning("p2_brand_style_failed", error=str(vision_err),
+                            note="skipping style analysis, Imagen 4 will use prompt only")
 
         # â”€â”€ Step B: Enrich image prompt with brand visual style â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         enriched_prompt = image_prompt

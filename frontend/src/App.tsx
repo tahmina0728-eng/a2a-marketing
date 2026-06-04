@@ -579,13 +579,250 @@ const AGENT_VISUALS: Record<string, { g1: string; g2: string; blob1: string; blo
 };
 const DEFAULT_VISUAL = { g1: "#1e293b", g2: "#334155", blob1: "#475569", blob2: "#64748b", title: "Starting…" };
 
+// ── Agent content panels ──────────────────────────────────────
+const DATA_SOURCES = [
+  { id: "brand",    icon: "📚", label: "Brand Guidelines", from: "GCS Bucket",           delay: 0   },
+  { id: "fantruth", icon: "💡", label: "Fan Truth Library", from: "Vertex AI Search",    delay: 800 },
+  { id: "history",  icon: "📈", label: "Historical Campaigns", from: "BigQuery",         delay: 1600 },
+  { id: "cdp",      icon: "👥", label: "CDP / Sephora",    from: "Kaggle · BigQuery",    delay: 2400 },
+];
+
+function BriefingPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
+  const ft   = (m?.fan_truth ?? {}) as any;
+  const aud  = (m?.audience  ?? {}) as any;
+  const kpis = (m?.kpis      ?? []) as any[];
+  const hasData = !!ft?.overall;
+
+  const score      = ft.overall ?? 0;
+  const verdict    = ft.verdict ?? "—";
+  const scoreColor = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
+  const r = 26, circ = 2 * Math.PI * r, dash = circ * Math.min(score, 100) / 100;
+
+  return (
+    <div style={{ width: "100%" }}>
+      {/* Data sources — always visible */}
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", letterSpacing: "0.09em", textTransform: "uppercase" as const, marginBottom: 10 }}>
+        {hasData ? "Data Sources ✓" : "Querying Data Sources"}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 }}>
+        {DATA_SOURCES.map((src, idx) => (
+          <div key={src.id} className="source-card" style={{ animationDelay: `${src.delay}ms`, padding: "10px 12px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 18 }}>{src.icon}</span>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#1a2332" }}>{src.label}</div>
+                <div style={{ fontSize: 9, color: "#94a3b8" }}>← {src.from}</div>
+              </div>
+              {hasData
+                ? <span style={{ marginLeft: "auto", color: "#10b981", fontSize: 12, fontWeight: 700 }}>✓</span>
+                : <span style={{ marginLeft: "auto" }}><span className="source-dot" style={{ animationDelay: `${idx * 0.15}s` }} /></span>}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Fan Truth + KPIs — appear after milestone */}
+      {hasData && (
+        <div className="msg-fade">
+          <div style={{ marginBottom: 12, padding: "12px 14px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#64748b", letterSpacing: "0.09em", textTransform: "uppercase" as const, marginBottom: 8 }}>Fan Truth Score</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <svg width="60" height="60" viewBox="0 0 60 60">
+                <circle cx="30" cy="30" r={r} fill="none" stroke="#e2e8f0" strokeWidth="5"/>
+                <circle cx="30" cy="30" r={r} fill="none" stroke={scoreColor} strokeWidth="5"
+                  strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" transform="rotate(-90 30 30)"
+                  style={{ transition: "stroke-dasharray 1.2s ease" }}/>
+                <text x="30" y="27" textAnchor="middle" fill={scoreColor} fontSize="13" fontWeight="800">{score}</text>
+                <text x="30" y="39" textAnchor="middle" fill="#94a3b8" fontSize="8">/100</text>
+              </svg>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: scoreColor }}>{score}/100</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
+                    background: verdict === "PASS" ? "#d1fae5" : "#fee2e2",
+                    color: verdict === "PASS" ? "#065f46" : "#991b1b",
+                    border: `1px solid ${verdict === "PASS" ? "#86efac" : "#fca5a5"}` }}>{verdict}</span>
+                </div>
+                {ft.statement && <div style={{ fontSize: 11, color: "#475569", fontStyle: "italic", lineHeight: 1.4 }}>"{String(ft.statement).slice(0, 72)}{String(ft.statement).length > 72 ? "…" : ""}"</div>}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+            {kpis.slice(0, 3).map((k: any, i: number) => {
+              const fc = k.flag === "OK" ? "#10b981" : k.flag === "AMBITIOUS" ? "#f59e0b" : "#ef4444";
+              return (
+                <div key={i} style={{ flex: 1, padding: "7px 10px", borderRadius: 10, background: `${fc}12`, border: `1px solid ${fc}28`, textAlign: "center" as const }}>
+                  <div style={{ fontSize: 10, fontWeight: 600, color: "#475569" }}>{k.metric}</div>
+                  <div style={{ fontSize: 10, fontWeight: 800, color: fc, marginTop: 2 }}>{k.flag}</div>
+                </div>
+              );
+            })}
+          </div>
+
+          {(aud.count || aud.income) && (
+            <div style={{ padding: "8px 12px", borderRadius: 10, background: "#eff6ff", border: "1px solid #bfdbfe", display: "flex", gap: 14, flexWrap: "wrap" as const }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#0055A4", width: "100%", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>CDP Audience</div>
+              {aud.count && <span style={{ fontSize: 11, color: "#1e40af" }}>👥 {String(aud.count).replace(/\D.*/, "")} profiles</span>}
+              {aud.income && <span style={{ fontSize: 11, color: "#1e40af" }}>💰 {aud.income}</span>}
+              {aud.channels && <span style={{ fontSize: 11, color: "#64748b" }}>📡 {aud.channels}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!hasData && liveMsg && <div style={{ fontSize: 12, color: "#64748b", fontStyle: "italic", marginTop: 4 }}>{liveMsg}</div>}
+    </div>
+  );
+}
+
+function StrategyPanel({ m }: { m?: Record<string,unknown> }) {
+  const hero    = String(m?.hero_message ?? "");
+  const big     = String(m?.big_idea ?? "");
+  const tagline = String(m?.tagline ?? "");
+  const fw      = String(m?.strategic_framework ?? "");
+  const pillars = (m?.messaging_pillars ?? []) as string[];
+  if (!hero) return null;
+
+  return (
+    <div style={{ width: "100%", borderRadius: 16, overflow: "hidden", border: "1px solid #fde68a" }}>
+      {/* Campaign concept banner */}
+      <div style={{ background: "linear-gradient(135deg, #d97706 0%, #ea580c 100%)", padding: "24px 22px", position: "relative" as const, overflow: "hidden" }}>
+        <div style={{ position: "absolute" as const, top: -30, right: -30, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
+        <div style={{ position: "absolute" as const, bottom: -20, left: -20, width: 80, height: 80, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }} />
+        <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.65)", letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 6 }}>
+          Campaign Concept · {big || "Big Idea"}
+        </div>
+        <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.2, marginBottom: 10, position: "relative" as const }}>
+          "{hero}"
+        </div>
+        {tagline && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", fontStyle: "italic" }}>{tagline}</div>}
+      </div>
+
+      {/* Strategic framework */}
+      {fw && (
+        <div style={{ padding: "12px 16px", background: "#fffbeb", borderTop: "1px solid #fde68a" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#92400e", letterSpacing: "0.09em", textTransform: "uppercase" as const, marginBottom: 6 }}>Strategic Framework</div>
+          <div style={{ fontSize: 12, color: "#78350f", lineHeight: 1.6 }}>{fw.slice(0, 200)}{fw.length > 200 ? "…" : ""}</div>
+        </div>
+      )}
+
+      {/* Messaging pillars */}
+      {pillars.length > 0 && (
+        <div style={{ padding: "10px 16px", background: "#fff7ed", display: "flex", flexWrap: "wrap" as const, gap: 6, borderTop: "1px solid #fed7aa" }}>
+          {pillars.slice(0, 3).map((p, i) => (
+            <span key={i} style={{ fontSize: 10, padding: "4px 10px", borderRadius: 99,
+              background: "#fef3c7", border: "1px solid #fde68a", color: "#92400e", fontWeight: 600 }}>
+              {String(p).slice(0, 45)}{String(p).length > 45 ? "…" : ""}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CopyPanel({ m }: { m?: Record<string,unknown> }) {
+  if (!m?.short_headline) return null;
+  return (
+    <div style={{ width: "100%" }}>
+      {/* Billboard mock */}
+      <div style={{ borderRadius: 14, overflow: "hidden", marginBottom: 10, border: "1px solid #bfdbfe" }}>
+        <div style={{ background: "linear-gradient(135deg, #0055A4, #0369a1)", padding: "18px 20px", textAlign: "center" as const, position: "relative" as const }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 6 }}>Billboard · Short</div>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.2 }}>"{m.short_headline as string}"</div>
+        </div>
+        {!!m.cta && <div style={{ background: "#0055A4", padding: "8px", textAlign: "center" as const }}>
+          <span style={{ display: "inline-block", padding: "5px 18px", borderRadius: 99, background: "white", color: "#0055A4", fontSize: 11, fontWeight: 800 }}>{String(m.cta)}</span>
+        </div>}
+      </div>
+
+      {/* Medium + long */}
+      {!!m.medium_headline && (
+        <div style={{ marginBottom: 8, padding: "10px 12px", borderRadius: 10, background: "#f0f9ff", border: "1px solid #bae6fd" }}>
+          <div style={{ fontSize: 9, fontWeight: 700, color: "#0369a1", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 4 }}>Digital · Medium</div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>"{String(m.medium_headline)}"</div>
+        </div>
+      )}
+      {!!m.body && (
+        <div style={{ marginBottom: 8, padding: "10px 12px", borderRadius: 10, background: "#f8fafc", border: "1px solid #e2e8f0", fontSize: 12, color: "#475569", lineHeight: 1.6 }}>
+          {String(m.body).slice(0, 140)}{String(m.body).length > 140 ? "…" : ""}
+        </div>
+      )}
+
+      {/* Social row */}
+      <div style={{ display: "flex", gap: 8 }}>
+        {!!m.instagram && (
+          <div style={{ flex: 1, padding: "9px 11px", borderRadius: 10, background: "#fdf4ff", border: "1px solid #e9d5ff" }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 4 }}>📸 Instagram</div>
+            <div style={{ fontSize: 11, color: "#6b21a8", lineHeight: 1.4 }}>{String(m.instagram).slice(0, 80)}{String(m.instagram).length > 80 ? "…" : ""}</div>
+          </div>
+        )}
+        {!!m.tiktok_hook && (
+          <div style={{ flex: 1, padding: "9px 11px", borderRadius: 10, background: "#fff0f6", border: "1px solid #ffd6e7" }}>
+            <div style={{ fontSize: 9, fontWeight: 700, color: "#be185d", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 4 }}>🎵 TikTok Hook</div>
+            <div style={{ fontSize: 11, color: "#9d174d", lineHeight: 1.4 }}>{String(m.tiktok_hook).slice(0, 80)}{String(m.tiktok_hook).length > 80 ? "…" : ""}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CulturePanel({ m }: { m?: Record<string,unknown> }) {
+  const brief = String(m?.brief ?? "");
+  if (!brief) return null;
+  const sentences = brief.split(/\.\s+/).slice(0, 4);
+  return (
+    <div style={{ width: "100%" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#0d9488", letterSpacing: "0.09em", textTransform: "uppercase" as const, marginBottom: 10 }}>Cultural Intelligence Brief</div>
+      {sentences.map((s, i) => (
+        <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, padding: "10px 12px", borderRadius: 10, background: i === 0 ? "#f0fdfa" : "#f8fafc", border: `1px solid ${i === 0 ? "#99f6e4" : "#e2e8f0"}` }}>
+          <span style={{ fontSize: 14 }}>{["🌍", "💫", "🎯", "⚡"][i]}</span>
+          <span style={{ fontSize: 12, color: "#1a2332", lineHeight: 1.5 }}>{s.trim()}{s.trim().slice(-1) !== "." ? "." : ""}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function KVPanel({ liveMsg }: { liveMsg: string|null }) {
+  const steps = [
+    { icon: "🎨", label: "Brand locks extracted" },
+    { icon: "💡", label: "Big Idea developed" },
+    { icon: "🖼️", label: "Image prompt crafted" },
+    { icon: "✨", label: "Imagen 4 generating" },
+  ];
+  const active = liveMsg?.toLowerCase().includes("imagen") ? 3
+    : liveMsg?.toLowerCase().includes("prompt") ? 2
+    : liveMsg?.toLowerCase().includes("idea") ? 1 : 0;
+  return (
+    <div style={{ width: "100%" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#be123c", letterSpacing: "0.09em", textTransform: "uppercase" as const, marginBottom: 12 }}>Image Generation Pipeline</div>
+      {steps.map((s, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", borderRadius: 10, marginBottom: 8,
+          background: i < active ? "#f0fdf4" : i === active ? "#fff1f2" : "#f8fafc",
+          border: `1px solid ${i < active ? "#86efac" : i === active ? "#fecdd3" : "#e2e8f0"}` }}>
+          <span style={{ fontSize: 18 }}>{s.icon}</span>
+          <span style={{ fontSize: 13, fontWeight: i <= active ? 600 : 400, color: i < active ? "#065f46" : i === active ? "#be123c" : "#94a3b8" }}>{s.label}</span>
+          {i < active && <span style={{ marginLeft: "auto", color: "#10b981", fontSize: 14 }}>✓</span>}
+          {i === active && <span style={{ marginLeft: "auto" }} className="source-dot" />}
+        </div>
+      ))}
+      {liveMsg && <div style={{ marginTop: 10, fontSize: 12, color: "#64748b", fontStyle: "italic" }}>{liveMsg}</div>}
+    </div>
+  );
+}
+
 // ── Running view (pipeline in progress) ─────────────────────
 function RunningView({
   agentStatus,
   liveLog,
+  milestones,
 }: {
   agentStatus: Record<string, string>;
   liveLog: AgentEvent[];
+  milestones: Record<string, Record<string, unknown>>;
 }) {
   // Most recent running agent
   const activeKey = useMemo(() =>
@@ -701,93 +938,81 @@ function RunningView({
           backgroundImage: "linear-gradient(#0055A4 1px, transparent 1px), linear-gradient(90deg, #0055A4 1px, transparent 1px)",
           backgroundSize: "40px 40px" }} />
 
-        {/* Spotlight card — re-animates on key change */}
+        {/* Spotlight card — re-animates on agent/mode change */}
         {displayMode !== "idle" ? (
           <div key={`${displayKey}-${displayMode}`} className="spotlight-card" style={{
             position: "relative" as const, zIndex: 2,
-            background: displayMode === "done"
-              ? `linear-gradient(135deg, ${v.g1}10, rgba(255,255,255,0.92) 60%)`
-              : "rgba(255,255,255,0.76)",
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            border: `1.5px solid ${v.g1}${displayMode === "done" ? "40" : "22"}`,
-            borderRadius: 28, padding: "48px 52px",
-            textAlign: "center" as const, maxWidth: 520, width: "90%",
-            boxShadow: `0 24px 80px ${v.g1}${displayMode === "done" ? "28" : "18"}, 0 4px 24px rgba(0,0,0,0.07)`,
+            background: "rgba(255,255,255,0.82)",
+            backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)",
+            border: `1.5px solid ${v.g1}28`,
+            borderRadius: 24, padding: "28px 30px",
+            width: "min(580px, 92%)", maxHeight: "80vh", overflowY: "auto" as const,
+            boxShadow: `0 20px 72px ${v.g1}18, 0 4px 20px rgba(0,0,0,0.07)`,
           }}>
-            {/* Icon with rings */}
-            <div style={{ position: "relative" as const, display: "inline-block", marginBottom: 26 }}>
-              {displayMode === "running" && <>
-                <div style={{ position: "absolute" as const, inset: -14, borderRadius: "50%",
-                  border: `2px solid ${v.g1}22`, animation: "ring-spin 6s linear infinite" }} />
-                <div style={{ position: "absolute" as const, inset: -28, borderRadius: "50%",
-                  border: `1.5px dashed ${v.g1}14`, animation: "ring-spin 10s linear infinite reverse" }} />
-              </>}
-              {displayMode === "done" && (
-                <div style={{ position: "absolute" as const, top: -4, right: -4, zIndex: 1,
-                  width: 30, height: 30, borderRadius: "50%", background: "#10b981",
-                  border: "3px solid white", display: "flex", alignItems: "center",
-                  justifyContent: "center", fontSize: 15, color: "white", fontWeight: 800 }}>✓</div>
-              )}
-              <div style={{
-                width: 100, height: 100, borderRadius: "50%",
-                background: `linear-gradient(135deg, ${v.g1}${displayMode === "done" ? "28" : "18"}, ${v.g2}14)`,
-                border: `2px solid ${v.g1}${displayMode === "done" ? "50" : "30"}`,
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 50,
-                boxShadow: `0 0 ${displayMode === "done" ? "60px" : "48px"} ${v.g1}${displayMode === "done" ? "40" : "28"}, 0 0 96px ${v.g1}12`,
-                animation: displayMode === "running" ? "icon-breathe 2.5s ease-in-out infinite" : "none",
-              }}>
-                {stage?.icon ?? "🤖"}
+            {/* Header row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+              <div style={{ position: "relative" as const, flexShrink: 0 }}>
+                {displayMode === "running" && <>
+                  <div style={{ position: "absolute" as const, inset: -10, borderRadius: "50%",
+                    border: `2px solid ${v.g1}25`, animation: "ring-spin 6s linear infinite" }} />
+                  <div style={{ position: "absolute" as const, inset: -20, borderRadius: "50%",
+                    border: `1.5px dashed ${v.g1}15`, animation: "ring-spin 10s linear infinite reverse" }} />
+                </>}
+                {displayMode === "done" && <div style={{ position: "absolute" as const, top: -4, right: -4, zIndex: 1,
+                  width: 22, height: 22, borderRadius: "50%", background: "#10b981",
+                  border: "2px solid white", display: "flex", alignItems: "center",
+                  justifyContent: "center", fontSize: 12, color: "white", fontWeight: 800 }}>✓</div>}
+                <div style={{ width: 72, height: 72, borderRadius: "50%",
+                  background: `linear-gradient(135deg, ${v.g1}22, ${v.g2}14)`,
+                  border: `2px solid ${v.g1}35`, display: "flex", alignItems: "center",
+                  justifyContent: "center", fontSize: 36,
+                  boxShadow: `0 0 36px ${v.g1}28`,
+                  animation: displayMode === "running" ? "icon-breathe 2.5s ease-in-out infinite" : "none",
+                }}>{stage?.icon ?? "🤖"}</div>
+              </div>
+              <div>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 4,
+                  padding: "3px 10px", borderRadius: 99,
+                  background: displayMode === "done" ? "#dcfce7" : `${v.g1}14`,
+                  border: `1px solid ${displayMode === "done" ? "#86efac" : v.g1 + "28"}` }}>
+                  {displayMode === "running" && <span style={{ width: 5, height: 5, borderRadius: "50%",
+                    background: v.g1, animation: "wave-dot 1.2s ease-in-out infinite", display: "inline-block" }} />}
+                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em",
+                    textTransform: "uppercase" as const,
+                    color: displayMode === "done" ? "#15803d" : v.g1 }}>
+                    {stage?.label ?? "Agent"} · {displayMode === "done" ? "Complete" : "Running"}
+                  </span>
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>
+                  {v.title}{displayMode === "done" ? " ✓" : ""}
+                </div>
               </div>
             </div>
 
-            {/* Status pill */}
-            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 14,
-              padding: "4px 14px", borderRadius: 99,
-              background: displayMode === "done" ? "#dcfce7" : `${v.g1}14`,
-              border: `1px solid ${displayMode === "done" ? "#86efac" : v.g1 + "28"}` }}>
-              {displayMode === "running" && (
-                <span style={{ width: 6, height: 6, borderRadius: "50%", display: "inline-block",
-                  background: v.g1, animation: "wave-dot 1.2s ease-in-out infinite" }} />
-              )}
-              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
-                textTransform: "uppercase" as const,
-                color: displayMode === "done" ? "#15803d" : v.g1 }}>
-                {stage?.label ?? "CampaignOS"}&nbsp;·&nbsp;{displayMode === "done" ? "Complete" : "Running"}
-              </span>
+            {/* Agent-specific content panel */}
+            <div key={`${displayKey}-content`} className="msg-fade">
+              {displayKey === "briefing" && <BriefingPanel m={milestones.briefing} liveMsg={liveMsg} />}
+              {displayKey === "strategy" && milestones.strategy
+                ? <StrategyPanel m={milestones.strategy} />
+                : displayKey === "strategy" && <div style={{ fontSize: 14, color: "#64748b", fontStyle: "italic" }}>{liveMsg ?? "Building creative strategy…"}</div>}
+              {displayKey === "copy" && milestones.copy
+                ? <CopyPanel m={milestones.copy} />
+                : displayKey === "copy" && <div style={{ fontSize: 14, color: "#64748b", fontStyle: "italic" }}>{liveMsg ?? "Writing copy variants…"}</div>}
+              {displayKey === "culture" && milestones.culture
+                ? <CulturePanel m={milestones.culture} />
+                : displayKey === "culture" && <div style={{ fontSize: 14, color: "#64748b", fontStyle: "italic" }}>{liveMsg ?? "Researching cultural trends…"}</div>}
+              {displayKey === "kv" && <KVPanel liveMsg={liveMsg} />}
             </div>
 
-            {/* Title */}
-            <div style={{ fontSize: 30, fontWeight: 800, color: "#0f172a",
-              letterSpacing: "-0.02em", lineHeight: 1.2, marginBottom: 16 }}>
-              {v.title}{displayMode === "done" ? " ✓" : ""}
-            </div>
-
-            {/* Message — fades in fresh on every change */}
-            <div key={liveMsg} className="msg-fade" style={{
-              fontSize: 15, lineHeight: 1.7, minHeight: 52, marginBottom: displayMode === "running" ? 32 : 0,
-              color: displayMode === "done" ? "#166534" : "#475569",
-              fontWeight: displayMode === "done" ? 500 : 400,
-              ...(displayMode === "done" ? {
-                background: "#f0fdf4", border: "1px solid #bbf7d0",
-                borderRadius: 14, padding: "14px 18px",
-              } : {}),
-            }}>
-              {liveMsg ?? "Processing…"}
-            </div>
-
-            {/* Animated dots (running only) */}
-            {displayMode === "running" && (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-                {[0, 1, 2, 3].map(i => (
-                  <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: v.g1,
-                    opacity: 0.7, animation: `wave-dot 1.4s ease-in-out ${i * 0.18}s infinite` }} />
-                ))}
+            {/* Wave dots (running, no rich content yet) */}
+            {displayMode === "running" && !milestones[displayKey ?? ""] && displayKey !== "briefing" && displayKey !== "kv" && (
+              <div style={{ display: "flex", gap: 7, marginTop: 20 }}>
+                {[0,1,2,3].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%",
+                  background: v.g1, opacity: 0.7, animation: `wave-dot 1.4s ease-in-out ${i*0.18}s infinite` }} />)}
               </div>
             )}
           </div>
         ) : (
-          /* Initial — no events yet */
           <div style={{ position: "relative" as const, zIndex: 1, textAlign: "center" as const, padding: 48 }}>
             <div style={{ fontSize: 72, marginBottom: 24, animation: "icon-breathe 2.5s ease-in-out infinite" }}>🤖</div>
             <div style={{ fontSize: 28, fontWeight: 800, color: "#1a2332", marginBottom: 12 }}>Agents are starting…</div>
@@ -1335,7 +1560,7 @@ export default function App() {
   }
 
   if (state.status === "running") {
-    return <RunningView agentStatus={state.agentStatus} liveLog={state.liveLog} />;
+    return <RunningView agentStatus={state.agentStatus} liveLog={state.liveLog} milestones={state.milestones} />;
   }
 
   if (state.status === "error") {

@@ -10,6 +10,7 @@ const INITIAL_STATE: PipelineState = {
   error:        null,
   agentStatus:  {},
   liveLog:      [],
+  milestones:   {},
 };
 
 export function usePipeline() {
@@ -56,6 +57,7 @@ export function usePipeline() {
         error:           null,
         agentStatus:     {},
         liveLog:         [],
+        milestones:      {},
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Connection failed — is the harness running?";
@@ -118,6 +120,18 @@ export function usePipeline() {
           es.close();
           esRef.current = null;
           setState((s) => ({ ...s, status: "error", error: ev.message }));
+          return;
+        }
+
+        // Milestone event — parse JSON payload and store per agent
+        if (ev.status === "milestone") {
+          try {
+            const payload = JSON.parse(ev.message);
+            setState((s) => ({
+              ...s,
+              milestones: { ...s.milestones, [ev.agent]: payload },
+            }));
+          } catch {}
           return;
         }
 

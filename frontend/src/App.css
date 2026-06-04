@@ -837,6 +837,32 @@ body {
   to   { opacity: 1; transform: translateY(0)    scale(1); }
 }
 
+/* ── Briefing data source cards ── */
+.source-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 14px;
+  opacity: 0;
+  animation: source-appear 0.4s ease both;
+}
+@keyframes source-appear {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.source-dot {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: #94a3b8;
+  animation: source-blink 1.2s ease-in-out infinite;
+}
+@keyframes source-blink {
+  0%, 100% { opacity: 0.3; }
+  50%       { opacity: 1; }
+}
+
 /* Live message fade */
 @keyframes msg-in {
   from { opacity: 0; transform: translateY(6px); }
