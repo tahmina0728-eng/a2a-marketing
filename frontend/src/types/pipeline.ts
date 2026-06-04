@@ -78,9 +78,20 @@ export interface KVConcept {
   };
 }
 
+export type AgentStatus = "pending" | "running" | "done" | "error";
+
+export interface AgentEvent {
+  agent: string;
+  status: string;
+  message: string;
+  t: number;
+}
+
 export interface PipelineState {
   campaign_id: string | null;
   status: "idle" | "running" | "done" | "error";
   pipeline_output: Record<string, unknown> | null;
   error: string | null;
+  agentStatus: Record<string, AgentStatus>;
+  liveLog: AgentEvent[];
 }

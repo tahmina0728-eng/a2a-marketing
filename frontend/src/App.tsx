@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import "./App.css";
 import { usePipeline } from "./hooks/usePipeline";
-import type { HarnessBriefRequest } from "./types/pipeline";
+import type { HarnessBriefRequest, AgentEvent } from "./types/pipeline";
 
 // ── Infosys Aster Logo ───────────────────────────────────────
 function AsterLogo({ size = 1 }: { size?: number }) {
@@ -146,17 +146,20 @@ interface WizardData {
 }
 
 // ── Harness pipeline agents (for loading display) ────────────
+// Order matches actual backend execution: Stage 1 (briefing→strategy→copy) then Stage 2 (culture→kv)
 const HARNESS_STAGES = [
-  { key: "briefing",  icon: "📋", label: "Briefing Agent",    desc: "Validating campaign brief & fan truth" },
-  { key: "culture",   icon: "🌍", label: "Culture Analyst",   desc: "Researching cultural trends" },
-  { key: "strategy",  icon: "💡", label: "Creative Director", desc: "Building big idea & strategy" },
-  { key: "copy",      icon: "✍️", label: "Copy Agent",        desc: "Writing copy variants" },
-  { key: "kv",        icon: "🎨", label: "KV Generator",      desc: "Creating key visuals" },
-  { key: "channel",   icon: "📡", label: "Channel Adapter",   desc: "Adapting assets for channels" },
+  { key: "briefing", icon: "📋", label: "Briefing Agent",    desc: "Validating brief & Fan Truth score" },
+  { key: "strategy", icon: "💡", label: "Creative Director", desc: "Building big idea & strategy" },
+  { key: "copy",     icon: "✍️", label: "Copy Agent",        desc: "Writing campaign copy variants" },
+  { key: "culture",  icon: "🌍", label: "Culture Analyst",   desc: "Researching cultural intelligence" },
+  { key: "kv",       icon: "🎨", label: "KV Generator",      desc: "Generating key visual with Imagen 4" },
 ];
 
 // ── Brief Form (6-step wizard) ───────────────────────────────
-function BriefForm({ onStart }: { onStart: (brief: HarnessBriefRequest) => void }) {
+function BriefForm({ onStart, onFullCampaign }: {
+  onStart: (brief: HarnessBriefRequest) => void;
+  onFullCampaign: (brief: HarnessBriefRequest) => void;
+}) {
   const [step, setStep] = useState(0);
   const [d, setD] = useState<WizardData>({
     campaignName: "",
@@ -225,6 +228,34 @@ function BriefForm({ onStart }: { onStart: (brief: HarnessBriefRequest) => void 
     };
 
     onStart(brief);
+  }
+
+  function handleFullLaunch() {
+    const goal       = d.goal === "custom" ? d.goalCustom : GOALS.find((g) => g.id === d.goal)?.label ?? "";
+    const product    = d.product === "custom" ? d.productCustom : d.product;
+    const fanTruth   = d.fanTruth === "custom" ? d.fanTruthCustom : d.fanTruth;
+    const kpisStr    = d.kpis.map((k) => KPI_OPTIONS.find((o) => o.id === k)?.label ?? k).join(", ");
+    const budget     = d.budget === "custom" ? `£${d.budgetCustom}` : d.budget;
+    const ageRange   = d.audienceAge.length > 0 ? d.audienceAge[0].replace("–", "-") : "All ages";
+    const market     = d.audienceRegions[0] ?? "UK";
+    const category   = BRAND_CATEGORY[d.brand] ?? "Food & Beverage";
+
+    const brief: HarnessBriefRequest = {
+      campaign_name:    d.campaignName.trim(),
+      brand:            d.brand,
+      goal, budget, kpis: kpisStr, product,
+      product_category: category,
+      fan_truth:        fanTruth,
+      channels:         d.channels,
+      market, season: d.season, moment_type: d.momentType,
+      audience: {
+        segment:  d.audienceInterests.join(", ") || "General audience",
+        location: market, age_range: ageRange, gender: "All genders",
+        interests: d.audienceInterests.join(", ") || undefined,
+      },
+      tone: "Warm & friendly",
+    };
+    onFullCampaign(brief);
   }
 
   const stepContent = () => {
@@ -517,37 +548,252 @@ function BriefForm({ onStart }: { onStart: (brief: HarnessBriefRequest) => void 
             ? <button className="wizard-next-btn" disabled={!canProceed()} onClick={() => setStep((s) => s + 1)}>
                 {step === TOTAL_STEPS - 1 ? "Review →" : "Continue →"}
               </button>
-            : <button className="wizard-launch-btn" disabled={!canProceed()} onClick={handleLaunch}>
-                ⚡ Launch Campaign
-              </button>}
+            : <div style={{ display: "flex", gap: 10, flexDirection: "column" as const, alignItems: "flex-end" }}>
+                <button className="wizard-launch-btn" disabled={!canProceed()} onClick={handleLaunch}>
+                  ⚡ Validate Brief
+                </button>
+                <button
+                  disabled={!canProceed()}
+                  onClick={handleFullLaunch}
+                  style={{ padding: "10px 24px", borderRadius: 8, border: "2px solid #0055A4",
+                    background: "transparent", color: "#0055A4", fontSize: 13, fontWeight: 700,
+                    cursor: canProceed() ? "pointer" : "not-allowed", fontFamily: "inherit",
+                    opacity: canProceed() ? 1 : 0.35 }}>
+                  🎬 Full Campaign (Images + 6 Channels)
+                </button>
+              </div>}
         </div>
       </div>
     </div>
   );
 }
 
+// ── Agent visual themes ───────────────────────────────────────
+const AGENT_VISUALS: Record<string, { g1: string; g2: string; blob1: string; blob2: string; title: string }> = {
+  briefing: { g1: "#7c3aed", g2: "#4f46e5", blob1: "#a78bfa", blob2: "#818cf8", title: "Validating Brief" },
+  culture:  { g1: "#0d9488", g2: "#0891b2", blob1: "#2dd4bf", blob2: "#22d3ee", title: "Cultural Research" },
+  strategy: { g1: "#d97706", g2: "#ea580c", blob1: "#fbbf24", blob2: "#fb923c", title: "Creative Strategy" },
+  copy:     { g1: "#0055A4", g2: "#0369a1", blob1: "#3b82f6", blob2: "#06b6d4", title: "Writing Copy" },
+  kv:       { g1: "#be123c", g2: "#c2410c", blob1: "#fb7185", blob2: "#fb923c", title: "Key Visual" },
+  channel:  { g1: "#4338ca", g2: "#0e7490", blob1: "#818cf8", blob2: "#22d3ee", title: "Channel Adaptation" },
+};
+const DEFAULT_VISUAL = { g1: "#1e293b", g2: "#334155", blob1: "#475569", blob2: "#64748b", title: "Starting…" };
+
 // ── Running view (pipeline in progress) ─────────────────────
-function RunningView() {
+function RunningView({
+  agentStatus,
+  liveLog,
+}: {
+  agentStatus: Record<string, string>;
+  liveLog: AgentEvent[];
+}) {
+  // Most recent running agent
+  const activeKey = useMemo(() =>
+    [...liveLog].reverse().find(e => e.status === "running")?.agent ?? null,
+  [liveLog]);
+
+  // Most recent done agent (to show completion card between agents)
+  const lastDoneEvent = useMemo(() =>
+    [...liveLog].reverse().find(e => e.status === "done"),
+  [liveLog]);
+
+  // What to display on right: running agent takes priority, else last completed
+  const displayKey  = activeKey ?? lastDoneEvent?.agent ?? null;
+  const displayMode = activeKey ? "running" : lastDoneEvent ? "done" : "idle";
+
+  const liveMsg = useMemo(() => {
+    if (!displayKey) return null;
+    if (displayMode === "done") {
+      return [...liveLog].reverse().find(e => e.agent === displayKey && e.status === "done")?.message ?? null;
+    }
+    return [...liveLog].reverse().find(e => e.agent === displayKey && e.status === "running")?.message ?? null;
+  }, [liveLog, displayKey, displayMode]);
+
+  const v = displayKey ? (AGENT_VISUALS[displayKey] ?? DEFAULT_VISUAL) : DEFAULT_VISUAL;
+  const stage = displayKey ? HARNESS_STAGES.find(s => s.key === displayKey) : null;
+
+  const doneCount = HARNESS_STAGES.filter(s => agentStatus[s.key] === "done").length;
+
   return (
-    <div style={styles.runningPage}>
-      <div className="aster-header"><AsterLogo /><span className="aster-tagline">The AI-Amplified Marketing Suite</span></div>
-      <div style={styles.runningCard}>
-        <div style={styles.runningTitle}>🤖 Agents are working…</div>
-        <p style={styles.runningSubtitle}>
-          The pipeline is generating your campaign. This typically takes 2–5 minutes.
-        </p>
-        <div style={styles.stageList}>
-          {HARNESS_STAGES.map((s, i) => (
-            <div key={s.key} className="stage-row" style={{ animationDelay: `${i * 0.8}s` }}>
-              <span style={styles.stageIcon}>{s.icon}</span>
-              <div style={styles.stageInfo}>
-                <div style={styles.stageName}>{s.label}</div>
-                <div style={styles.stageDesc}>{s.desc}</div>
-              </div>
-              <div className="stage-pulse" style={{ animationDelay: `${i * 0.8}s` }} />
-            </div>
-          ))}
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "Inter,sans-serif" }}>
+
+      {/* ── LEFT: step sidebar ───────────────────────────────── */}
+      <div style={{ width: 340, flexShrink: 0, background: "#fff", borderRight: "1px solid #e2e8f0",
+        display: "flex", flexDirection: "column", padding: "28px 20px", overflowY: "auto" as const }}>
+
+        {/* Logo */}
+        <div style={{ marginBottom: 28 }}><AsterLogo /></div>
+
+        {/* Progress bar */}
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", letterSpacing: "0.09em",
+            textTransform: "uppercase" as const, marginBottom: 6 }}>Campaign Pipeline</div>
+          <div style={{ height: 6, background: "#e2e8f0", borderRadius: 99, overflow: "hidden" }}>
+            <div style={{ height: "100%", borderRadius: 99, transition: "width 0.8s ease",
+              background: `linear-gradient(90deg, ${v.g1}, ${v.g2})`,
+              width: `${Math.max(4, (doneCount / HARNESS_STAGES.length) * 100)}%` }} />
+          </div>
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>
+            {doneCount} of {HARNESS_STAGES.length} complete · 2–5 min
+          </div>
         </div>
+
+        {/* Step list */}
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 6, flex: 1 }}>
+          {HARNESS_STAGES.map((s, i) => {
+            const st    = agentStatus[s.key];
+            const isOn  = s.key === activeKey;
+            const isDone = st === "done";
+            const vis   = AGENT_VISUALS[s.key] ?? DEFAULT_VISUAL;
+            return (
+              <div key={s.key} style={{
+                display: "flex", alignItems: "center", gap: 12,
+                padding: "11px 14px", borderRadius: 12,
+                background: isOn ? `${vis.g1}10` : isDone ? "#f0fdf4" : "#fafafa",
+                border: `1.5px solid ${isOn ? vis.g1 + "35" : isDone ? "#bbf7d0" : "#f1f5f9"}`,
+                transition: "all 0.35s ease",
+              }}>
+                {/* Circle */}
+                <div style={{
+                  width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: isDone ? 13 : 11, fontWeight: 700,
+                  background: isOn ? vis.g1 : isDone ? "#10b981" : "#e2e8f0",
+                  color: isOn || isDone ? "#fff" : "#94a3b8",
+                  boxShadow: isOn ? `0 0 0 4px ${vis.g1}20` : "none",
+                  animation: isOn ? "step-ring 1.6s ease-in-out infinite" : "none",
+                }}>
+                  {isDone ? "✓" : isOn ? "⋯" : i + 1}
+                </div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700,
+                    color: isOn ? vis.g1 : isDone ? "#065f46" : "#94a3b8" }}>
+                    {s.icon} {s.label}
+                  </div>
+                  <div style={{ fontSize: 11, marginTop: 1,
+                    color: isOn ? vis.g1 + "cc" : isDone ? "#6ee7b7" : "#cbd5e1" }}>
+                    {isOn ? "Running now" : isDone ? "Complete ✓" : "Waiting"}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── RIGHT: spotlight panel ────────────────────────────── */}
+      <div style={{ flex: 1, position: "relative" as const, overflow: "hidden",
+        background: `linear-gradient(145deg, ${v.g1}12 0%, ${v.g2}08 50%, #f4f6f9 100%)`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        transition: "background 1s ease" }}>
+
+        {/* Animated blobs */}
+        <div className="blob blob-1" style={{
+          background: `radial-gradient(circle, ${v.blob1}35 0%, transparent 68%)`,
+        }} />
+        <div className="blob blob-2" style={{
+          background: `radial-gradient(circle, ${v.blob2}28 0%, transparent 68%)`,
+        }} />
+
+        {/* Grid overlay */}
+        <div style={{ position: "absolute" as const, inset: 0, opacity: 0.04,
+          backgroundImage: "linear-gradient(#0055A4 1px, transparent 1px), linear-gradient(90deg, #0055A4 1px, transparent 1px)",
+          backgroundSize: "40px 40px" }} />
+
+        {/* Spotlight card — re-animates on key change */}
+        {displayMode !== "idle" ? (
+          <div key={`${displayKey}-${displayMode}`} className="spotlight-card" style={{
+            position: "relative" as const, zIndex: 2,
+            background: displayMode === "done"
+              ? `linear-gradient(135deg, ${v.g1}10, rgba(255,255,255,0.92) 60%)`
+              : "rgba(255,255,255,0.76)",
+            backdropFilter: "blur(24px)",
+            WebkitBackdropFilter: "blur(24px)",
+            border: `1.5px solid ${v.g1}${displayMode === "done" ? "40" : "22"}`,
+            borderRadius: 28, padding: "48px 52px",
+            textAlign: "center" as const, maxWidth: 520, width: "90%",
+            boxShadow: `0 24px 80px ${v.g1}${displayMode === "done" ? "28" : "18"}, 0 4px 24px rgba(0,0,0,0.07)`,
+          }}>
+            {/* Icon with rings */}
+            <div style={{ position: "relative" as const, display: "inline-block", marginBottom: 26 }}>
+              {displayMode === "running" && <>
+                <div style={{ position: "absolute" as const, inset: -14, borderRadius: "50%",
+                  border: `2px solid ${v.g1}22`, animation: "ring-spin 6s linear infinite" }} />
+                <div style={{ position: "absolute" as const, inset: -28, borderRadius: "50%",
+                  border: `1.5px dashed ${v.g1}14`, animation: "ring-spin 10s linear infinite reverse" }} />
+              </>}
+              {displayMode === "done" && (
+                <div style={{ position: "absolute" as const, top: -4, right: -4, zIndex: 1,
+                  width: 30, height: 30, borderRadius: "50%", background: "#10b981",
+                  border: "3px solid white", display: "flex", alignItems: "center",
+                  justifyContent: "center", fontSize: 15, color: "white", fontWeight: 800 }}>✓</div>
+              )}
+              <div style={{
+                width: 100, height: 100, borderRadius: "50%",
+                background: `linear-gradient(135deg, ${v.g1}${displayMode === "done" ? "28" : "18"}, ${v.g2}14)`,
+                border: `2px solid ${v.g1}${displayMode === "done" ? "50" : "30"}`,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 50,
+                boxShadow: `0 0 ${displayMode === "done" ? "60px" : "48px"} ${v.g1}${displayMode === "done" ? "40" : "28"}, 0 0 96px ${v.g1}12`,
+                animation: displayMode === "running" ? "icon-breathe 2.5s ease-in-out infinite" : "none",
+              }}>
+                {stage?.icon ?? "🤖"}
+              </div>
+            </div>
+
+            {/* Status pill */}
+            <div style={{ display: "inline-flex", alignItems: "center", gap: 6, marginBottom: 14,
+              padding: "4px 14px", borderRadius: 99,
+              background: displayMode === "done" ? "#dcfce7" : `${v.g1}14`,
+              border: `1px solid ${displayMode === "done" ? "#86efac" : v.g1 + "28"}` }}>
+              {displayMode === "running" && (
+                <span style={{ width: 6, height: 6, borderRadius: "50%", display: "inline-block",
+                  background: v.g1, animation: "wave-dot 1.2s ease-in-out infinite" }} />
+              )}
+              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
+                textTransform: "uppercase" as const,
+                color: displayMode === "done" ? "#15803d" : v.g1 }}>
+                {stage?.label ?? "CampaignOS"}&nbsp;·&nbsp;{displayMode === "done" ? "Complete" : "Running"}
+              </span>
+            </div>
+
+            {/* Title */}
+            <div style={{ fontSize: 30, fontWeight: 800, color: "#0f172a",
+              letterSpacing: "-0.02em", lineHeight: 1.2, marginBottom: 16 }}>
+              {v.title}{displayMode === "done" ? " ✓" : ""}
+            </div>
+
+            {/* Message — fades in fresh on every change */}
+            <div key={liveMsg} className="msg-fade" style={{
+              fontSize: 15, lineHeight: 1.7, minHeight: 52, marginBottom: displayMode === "running" ? 32 : 0,
+              color: displayMode === "done" ? "#166534" : "#475569",
+              fontWeight: displayMode === "done" ? 500 : 400,
+              ...(displayMode === "done" ? {
+                background: "#f0fdf4", border: "1px solid #bbf7d0",
+                borderRadius: 14, padding: "14px 18px",
+              } : {}),
+            }}>
+              {liveMsg ?? "Processing…"}
+            </div>
+
+            {/* Animated dots (running only) */}
+            {displayMode === "running" && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} style={{ width: 7, height: 7, borderRadius: "50%", background: v.g1,
+                    opacity: 0.7, animation: `wave-dot 1.4s ease-in-out ${i * 0.18}s infinite` }} />
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Initial — no events yet */
+          <div style={{ position: "relative" as const, zIndex: 1, textAlign: "center" as const, padding: 48 }}>
+            <div style={{ fontSize: 72, marginBottom: 24, animation: "icon-breathe 2.5s ease-in-out infinite" }}>🤖</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#1a2332", marginBottom: 12 }}>Agents are starting…</div>
+            <div style={{ fontSize: 15, color: "#64748b" }}>The pipeline is warming up. This typically takes 2–5 minutes.</div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -852,6 +1098,105 @@ function ResultsView({ output, campaignId, onReset }: {
           </div>
         )}
 
+        {/* ── Creative Intelligence (from Full Campaign pipeline) ── */}
+        {(() => {
+          const cp = (output as any)?.creative_pipeline;
+          if (!cp?.culture_brief && !cp?.big_idea) return null;
+          return (
+            <div style={{ ...styles.resultCard, gridColumn: "1 / -1",
+              background: "linear-gradient(135deg, #f0f7ff, #eff6ff)",
+              border: "1px solid rgba(0,85,164,0.15)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                <div style={styles.cardHeader}>🌍 Creative Intelligence</div>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 12,
+                  background: "#e8f0fb", color: "#0055A4", border: "1px solid rgba(0,85,164,0.2)" }}>
+                  FULL CAMPAIGN PIPELINE
+                </span>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+                {cp.big_idea && (
+                  <div style={{ padding: "14px 16px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
+                    <div style={styles.cardLabel}>Big Idea</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#0055A4", fontStyle: "italic",
+                      lineHeight: 1.5, marginTop: 6 }}>{cp.big_idea.split("\n")[0]}</div>
+                  </div>
+                )}
+                {cp.culture_brief && (
+                  <div style={{ padding: "14px 16px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
+                    <div style={styles.cardLabel}>Cultural Intelligence</div>
+                    <div style={{ fontSize: 12, color: "#4a5568", lineHeight: 1.6, marginTop: 6 }}>
+                      {cp.culture_brief.slice(0, 250)}...
+                    </div>
+                  </div>
+                )}
+                {cp.brand_summary && (
+                  <div style={{ padding: "14px 16px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
+                    <div style={styles.cardLabel}>Brand Locks</div>
+                    <div style={{ fontSize: 12, color: "#4a5568", lineHeight: 1.6, marginTop: 6 }}>
+                      {cp.brand_summary.slice(0, 250)}...
+                    </div>
+                  </div>
+                )}
+              </div>
+              {!cp.image_b64 && (
+                <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 8,
+                  background: "#fef3c7", border: "1px solid #fde68a", fontSize: 12, color: "#92400e" }}>
+                  ⚠ Key Visual pending — enable Gemini in Vertex AI Model Garden to generate images
+                </div>
+              )}
+            </div>
+          );
+        })()}
+
+        {/* ── Key Visual (from Full Campaign pipeline) ── */}
+        {(() => {
+          const cp = (output as any)?.creative_pipeline;
+          if (!cp?.image_b64) return null;
+          return (
+            <div style={{ ...styles.resultCard, gridColumn: "1 / -1",
+              background: "#ffffff", border: "1px solid #e2e8f0" }}>
+              <div style={styles.cardHeader}>🎨 Key Visual — Generated by Gemini</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
+                <img
+                  src={`data:image/jpeg;base64,${cp.image_b64}`}
+                  alt="Generated Key Visual"
+                  style={{ width: "100%", borderRadius: 12, border: "1px solid #e2e8f0",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}
+                />
+                <div>
+                  {cp.big_idea && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={styles.cardLabel}>Big Idea</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: "#0055A4",
+                        fontStyle: "italic", lineHeight: 1.5, marginTop: 6 }}>
+                        {cp.big_idea.split("\n")[0]}
+                      </div>
+                    </div>
+                  )}
+                  {cp.culture_brief && (
+                    <div style={{ marginBottom: 16 }}>
+                      <div style={styles.cardLabel}>Cultural Intelligence</div>
+                      <div style={{ fontSize: 12, color: "#4a5568", lineHeight: 1.6, marginTop: 6 }}>
+                        {cp.culture_brief.slice(0, 300)}...
+                      </div>
+                    </div>
+                  )}
+                  {cp.image_prompt && (
+                    <div>
+                      <div style={styles.cardLabel}>Image Prompt</div>
+                      <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.6, marginTop: 6,
+                        fontFamily: "monospace", background: "#f8fafc", padding: "8px 10px",
+                        borderRadius: 6, border: "1px solid #e2e8f0" }}>
+                        {cp.image_prompt.slice(0, 200)}...
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ── Creative Strategy ── */}
         {strategy && (strategy.hero_message || strategy.big_idea || strategy.strategic_framework) && (
           <div style={{ ...styles.resultCard, gridColumn: "1 / -1",
@@ -983,14 +1328,14 @@ function ResultsView({ output, campaignId, onReset }: {
 
 // ── Main App ─────────────────────────────────────────────────
 export default function App() {
-  const { state, startCampaign, reset } = usePipeline();
+  const { state, startCampaign, startFullCampaign, reset } = usePipeline();
 
   if (state.status === "idle") {
-    return <BriefForm onStart={startCampaign} />;
+    return <BriefForm onStart={startCampaign} onFullCampaign={startFullCampaign} />;
   }
 
   if (state.status === "running") {
-    return <RunningView />;
+    return <RunningView agentStatus={state.agentStatus} liveLog={state.liveLog} />;
   }
 
   if (state.status === "error") {

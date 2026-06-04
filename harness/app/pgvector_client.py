@@ -26,23 +26,15 @@ GEMINI_EMBEDDING_DIM = 768   # gemini-embedding-2 with output_dimensionality=768
 # ── Option A: Gemini Embedding 2 (text-embedding-004) ────────────────────────
 def _embed_gemini(text: str) -> list[float]:
     """
-    Call Gemini Embedding 2 via google-genai SDK.
-
-    Model: text-embedding-004
-      - 768 dimensions
-      - Requires API version v1 (not v1beta — text-embedding-004 not on v1beta)
-      - Task type: RETRIEVAL_QUERY for search queries
-      - Free tier: 1,500 requests/day via Google AI API key
-
-    Authentication:
-      Google AI:  set GOOGLE_API_KEY in .env
-      Vertex AI:  set GOOGLE_GENAI_USE_VERTEXAI=TRUE + gcloud auth application-default login
+    Call gemini-embedding-2 via Google AI (generativelanguage.googleapis.com).
+    Uses GOOGLE_API_KEY with vertexai=False to bypass GOOGLE_GENAI_USE_VERTEXAI —
+    gemini-embedding-2 is not available on Vertex AI (404).
     """
     try:
         import google.genai as genai
 
         api_key = os.getenv("GOOGLE_API_KEY", "")
-        client = genai.Client(api_key=api_key if api_key else None)
+        client = genai.Client(api_key=api_key if api_key else None, vertexai=False)
 
         result = client.models.embed_content(
             model   = GEMINI_EMBEDDING_MODEL,

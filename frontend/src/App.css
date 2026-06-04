@@ -760,23 +760,85 @@ body {
 /* ── Audience truth-cards spacing ── */
 .truth-stack { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
 
-/* ── Running pipeline stages ── */
-.stage-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,255,255,0.06);
-  animation: stage-appear 0.4s ease both;
+/* ── Running pipeline stages (legacy dot kept for fallback) ── */
+.stage-pulse {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #7c3aed; flex-shrink: 0;
+  animation: stage-blink 1.4s ease-in-out infinite;
 }
 
-.stage-pulse {
-  width: 8px;
-  height: 8px;
+/* ── Spotlight running view ───────────────────────────────── */
+
+/* Animated blobs in background */
+.blob {
+  position: absolute;
   border-radius: 50%;
-  background: #7c3aed;
-  flex-shrink: 0;
-  animation: stage-blink 1.4s ease-in-out infinite;
+  pointer-events: none;
+  transition: background 1s ease;
+}
+.blob-1 {
+  width: 560px; height: 560px;
+  top: -18%; right: -12%;
+  animation: blob-drift 9s ease-in-out infinite;
+}
+.blob-2 {
+  width: 440px; height: 440px;
+  bottom: -18%; left: -10%;
+  animation: blob-drift 12s ease-in-out infinite reverse;
+}
+
+/* Frosted glass spotlight card */
+.spotlight-card {
+  animation: card-rise 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+/* Spinning rings around icon */
+.icon-ring { pointer-events: none; }
+
+/* Message fade-in on change */
+.msg-fade {
+  animation: msg-in 0.4s ease both;
+}
+
+/* Step circle ring pulse */
+@keyframes step-ring {
+  0%, 100% { box-shadow: 0 0 0 4px currentColor; opacity: 0.15; }
+  50%       { box-shadow: 0 0 0 8px currentColor; opacity: 0.25; }
+}
+
+/* Blob drifting */
+@keyframes blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(28px, -22px) scale(1.06); }
+  66%       { transform: translate(-16px, 14px) scale(0.96); }
+}
+
+/* Icon breathe */
+@keyframes icon-breathe {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.06); }
+}
+
+/* Ring spin */
+@keyframes ring-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Wave dots */
+@keyframes wave-dot {
+  0%, 60%, 100% { transform: translateY(0);   opacity: 0.35; }
+  30%            { transform: translateY(-9px); opacity: 1; }
+}
+
+/* Card entrance */
+@keyframes card-rise {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* Live message fade */
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

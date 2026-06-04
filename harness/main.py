@@ -12,7 +12,10 @@ Authentication: --no-allow-unauthenticated on Cloud Run.
 Callers must pass: Authorization: Bearer $(gcloud auth print-identity-token)
 """
 
+import asyncio
+import json
 import os
+import time
 import uuid
 import structlog
 from contextlib import asynccontextmanager
@@ -23,13 +26,35 @@ load_dotenv()
 if os.getenv("GROQ_API_KEY"):
     os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+# ── Per-campaign SSE event store ──────────────────────────────────────────────
+# Index-based: each SSE client tracks its own read position in the events list.
+# No queue needed — avoids duplicate replay bugs.
+_pipelines: dict[str, dict] = {}  # {cid: {"events": [...], "signal": asyncio.Event}}
+
+
+async def push_event(cid: str, agent: str, status: str, message: str) -> None:
+    if cid not in _pipelines:
+        return
+    event = {"agent": agent, "status": status, "message": message, "t": int(time.time())}
+    _pipelines[cid]["events"].append(event)
+    _pipelines[cid]["signal"].set()   # wake any waiting SSE generators
+
+
+async def _heartbeat(cid: str, agent: str, msgs: list, interval: int = 22) -> None:
+    """Push rolling status messages while a long operation runs."""
+    import itertools
+    for msg in itertools.cycle(msgs):
+        await asyncio.sleep(interval)
+        await push_event(cid, agent, "running", msg)
 
 from app.config import get_settings
 from app.models import BriefRequest
 from app.pipeline import briefing_pipeline, root_agent
-from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq
+from app.creative_pipeline import experiment_pipeline
+from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq, run_creative_pipeline_direct
 
 logger   = structlog.get_logger()
 settings = get_settings()
@@ -213,6 +238,177 @@ async def run_brief_full(brief: BriefRequest):
     except Exception as e:
         logger.error("brief_full_error", error=str(e))
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.options("/campaign")
+async def campaign_preflight():
+    return JSONResponse(content={}, headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+    })
+
+
+async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> None:
+    """Background task: run the full pipeline and push SSE events at each stage."""
+    t_start = time.time()
+    try:
+        # ── Stage 1a: Brief validation ────────────────────────────────────
+        await push_event(campaign_id, "briefing", "running", "Loading brand guidelines & audience data…")
+        logger.info("campaign_stage1_start", campaign_id=campaign_id)
+        hb1 = asyncio.create_task(_heartbeat(campaign_id, "briefing", [
+            "Querying Fan Truth benchmarks from CDP…",
+            "Scoring campaign KPIs against historical data…",
+            "Gemini 2.5 Flash is validating your brief…",
+            "Cross-checking audience insights & channel data…",
+            "Almost there — scoring Fan Truth quality…",
+        ], interval=22))
+        try:
+            machine_brief, ms1 = await run_agent(
+                agent       = briefing_pipeline,
+                input_data  = brief.model_dump(),
+                campaign_id = campaign_id,
+            )
+        finally:
+            hb1.cancel()
+        machine_brief.setdefault("campaign_id", campaign_id)
+        brand_guidelines  = machine_brief.pop("brand_guidelines", "")
+        brand_locks       = machine_brief.pop("brand_locks_json", "{}")
+        audience_insights = machine_brief.pop("audience_insights", "")
+        ft = machine_brief.get("fan_truth", {})
+        ft_score   = ft.get("overall", 0)   if isinstance(ft, dict) else 0
+        ft_verdict = ft.get("verdict", "—") if isinstance(ft, dict) else "—"
+        await push_event(campaign_id, "briefing", "done",
+            f"Brief validated ✓ — Fan Truth {ft_verdict} {ft_score}/100")
+
+        # ── Stage 1b: Creative strategy ───────────────────────────────────
+        await push_event(campaign_id, "strategy", "running", "Building creative strategy & hero message…")
+        hb2 = asyncio.create_task(_heartbeat(campaign_id, "strategy", [
+            "Analysing brand voice & creative principles…",
+            "Crafting the campaign hero message…",
+            "Defining strategic framework & messaging pillars…",
+        ], interval=20))
+        try:
+            strategy = await run_strategy_with_groq(machine_brief, brand_guidelines, brand_locks)
+        finally:
+            hb2.cancel()
+        await push_event(campaign_id, "strategy", "done",
+            f'Strategy ready — "{strategy.get("hero_message", "")}"')
+
+        # ── Stage 1c: Campaign copy ───────────────────────────────────────
+        await push_event(campaign_id, "copy", "running", "Writing headline, body & social copy variants…")
+        hb3 = asyncio.create_task(_heartbeat(campaign_id, "copy", [
+            "Writing billboard-ready short headline…",
+            "Crafting Instagram & TikTok copy variants…",
+            "Generating CTA and long-form body copy…",
+        ], interval=18))
+        try:
+            copy = await run_copy_with_groq(machine_brief, strategy, brand_locks)
+        finally:
+            hb3.cancel()
+        short_hl = copy.get("short", {}).get("headline", "") if isinstance(copy.get("short"), dict) else ""
+        await push_event(campaign_id, "copy", "done",
+            f'Copy ready — "{short_hl}"' if short_hl else "Copy variants ready ✓")
+
+        if audience_insights:
+            machine_brief["audience_insights"] = audience_insights
+        logger.info("campaign_stage1_done", campaign_id=campaign_id)
+
+        # ── Stage 2: Creative pipeline ────────────────────────────────────
+        logger.info("campaign_stage2_start", campaign_id=campaign_id)
+        from app.brand_assets import get_asset_loader
+        loader   = get_asset_loader()
+        products = loader.list_products(brief.brand) if brief.brand else []
+        logos    = loader.list_logos(brief.brand)    if brief.brand else []
+        assets   = loader.list_assets(brief.brand)   if brief.brand else []
+
+        aud = brief.audience
+        audience_desc = (
+            f"{aud.segment if hasattr(aud, 'segment') else aud} "
+            f"{aud.age_range if hasattr(aud, 'age_range') else ''}, "
+            f"{brief.market}, {brief.season} season"
+        ).strip(", ")
+
+        async def _progress(agent: str, status: str, message: str):
+            await push_event(campaign_id, agent, status, message)
+
+        t2 = time.time()
+        creative_result = await run_creative_pipeline_direct(
+            brand            = brief.brand,
+            audience         = audience_desc,
+            product_uris     = products[:3],
+            asset_uris       = assets[:3],
+            logo_uri         = logos[0] if logos else "",
+            brand_guidelines = brand_guidelines,
+            big_idea_seed    = strategy.get("hero_message", ""),
+            campaign_id      = campaign_id,
+            progress_cb      = _progress,
+        )
+        ms2 = int((time.time() - t2) * 1000)
+        logger.info("campaign_stage2_done", campaign_id=campaign_id, ms2=ms2,
+                    has_image=bool(creative_result.get("image_b64")))
+
+        result = {
+            "status":             "ok",
+            "campaign_id":        campaign_id,
+            "machine_brief":      machine_brief,
+            "creative_strategy":  strategy,
+            "campaign_copy":      copy,
+            "creative_pipeline":  creative_result,
+            "processing_time_ms": int((time.time() - t_start) * 1000),
+        }
+        await push_event(campaign_id, "__done__", "done", json.dumps(result))
+
+    except Exception as e:
+        logger.error("campaign_error", campaign_id=campaign_id, error=str(e))
+        await push_event(campaign_id, "__error__", "error", str(e))
+
+
+@app.post("/campaign")
+async def run_full_campaign(brief: BriefRequest):
+    """Start full campaign pipeline — returns campaign_id immediately, streams progress via /events/{id}."""
+    campaign_id = (
+        f"campaign-{brief.campaign_name.lower().replace(' ', '-')[:20]}"
+        f"-{str(uuid.uuid4())[:6]}"
+    )
+    _pipelines[campaign_id] = {"events": [], "signal": asyncio.Event()}
+    asyncio.create_task(_run_campaign_background(campaign_id, brief))
+    return {"campaign_id": campaign_id, "status": "started"}
+
+
+@app.get("/events/{campaign_id}")
+async def campaign_events(campaign_id: str):
+    """SSE stream of pipeline progress events for a running campaign."""
+    if campaign_id not in _pipelines:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+
+    async def generate():
+        idx = 0
+        while campaign_id in _pipelines:
+            store = _pipelines[campaign_id]
+            events = store["events"]
+            # Yield any new events since last read
+            while idx < len(events):
+                ev = events[idx]
+                idx += 1
+                yield f"data: {json.dumps(ev)}\n\n"
+                if ev.get("agent") in ("__done__", "__error__"):
+                    _pipelines.pop(campaign_id, None)
+                    return
+            # Wait for the next push_event signal
+            store["signal"].clear()
+            try:
+                await asyncio.wait_for(store["signal"].wait(), timeout=600)
+            except asyncio.TimeoutError:
+                yield f"data: {json.dumps({'agent': '__error__', 'status': 'error', 'message': 'Pipeline timed out'})}\n\n"
+                _pipelines.pop(campaign_id, None)
+                return
+
+    return StreamingResponse(generate(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+        "Connection": "keep-alive",
+    })
 
 
 @app.post("/pipeline")
