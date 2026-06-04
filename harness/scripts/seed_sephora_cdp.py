@@ -16,6 +16,13 @@ import psycopg2
 from psycopg2.extras import execute_values
 from google.cloud import bigquery
 
+# Load .env so USE_GEMINI_EMBEDDINGS and GOOGLE_API_KEY are available
+try:
+    from dotenv import load_dotenv
+    load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env"))
+except ImportError:
+    pass
+
 PROJECT    = os.getenv("GOOGLE_CLOUD_PROJECT", "dauntless-karma-497108-b0")
 BQ_DATASET = os.getenv("BQ_DATASET",           "briefing_agent")
 BQ_TABLE   = f"{PROJECT}.{BQ_DATASET}.sephora_products"
@@ -25,6 +32,81 @@ PG_PORT = int(os.getenv("PGVECTOR_PORT", "5433"))
 PG_USER = os.getenv("PGVECTOR_USER",     "campaignos")
 PG_PASS = os.getenv("PGVECTOR_PASSWORD", "campaignos")
 PG_DB   = os.getenv("PGVECTOR_DB",       "marketing")
+
+# ── Embedding backend ─────────────────────────────────────────────────────────
+USE_GEMINI   = os.getenv("USE_GEMINI_EMBEDDINGS", "false").lower() == "true"
+GEMINI_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2")
+VECTOR_DIM   = 768 if USE_GEMINI else 384
+
+
+def get_embeddings_batch(texts: list[str], batch_size: int = 50) -> list[list[float]]:
+    """
+    Batch embedding — 50 texts per API call instead of 1 per call.
+    Sephora: 1,597 records / 50 = 32 API calls (under 1,000/day free tier limit)
+
+    Option A — Gemini gemini-embedding-2 (USE_GEMINI_EMBEDDINGS=true):
+      768 dims, 32 calls for Sephora, rate-limited to 4s between batches
+
+    Option B — sentence-transformers (USE_GEMINI_EMBEDDINGS=false):
+      384 dims, all processed locally, no API calls needed
+      Original per-record code:
+      #   from sentence_transformers import SentenceTransformer
+      #   model = SentenceTransformer("all-MiniLM-L6-v2")
+      #   return model.encode(text).tolist()
+    """
+    if USE_GEMINI:
+        import google.genai as genai
+        import time
+        api_key = os.getenv("GOOGLE_API_KEY", "")
+        client  = genai.Client(api_key=api_key if api_key else None)
+        all_embeddings = []
+
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            try:
+                result = client.models.embed_content(
+                    model   = GEMINI_MODEL,
+                    contents= batch,
+                    config  = {"task_type": "RETRIEVAL_DOCUMENT", "output_dimensionality": VECTOR_DIM},
+                )
+                all_embeddings.extend([list(e.values) for e in result.embeddings])
+                print(f"  Batch {i//batch_size+1}/{(len(texts)+batch_size-1)//batch_size} done")
+            except Exception as e:
+                if "429" in str(e):
+                    print(f"  Rate limit — waiting 60s...")
+                    time.sleep(60)
+                    try:
+                        result = client.models.embed_content(
+                            model   = GEMINI_MODEL,
+                            contents= batch,
+                            config  = {"task_type": "RETRIEVAL_DOCUMENT", "output_dimensionality": VECTOR_DIM},
+                        )
+                        all_embeddings.extend([list(e.values) for e in result.embeddings])
+                        continue
+                    except Exception as e2:
+                        print(f"  Retry failed — zero vectors: {e2}")
+                        all_embeddings.extend([[0.0] * VECTOR_DIM] * len(batch))
+                else:
+                    print(f"  WARNING: Gemini batch failed ({e}) — zero vectors")
+                    all_embeddings.extend([[0.0] * VECTOR_DIM] * len(batch))
+            time.sleep(4)  # 4s between batches = ~15 RPM free tier
+
+        return all_embeddings
+    else:
+        # ── sentence-transformers batch ───────────────────────────────────
+        # Original: model.encode(text).tolist() per record
+        try:
+            from sentence_transformers import SentenceTransformer
+            model = SentenceTransformer("all-MiniLM-L6-v2")
+            return [model.encode(t).tolist() for t in texts]
+        except ImportError:
+            return [[0.0] * 384] * len(texts)
+
+
+def get_embedding(text: str) -> list[float]:
+    """Single embedding — delegates to batch function."""
+    return get_embeddings_batch([text])[0]
+
 
 _model = None
 def get_model():
@@ -225,18 +307,37 @@ if __name__ == "__main__":
     cur.execute("DELETE FROM customer_insights WHERE brand IN ('Sunglow', 'Boozt')")
     print(f"\nCleared existing Sunglow/Boozt records")
 
-    model = get_model()
-    print("Embedding model ready. Generating profiles...\n")
+    backend = f"Gemini {GEMINI_MODEL} ({VECTOR_DIM} dims, batched 50/call)" if USE_GEMINI else "sentence-transformers (384 dims)"
+    print(f"Embedding backend: {backend}")
+    total_batches = (len(mapped) + 49) // 50
+    print(f"Generating profiles + embeddings in {total_batches} batches...\n")
+
+    # Pre-generate all notes
+    records = []
+    for row, brand in mapped:
+        records.append({
+            "note":      generate_consumer_note(row, brand),
+            "age_range": infer_age_range_from_product(row, brand),
+            "channels":  infer_channels(row, brand),
+            "income":    (row.get("price_usd") or 0) * 800,
+            "row":       row,
+            "brand":     brand,
+        })
+
+    # Batch embed all notes
+    all_embeddings = get_embeddings_batch([r["note"] for r in records])
+    print(f"Embeddings done. Building insert batch...\n")
 
     batch = []
-    fake_id = 100000  # Start IDs above Kaggle range (max ~11000)
+    fake_id = 100000
 
-    for i, (row, brand) in enumerate(mapped):
-        note      = generate_consumer_note(row, brand)
-        age_range = infer_age_range_from_product(row, brand)
-        channels  = infer_channels(row, brand)
-        income    = (row.get("price_usd") or 0) * 800  # proxy: spend × 800 ≈ annual income
-        embedding = model.encode(note).tolist()
+    for i, (rec, embedding) in enumerate(zip(records, all_embeddings)):
+        row      = rec["row"]
+        brand    = rec["brand"]
+        note     = rec["note"]
+        age_range = rec["age_range"]
+        channels  = rec["channels"]
+        income    = rec["income"]
 
         batch.append((
             fake_id + i,
