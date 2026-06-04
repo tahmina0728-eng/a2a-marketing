@@ -589,122 +589,134 @@ const DATA_SOURCES = [
 ];
 
 function BriefingPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
-  const ft   = (m?.fan_truth ?? {}) as any;
-  const aud  = (m?.audience  ?? {}) as any;
-  const kpis = (m?.kpis      ?? []) as any[];
+  const ft      = (m?.fan_truth ?? {}) as any;
+  const aud     = (m?.audience  ?? {}) as any;
+  const kpis    = (m?.kpis      ?? []) as any[];
   const hasData = !!ft?.overall;
 
-  // ── Phase 1: running, no data yet ─────────────────────────────────────────
-  if (!hasData) return (
-    <div style={{ width: "100%" }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
-        textTransform: "uppercase" as const, marginBottom: 12 }}>Querying Data Sources</div>
-      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
-        {DATA_SOURCES.map((src, idx) => (
-          <div key={src.id} className="source-card" style={{ animationDelay: `${src.delay}ms` }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: "#f3f0ff",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, flexShrink: 0 }}>{src.icon}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "#1a2332" }}>{src.label}</div>
-                <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 1 }}>← {src.from}</div>
-              </div>
-              <div style={{ display: "flex", gap: 3 }}>
-                {[0,1,2].map(d => <span key={d} className="source-dot" style={{ animationDelay: `${idx * 0.15 + d * 0.2}s` }} />)}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-      {liveMsg && <div style={{ marginTop: 12, fontSize: 12, color: "#7c3aed", fontStyle: "italic" }}>{liveMsg}</div>}
-    </div>
-  );
-
-  // ── Phase 2: milestone arrived — show fan truth + KPIs + CDP ──────────────
-  const score      = ft.overall ?? 0;
-  const verdict    = ft.verdict ?? "—";
+  const score      = hasData ? (ft.overall ?? 0) : 0;
+  const verdict    = hasData ? (ft.verdict ?? "—") : "—";
   const scoreColor = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
-  const r = 32, circ = 2 * Math.PI * r, dash = circ * Math.min(score, 100) / 100;
+  const r = 28, circ = 2 * Math.PI * r, dash = circ * Math.min(score, 100) / 100;
 
   return (
-    <div style={{ width: "100%" }} className="msg-fade">
-      {/* Fan Truth — full width, prominent */}
-      <div style={{ borderRadius: 16, overflow: "hidden", marginBottom: 12, border: `2px solid ${scoreColor}30` }}>
-        <div style={{ background: `linear-gradient(135deg, ${scoreColor}15, ${scoreColor}06)`,
-          padding: "16px 18px", display: "flex", alignItems: "center", gap: 16 }}>
-          <svg width="80" height="80" viewBox="0 0 80 80" style={{ flexShrink: 0 }}>
-            <circle cx="40" cy="40" r={r} fill="none" stroke="#e2e8f0" strokeWidth="7"/>
-            <circle cx="40" cy="40" r={r} fill="none" stroke={scoreColor} strokeWidth="7"
-              strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" transform="rotate(-90 40 40)"
-              style={{ transition: "stroke-dasharray 1.4s ease" }}/>
-            <text x="40" y="36" textAnchor="middle" fill={scoreColor} fontSize="17" fontWeight="900">{score}</text>
-            <text x="40" y="51" textAnchor="middle" fill="#94a3b8" fontSize="10">/100</text>
-          </svg>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-              <span style={{ fontSize: 26, fontWeight: 900, color: scoreColor }}>{score}/100</span>
-              <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 12px", borderRadius: 20,
-                background: verdict === "PASS" ? "#dcfce7" : "#fee2e2",
-                color: verdict === "PASS" ? "#065f46" : "#991b1b",
-                border: `1px solid ${verdict === "PASS" ? "#86efac" : "#fca5a5"}` }}>{verdict}</span>
-            </div>
-            <div style={{ fontSize: 9, fontWeight: 700, color: "#64748b", letterSpacing: "0.1em",
-              textTransform: "uppercase" as const, marginBottom: 4 }}>Fan Truth</div>
-            {ft.statement && <div style={{ fontSize: 12, color: "#475569", fontStyle: "italic", lineHeight: 1.5, maxWidth: 240 }}>
-              "{String(ft.statement).slice(0, 90)}{String(ft.statement).length > 90 ? "…" : ""}"
-            </div>}
-          </div>
-        </div>
+    <div style={{ width: "100%" }}>
 
-        {/* KPIs strip */}
-        {kpis.length > 0 && (
-          <div style={{ display: "flex", borderTop: `1px solid ${scoreColor}20` }}>
-            {kpis.slice(0, 3).map((k: any, i: number) => {
-              const fc = k.flag === "OK" ? "#10b981" : k.flag === "AMBITIOUS" ? "#f59e0b" : "#ef4444";
-              return (
-                <div key={i} style={{ flex: 1, padding: "9px 10px", borderRight: i < 2 ? `1px solid ${scoreColor}15` : "none",
-                  textAlign: "center" as const, background: `${fc}08` }}>
-                  <div style={{ fontSize: 10, color: "#64748b", fontWeight: 600 }}>{k.metric}</div>
-                  <div style={{ fontSize: 10, fontWeight: 800, color: fc, marginTop: 2 }}>{k.target || k.flag}</div>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: fc }}>{k.flag}</div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {/* ── Data sources (always visible, loading → ✓) ── */}
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 8 }}>
+        {hasData ? "Data Sources ✓" : "Querying Data Sources"}
       </div>
-
-      {/* CDP audience */}
-      {(aud.count || aud.income) && (
-        <div style={{ padding: "10px 14px", borderRadius: 12, background: "#eff6ff", border: "1px solid #bfdbfe" }}>
-          <div style={{ fontSize: 9, fontWeight: 700, color: "#0055A4", letterSpacing: "0.1em",
-            textTransform: "uppercase" as const, marginBottom: 8 }}>Audience Intelligence · Kaggle CDP</div>
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const }}>
-            {aud.count && <div style={{ textAlign: "center" as const }}>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "#0055A4" }}>{String(aud.count).replace(/\D.*/, "")}</div>
-              <div style={{ fontSize: 9, color: "#64748b" }}>profiles matched</div>
-            </div>}
-            {aud.income && <div>
-              <div style={{ fontSize: 11, fontWeight: 700, color: "#1e40af" }}>💰 {aud.income}</div>
-              <div style={{ fontSize: 9, color: "#64748b" }}>avg household income</div>
-            </div>}
-            {aud.channels && <div>
-              <div style={{ fontSize: 11, color: "#1e40af" }}>📡 {aud.channels}</div>
-              <div style={{ fontSize: 9, color: "#64748b" }}>top channels</div>
-            </div>}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+        {DATA_SOURCES.map((src, idx) => (
+          <div key={src.id} className="source-card" style={{ animationDelay: `${src.delay}ms`, padding: "8px 10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                background: hasData ? "#f0fdf4" : "#f3f0ff",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>{src.icon}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#1a2332", whiteSpace: "nowrap" as const,
+                  overflow: "hidden", textOverflow: "ellipsis" }}>{src.label}</div>
+                <div style={{ fontSize: 9, color: "#94a3b8" }}>← {src.from}</div>
+              </div>
+              {hasData
+                ? <span style={{ fontSize: 11, color: "#10b981", fontWeight: 800, flexShrink: 0 }}>✓</span>
+                : <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                    {[0,1,2].map(d => <span key={d} className="source-dot"
+                      style={{ animationDelay: `${idx * 0.15 + d * 0.2}s` }} />)}
+                  </div>}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Source confirmation chips */}
-      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 5, marginTop: 10 }}>
-        {DATA_SOURCES.map(src => (
-          <span key={src.id} style={{ fontSize: 9, padding: "3px 8px", borderRadius: 99,
-            background: "#f0fdf4", border: "1px solid #86efac", color: "#15803d", fontWeight: 600 }}>
-            {src.icon} {src.label} ✓
-          </span>
         ))}
       </div>
+
+      {/* ── Live message while loading ── */}
+      {!hasData && liveMsg && (
+        <div style={{ fontSize: 11, color: "#7c3aed", fontStyle: "italic", marginBottom: 8 }}>{liveMsg}</div>
+      )}
+
+      {/* ── Fan Truth gauge + KPIs + CDP — fade in when milestone arrives ── */}
+      {hasData && (
+        <div className="msg-fade">
+          {/* Fan Truth */}
+          <div style={{ borderRadius: 14, overflow: "hidden", marginBottom: 10,
+            border: `1.5px solid ${scoreColor}30` }}>
+            <div style={{ background: `linear-gradient(135deg, ${scoreColor}14, ${scoreColor}05)`,
+              padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
+              <svg width="68" height="68" viewBox="0 0 68 68" style={{ flexShrink: 0 }}>
+                <circle cx="34" cy="34" r={r} fill="none" stroke="#e2e8f0" strokeWidth="6"/>
+                <circle cx="34" cy="34" r={r} fill="none" stroke={scoreColor} strokeWidth="6"
+                  strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" transform="rotate(-90 34 34)"
+                  style={{ transition: "stroke-dasharray 1.4s ease" }}/>
+                <text x="34" y="31" textAnchor="middle" fill={scoreColor} fontSize="15" fontWeight="900">{score}</text>
+                <text x="34" y="44" textAnchor="middle" fill="#94a3b8" fontSize="9">/100</text>
+              </svg>
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 22, fontWeight: 900, color: scoreColor }}>{score}/100</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 10px", borderRadius: 20,
+                    background: verdict === "PASS" ? "#dcfce7" : "#fee2e2",
+                    color: verdict === "PASS" ? "#065f46" : "#991b1b",
+                    border: `1px solid ${verdict === "PASS" ? "#86efac" : "#fca5a5"}` }}>{verdict}</span>
+                </div>
+                <div style={{ fontSize: 9, color: "#64748b", fontWeight: 700, letterSpacing: "0.08em",
+                  textTransform: "uppercase" as const, marginBottom: 3 }}>Fan Truth Score</div>
+                {ft.statement && (
+                  <div style={{ fontSize: 11, color: "#475569", fontStyle: "italic", lineHeight: 1.4 }}>
+                    "{String(ft.statement).slice(0, 80)}{String(ft.statement).length > 80 ? "…" : ""}"
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* KPI strip */}
+            {kpis.length > 0 && (
+              <div style={{ display: "flex", borderTop: `1px solid ${scoreColor}18` }}>
+                {kpis.slice(0, 3).map((k: any, i: number) => {
+                  const fc = k.flag === "OK" ? "#10b981" : k.flag === "AMBITIOUS" ? "#f59e0b" : "#ef4444";
+                  return (
+                    <div key={i} style={{ flex: 1, padding: "7px 8px",
+                      borderRight: i < 2 ? `1px solid ${scoreColor}15` : "none",
+                      textAlign: "center" as const, background: `${fc}08` }}>
+                      <div style={{ fontSize: 9, color: "#64748b", fontWeight: 600 }}>{k.metric}</div>
+                      <div style={{ fontSize: 9, fontWeight: 800, color: fc, marginTop: 1 }}>{k.flag}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* CDP audience */}
+          {(aud.count || aud.income) && (
+            <div style={{ padding: "9px 12px", borderRadius: 12, background: "#eff6ff", border: "1px solid #bfdbfe" }}>
+              <div style={{ fontSize: 9, fontWeight: 700, color: "#0055A4", letterSpacing: "0.09em",
+                textTransform: "uppercase" as const, marginBottom: 7 }}>
+                Audience Intelligence · Kaggle CDP / Sephora
+              </div>
+              <div style={{ display: "flex", gap: 12, flexWrap: "wrap" as const, alignItems: "center" }}>
+                {aud.count && (
+                  <div style={{ textAlign: "center" as const }}>
+                    <div style={{ fontSize: 20, fontWeight: 900, color: "#0055A4", lineHeight: 1 }}>
+                      {String(aud.count).replace(/\D.*/, "")}
+                    </div>
+                    <div style={{ fontSize: 9, color: "#64748b" }}>profiles matched</div>
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  {aud.income && (
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "#1e40af", marginBottom: 2 }}>
+                      💰 {aud.income}
+                    </div>
+                  )}
+                  {aud.channels && (
+                    <div style={{ fontSize: 11, color: "#3b82f6" }}>📡 {aud.channels}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
