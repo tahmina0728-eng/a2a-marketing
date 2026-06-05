@@ -26,8 +26,9 @@ load_dotenv()
 if os.getenv("GROQ_API_KEY"):
     os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel as _BaseModel  # avoid clash with app.models
 
 # ── Per-campaign SSE event store ──────────────────────────────────────────────
 # Index-based: each SSE client tracks its own read position in the events list.
@@ -218,6 +219,7 @@ async def run_brief_full(brief: BriefRequest):
             campaign_id = campaign_id,
         )
         machine_brief.setdefault("campaign_id", campaign_id)
+        machine_brief.setdefault("brand", brief.brand)
 
         # Stage 2: Creative strategy
         brand_guidelines = machine_brief.pop("brand_guidelines", "")
@@ -283,6 +285,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         finally:
             hb1.cancel()
         machine_brief.setdefault("campaign_id", campaign_id)
+        machine_brief.setdefault("brand", brief.brand)
         brand_guidelines  = machine_brief.pop("brand_guidelines", "")
         brand_locks       = machine_brief.pop("brand_locks_json", "{}")
         audience_insights = machine_brief.pop("audience_insights", "")
@@ -353,6 +356,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         except Exception as _e:
             logger.debug("hero_image_thumb_failed", error=str(_e))
 
+        # Keep done event small — text data only
         await push_event(campaign_id, "strategy", "done", json.dumps({
             "_text":               f'Strategy ready — "{strategy.get("hero_message", "")}"',
             "hero_message":        strategy.get("hero_message", ""),
@@ -360,8 +364,12 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "tagline":             strategy.get("tagline", ""),
             "strategic_framework": strategy.get("strategic_framework", ""),
             "messaging_pillars":   strategy.get("messaging_pillars", []),
-            "hero_image_b64":      _hero_img_b64,
         }))
+        # Send hero image separately as a milestone (large payload, keep isolated)
+        if _hero_img_b64:
+            await push_event(campaign_id, "strategy", "milestone", json.dumps({
+                "hero_image_b64": _hero_img_b64,
+            }))
         await asyncio.sleep(8)  # Let user read the strategy banner
 
         # ── Stage 1c: Campaign copy ───────────────────────────────────────
@@ -553,6 +561,102 @@ async def run_pipeline(brief: BriefRequest):
     except Exception as e:
         logger.error("pipeline_error", campaign_id=campaign_id, error=str(e))
         raise HTTPException(status_code=500, detail=f"Pipeline error: {e}")
+
+
+# ── In-memory landing pages ───────────────────────────────────────────────────
+_landing_pages: dict[str, str] = {}  # {campaign_id: html}
+
+
+class PublishRequest(_BaseModel):
+    brand:           str
+    hero_message:    str = ""
+    short_headline:  str = ""
+    medium_headline: str = ""
+    body:            str = ""
+    cta:             str = ""
+    tagline:         str = ""
+    image_b64:       str = ""
+    to_email:        str = ""
+    channels:        list = []  # ["google_ads", "landing_page", "email"] — empty = all
+
+
+@app.post("/publish/{campaign_id}")
+async def publish_campaign(campaign_id: str, req: PublishRequest):
+    """
+    Distribute the campaign to Google Ads, a brand landing page, and email.
+    Returns status for each channel.
+    """
+    from app.publisher import (
+        publish_google_ads, generate_brand_website, send_campaign_email,
+    )
+    results: dict = {}
+    # Determine which channels to publish — empty list means all
+    selected = set(req.channels) if req.channels else {"google_ads", "landing_page", "email"}
+
+    # ── 1. Google Ads (mock) ──────────────────────────────────────────────────
+    if "google_ads" in selected:
+        results["google_ads"] = publish_google_ads(
+            campaign_id     = campaign_id,
+            brand           = req.brand,
+            short_headline  = req.short_headline,
+            medium_headline = req.medium_headline,
+            cta             = req.cta,
+            body            = req.body,
+        )
+
+    # ── 2. Brand landing page ─────────────────────────────────────────────────
+    if "landing_page" in selected:
+        html = generate_brand_website(
+            brand              = req.brand,
+            hero_message       = req.hero_message,
+            tagline            = req.tagline,
+            body_copy          = req.body,
+            cta                = req.cta,
+            campaign_image_b64 = req.image_b64,
+            campaign_id        = campaign_id,
+        )
+        _landing_pages[campaign_id] = html
+        landing_url = f"/landing/{campaign_id}"
+        results["landing_page"] = {"status": "live", "url": landing_url, "public_url": landing_url}
+        logger.info("landing_page_created", campaign_id=campaign_id, brand=req.brand)
+
+    # ── 3. Email ──────────────────────────────────────────────────────────────
+    if "email" in selected:
+      if req.to_email:
+        results["email"] = send_campaign_email(
+            to_email       = req.to_email,
+            brand          = req.brand,
+            hero_message   = req.hero_message,
+            short_headline = req.short_headline,
+            cta            = req.cta,
+            image_b64      = req.image_b64,
+            landing_url    = landing_url,
+        )
+      else:
+        results["email"] = {"status": "skipped", "reason": "No recipient email provided"}
+
+    return {"status": "ok", "campaign_id": campaign_id, "results": results}
+
+
+@app.get("/landing/{campaign_id}", response_class=HTMLResponse)
+async def serve_landing_page(campaign_id: str):
+    """Serve the generated brand campaign landing page."""
+    html = _landing_pages.get(campaign_id)
+    if not html:
+        raise HTTPException(status_code=404, detail="Landing page not found — publish first")
+    return HTMLResponse(content=html)
+
+
+@app.get("/brand/{brand_name}", response_class=HTMLResponse)
+async def serve_brand_website(brand_name: str):
+    """Permanent brand website — no campaign needed. /brand/sunglow, /brand/rnorr, /brand/boozt"""
+    from app.publisher import generate_brand_website
+    brand_map = {"sunglow": "Sunglow", "rnorr": "Rnorr", "boozt": "Boozt"}
+    brand = brand_map.get(brand_name.lower())
+    if not brand:
+        raise HTTPException(status_code=404, detail=f"Brand '{brand_name}' not found. Try: sunglow, rnorr, boozt")
+    html = generate_brand_website(brand=brand, campaign_id="brand-site")
+    return HTMLResponse(content=html)
 
 
 @app.post("/refresh")

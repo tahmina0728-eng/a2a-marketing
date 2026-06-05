@@ -123,13 +123,16 @@ export function usePipeline() {
           return;
         }
 
-        // Milestone — replace agent's milestone data
+        // Milestone — merge into agent's milestone (don't replace, to preserve done-event data)
         if (ev.status === "milestone") {
           try {
             const payload = JSON.parse(ev.message);
             setState((s) => ({
               ...s,
-              milestones: { ...s.milestones, [ev.agent]: payload },
+              milestones: {
+                ...s.milestones,
+                [ev.agent]: { ...(s.milestones[ev.agent] ?? {}), ...payload },
+              },
             }));
           } catch {}
           return;

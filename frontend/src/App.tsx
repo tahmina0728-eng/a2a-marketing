@@ -1,4 +1,24 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback, Component, type ReactNode, type ErrorInfo } from "react";
+
+// ── Error boundary — shows error instead of blank page ────────
+class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
+  state = { error: null };
+  static getDerivedStateFromError(e: Error) { return { error: e.message }; }
+  componentDidCatch(e: Error, info: ErrorInfo) { console.error("CampaignOS render error:", e, info); }
+  render() {
+    if (this.state.error) return (
+      <div style={{ padding: 48, fontFamily: "Inter,sans-serif", color: "#1a2332" }}>
+        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: "#dc2626" }}>⚠ Render Error</div>
+        <pre style={{ fontSize: 12, background: "#f8fafc", padding: 16, borderRadius: 8, overflowX: "auto" as const }}>{this.state.error}</pre>
+        <button onClick={() => this.setState({ error: null })} style={{ marginTop: 16, padding: "8px 20px",
+          borderRadius: 8, border: "none", background: "#0055A4", color: "white", cursor: "pointer" }}>
+          Dismiss
+        </button>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 import "./App.css";
 import { usePipeline } from "./hooks/usePipeline";
 import type { HarnessBriefRequest, AgentEvent } from "./types/pipeline";
@@ -1354,6 +1374,208 @@ function KPIRow({ metric, target, flag }: { metric: string; target: string; flag
   );
 }
 
+// ── Distribute Campaign Panel ─────────────────────────────────
+const API_BASE_PUB = import.meta.env.VITE_API_URL || "http://localhost:8000";
+
+
+function DistributePanel({ output, campaignId }: {
+  output: Record<string, unknown> | null; campaignId: string | null;
+}) {
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [email,    setEmail]    = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [results,  setResults]  = useState<Record<string, any> | null>(null);
+  const [error,    setError]    = useState("");
+
+  const cp       = (output as any)?.creative_pipeline;
+  const strategy = (output as any)?.creative_strategy;
+  const copy     = (output as any)?.campaign_copy;
+  // brand from machine_brief spread, or extracted from campaign_id (format: campaign-{brand}-xxx)
+  const brandFromId = campaignId
+    ? campaignId.replace(/^campaign-/, "").split("-")[0]
+        .replace(/^(.)/, (c: string) => c.toUpperCase())
+    : "";
+  const brand = String((output as any)?.brand ?? brandFromId ?? "");
+
+  const toggle = (key: string) => setSelected(s => {
+    const n = new Set(s);
+    n.has(key) ? n.delete(key) : n.add(key);
+    return n;
+  });
+
+  const handlePublish = useCallback(async () => {
+    if (selected.size === 0) return;
+    if (!campaignId) { setError("No campaign ID — run a full campaign first"); return; }
+    if (!brand) { setError("Brand not found in campaign output"); return; }
+    setLoading(true); setError(""); setResults(null);
+    try {
+      const res = await fetch(`${API_BASE_PUB}/publish/${campaignId}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brand,
+          hero_message:    strategy?.hero_message ?? "",
+          short_headline:  copy?.short?.headline  ?? "",
+          medium_headline: copy?.medium?.headline ?? "",
+          body:            copy?.long?.body       ?? "",
+          cta:             copy?.cta              ?? "",
+          tagline:         strategy?.tagline      ?? "",
+          image_b64:       cp?.image_b64          ?? "",
+          to_email:        selected.has("email") ? email : "",
+          channels:        Array.from(selected),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.detail ?? "Publish failed");
+      setResults(json.results);
+      // Auto-open landing page in new tab if published
+      const lp = json.results?.landing_page;
+      if (lp?.status === "live" && lp?.url) {
+        window.open(`${API_BASE_PUB}${lp.url}`, "_blank");
+      }
+    } catch (e: any) { setError(e.message); }
+    finally { setLoading(false); }
+  }, [campaignId, brand, strategy, copy, cp, email, selected]);
+
+  if (!strategy && !cp?.culture_brief) return null;
+
+  const CHANNELS = [
+    { key: "google_ads",   icon: "🔍", label: "Google Ads",    desc: "Responsive Search Ad" },
+    { key: "landing_page", icon: "🌐", label: "Brand Website", desc: `${brand} landing page` },
+    { key: "email",        icon: "📧", label: "Email Campaign", desc: "Branded HTML email" },
+  ];
+
+  const publishedCount = results
+    ? Object.values(results).filter((r: any) => r.status !== "skipped" && r.status !== "error").length
+    : 0;
+
+  return (
+    <div style={{ gridColumn: "1 / -1", borderRadius: 16, overflow: "hidden",
+      border: "1.5px solid rgba(0,85,164,0.2)" }}>
+
+      {/* Header */}
+      <div style={{ padding: "16px 24px", background: "#0055A4",
+        display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 22 }}>🚀</span>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "white" }}>Distribute Campaign</div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.65)" }}>Select channels and publish</div>
+          </div>
+        </div>
+        {!results && selected.size > 0 && (
+          <button onClick={handlePublish} disabled={loading}
+            style={{ padding: "9px 24px", borderRadius: 99, border: "2px solid white",
+              background: loading ? "transparent" : "white", color: loading ? "white" : "#0055A4",
+              fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
+            {loading ? "Publishing…" : `🚀 Publish to ${selected.size} channel${selected.size > 1 ? "s" : ""}`}
+          </button>
+        )}
+        {results && (
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#86efac" }}>
+            ✅ {publishedCount} channel{publishedCount !== 1 ? "s" : ""} published
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: "20px 24px", background: "linear-gradient(135deg,#eff6ff,#f0f9ff)" }}>
+
+        {/* Channel selector cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 16 }}>
+          {CHANNELS.map(ch => {
+            const r    = results?.[ch.key];
+            const done = r?.status === "submitted" || r?.status === "live" || r?.status === "sent";
+            const isOn = selected.has(ch.key);
+            const canSelect = !results;
+
+            return (
+              <div key={ch.key}
+                onClick={() => canSelect && toggle(ch.key)}
+                style={{
+                  padding: "16px", borderRadius: 14, cursor: canSelect ? "pointer" : "default",
+                  transition: "all 0.2s",
+                  background: done ? "#f0fdf4" : isOn ? "#eff6ff" : "white",
+                  border: `2px solid ${done ? "#86efac" : isOn ? "#0055A4" : "#e2e8f0"}`,
+                  boxShadow: isOn && !done ? "0 0 0 3px rgba(0,85,164,0.12)" : "none",
+                }}>
+
+                {/* Icon + checkbox row */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                  <span style={{ fontSize: 24 }}>{ch.icon}</span>
+                  {!results && (
+                    <div style={{ width: 20, height: 20, borderRadius: 6,
+                      border: `2px solid ${isOn ? "#0055A4" : "#cbd5e1"}`,
+                      background: isOn ? "#0055A4" : "white",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 12, color: "white", fontWeight: 800 }}>
+                      {isOn ? "✓" : ""}
+                    </div>
+                  )}
+                  {done && <span style={{ fontSize: 14, color: "#10b981", fontWeight: 800 }}>✓</span>}
+                </div>
+
+                <div style={{ fontSize: 13, fontWeight: 700,
+                  color: done ? "#065f46" : isOn ? "#0055A4" : "#1a2332", marginBottom: 3 }}>
+                  {ch.label}
+                </div>
+                <div style={{ fontSize: 10, color: "#94a3b8" }}>{ch.desc}</div>
+
+                {/* Results per channel */}
+                {done && ch.key === "google_ads" && r && (
+                  <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 8,
+                    background: "#f0f9ff", border: "1px solid #bfdbfe",
+                    fontSize: 10, color: "#1e40af", lineHeight: 1.7 }}>
+                    <div>Ad ID: <b>{r.ad_id}</b></div>
+                    <div>Est. Reach: <b>{r.est_impressions}</b></div>
+                    <div>CPC: <b>{r.est_cpc}</b> · Quality: <b>{r.quality_score}/10</b></div>
+                  </div>
+                )}
+                {done && ch.key === "landing_page" && r && (
+                  <div style={{ marginTop: 10 }}>
+                    <a href={`${API_BASE_PUB}${r.url}`} target="_blank" rel="noreferrer"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 5,
+                        padding: "7px 14px", borderRadius: 99, background: "#0055A4",
+                        color: "white", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
+                      🔗 Open Landing Page
+                    </a>
+                  </div>
+                )}
+                {done && ch.key === "email" && r && (
+                  <div style={{ marginTop: 8, fontSize: 10, color: "#065f46" }}>
+                    ✉ Sent to <b>{r.to}</b>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Email input — only shown when email channel is selected */}
+        {selected.has("email") && !results && (
+          <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10,
+            padding: "12px 16px", borderRadius: 12, background: "white", border: "1.5px solid #bfdbfe" }}>
+            <span style={{ fontSize: 18 }}>📧</span>
+            <input type="email" placeholder="Enter recipient email address"
+              value={email} onChange={e => setEmail(e.target.value)}
+              style={{ flex: 1, border: "none", outline: "none", fontSize: 13, fontFamily: "inherit", color: "#1a2332" }} />
+          </div>
+        )}
+
+        {/* No channel selected hint */}
+        {!results && selected.size === 0 && (
+          <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center" as const, padding: "8px 0" }}>
+            Select one or more channels above to publish your campaign
+          </div>
+        )}
+
+        {error && (
+          <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fee2e2",
+            border: "1px solid #fca5a5", fontSize: 12, color: "#991b1b" }}>{error}</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Results view ─────────────────────────────────────────────
 function ResultsView({ output, campaignId, onReset }: {
   output: Record<string, unknown> | null;
@@ -1821,6 +2043,10 @@ function ResultsView({ output, campaignId, onReset }: {
             {expanded && <pre style={styles.jsonPre}>{JSON.stringify(output, null, 2)}</pre>}
           </div>
         )}
+
+        {/* ── Distribute Campaign ── */}
+        <DistributePanel output={output} campaignId={campaignId} />
+
       </div>
     </div>
   );
@@ -1861,11 +2087,13 @@ export default function App() {
 
   // done
   return (
-    <ResultsView
-      output={state.pipeline_output}
-      campaignId={state.campaign_id}
-      onReset={reset}
-    />
+    <ErrorBoundary>
+      <ResultsView
+        output={state.pipeline_output}
+        campaignId={state.campaign_id}
+        onReset={reset}
+      />
+    </ErrorBoundary>
   );
 }
 

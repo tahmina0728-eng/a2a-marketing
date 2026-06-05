@@ -1,5 +1,5 @@
-﻿"""
-runner.py â€” ADK Runner + direct Groq fallback.
+"""
+runner.py â€" ADK Runner + direct Groq fallback.
 
 For Vertex AI: uses ADK Workflow runner normally.
 For Groq/LiteLLM: runs load_brand_context via ADK, then calls Groq directly
@@ -67,7 +67,7 @@ def _is_groq_model(agent: Agent | Workflow) -> bool:
 def _needs_groq_fallback(agent: Agent | Workflow) -> bool:
     """
     Returns True only for pipelines where the Groq direct-call fallback is appropriate.
-    experiment_pipeline has its OWN agent-level handling â€” don't use briefing fallback.
+    experiment_pipeline has its OWN agent-level handling â€" don't use briefing fallback.
     """
     if hasattr(agent, "name") and agent.name == "experiment_pipeline":
         return False
@@ -105,7 +105,7 @@ async def _run_briefing_with_groq(state: dict, brief: dict, cid: str) -> dict:
         "moment_type_rules":   state.get("moment_type_rules_summary", ""),
     }
 
-    # Serialize brief â€” convert enums/Pydantic to plain values BEFORE f-string
+    # Serialize brief â€" convert enums/Pydantic to plain values BEFORE f-string
     def _safe(v):
         if hasattr(v, "value"):      return v.value
         if hasattr(v, "model_dump"): return v.model_dump()
@@ -133,7 +133,7 @@ Campaign Benchmarks:
 Channel Benchmarks:
 {context['channel_benchmarks'][:500]}
 
-Customer Audience Intelligence (CDP â€” pgvector):
+Customer Audience Intelligence (CDP â€" pgvector):
 {context['audience_insights'][:800]}
 
 Moment Type Rules:
@@ -159,12 +159,12 @@ Validate the campaign brief above using ALL context provided. Your scoring must 
 3. Audience: Cross-check against audience_insights CDP data.
    Flag channel mismatches or segment size issues as brand_warnings.
 
-4. Status â€” apply these rules EXACTLY:
-   "READY"        â†’ fan_truth overall >= 75 AND zero UNREALISTIC KPI flags AND zero error brand_warnings
-   "NEEDS_REVIEW" â†’ fan_truth overall >= 60 AND has AMBITIOUS KPIs or minor brand_warnings
-   "INCOMPLETE"   â†’ fan_truth overall < 60 OR fan_truth verdict is FAIL
+4. Status â€" apply these rules EXACTLY:
+   "READY"        â†' fan_truth overall >= 75 AND zero UNREALISTIC KPI flags AND zero error brand_warnings
+   "NEEDS_REVIEW" â†' fan_truth overall >= 60 AND has AMBITIOUS KPIs or minor brand_warnings
+   "INCOMPLETE"   â†' fan_truth overall < 60 OR fan_truth verdict is FAIL
 
-Apply brand locks. Return ONLY valid JSON â€” no markdown, no explanation:
+Apply brand locks. Return ONLY valid JSON â€" no markdown, no explanation:
 
 {{
   "campaign_id": "{cid}",
@@ -298,17 +298,17 @@ BRAND LOCKS:
 {brand_locks[:500]}
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-Produce a creative strategy as valid JSON only â€” no markdown, no explanation:
+Produce a creative strategy as valid JSON only â€" no markdown, no explanation:
 {{
   "campaign_id": "{machine_brief.get('campaign_id', '')}",
-  "big_idea": "<6 words max â€” the campaign world>",
+  "big_idea": "<6 words max â€" the campaign world>",
   "tagline": "<campaign tagline>",
-  "strategic_framework": "<2-3 sentences â€” the overarching approach>",
+  "strategic_framework": "<2-3 sentences â€" the overarching approach>",
   "hero_message": "<â‰¤8 words, Fan-to-Fan voice>",
   "tone_of_voice": "<brand voice for this campaign>",
   "channel_priorities": [{{"channel": "<name>", "priority": <1-10>, "rationale": "<why>"}}],
   "messaging_pillars": ["<pillar 1>", "<pillar 2>", "<pillar 3>"],
-  "culture_context": "<1 sentence â€” the cultural insight driving the idea>",
+  "culture_context": "<1 sentence â€" the cultural insight driving the idea>",
   "handoff_message": "<2-3 sentences briefing the creative team>"
 }}"""
 
@@ -338,7 +338,7 @@ CAMPAIGN BRIEF:
 {json.dumps(machine_brief, indent=2)[:1500]}
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-Produce campaign copy as valid JSON only â€” no markdown, no explanation:
+Produce campaign copy as valid JSON only â€" no markdown, no explanation:
 {{
   "campaign_id": "{machine_brief.get('campaign_id', '')}",
   "short": {{
@@ -356,7 +356,7 @@ Produce campaign copy as valid JSON only â€” no markdown, no explanation:
   }},
   "cta": "<â‰¤3 words, verb-led>",
   "instagram_caption": "<platform caption with relevant hashtags>",
-  "tiktok_hook": "<first 3 seconds â€” what makes someone stop scrolling>"
+  "tiktok_hook": "<first 3 seconds â€" what makes someone stop scrolling>"
 }}"""
 
     import google.genai as _g2
@@ -390,23 +390,43 @@ def _apply_brand_overlay(img_data: bytes, brand: str, headline: str, product_uri
         img = Image.open(io.BytesIO(img_data)).convert("RGBA")
         W, H = img.size
 
-        # â”€â”€ Load brand font â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â"€â"€ Load brand font â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+        # Preferred brand fonts per guidelines:
+        #   Sunglow → Alatsi-Regular.ttf
+        #   Rnorr   → Antonio (display) or Rubik
+        #   Boozt   → Rubik (bold italic for headlines)
+        BRAND_FONT_PREFS = {
+            "Sunglow": ["Alatsi"],
+            "Rnorr":   ["Antonio", "Rubik"],
+            "Boozt":   ["Rubik"],
+        }
+        prefs = BRAND_FONT_PREFS.get(brand, [])
+
         font_path = None
         local_font_dir = Path(__file__).parent.parent / "bucket" / "brands" / brand / "Font"
-        for ext in ["*.ttf", "*.otf", "*.woff2"]:
-            fonts = list(local_font_dir.glob(ext))
-            if fonts:
-                # Prefer italic/bold for headlines
-                bold = [f for f in fonts if "italic" in f.name.lower() or "bold" in f.name.lower()]
-                font_path = str(bold[0] if bold else fonts[0])
+        # Try preferred fonts first
+        for pref in prefs:
+            for f in local_font_dir.glob("*.ttf"):
+                if pref.lower() in f.name.lower():
+                    font_path = str(f)
+                    break
+            if font_path:
                 break
+        # Fall back to any font in the folder
+        if not font_path:
+            for ext in ["*.ttf", "*.otf"]:
+                fonts = list(local_font_dir.glob(ext))
+                if fonts:
+                    bold = [f for f in fonts if "bold" in f.name.lower() or "italic" in f.name.lower()]
+                    font_path = str(bold[0] if bold else fonts[0])
+                    break
 
-        # â”€â”€ Brand colors from brand locks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â"€â"€ Brand colors from brand locks â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+        # Colors sourced from official brand guidelines
         BRAND_COLORS = {
-            "Sunglow":    {"text": "#FFFFFF", "bar": "#2D6A4F",   "accent": "#FFDE00"},
-            "Rnorr":      {"text": "#FFFFFF", "bar": "#006B3F",   "accent": "#FFDE00"},
-            "Boozt":      {"text": "#FFFFFF", "bar": "#1A1A2E",   "accent": "#FF4444"},
-            "McDonalds":  {"text": "#FFFFFF", "bar": "#DA291C",   "accent": "#FFC72C"},
+            "Sunglow": {"text": "#FFFFFF", "bar": "#B00064", "accent": "#FFC72C"},  # Magenta + Sunshine Yellow
+            "Rnorr":   {"text": "#FFFFFF", "bar": "#008641", "accent": "#FFDE00"},  # Rnorr Green + Yellow
+            "Boozt":   {"text": "#FFFFFF", "bar": "#0E105E", "accent": "#0086FE"},  # Midnight + Boozt Blue
         }
         colors = BRAND_COLORS.get(brand, {"text": "#FFFFFF", "bar": "#1a1a2e", "accent": "#0055A4"})
 
@@ -414,7 +434,7 @@ def _apply_brand_overlay(img_data: bytes, brand: str, headline: str, product_uri
             h = h.lstrip("#")
             return tuple(int(h[i:i+2], 16) for i in (0, 2, 4)) + (a,)
 
-        # â”€â”€ Create overlay canvas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â"€â"€ Create overlay canvas â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
         overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         draw    = ImageDraw.Draw(overlay)
 
@@ -429,7 +449,7 @@ def _apply_brand_overlay(img_data: bytes, brand: str, headline: str, product_uri
             draw.rectangle([(0, H - bar_h - 30 + i), (W, H - bar_h - 29 + i)],
                             fill=(*hex_to_rgba(colors["bar"])[:3], alpha))
 
-        # â”€â”€ Load fonts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â"€â"€ Load fonts â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
         headline_size = max(32, W // 18)
         brand_size    = max(18, W // 32)
         try:
@@ -443,7 +463,7 @@ def _apply_brand_overlay(img_data: bytes, brand: str, headline: str, product_uri
             font_headline = ImageFont.load_default()
             font_brand    = ImageFont.load_default()
 
-        # â”€â”€ Draw headline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â"€â"€ Draw headline â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
         text_color = hex_to_rgba(colors["text"])
         # Word-wrap headline to 2 lines max
         words = headline.split()
@@ -470,7 +490,7 @@ def _apply_brand_overlay(img_data: bytes, brand: str, headline: str, product_uri
             draw.text(((W - tw) // 2, y_start), line, fill=text_color, font=font_headline)
             y_start += line_h
 
-        # â”€â”€ Draw brand name â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â"€â"€ Draw brand name â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
         accent_color = hex_to_rgba(colors["accent"])
         brand_text   = brand.upper()
         bb   = draw.textbbox((0, 0), brand_text, font=font_brand)
@@ -483,7 +503,30 @@ def _apply_brand_overlay(img_data: bytes, brand: str, headline: str, product_uri
         draw.rectangle([(W // 2 - 40, line_y), (W // 2 + 40, line_y + 2)],
                         fill=accent_color)
 
-        # â”€â”€ Composite and return â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # ── Brand logo (top-left corner) ──────────────────────────────────────
+        try:
+            from app.brand_assets import get_asset_loader as _gal_ov
+            _logos = _gal_ov().list_logos(brand)
+            if _logos:
+                from app.creative_pipeline import _load_bytes as _lb_ov
+                _logo_data = _lb_ov(_logos[0])
+                if _logo_data:
+                    _logo = Image.open(io.BytesIO(_logo_data)).convert("RGBA")
+                    _lw, _lh = _logo.size
+                    _scale = min(120 / _lw, 50 / _lh, 1.0)
+                    _logo = _logo.resize((int(_lw * _scale), int(_lh * _scale)), Image.LANCZOS)
+                    _pad = 10
+                    _lbg = Image.new("RGBA", (_logo.width + _pad*2, _logo.height + _pad*2),
+                                     (*hex_to_rgba(colors["bar"])[:3], 200))
+                    if _logo.mode == "RGBA":
+                        _lbg.paste(_logo, (_pad, _pad), _logo)
+                    else:
+                        _lbg.paste(_logo, (_pad, _pad))
+                    overlay.paste(_lbg, (16, 16), _lbg)
+        except Exception as _le:
+            logger.debug("logo_overlay_skipped", error=str(_le))
+
+        # ── Composite and return ──────────────────────────────────────────────
         result = Image.alpha_composite(img, overlay).convert("RGB")
         buf    = io.BytesIO()
         result.save(buf, format="JPEG", quality=92)
@@ -507,14 +550,14 @@ async def run_creative_pipeline_direct(
 ) -> dict:
     """
     Directly orchestrate the creative pipeline stages using Groq for text
-    and Google AI for image generation â€” bypasses ADK Workflow DAG.
+    and Google AI for image generation â€" bypasses ADK Workflow DAG.
 
     Stages:
-      1. Culture researcher  â†’ cultural intelligence brief
-      2. Brand summariser    â†’ 5 brand locks
-      3. Creative director   â†’ Big Idea + creative strategy
-      4. Prompt agent        â†’ Gemini image generation prompt
-      5. Image generator     â†’ key visual (base64 PNG via Google AI)
+      1. Culture researcher  â†' cultural intelligence brief
+      2. Brand summariser    â†' 5 brand locks
+      3. Creative director   â†' Big Idea + creative strategy
+      4. Prompt agent        â†' Gemini image generation prompt
+      5. Image generator     â†' key visual (base64 PNG via Google AI)
     """
     log = logger.bind(campaign_id=campaign_id)
 
@@ -576,13 +619,24 @@ Be specific, avoid generic boilerplate.""")
     # Stage 2: Brand summariser
     log.info("p2_brand_summariser_start")
     await _emit("kv", "running", f"Extracting {brand} brand locks & creative rules…")
+    _BRAND_PALETTE_LOCK = {
+        "Sunglow": "primary #B00064 Magenta, accent #FFC72C Sunshine Yellow, base #F9F9F9 Off-White, font Alatsi",
+        "Rnorr":   "primary #008641 Rnorr Green, accent #FFDE00 Yellow, base #FFFFFF White, fonts Antonio + Rubik",
+        "Boozt":   "primary #0E105E Midnight, accent #0086FE Boozt Blue, highlight #00BFFE Sky, base #FFFFFF White, font Rubik",
+    }
+    _palette_lock = _BRAND_PALETTE_LOCK.get(brand, "use brand primary colours")
+
     brand_summary = await _groq(f"""You are a brand strategist.
 
-Brand guidelines for {brand}:
-{brand_guidelines[:4000]}
+Brand: {brand}
+Official colour palette: {_palette_lock}
 
-Distil these into exactly 5 brand lock points that any creative execution must honour.
-Format as a numbered list. Be specific about colours, tone, logo rules, forbidden treatments.""")
+Brand guidelines:
+{brand_guidelines[:3500]}
+
+Distil into exactly 5 numbered brand lock points any creative execution MUST honour.
+Include the exact HEX colours ({_palette_lock}) in lock 1.
+Cover: colours (with HEX), typography/font, logo rules, tone, forbidden treatments.""")
     log.info("p2_brand_summariser_done")
     import json as _json2
     await _emit("kv", "step_data", _json2.dumps({"brand_locks": brand_summary[:500]}))
@@ -601,9 +655,9 @@ Brand locks: {brand_summary}
 
 Create a Big Idea for this campaign. Output:
 - Big Idea title (â‰¤6 words, memorable)
-- Visual world (2-3 sentences â€” what the campaign looks and feels like)
+- Visual world (2-3 sentences â€" what the campaign looks and feels like)
 - Hero message (â‰¤8 words, Fan-to-Fan voice)
-- Creative tension (1 sentence â€” the cultural hook)""", temp=0.7)
+- Creative tension (1 sentence â€" the cultural hook)""", temp=0.7)
     log.info("p2_creative_director_done")
     await _emit("kv", "step_data", _json2.dumps({"big_idea": big_idea[:400]}))
     await _emit("kv", "running", "Big Idea ready — crafting image prompt…")
@@ -612,19 +666,29 @@ Create a Big Idea for this campaign. Output:
     # Stage 4: Prompt agent → image generation prompt
     log.info("p2_prompt_agent_start")
     await _emit("kv", "running", "Crafting Imagen 4 prompt from Big Idea…")
+    # Inject exact brand colors so Imagen 4 generates on-brand visuals
+    _BRAND_PALETTE = {
+        "Sunglow": "primary Magenta #B00064, accent Sunshine Yellow #FFC72C, base Off-White #F9F9F9",
+        "Rnorr":   "primary Rnorr Green #008641, accent Yellow #FFDE00, base White #FFFFFF",
+        "Boozt":   "primary Midnight #0E105E, accent Boozt Blue #0086FE, Sky #00BFFE, base White #FFFFFF",
+    }
+    _brand_palette_str = _BRAND_PALETTE.get(brand, "brand primary colour, accent colour, white base")
+
     image_prompt = await _groq(f"""You are an expert image generation prompt engineer.
 
 Brand: {brand}
+Official brand colour palette: {_brand_palette_str}
 Big Idea: {big_idea}
 Brand locks: {brand_summary}
 
-Write a detailed Gemini image generation prompt for the key visual.
-The prompt must:
-- Describe the visual composition, lighting, mood
-- Reference the product naturally in context
-- Respect brand colours and aesthetic
+Write a detailed Gemini Imagen 4 prompt for the campaign key visual.
+The prompt MUST:
+- Use the exact brand colours ({_brand_palette_str}) prominently in the visual
+- Show the product naturally in context (not as a still life)
+- Describe composition, lighting, mood in detail
+- Reference the brand's visual identity and colour palette explicitly
 - Be 150-250 words
-- End with: "Brand colours: [list from brand locks]"
+- End with: "Colour palette: {_brand_palette_str}"
 
 Output only the prompt text, no commentary.""", temp=0.6)
     log.info("p2_prompt_agent_done")
@@ -648,7 +712,7 @@ Output only the prompt text, no commentary.""", temp=0.6)
             location = _settings.gcp_region,
         )
 
-        # â”€â”€ Step A: Analyze existing brand campaign banners (reference ads) â”€â”€
+        # â"€â"€ Step A: Analyze existing brand campaign banners (reference ads) â"€â"€
         # Load asset images from GCS and ask Gemini Vision to extract visual style
         from app.creative_pipeline import _load_bytes, _mime_for
         SUPPORTED_MIME = {"image/jpeg", "image/png", "image/gif", "image/webp"}
@@ -683,16 +747,16 @@ Output only the prompt text, no commentary.""", temp=0.6)
                 log.warning("p2_brand_style_failed", error=str(vision_err),
                             note="skipping style analysis, Imagen 4 will use prompt only")
 
-        # â”€â”€ Step B: Enrich image prompt with brand visual style â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â"€â"€ Step B: Enrich image prompt with brand visual style â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
         enriched_prompt = image_prompt
         if style_analysis:
             enriched_prompt = (
                 f"{image_prompt}\n\n"
-                f"BRAND VISUAL STYLE (derived from existing campaign imagery â€” match this aesthetic):\n"
+                f"BRAND VISUAL STYLE (derived from existing campaign imagery - match this aesthetic):\n"
                 f"{style_analysis}"
             )
 
-        # â”€â”€ Step C: Generate key visual with Imagen 4 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        # â"€â"€ Step C: Generate key visual with Imagen 4 â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
         image_model = os.getenv("IMAGE_GEN_MODEL", "imagen-4.0-fast-generate-001")
         log.info("p2_generate_image_start", model=image_model, has_style_ref=bool(style_analysis))
         await _emit("kv", "running", "Generating key visual with Imagen 4…")
