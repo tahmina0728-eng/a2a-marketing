@@ -11,10 +11,10 @@ app/.adk/
 
 # Local brand assets — loaded from GCS at runtime
 bucket/brands/*/Assets/
-bucket/brands/*/Font/
 bucket/brands/*/Colours/
 bucket/brands/*/Products/
 bucket/brands/*/Logos/
+# Font/ is NOT excluded — baked into image for Pillow KV overlay
 
 # Seed scripts and data files — not needed in container
 scripts/

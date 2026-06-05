@@ -102,24 +102,25 @@ def publish_google_ads(campaign_id: str, brand: str,
 
 # ── Brand Landing Page ─────────────────────────────────────────────────────────
 
-def _gcs_to_b64(uri: str, mime: str = "image/jpeg", max_kb: int = 400) -> str:
-    """Load a GCS asset and return as base64 data URI. Empty string on failure."""
+def _gcs_to_b64(uri: str, mime: str = "image/jpeg", max_kb: int = 800) -> str:
+    """Load a GCS asset, resize with Pillow, return as base64 data URI."""
     try:
         from app.creative_pipeline import _load_bytes
         data = _load_bytes(uri)
-        if not data or len(data) > max_kb * 1024:
+        if not data:
             return ""
-        # Resize if it's an image
+        # Always resize — reduces payload regardless of original size
         try:
             from PIL import Image
             img = Image.open(io.BytesIO(data)).convert("RGB")
-            img.thumbnail((800, 600))
+            img.thumbnail((600, 600))   # max 600px, preserves aspect ratio
             buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=72)
+            img.save(buf, format="JPEG", quality=70)
             data = buf.getvalue()
             mime = "image/jpeg"
         except Exception:
-            pass
+            if len(data) > max_kb * 1024:
+                return ""  # skip if Pillow fails and file is huge
         b64 = base64.b64encode(data).decode()
         return f"data:{mime};base64,{b64}"
     except Exception as e:
@@ -160,8 +161,8 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
     assets    = loader.list_assets(brand)
 
     logo_src     = _gcs_to_b64(logos[0],    "image/png", max_kb=200) if logos    else ""
-    prod_srcs    = [_gcs_to_b64(p, "image/jpeg", max_kb=300) for p in products[:3]]
-    asset_src    = _gcs_to_b64(assets[0],   "image/jpeg", max_kb=400) if assets   else ""
+    prod_srcs    = [_gcs_to_b64(p, "image/jpeg", max_kb=800) for p in products[:3]]
+    asset_src    = _gcs_to_b64(assets[0],   "image/jpeg", max_kb=600) if assets   else ""
     campaign_src = (f"data:image/jpeg;base64,{campaign_image_b64}"
                    if campaign_image_b64 else asset_src)
 
@@ -347,8 +348,8 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
     assets   = loader.list_assets("Rnorr")
 
     logo_src  = _gcs_to_b64(logos[0],   "image/png",  200) if logos    else ""
-    prod_srcs = [_gcs_to_b64(p, "image/jpeg", 300) for p in products[:6]]
-    hero_src  = _gcs_to_b64(assets[0],  "image/jpeg", 400) if assets   else ""
+    prod_srcs = [_gcs_to_b64(p, "image/jpeg", 800) for p in products[:6]]
+    hero_src  = _gcs_to_b64(assets[0],  "image/jpeg", 600) if assets   else ""
     camp_src  = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else hero_src
 
     logo_html = (f'<img src="{logo_src}" alt="Rnorr" style="height:40px;object-fit:contain;">'
@@ -570,8 +571,8 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
     assets   = loader.list_assets("Boozt")
 
     logo_src  = _gcs_to_b64(logos[0],   "image/png",  200) if logos    else ""
-    prod_srcs = [_gcs_to_b64(p, "image/jpeg", 300) for p in products[:6]]
-    hero_src  = _gcs_to_b64(assets[0],  "image/jpeg", 400) if assets   else ""
+    prod_srcs = [_gcs_to_b64(p, "image/jpeg", 800) for p in products[:6]]
+    hero_src  = _gcs_to_b64(assets[0],  "image/jpeg", 600) if assets   else ""
     camp_src  = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else hero_src
 
     logo_html = (f'<img src="{logo_src}" alt="Boozt" style="height:38px;object-fit:contain;">'

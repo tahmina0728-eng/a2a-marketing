@@ -689,6 +689,7 @@ The prompt MUST:
 - Reference the brand's visual identity and colour palette explicitly
 - Be 150-250 words
 - End with: "Colour palette: {_brand_palette_str}"
+- IMPORTANT: Do NOT include any text, words, brand names, logos, watermarks, or typography in the image. The image must be purely photographic/visual with no readable text whatsoever.
 
 Output only the prompt text, no commentary.""", temp=0.6)
     log.info("p2_prompt_agent_done")
