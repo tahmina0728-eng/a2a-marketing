@@ -557,7 +557,7 @@ def _apply_brand_overlay(img_data: bytes, brand: str, headline: str, product_uri
         brand_text   = brand.upper()
         bb   = draw.textbbox((0, 0), brand_text, font=font_brand)
         bw   = bb[2] - bb[0]
-        draw.text(((W - bw) // 2, H - brand_size - 14), brand_text,
+        draw.text(((W - bw) // 2, y_start + 4), brand_text,
                   fill=accent_color, font=font_brand)
 
         # Accent line above brand name
@@ -634,21 +634,32 @@ async def run_creative_pipeline_direct(
     _gemini = _genai.Client(vertexai=True, project=_s.gcp_project, location=_s.gcp_region)
     _text_model = os.getenv("CREATIVE_MODEL", "gemini-2.5-flash")
 
-    async def _groq(prompt: str, temp: float = 0.5, retries: int = 3) -> str:
-        """Call Gemini via Vertex AI with retry on 429 rate limits."""
+    async def _llm(prompt: str, temp: float = 0.5, retries: int = 3,
+                   with_brand_imgs: bool = False) -> str:
+        """Call creative model via Vertex AI. Passes brand images when model supports vision."""
         import asyncio
         loop = asyncio.get_event_loop()
+        is_vision = any(x in _text_model.lower() for x in ["image", "vision", "pro"])
+        contents = [prompt] + (_brand_img_parts[:6] if with_brand_imgs and is_vision and _brand_img_parts else [])
         for attempt in range(retries):
             try:
                 r = await loop.run_in_executor(None, lambda: _gemini.models.generate_content(
                     model    = _text_model,
-                    contents = prompt,
+                    contents = contents,
                     config   = {"temperature": temp},
                 ))
-                return r.text.strip()
+                # Extract text — vision models may return mixed parts
+                txt = ""
+                try:
+                    for _p in (r.candidates[0].content.parts if r.candidates else []):
+                        if hasattr(_p, "text") and _p.text:
+                            txt += _p.text
+                except Exception:
+                    pass
+                return (txt or r.text or "").strip()
             except Exception as e:
                 if "429" in str(e) and attempt < retries - 1:
-                    wait = 30 * (attempt + 1)  # 30s, 60s, 90s
+                    wait = 30 * (attempt + 1)
                     log.warning("gemini_rate_limit_retry", attempt=attempt+1, wait=wait)
                     await asyncio.sleep(wait)
                 else:
@@ -660,7 +671,7 @@ async def run_creative_pipeline_direct(
     # Stage 1: Culture research
     log.info("p2_culture_researcher_start")
     await _emit("culture", "running", f"Researching cultural trends for {brand} audience…")
-    culture = await _groq(f"""You are a cultural intelligence researcher.
+    culture = await _llm(f"""You are a cultural intelligence researcher.
 
 Brand: {brand}
 Target audience: {audience}
@@ -688,7 +699,7 @@ Be specific, avoid generic boilerplate.""")
     }
     _palette_lock = _BRAND_PALETTE_LOCK.get(brand, "use brand primary colours")
 
-    brand_summary = await _groq(f"""You are a brand strategist.
+    brand_summary = await _llm(f"""You are a brand strategist. You can see the brand logo, colour swatches, and product imagery in the images provided. Use them to extract the exact visual identity.
 
 Brand: {brand}
 Official colour palette: {_palette_lock}
@@ -707,7 +718,7 @@ Cover: colours (with HEX), typography/font, logo rules, tone, forbidden treatmen
 
     # Stage 3: Creative director → Big Idea
     log.info("p2_creative_director_start")
-    big_idea = await _groq(f"""You are a Creative Director.
+    big_idea = await _llm(f"""You are a Creative Director.
 
 Brand: {brand}
 Audience: {audience}
@@ -736,7 +747,7 @@ Create a Big Idea for this campaign. Output:
     }
     _brand_palette_str = _BRAND_PALETTE.get(brand, "brand primary colour, accent colour, white base")
 
-    image_prompt = await _groq(f"""You are a senior creative director writing Imagen 4 prompts for premium advertising campaigns.
+    image_prompt = await _llm(f"""You are a senior creative director writing Imagen 4 prompts for premium advertising campaigns.
 
 Brand: {brand}
 Brand colour palette: {_brand_palette_str}
@@ -827,9 +838,9 @@ Output only the prompt text, nothing else.""", temp=0.7)
             )
 
         # â"€â"€ Step C: Generate key visual with Imagen 4 â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-        image_model = os.getenv("IMAGE_GEN_MODEL", "imagen-4.0-fast-generate-001")
+        image_model = os.getenv("IMAGE_GEN_MODEL", "imagen-4.0-generate-001")
         log.info("p2_generate_image_start", model=image_model, has_style_ref=bool(style_analysis))
-        await _emit("kv", "running", "Generating key visual with Imagen 4…")
+        await _emit("kv", "running", f"Generating key visual with {image_model}…")
         response = client.models.generate_images(
             model  = image_model,
             prompt = enriched_prompt,

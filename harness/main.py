@@ -344,7 +344,9 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             _ldr = _gal()
             _assets = _ldr.list_assets(brief.brand) if brief.brand else []
             _products = _ldr.list_products(brief.brand) if brief.brand else []
-            _img_uri = (_assets + _products)[0] if (_assets + _products) else ""
+            import random as _rnd
+            _pool = _assets + _products
+            _img_uri = _rnd.choice(_pool) if _pool else ""
             if _img_uri:
                 _data = _load_bytes(_img_uri)
                 if _data and len(_data) > 1024:

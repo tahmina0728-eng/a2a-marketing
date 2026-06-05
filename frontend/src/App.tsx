@@ -188,8 +188,7 @@ const HARNESS_STAGES = [
 ];
 
 // ── Brief Form (6-step wizard) ───────────────────────────────
-function BriefForm({ onStart, onFullCampaign }: {
-  onStart: (brief: HarnessBriefRequest) => void;
+function BriefForm({ onFullCampaign }: {
   onFullCampaign: (brief: HarnessBriefRequest) => void;
 }) {
   const [step, setStep] = useState(0);
@@ -226,41 +225,6 @@ function BriefForm({ onStart, onFullCampaign }: {
     }
   }
 
-  function handleLaunch() {
-    const goal       = d.goal === "custom" ? d.goalCustom : GOALS.find((g) => g.id === d.goal)?.label ?? "";
-    const product    = d.product === "custom" ? d.productCustom : d.product;
-    const fanTruth   = d.fanTruth === "custom" ? d.fanTruthCustom : d.fanTruth;
-    const kpisStr    = d.kpis.map((k) => KPI_OPTIONS.find((o) => o.id === k)?.label ?? k).join(", ");
-    const budget     = d.budget === "custom" ? `£${d.budgetCustom}` : d.budget;
-    const ageRange   = d.audienceAge.length > 0 ? d.audienceAge[0].replace("–", "-") : "All ages";
-    const market     = d.audienceRegions[0] ?? "UK";
-    const category   = BRAND_CATEGORY[d.brand] ?? "Food & Beverage";
-
-    const brief: HarnessBriefRequest = {
-      campaign_name:    d.campaignName.trim(),
-      brand:            d.brand,
-      goal,
-      budget,
-      kpis:             kpisStr,
-      product,
-      product_category: category,
-      fan_truth:        fanTruth,
-      channels:         d.channels,
-      market,
-      season:           d.season,
-      moment_type:      d.momentType,
-      audience: {
-        segment:  d.audienceInterests.join(", ") || "General audience",
-        location: market,
-        age_range: ageRange,
-        gender:   "All genders",
-        interests: d.audienceInterests.join(", ") || undefined,
-      },
-      tone: "Warm & friendly",
-    };
-
-    onStart(brief);
-  }
 
   function handleFullLaunch() {
     const goal       = d.goal === "custom" ? d.goalCustom : GOALS.find((g) => g.id === d.goal)?.label ?? "";
@@ -580,20 +544,9 @@ function BriefForm({ onStart, onFullCampaign }: {
             ? <button className="wizard-next-btn" disabled={!canProceed()} onClick={() => setStep((s) => s + 1)}>
                 {step === TOTAL_STEPS - 1 ? "Review →" : "Continue →"}
               </button>
-            : <div style={{ display: "flex", gap: 10, flexDirection: "column" as const, alignItems: "flex-end" }}>
-                <button className="wizard-launch-btn" disabled={!canProceed()} onClick={handleLaunch}>
-                  ⚡ Validate Brief
-                </button>
-                <button
-                  disabled={!canProceed()}
-                  onClick={handleFullLaunch}
-                  style={{ padding: "10px 24px", borderRadius: 8, border: "2px solid #0055A4",
-                    background: "transparent", color: "#0055A4", fontSize: 13, fontWeight: 700,
-                    cursor: canProceed() ? "pointer" : "not-allowed", fontFamily: "inherit",
-                    opacity: canProceed() ? 1 : 0.35 }}>
-                  🎬 Full Campaign (Images + 6 Channels)
-                </button>
-              </div>}
+            : <button className="wizard-launch-btn" disabled={!canProceed()} onClick={handleFullLaunch}>
+                🚀 Generate AI Campaign
+              </button>}
         </div>
       </div>
     </div>
@@ -939,16 +892,33 @@ function ChannelPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: str
 }
 
 function CulturePanel({ m }: { m?: Record<string,unknown> }) {
-  const brief = String(m?.brief ?? "");
-  if (!brief) return null;
-  const sentences = brief.split(/\.\s+/).slice(0, 4);
+  const raw = String(m?.brief ?? "");
+  if (!raw) return null;
+  // Strip markdown: **bold**, ## headers, leading bullets
+  const clean = raw
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/^#+\s*/gm, "")
+    .replace(/^[-*]\s*/gm, "")
+    .trim();
+  // Split on sentence boundaries, filter out short/empty fragments
+  const sentences = clean
+    .split(/(?<=[.!?])\s+/)
+    .map(s => s.trim())
+    .filter(s => s.length > 25)
+    .slice(0, 4);
+  if (sentences.length === 0) return null;
   return (
     <div style={{ width: "100%" }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#0d9488", letterSpacing: "0.09em", textTransform: "uppercase" as const, marginBottom: 10 }}>Cultural Intelligence Brief</div>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#0d9488", letterSpacing: "0.09em",
+        textTransform: "uppercase" as const, marginBottom: 10 }}>Cultural Intelligence Brief</div>
       {sentences.map((s, i) => (
-        <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, padding: "10px 12px", borderRadius: 10, background: i === 0 ? "#f0fdfa" : "#f8fafc", border: `1px solid ${i === 0 ? "#99f6e4" : "#e2e8f0"}` }}>
-          <span style={{ fontSize: 14 }}>{["🌍", "💫", "🎯", "⚡"][i]}</span>
-          <span style={{ fontSize: 12, color: "#1a2332", lineHeight: 1.5 }}>{s.trim()}{s.trim().slice(-1) !== "." ? "." : ""}</span>
+        <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, padding: "10px 12px",
+          borderRadius: 10, background: i === 0 ? "#f0fdfa" : "#f8fafc",
+          border: `1px solid ${i === 0 ? "#99f6e4" : "#e2e8f0"}` }}>
+          <span style={{ fontSize: 14, flexShrink: 0 }}>{["🌍", "💫", "🎯", "⚡"][i]}</span>
+          <span style={{ fontSize: 12, color: "#1a2332", lineHeight: 1.5 }}>
+            {s}{s.slice(-1).match(/[.!?]/) ? "" : "."}
+          </span>
         </div>
       ))}
     </div>
@@ -969,7 +939,7 @@ function KVPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|n
     { icon: "🔒", label: "Brand locks extracted",  dataKey: "brand_locks",  content: brandLocks },
     { icon: "💡", label: "Big Idea developed",      dataKey: "big_idea",     content: bigIdea },
     { icon: "🖼️", label: "Image prompt crafted",   dataKey: "image_prompt", content: imagePrompt },
-    { icon: "✨", label: "Imagen 4 generating",     dataKey: "image_b64",    content: imageB64 },
+    { icon: "✨", label: "Generating key visual…",   dataKey: "image_b64",    content: imageB64 },
   ];
 
   return (
@@ -1323,7 +1293,7 @@ function RunningView({
             <div style={{ textAlign: "center" as const }}>
               <div style={{ fontSize: 22, fontWeight: 800, color: "#0f172a",
                 letterSpacing: "-0.02em", marginBottom: 8 }}>
-                Launching AI Agents Activating
+                Your Campaign AI is Waking Up
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 {[0,1,2].map(d => (
@@ -2122,10 +2092,10 @@ function ResultsView({ output, campaignId, onReset }: {
 
 // ── Main App ─────────────────────────────────────────────────
 export default function App() {
-  const { state, startCampaign, startFullCampaign, reset } = usePipeline();
+  const { state, startFullCampaign, reset } = usePipeline();
 
   if (state.status === "idle") {
-    return <BriefForm onStart={startCampaign} onFullCampaign={startFullCampaign} />;
+    return <BriefForm onFullCampaign={startFullCampaign} />;
   }
 
   if (state.status === "running") {

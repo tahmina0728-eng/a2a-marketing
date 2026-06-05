@@ -29,7 +29,7 @@ images:
   - 'gcr.io/$PROJECT_ID/campaignos-frontend:latest'
 
 substitutions:
-  _HARNESS_URL: 'https://campaignos-harness-xxxx-uc.a.run.app'
+  _HARNESS_URL: 'https://campaignos-harness-958438970145.us-central1.run.app'
 
 options:
   logging: CLOUD_LOGGING_ONLY
