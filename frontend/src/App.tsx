@@ -24,14 +24,36 @@ import { usePipeline } from "./hooks/usePipeline";
 import type { HarnessBriefRequest, AgentEvent } from "./types/pipeline";
 
 // ── Infosys Aster Logo ───────────────────────────────────────
+// Matches the official Infosys Aster design:
+//   "Infosys®" — light weight, cobalt blue #007DC3
+//   "aster"    — bold, dark navy #1B3E6F
 function AsterLogo({ size = 1 }: { size?: number }) {
   return (
-    <svg width={120 * size} height={52 * size} viewBox="0 0 120 52" xmlns="http://www.w3.org/2000/svg">
-      <text x="4" y="18" fontFamily="Inter,Arial,sans-serif" fontWeight="400"
-        fontSize="13" fill="#0055A4" letterSpacing="0.3">Infosys</text>
-      <text x="2" y="46" fontFamily="Inter,Arial,sans-serif" fontWeight="700"
-        fontSize="30" fill="#173563" letterSpacing="-0.5">aster</text>
+    <svg width={140 * size} height={58 * size} viewBox="0 0 140 58"
+      xmlns="http://www.w3.org/2000/svg" style={{ display: "block" }}>
+      {/* Infosys® — light weight, cobalt blue */}
+      <text x="2" y="20" fontFamily="'Inter','Helvetica Neue',Arial,sans-serif"
+        fontWeight="300" fontSize="15" fill="#007DC3" letterSpacing="0.4">Infosys</text>
+      <text x="77" y="16" fontFamily="'Inter','Helvetica Neue',Arial,sans-serif"
+        fontWeight="300" fontSize="9" fill="#007DC3">®</text>
+      {/* aster — bold, dark navy */}
+      <text x="1" y="52" fontFamily="'Inter','Helvetica Neue',Arial,sans-serif"
+        fontWeight="800" fontSize="34" fill="#1B3E6F" letterSpacing="-0.8">aster</text>
     </svg>
+  );
+}
+
+// ── Powered by Infosys badge ─────────────────────────────────
+function PoweredByInfosys({ dark = false }: { dark?: boolean }) {
+  const textColor = dark ? "#ffffff" : "#64748b";
+  const brandColor = dark ? "#7ab8e0" : "#007DC3";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10,
+      fontFamily: "'Inter','Helvetica Neue',sans-serif", color: textColor, letterSpacing: "0.04em" }}>
+      <span style={{ fontWeight: 400 }}>Powered by</span>
+      <span style={{ fontWeight: 700, color: brandColor, fontSize: 11 }}>Infosys</span>
+      <span style={{ color: brandColor, fontSize: 8, fontWeight: 300, position: "relative" as const, top: -2 }}>®</span>
+    </div>
   );
 }
 
@@ -540,7 +562,10 @@ function BriefForm({ onStart, onFullCampaign }: {
       {/* Infosys Aster Header */}
       <div className="aster-header">
         <AsterLogo />
-        <span className="aster-tagline">The AI-Amplified Marketing Suite</span>
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
+          <span className="aster-tagline">The AI-Amplified Marketing Suite</span>
+          <PoweredByInfosys />
+        </div>
       </div>
       <div className="wizard-container">
         <div className="wizard-progress">
@@ -1053,7 +1078,8 @@ function RunningView({
         display: "flex", flexDirection: "column", padding: "28px 20px", overflowY: "auto" as const }}>
 
         {/* Logo */}
-        <div style={{ marginBottom: 28 }}><AsterLogo /></div>
+        <div style={{ marginBottom: 6 }}><AsterLogo /></div>
+        <div style={{ marginBottom: 22 }}><PoweredByInfosys /></div>
 
         {/* Progress bar */}
         <div style={{ marginBottom: 24 }}>
@@ -1602,7 +1628,10 @@ function ResultsView({ output, campaignId, onReset }: {
       <div style={styles.resultsHero}>
         <div style={styles.resultsHeroInner}>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <AsterLogo size={0.8} />
+            <div>
+              <AsterLogo size={0.8} />
+              <PoweredByInfosys />
+            </div>
             <div style={{ width: 1, height: 36, background: "#e2e8f0" }} />
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <div style={{ width: 32, height: 32, borderRadius: 8, background: "#d1fae5",
