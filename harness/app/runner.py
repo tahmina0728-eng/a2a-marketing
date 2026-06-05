@@ -376,6 +376,68 @@ def _extract_headline(big_idea: str) -> str:
     return big_idea[:50].strip()
 
 
+def _create_channel_adaptation(img_data: bytes, ratio_w: int, ratio_h: int,
+                                label: str, brand: str) -> str:
+    """Smart-crop the KV image for a specific channel aspect ratio. Returns base64 JPEG."""
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        import io as _io, base64 as _b64
+
+        img = Image.open(_io.BytesIO(img_data)).convert("RGB")
+        W, H = img.size
+        target_ratio = ratio_w / ratio_h
+        current_ratio = W / H
+
+        if current_ratio > target_ratio:
+            # Image wider than target — crop sides
+            new_w = int(H * target_ratio)
+            left = (W - new_w) // 2
+            img = img.crop((left, 0, left + new_w, H))
+        else:
+            # Image taller than target — crop bottom (keep top, where subject usually is)
+            new_h = int(W / target_ratio)
+            img = img.crop((0, 0, W, new_h))
+
+        # Resize to standard output size
+        if ratio_w >= ratio_h:
+            out_w, out_h = 960, int(960 * ratio_h / ratio_w)
+        else:
+            out_w, out_h = int(960 * ratio_w / ratio_h), 960
+        img = img.resize((out_w, out_h), Image.LANCZOS)
+
+        # Add channel label chip in bottom-left corner
+        try:
+            draw = ImageDraw.Draw(img)
+            chip_text = f"  {label}  "
+            font = ImageFont.load_default(size=14)
+            bb = draw.textbbox((0, 0), chip_text, font=font)
+            tw = bb[2] - bb[0] + 4
+            draw.rectangle([(8, out_h - 28), (8 + tw, out_h - 8)],
+                           fill=(0, 0, 0, 160))
+            draw.text((10, out_h - 26), chip_text, fill="white", font=font)
+        except Exception:
+            pass
+
+        buf = _io.BytesIO()
+        img.save(buf, format="JPEG", quality=82)
+        return _b64.b64encode(buf.getvalue()).decode()
+    except Exception as e:
+        import structlog as _sl
+        _sl.get_logger().debug("channel_adaptation_failed", label=label, error=str(e))
+        return ""
+
+
+# Channel format specs: (ratio_w, ratio_h, label, channel_key)
+_CHANNEL_FORMATS = [
+    (1,  1,  "Instagram Feed",    "instagram_feed"),
+    (9,  16, "Instagram Stories", "instagram_stories"),
+    (9,  16, "TikTok",            "tiktok"),
+    (16, 9,  "Google Ads",        "google_ads"),
+    (3,  1,  "Email Banner",      "email"),
+    (4,  1,  "OOH / Billboard",   "ooh"),
+]
+
+
 def _apply_brand_overlay(img_data: bytes, brand: str, headline: str, product_uris: list) -> bytes:
     """
     Overlay brand headline + logo area on the generated image using Pillow.
@@ -674,24 +736,30 @@ Create a Big Idea for this campaign. Output:
     }
     _brand_palette_str = _BRAND_PALETTE.get(brand, "brand primary colour, accent colour, white base")
 
-    image_prompt = await _groq(f"""You are an expert image generation prompt engineer.
+    image_prompt = await _groq(f"""You are a senior creative director writing Imagen 4 prompts for premium advertising campaigns.
 
 Brand: {brand}
-Official brand colour palette: {_brand_palette_str}
-Big Idea: {big_idea}
+Brand colour palette: {_brand_palette_str}
+Campaign Big Idea: {big_idea}
 Brand locks: {brand_summary}
 
-Write a detailed Gemini Imagen 4 prompt for the campaign key visual.
-The prompt MUST:
-- Use the exact brand colours ({_brand_palette_str}) prominently in the visual
-- Show the product naturally in context (not as a still life)
-- Describe composition, lighting, mood in detail
-- Reference the brand's visual identity and colour palette explicitly
-- Be 150-250 words
-- End with: "Colour palette: {_brand_palette_str}"
-- IMPORTANT: Do NOT include any text, words, brand names, logos, watermarks, or typography in the image. The image must be purely photographic/visual with no readable text whatsoever.
+Write a Imagen 4 image generation prompt that produces a PREMIUM ADVERTISING KEY VISUAL.
 
-Output only the prompt text, no commentary.""", temp=0.6)
+The prompt must describe:
+1. PHOTOGRAPHY STYLE: Professional advertising photography, DSLR shot, shallow depth of field (f/1.8-f/2.8), editorial quality, award-winning campaign imagery
+2. SCENE: A specific, cinematic lifestyle moment that connects emotionally with the audience. Show a real person in a real moment — not a product still life
+3. LIGHTING: Specific lighting setup (e.g. "golden hour natural light", "soft studio diffused light", "warm candlelit") that flatters the scene
+4. COMPOSITION: Rule of thirds, clear hero subject, intentional negative space for the brand mark
+5. COLOUR GRADING: The brand palette ({_brand_palette_str}) must be woven into the scene through props, wardrobe, environment — not as flat overlays
+6. MOOD: The emotional feeling the viewer should experience
+
+STRICT RULES:
+- NO text, letters, words, brand names, logos, watermarks, or typography anywhere in the image
+- NO product packaging shown prominently — product appears naturally in context
+- Photorealistic, not illustrated or animated
+- Be 180-240 words
+
+Output only the prompt text, nothing else.""", temp=0.7)
     log.info("p2_prompt_agent_done")
     await _emit("kv", "step_data", _json2.dumps({"image_prompt": image_prompt[:350]}))
     await _emit("kv", "running", "Generating key visual with Imagen 4…")
@@ -699,6 +767,7 @@ Output only the prompt text, no commentary.""", temp=0.6)
     # Stage 5: Image generation via Google AI
     image_b64 = None
     image_error = None
+    channel_adaptations: dict = {}
     try:
         import google.genai as genai
         import base64
@@ -778,7 +847,17 @@ Output only the prompt text, no commentary.""", temp=0.6)
             )
             image_b64 = base64.b64encode(img_data).decode("utf-8")
             log.info("p2_generate_image_done", size_kb=len(img_data) // 1024)
-            # Push image as step_data so KV panel shows it before moving on
+
+            # Generate channel adaptations (smart crops for different aspect ratios)
+            channel_adaptations: dict = {}
+            for rw, rh, label, key in _CHANNEL_FORMATS:
+                adapted = _create_channel_adaptation(img_data, rw, rh, label, brand)
+                if adapted:
+                    channel_adaptations[key] = {"label": label, "image_b64": adapted,
+                                                "ratio": f"{rw}:{rh}"}
+            log.info("p2_channel_adaptations_done", count=len(channel_adaptations))
+
+            # Push main image + adaptations as step_data
             await _emit("kv", "step_data", _json2.dumps({"image_b64": image_b64}))
             await _asyncio.sleep(5)  # Let UI display image before channel agent
             await _emit("kv", "done", "Key visual generated ✓")
@@ -788,13 +867,14 @@ Output only the prompt text, no commentary.""", temp=0.6)
         await _emit("kv", "error", f"Image generation failed: {image_error[:80]}")
 
     return {
-        "campaign_id":    campaign_id,
-        "culture_brief":  culture,
-        "brand_summary":  brand_summary,
-        "big_idea":       big_idea,
-        "image_prompt":   image_prompt,
-        "image_b64":      image_b64,
-        "image_error":    image_error,
+        "campaign_id":          campaign_id,
+        "culture_brief":        culture,
+        "brand_summary":        brand_summary,
+        "big_idea":             big_idea,
+        "image_prompt":         image_prompt,
+        "image_b64":            image_b64,
+        "image_error":          image_error,
+        "channel_adaptations":  channel_adaptations,
     }
 
 
