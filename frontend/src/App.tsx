@@ -2214,7 +2214,7 @@ const styles: Record<string, React.CSSProperties> = {
 
   // Results
   resultsPage: {
-    minHeight: "100vh", background: "#f4f6f9",
+    minHeight: "100vh", background: "#f4f6f9", paddingBottom: 140,
   },
   resultsHero: {
     background: "#ffffff",
@@ -2275,7 +2275,7 @@ const styles: Record<string, React.CSSProperties> = {
   // Error
   errorPage: {
     minHeight: "100vh", display: "flex", alignItems: "center",
-    justifyContent: "center", background: "#f4f6f9",
+    justifyContent: "center", background: "#f4f6f9", paddingBottom: 140,
   },
   errorCard: {
     background: "#ffffff", border: "1px solid #fecaca",
