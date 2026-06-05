@@ -23,37 +23,67 @@ import "./App.css";
 import { usePipeline } from "./hooks/usePipeline";
 import type { HarnessBriefRequest, AgentEvent } from "./types/pipeline";
 
-// ── Infosys® Logo — top-left header (matches infosys.com style) ──
+// ── Infosys® Logo — header ───────────────────────────────────
 function AsterLogo({ size = 1 }: { size?: number }) {
-  const fs = 20 * size;
   return (
-    <div style={{ display: "inline-flex", alignItems: "flex-start",
-      fontFamily: "'Inter','Helvetica Neue',Arial,sans-serif", lineHeight: 1, userSelect: "none" as const }}>
-      <span style={{ fontSize: fs, fontWeight: 300, color: "#007DC3", letterSpacing: "0.01em" }}>
-        Infosys
-      </span>
-      <span style={{ fontSize: fs * 0.45, fontWeight: 300, color: "#007DC3",
-        marginTop: fs * 0.06, marginLeft: 1 }}>®</span>
+    <div style={{
+      fontFamily: "'Inter','Helvetica Neue',Arial,sans-serif",
+      fontWeight: 300,
+      fontSize: `${20 * size}px`,
+      color: "#1B3666",
+      letterSpacing: "0.02em",
+      lineHeight: 1,
+      userSelect: "none" as const,
+      display: "inline-flex",
+      alignItems: "flex-start",
+    }}>
+      Infosys
+      <span style={{
+        fontSize: `${9 * size}px`,
+        marginTop: `${2 * size}px`,
+        marginLeft: "1px",
+      }}>®</span>
     </div>
   );
 }
 
-// ── Infosys Aster footer branding ────────────────────────────
-// "Infosys" lighter blue + "aster" bold dark navy — matches hero design on infosys.com
-function PoweredByInfosys({ dark = false }: { dark?: boolean }) {
-  const muted = dark ? "rgba(255,255,255,0.55)" : "#94a3b8";
-  const blue  = dark ? "#5ab0e0" : "#3A8DC8";   // lighter Infosys blue for "Infosys" in aster logo
-  const navy  = dark ? "#7aa4cc" : "#1B3666";   // dark navy for "aster"
+// ── Powered by Infosys Aster — official SVG logo ─────────────
+function PoweredByInfosys() {
   return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 3,
+    <div style={{ display: "flex", flexDirection: "column" as const,
+      alignItems: "center", gap: 6,
       fontFamily: "'Inter','Helvetica Neue',Arial,sans-serif" }}>
-      <span style={{ fontSize: 10, color: muted, fontWeight: 400, letterSpacing: "0.04em" }}>
+      <span style={{ fontSize: 10, color: "#94a3b8", fontWeight: 400,
+        letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
         Powered by
       </span>
-      <span style={{ fontSize: 12, color: blue, fontWeight: 300, letterSpacing: "0.01em" }}>Infosys</span>
-      <span style={{ fontSize: 7, color: blue, fontWeight: 300,
-        position: "relative" as const, top: -4 }}>®</span>
-      <span style={{ fontSize: 15, color: navy, fontWeight: 800, letterSpacing: "-0.03em" }}>aster</span>
+      {/* Official Infosys Aster SVG logo */}
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 499.39 292.79"
+        width="160" height="94" style={{ display: "block" }}>
+        <defs>
+          <style>{`
+            .ail1{fill:#004a85}
+            .ail2{fill:#221f1f}
+            .ail3,.ail4{fill:#0c7ec2}
+            .ail4{fill-rule:evenodd}
+            .ail5{fill:#231f20}
+          `}</style>
+        </defs>
+        <path className="ail2" d="M438.29,120.34l1.13-2.09s.04-.08.07-.13l-1.2,2.22"/>
+        <g>
+          <path className="ail3" d="M444.83,32.23s0,0,0,0h0c.08.18.13.33.18.41l-.18-.43v.02"/>
+          <polyline className="ail4" points="132.5 12.96 132.5 .36 145.01 .36 145.01 104.33 132.5 104.33 132.5 12.96"/>
+          <path className="ail5" d="M372.98,119.68l1.11-2.04s.04-.08.07-.13l-1.17,2.17"/>
+          <path className="ail3" d="M363.11,43.19s0,0,0,0h0c.08.18.13.33.18.41l-.18-.43v.02"/>
+          <path className="ail3" d="M436.59,60.35c-13.67-6.78-18.31-8.21-18.18-15.96,0-10.32,8.44-13.44,15.45-13.44,7.99,0,13.03,2.96,20.07,8.08v-12.06c-5.72-1.99-10.49-2.78-16.93-2.75-12.98-.03-24.77,4.71-27.72,15.7l-16.11,39.82-1.66,5.01-1.47-5.01-12.75-31.02-4.21-10.33c-.03-.08-.07-.15-.1-.23h0c-.15-.35-.3-.74-.43-1.07l-4.16-10.25c-1.5-.41-3.34-.84-5.28-1.28h0s0,0,0,0c-4-.87-8.58-1.63-12.13-1.58-.53,0-1.12,0-1.68,0-15.02-.02-29.47,6.3-29.47,21.24,0,.87.05,1.68.1,2.48-6.02-14.3-19-24.2-34.06-24.2h-.44c-1.65.03-3.28.18-4.92.43h-42.3c-1.73-10.71,3.24-16.8,10.73-16.8,9.43,0,13.49,2.8,17.57,6.58,0,0,.28,0,.41.03,0,0,0-.49.02-1.25V2.12C264.26.9,259.57,0,251.07,0,237.94,0,228.49,8.64,227.16,23.94h-10.1v7.57h9.97v60.2c0,.23,0,.43-.03.63v11.98h11.32V31.52h25.44c-9.41,7.62-15.53,20.01-15.53,34.01,0,23.05,16.61,41.76,37.18,42.02h0c.15,0,.31,0,.44,0,20.77,0,37.6-18.81,37.6-42.02,0-2.75-.25-5.45-.71-8.08,3.75,6.02,10.89,8.95,20.5,13.1,11.34,4.8,17.69,8.97,17.69,16.12,0,8.59-8.11,13.03-17.21,12.98-8.9,0-15.86-3.62-23.61-10.66v13.49c4.71,3.04,12.05,4.79,19.96,4.79,6.12-.02,16.14-1.37,23.02-7.19h0,0c4.36-3.7,7.45-9.18,7.45-17.23-.03-6.66-2.98-11.3-7.45-14.89h0s0,0,0,0c-3.92-3.19-8.97-5.56-14.22-7.85-13.66-6.78-18.87-8.18-18.72-15.96,0-10.33,8.97-13.44,15.99-13.44,3.05,0,5.68.43,8.16,1.28,4.62,1.73,6.15,5.17,7.77,8.89.49,1.15.82,1.89,1.02,2.32v-.02s-.27-.64-.27-.64l.27.61h0s0,0,0,0h0s0,0,0,0c.18.43.39.9.18.46l9.69,23.38,11.65,28.12c-3.6,8.21-7.62,16.8-10.41,22.26l-.07.15-.07.13c-.41.77-.77,1.49-1.11,2.12-.43.84-.83,1.56-1.14,2.09l-2.63,4.89h11.1c4.84-10.7,25.39-60.75,29.8-71.51,2.9,7.75,10.02,10.86,20.85,15.55,11.35,4.79,17.7,8.97,17.7,16.14,0,8.56-8.11,13.02-17.22,12.95-9.25,0-16.42-3.91-24.5-11.48l-.74-.58v13.72c4.53,3.77,12.69,5.97,21.59,5.97,9.97-.02,30.47-3.62,30.47-24.43-.05-12.47-10.43-17.85-21.67-22.72M286,100.23h-.58c-13.93-.18-25.37-15.12-25.7-33.76-.34-18.92,10.91-34.45,25.12-34.68.2-.03.41-.03.58,0,13.94.15,25.4,15.12,25.7,33.76.33,18.89-10.91,34.43-25.12,34.68Z"/>
+          <path className="ail4" d="M168.37,24.71l.13,9.1v.61h.12c.13-.38.33-.71.51-.94,4.62-4.94,10.4-9.82,24.17-9.82s21.69,11.2,22.05,18.23v49.82s0,12.62,0,12.62h-11.29v-57.29c0-8.77-7.71-15.12-17.17-15.12-7.82,0-17.92,7.06-18.25,14.2v45.61l.03.34v12.26h-11.32l.03-12.59-.03-56.55.03-10.48h10.99"/>
+          <path className="ail1" d="M305.92,274.48h2.15s0,16.62,0,16.62h-.96c-31.77.02-56.86-25.22-56.86-56.88v-94.99h16.28v41.56h41.53v16.54h-41.53v34.86c0,28.68,21.99,42.4,39.39,42.29"/>
+          <path className="ail1" d="M96.83,234.71c.11-20.29-14.44-40.63-40.14-40.73-23.13-.09-39.8,18.24-40.27,39.49-.45,20.48,15.05,40.8,39.97,41.01,22.85.19,40.32-17.46,40.44-39.76M0,234.4c-.01-30.66,24.28-56.85,56.58-57,14.94-.07,29.72,6,40.48,16.66v-12.86h16.28v108.39h-16.28v-15.05c-10.45,10.4-24.86,16.57-40.19,16.58C23.02,291.12.02,263.69,0,234.4Z"/>
+          <path className="ail1" d="M337.27,244.85c4.68,17.93,18.9,29.42,35.46,29.42,12.67,0,24.55-6.63,30.79-18.12h20.27c-8.38,22.21-28.64,36.63-51.83,36.63-30.4,0-54.95-26.89-54.95-55.73,0-34.1,25.72-57.87,54.37-57.87,31.76,0,55.92,24.55,55.92,55.54,0,3.31,0,6.43-.58,10.13h-89.44ZM407.03,229.26c-1.56-18.32-17.73-31.57-35.07-31.57s-33.13,13.06-34.69,31.57h69.76Z"/>
+          <path className="ail1" d="M443.53,288.88v-111.31h16.55v11.91h.34c4.27-7.3,26.51-10.83,38.97-11.62v19.9c-15.35.59-38.11-.12-38.11,29.78v61.34h-17.74Z"/>
+          <path className="ail1" d="M166.97,225.99h-6.88c-8.84,0-16.07-7.23-16.07-16.07h0c0-8.84,7.23-16.07,16.07-16.07h43.53c8.84,0,16.07,7.23,16.07,16.07h0s15.78-.19,15.78-.19v-2.94c0-15.61-12.77-28.39-28.39-28.39h-50.44c-15.61,0-28.39,12.77-28.39,28.39v6.26c0,15.61,12.77,28.39,28.39,28.39h8.6l5.08-.05h33.3c8.84,0,16.07,7.23,16.07,16.07h0c0,8.84-7.23,16.07-16.07,16.07h-43.53c-8.84,0-16.07-7.23-16.07-16.07h0l-15.78.19v2.94c0,15.61,12.77,28.39,28.39,28.39h50.44c15.61,0,28.39-12.77,28.39-28.39v-6.26c0-15.61-12.77-28.39-28.39-28.39h-35.92l-4.18.05Z"/>
+        </g>
+      </svg>
     </div>
   );
 }
@@ -2072,45 +2102,74 @@ function ResultsView({ output, campaignId, onReset }: {
 
       </div>
 
-      {/* ── Footer ── */}
-      <div style={{ textAlign: "center" as const, padding: "24px 0 32px",
-        borderTop: "1px solid #e2e8f0", marginTop: 16 }}>
-        <PoweredByInfosys />
-      </div>
+      {/* bottom padding so content isn't hidden behind fixed footer */}
+      <div style={{ height: 100 }} />
     </div>
   );
 }
 
 // ── Main App ─────────────────────────────────────────────────
+// ── Global footer shown on every page ────────────────────────
+function AppFooter() {
+  return (
+    <div style={{
+      position: "fixed" as const, bottom: 0, left: 0, right: 0,
+      background: "rgba(255,255,255,0.94)",
+      backdropFilter: "blur(10px)",
+      WebkitBackdropFilter: "blur(10px)",
+      borderTop: "1px solid #e2e8f0",
+      padding: "14px 0 16px",
+      display: "flex", justifyContent: "center", alignItems: "center",
+      zIndex: 999,
+      boxShadow: "0 -2px 16px rgba(0,0,0,0.04)",
+    }}>
+      <PoweredByInfosys />
+    </div>
+  );
+}
+
 export default function App() {
   const { state, startCampaign, startFullCampaign, reset } = usePipeline();
 
   if (state.status === "idle") {
-    return <BriefForm onStart={startCampaign} onFullCampaign={startFullCampaign} />;
+    return (
+      <>
+        <BriefForm onStart={startCampaign} onFullCampaign={startFullCampaign} />
+        <AppFooter />
+      </>
+    );
   }
 
   if (state.status === "running") {
-    return <RunningView agentStatus={state.agentStatus} liveLog={state.liveLog} milestones={state.milestones} />;
+    return (
+      <>
+        <RunningView agentStatus={state.agentStatus} liveLog={state.liveLog} milestones={state.milestones} />
+        <AppFooter />
+      </>
+    );
   }
 
   if (state.status === "error") {
     const isAuthError = state.error?.includes("credentials") || state.error?.includes("auth");
     return (
-      <div style={styles.errorPage}>
-        <div style={styles.errorCard}>
-          <div style={styles.errorTitle}>⚠️ Pipeline Error</div>
-          <div style={styles.errorMsg}>{state.error}</div>
-          {isAuthError && (
-            <div style={styles.authHint}>
-              <strong>Fix:</strong> Run this in your terminal, then restart the harness:
-              <pre style={styles.authCmd}>gcloud auth application-default login</pre>
-            </div>
-          )}
-          <button className="reset-btn" onClick={reset} style={{ marginTop: 20 }}>
-            Try Again
-          </button>
+      <>
+        <div style={styles.errorPage}>
+          <div style={styles.errorCard}>
+            <div style={styles.errorTitle}>⚠️ Pipeline Error</div>
+            <div style={styles.errorMsg}>{state.error}</div>
+            {isAuthError && (
+              <div style={styles.authHint}>
+                <strong>Fix:</strong> Run this in your terminal, then restart the harness:
+                <pre style={styles.authCmd}>gcloud auth application-default login</pre>
+              </div>
+            )}
+            <button className="reset-btn" onClick={reset} style={{ marginTop: 20 }}>
+              Try Again
+            </button>
+          </div>
         </div>
-      </div>
+        <AppFooter />
+      </>
     );
   }
 
@@ -2122,6 +2181,7 @@ export default function App() {
         campaignId={state.campaign_id}
         onReset={reset}
       />
+      <AppFooter />
     </ErrorBoundary>
   );
 }
