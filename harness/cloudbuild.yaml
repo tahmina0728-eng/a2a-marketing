@@ -16,12 +16,38 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--port=8080'
-      - '--memory=2Gi'
+      - '--memory=4Gi'
       - '--cpu=2'
-      - '--timeout=300'
-      - '--set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,BRAND_ASSETS_MODE=gcs,GCS_BUCKET=dauntless-karma-497108-b0-campaignos,SEARCH_MODE=live,SEARCH_ENGINE_ID=campaignos-briefing-search,BQ_DATASET=briefing_agent,BQ_LOGGING_ENABLED=true,ENVIRONMENT=production,LOG_LEVEL=INFO,GEMINI_MODEL_REASONING=groq/llama-3.3-70b-versatile,PGVECTOR_HOST=/cloudsql/dauntless-karma-497108-b0:us-central1:campaignos-pgvector,PGVECTOR_PORT=5432,PGVECTOR_USER=campaignos,PGVECTOR_DB=marketing,PGVECTOR_PASSWORD=campaignos123,USE_GEMINI_EMBEDDINGS=false,GEMINI_EMBEDDING_MODEL=gemini-embedding-2,FRONTEND_ORIGIN=https://campaignos-frontend-958438970145.us-central1.run.app'
+      - '--timeout=600'
+      - '--concurrency=10'
+      - >-
+        --set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,
+        GOOGLE_CLOUD_LOCATION=us-central1,
+        GOOGLE_GENAI_USE_VERTEXAI=TRUE,
+        GCS_BUCKET=dauntless-karma-497108-b0-campaignos,
+        BRAND_ASSETS_MODE=gcs,
+        SEARCH_MODE=live,
+        SEARCH_ENGINE_ID=campaignos-briefing-search,
+        SEARCH_LOCATION=global,
+        GEMINI_MODEL_REASONING=gemini-2.5-flash,
+        CREATIVE_MODEL=gemini-2.5-flash,
+        IMAGE_GEN_MODEL=imagen-4.0-fast-generate-001,
+        GEMINI_MODEL_IMAGE=imagen-4.0-fast-generate-001,
+        USE_GEMINI_EMBEDDINGS=true,
+        GEMINI_EMBEDDING_MODEL=gemini-embedding-2,
+        PGVECTOR_HOST=/cloudsql/dauntless-karma-497108-b0:us-central1:campaignos-pgvector,
+        PGVECTOR_PORT=5432,
+        PGVECTOR_USER=campaignos,
+        PGVECTOR_DB=marketing,
+        PGVECTOR_PASSWORD=campaignos123,
+        BQ_DATASET=briefing_agent,
+        BQ_OUTPUT_DATASET=campaign_outputs,
+        BQ_LOGGING_ENABLED=true,
+        ENVIRONMENT=production,
+        LOG_LEVEL=INFO
       - '--set-secrets=GROQ_API_KEY=GROQ_API_KEY:latest,GOOGLE_API_KEY=GOOGLE_EMBEDDING_KEY:latest'
       - '--add-cloudsql-instances=dauntless-karma-497108-b0:us-central1:campaignos-pgvector'
+      - '--service-account=958438970145-compute@developer.gserviceaccount.com'
 
 images:
   - 'gcr.io/$PROJECT_ID/campaignos-harness:latest'

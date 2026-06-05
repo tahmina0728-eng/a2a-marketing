@@ -330,7 +330,7 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
     <a href="#">Products</a>
     <a href="#">Contact</a>
   </div>
-  <div class="footer-copy">© 2025 {brand} · AI campaign by CampaignOS · {campaign_id}</div>
+  <div class="footer-copy">© 2026 {brand} · AI campaign by CampaignOS · {campaign_id}</div>
 </footer>
 
 </body>
@@ -555,7 +555,7 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
       </div>
     </div>
   </div>
-  <div class="footer-bottom">© 2025 Rnorr · AI campaign by CampaignOS · {campaign_id}</div>
+  <div class="footer-bottom">© 2026 Rnorr · AI campaign by CampaignOS · {campaign_id}</div>
 </footer>
 </body></html>"""
 
@@ -764,7 +764,7 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
     <div class="footer-col"><h4>Help</h4><a href="#">Delivery</a><a href="#">Returns</a><a href="#">FAQs</a><a href="#">Contact</a></div>
     <div class="footer-col"><h4>Company</h4><a href="#">About</a><a href="#">Careers</a><a href="#">Press</a><a href="#">Sustainability</a></div>
   </div>
-  <div class="footer-bottom">© 2025 Boozt Hair Care · AI campaign by CampaignOS · {campaign_id}</div>
+  <div class="footer-bottom">© 2026 Boozt Hair Care · AI campaign by CampaignOS · {campaign_id}</div>
 </footer>
 </body></html>"""
 
@@ -975,7 +975,7 @@ def generate_landing_html(brand: str, hero_message: str, tagline: str,
   </section>
 
   <footer>
-    <p>© 2025 <span>{brand}</span> · AI-generated campaign by <span>CampaignOS</span> · {campaign_id}</p>
+    <p>© 2026 <span>{brand}</span> · AI-generated campaign by <span>CampaignOS</span> · {campaign_id}</p>
   </footer>
 
 </body>
