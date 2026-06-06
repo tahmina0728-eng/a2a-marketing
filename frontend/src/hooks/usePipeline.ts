@@ -43,11 +43,16 @@ export function usePipeline() {
         return;
       }
       const result = await res.json();
+      const _rawMB2 = result.machine_brief ?? {};
+      let _flatMB2: Record<string,unknown> = typeof _rawMB2 === "string" ? JSON.parse(_rawMB2) : { ..._rawMB2 };
+      if (_flatMB2.machine_brief && typeof _flatMB2.machine_brief === "string") {
+        try { _flatMB2 = { ..._flatMB2, ...JSON.parse(_flatMB2.machine_brief as string) }; } catch {}
+      }
       const output = {
-        ...(result.machine_brief ?? {}),
+        ..._flatMB2,
         creative_strategy: result.creative_strategy,
         campaign_copy:     result.campaign_copy,
-        audience_insights: result.machine_brief?.audience_insights,
+        audience_insights: (_flatMB2.audience_insights as string | undefined) ?? result.machine_brief?.audience_insights,
         creative_pipeline: result.creative_pipeline,
       };
       setState({
@@ -101,11 +106,17 @@ export function usePipeline() {
           es.close();
           esRef.current = null;
           const result = JSON.parse(ev.message);
+          // machine_brief may be flat (Groq) or { machine_brief: json_string } (ADK output_key)
+          const _rawMB = result.machine_brief ?? {};
+          let _flatMB: Record<string,unknown> = typeof _rawMB === "string" ? JSON.parse(_rawMB) : { ..._rawMB };
+          if (_flatMB.machine_brief && typeof _flatMB.machine_brief === "string") {
+            try { _flatMB = { ..._flatMB, ...JSON.parse(_flatMB.machine_brief as string) }; } catch {}
+          }
           const output = {
-            ...(result.machine_brief ?? {}),
+            ..._flatMB,
             creative_strategy: result.creative_strategy,
             campaign_copy:     result.campaign_copy,
-            audience_insights: result.machine_brief?.audience_insights,
+            audience_insights: (_flatMB.audience_insights as string | undefined) ?? result.machine_brief?.audience_insights,
             creative_pipeline: result.creative_pipeline,
           };
           setState((s) => ({

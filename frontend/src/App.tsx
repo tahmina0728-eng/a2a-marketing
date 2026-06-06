@@ -1423,8 +1423,8 @@ const PUBLISH_CHANNEL_CFG: Record<string, { icon: string; color: string; bg: str
   "Email":      { icon: "📧", color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd", desc: "Branded email blast",   publishKey: "email"     },
 };
 
-function DistributePanel({ output, campaignId }: {
-  output: Record<string, unknown> | null; campaignId: string | null;
+function DistributePanel({ output, campaignId, selectedImageB64 }: {
+  output: Record<string, unknown> | null; campaignId: string | null; selectedImageB64?: string;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [email,    setEmail]    = useState("");
@@ -1440,8 +1440,13 @@ function DistributePanel({ output, campaignId }: {
   const brandFromId = campaignId ? campaignId.replace(/^campaign-/, "").split("-")[0].replace(/^(.)/, (c: string) => c.toUpperCase()) : "";
   const brand    = String((output as any)?.brand ?? brandFromId ?? "");
 
-  // Channels selected in the wizard
-  const wizardChannels: string[] = Array.isArray(brief?.channels) ? brief.channels : [];
+  // Channels selected in the wizard — may be a JSON string or an array
+  const _rawCh = brief?.channels ?? (output as any)?.channels;
+  const wizardChannels: string[] = Array.isArray(_rawCh)
+    ? _rawCh
+    : typeof _rawCh === "string"
+      ? (() => { try { const p = JSON.parse(_rawCh); return Array.isArray(p) ? p : []; } catch { return []; } })()
+      : [];
 
   const toggle = (key: string) => setSelected(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
@@ -1460,7 +1465,7 @@ function DistributePanel({ output, campaignId }: {
           body:            copy?.long?.body       ?? "",
           cta:             copy?.cta              ?? "",
           tagline:         strategy?.tagline      ?? "",
-          image_b64:       cp?.image_b64          ?? "",
+          image_b64:       selectedImageB64 ?? cp?.images_b64?.[0] ?? cp?.image_b64 ?? "",
           to_email:        selected.has("email") ? email : "",
           channels:        Array.from(selected),
         }),
@@ -1472,7 +1477,7 @@ function DistributePanel({ output, campaignId }: {
       if (lp?.status === "live" && lp?.url) window.open(`${API_BASE_PUB}${lp.url}`, "_blank");
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
-  }, [campaignId, brand, strategy, copy, cp, email, selected]);
+  }, [campaignId, brand, strategy, copy, cp, email, selected, selectedImageB64]);
 
   if (!strategy && !cp?.culture_brief) return null;
 
@@ -1597,11 +1602,16 @@ function ResultsView({ output, campaignId, onReset }: {
 }) {
   const [expanded, setExpanded] = useState(false);
   const [selectedKV, setSelectedKV] = useState(0);
-  const brief    = (output?.machine_brief ?? (output?.status ? output : null)) as any;
+  // machine_brief fields are spread into output by usePipeline, so output IS the brief
+  const brief    = output as any;
   const strategy = output?.creative_strategy as any;
   const copy     = output?.campaign_copy as any;
   const cp       = (output as any)?.creative_pipeline;
   const isReady  = brief?.status === "READY";
+  // CDP audience insights
+  const cdpLines = output?.audience_insights
+    ? String(output.audience_insights).split("\n").filter((l: string) => l.trim())
+    : [];
 
   const imagesB64: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
   const adaptations = cp?.channel_adaptations as Record<string, {label: string; image_b64: string; ratio: string}> | undefined;
@@ -1689,10 +1699,43 @@ function ResultsView({ output, campaignId, onReset }: {
                 </div>
               )}
               {brief.validation_notes && (
-                <div style={{ padding: "12px 20px", fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
+                <div style={{ padding: "12px 20px", fontSize: 12, color: "#64748b", lineHeight: 1.6, borderBottom: cdpLines.length > 0 ? "1px solid #f3e8ff" : "none" }}>
                   {brief.validation_notes}
                 </div>
               )}
+              {/* CDP Audience Intelligence */}
+              {cdpLines.length > 0 && (() => {
+                const g = (k: string) => { const l = cdpLines.find((x: string) => x.toLowerCase().includes(k)); return l ? l.split(":").slice(1).join(":").trim() : null; };
+                const cnt  = cdpLines.find((l: string) => l.includes("profiles"))?.match(/(\d[\d,]+)\s+\w+\s+profiles/)?.[1] ?? null;
+                const match = cdpLines.find((l: string) => l.includes("matched"));
+                const income = g("household income"); const channels = g("top channels");
+                const crmIdx = cdpLines.findIndex((l: string) => l.includes("CRM notes"));
+                const crm = crmIdx >= 0 ? cdpLines.slice(crmIdx + 1).join(" ").slice(0, 160) : null;
+                return (
+                  <div style={{ padding: "14px 20px", background: "#eff6ff" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#0055A4", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10, display: "flex", justifyContent: "space-between" }}>
+                      <span>👥 CDP Audience Intelligence</span>
+                      <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 99, background: "#dbeafe", color: "#1d4ed8" }}>KAGGLE CDP</span>
+                    </div>
+                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: crm ? 10 : 0 }}>
+                      {cnt && <div style={{ padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #bfdbfe", textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 900, color: "#0055A4" }}>{cnt}</div>
+                        <div style={{ fontSize: 9, color: "#64748b" }}>profiles matched</div>
+                      </div>}
+                      {income && <div style={{ flex: 1, padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #bfdbfe" }}>
+                        <div style={{ fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase", marginBottom: 3 }}>Avg Income</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#1e40af" }}>{income}</div>
+                      </div>}
+                      {channels && <div style={{ flex: 2, padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #bfdbfe" }}>
+                        <div style={{ fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase", marginBottom: 3 }}>Top Channels</div>
+                        <div style={{ fontSize: 12, color: "#3b82f6" }}>{channels}</div>
+                      </div>}
+                    </div>
+                    {match && <div style={{ fontSize: 11, color: "#475569", marginBottom: crm ? 6 : 0 }}>{match}</div>}
+                    {crm && <div style={{ fontSize: 11, color: "#64748b", fontStyle: "italic", lineHeight: 1.5 }}>"{crm}…"</div>}
+                  </div>
+                );
+              })()}
             </div>
           </TL>
         )}
@@ -1855,7 +1898,8 @@ function ResultsView({ output, campaignId, onReset }: {
 
         {/* Step 7: Launch */}
         <TL step={7} icon="🚀" color="#6366f1" label="Launch Campaign">
-          <DistributePanel output={output} campaignId={campaignId} />
+          <DistributePanel output={output} campaignId={campaignId}
+            selectedImageB64={imagesB64[selectedKV] ?? undefined} />
         </TL>
 
         {/* Raw output toggle */}
