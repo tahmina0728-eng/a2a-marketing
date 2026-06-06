@@ -320,6 +320,70 @@ Produce a creative strategy as valid JSON only â€" no markdown, no explanatio
     return _parse_agent_response(raw)
 
 
+_CHANNEL_COPY_SPEC: dict = {
+    "instagram":  {"key": "instagram_caption", "desc": "Instagram caption max 150 chars with 3-5 hashtags"},
+    "tiktok":     {"key": "tiktok_hook",        "desc": "TikTok hook - first 3 seconds that stops the scroll (max 15 words)"},
+    "youtube":    {"key": "youtube_script",     "desc": "YouTube pre-roll opening before skip (max 20 words)"},
+    "google ads": {"key": "google_headline",    "desc": "Google Search headline max 30 chars, keyword-rich"},
+    "google_ads": {"key": "google_headline",    "desc": "Google Search headline max 30 chars, keyword-rich"},
+    "meta ads":   {"key": "meta_caption",       "desc": "Meta/Facebook ad primary text max 125 chars"},
+    "meta_ads":   {"key": "meta_caption",       "desc": "Meta/Facebook ad primary text max 125 chars"},
+    "ooh":        {"key": "ooh_headline",       "desc": "OOH billboard copy max 6 words, readable at speed"},
+    "website":    {"key": "web_headline",       "desc": "Website hero headline max 8 words"},
+    "email":      {"key": "email_subject",      "desc": "Email subject line max 50 chars, curiosity-driving"},
+}
+
+
+async def run_copy_agent(machine_brief: dict, strategy: dict, brand_locks: str,
+                         channels: list = None) -> dict:
+    """Generate copy scoped to selected channels using Vertex AI."""
+    from app.instructions import COPY_AGENT_INSTRUCTIONS
+    import google.genai as _g2
+    from app.config import get_settings as _gs2
+    _ss2 = _gs2()
+    _gc2 = _g2.Client(vertexai=True, project=_ss2.gcp_project, location=_ss2.gcp_region)
+
+    selected = [c.lower().strip() for c in (channels or [])]
+    seen_keys: set = set()
+    channel_fields: list = []
+    for ch in selected:
+        spec = _CHANNEL_COPY_SPEC.get(ch)
+        if spec and spec["key"] not in seen_keys:
+            channel_fields.append((spec["key"], spec["desc"]))
+            seen_keys.add(spec["key"])
+
+    channel_json_lines = "\n".join(
+        f'  "{key}": "<{desc}>",' for key, desc in channel_fields
+    )
+
+    prompt = f"""{COPY_AGENT_INSTRUCTIONS}
+
+CREATIVE STRATEGY:
+{json.dumps(strategy, indent=2)[:2000]}
+
+BRAND LOCKS:
+{brand_locks[:500]}
+
+CAMPAIGN BRIEF:
+{json.dumps(machine_brief, indent=2)[:1500]}
+
+Produce campaign copy as valid JSON only - no markdown, no explanation.
+Only include the channel fields listed below.
+
+{{
+  "campaign_id": "{machine_brief.get('campaign_id', '')}",
+  "short": {{"headline": "<max 6 words, billboard-ready>", "subline": null}},
+  "medium": {{"headline": "<max 10 words>", "subline": "<max 20 words>"}},
+  "long": {{"headline": "<headline>", "subline": "<optional>", "body": "<max 60 words, present tense, sensory>"}},
+  "cta": "<max 3 words, verb-led>",
+{channel_json_lines}
+}}"""
+
+    raw = await _vertex_generate(_gc2, os.getenv("CREATIVE_MODEL", "gemini-2.5-flash"), prompt, temperature=0.7)
+    result = _parse_agent_response(raw)
+    result["_channel_keys"] = [k for k, _ in channel_fields]
+    return result
+
 async def run_copy_with_groq(machine_brief: dict, strategy: dict, brand_locks: str) -> dict:
     """Generate campaign copy from brief and strategy."""
     import litellm
@@ -432,10 +496,26 @@ _CHANNEL_FORMATS = [
     (1,  1,  "Instagram Feed",    "instagram_feed"),
     (9,  16, "Instagram Stories", "instagram_stories"),
     (9,  16, "TikTok",            "tiktok"),
+    (16, 9,  "YouTube",           "youtube"),
     (16, 9,  "Google Ads",        "google_ads"),
+    (1,  1,  "Meta Ads",          "meta_ads"),
+    (16, 9,  "Website Banner",    "website"),
     (3,  1,  "Email Banner",      "email"),
     (4,  1,  "OOH / Billboard",   "ooh"),
 ]
+
+_CHANNEL_KEY_MAP: dict = {
+    "instagram":  ["instagram_feed", "instagram_stories"],
+    "tiktok":     ["tiktok"],
+    "youtube":    ["youtube"],
+    "google ads": ["google_ads"],
+    "google_ads": ["google_ads"],
+    "meta ads":   ["meta_ads"],
+    "meta_ads":   ["meta_ads"],
+    "ooh":        ["ooh"],
+    "website":    ["website"],
+    "email":      ["email"],
+}
 
 
 def _apply_brand_overlay(img_data: bytes, brand: str, headline: str, product_uris: list) -> bytes:
@@ -596,6 +676,12 @@ async def run_creative_pipeline_direct(
     logo_uri: str,
     brand_guidelines: str,
     big_idea_seed: str = "",
+    copy_headline: str = "",
+    product_name: str = "",
+    fan_truth: str = "",
+    season: str = "",
+    market: str = "",
+    channels: list = None,
     campaign_id: str = "",
     progress_cb=None,
 ) -> dict:
@@ -736,7 +822,7 @@ Create a Big Idea for this campaign. Output:
     }
     _brand_palette_str = _BRAND_PALETTE.get(brand, "brand primary colour, accent colour, white base")
 
-    image_prompt = await _llm(f"""You are a senior creative director writing Gemini 3 Pro Image prompts for premium advertising campaigns.
+    image_prompt = await _llm(f"""You are a senior creative director writing Imagen 4 prompts for premium advertising campaigns.
 
 Brand: {brand}
 Brand colour palette: {_brand_palette_str}
@@ -765,7 +851,8 @@ Output only the prompt text, nothing else.""", temp=0.7)
     await _emit("kv", "running", "Generating key visual with Gemini 3 Pro Image…")
 
     # Stage 5: Image generation via Google AI
-    image_b64 = None
+    image_b64  = None
+    images_b64: list = []
     image_error = None
     channel_adaptations: dict = {}
     try:
@@ -826,44 +913,49 @@ Output only the prompt text, nothing else.""", temp=0.7)
                 f"{style_analysis}"
             )
 
-        # -- Step C: Generate key visual with Imagen 4 --------------------------------
+        # -- Step C: Generate 3 key visual variations with Imagen 4 -------------------
         image_model = _get_settings().gemini_model_image
-        headline_text = big_idea_seed if big_idea_seed else _extract_headline(big_idea)
-        log.info("p2_generate_image_start", model=image_model, has_style_ref=bool(style_analysis))
-        await _emit("kv", "running", f"Generating key visual with {image_model}...")
+        log.info("p2_generate_image_start", model=image_model, n=3)
+        await _emit("kv", "running", "Generating 3 key visual variations...")
 
         response = client.models.generate_images(
-            model=image_model,
-            prompt=enriched_prompt,
-            config={"number_of_images": 1, "aspect_ratio": "1:1"},
+            model  = image_model,
+            prompt = enriched_prompt,
+            config = {"number_of_images": 3, "aspect_ratio": "1:1"},
         )
         if not response.generated_images:
             raise ValueError("Imagen 4 returned no images")
-        img_data = response.generated_images[0].image.image_bytes
 
-        img_data = _apply_brand_overlay(
-            img_data     = img_data,
-            brand        = brand,
-            headline     = headline_text,
-            product_uris = product_uris,
-        )
+        images_b64 = [
+            base64.b64encode(gi.image.image_bytes).decode("utf-8")
+            for gi in response.generated_images
+        ]
+        image_b64 = images_b64[0]
+        log.info("p2_generate_image_done", n_generated=len(images_b64))
 
-        image_b64 = base64.b64encode(img_data).decode("utf-8")
-        log.info("p2_generate_image_done", size_kb=len(img_data) // 1024)
+        # Channel adaptations — only for channels selected in the wizard
+        primary_bytes = response.generated_images[0].image.image_bytes
+        selected_ch = {c.lower().strip() for c in (channels or [])}
+        if selected_ch:
+            active_keys: set = set()
+            for ch in selected_ch:
+                active_keys.update(_CHANNEL_KEY_MAP.get(ch, [ch]))
+        else:
+            active_keys = {key for *_, key in _CHANNEL_FORMATS}
 
-        # Generate channel adaptations (smart crops for different aspect ratios)
         channel_adaptations: dict = {}
         for rw, rh, label, key in _CHANNEL_FORMATS:
-            adapted = _create_channel_adaptation(img_data, rw, rh, label, brand)
+            if key not in active_keys:
+                continue
+            adapted = _create_channel_adaptation(primary_bytes, rw, rh, label, brand)
             if adapted:
                 channel_adaptations[key] = {"label": label, "image_b64": adapted,
                                             "ratio": f"{rw}:{rh}"}
         log.info("p2_channel_adaptations_done", count=len(channel_adaptations))
 
-        # Push main image + adaptations as step_data
-        await _emit("kv", "step_data", _json2.dumps({"image_b64": image_b64}))
-        await _asyncio.sleep(5)  # Let UI display image before channel agent
-        await _emit("kv", "done", "Key visual generated ✓")
+        await _emit("kv", "step_data", _json2.dumps({"image_b64": image_b64, "images_b64": images_b64}))
+        await _asyncio.sleep(5)
+        await _emit("kv", "done", f"{len(images_b64)} key visual variations ready")
     except Exception as e:
         image_error = str(e)
         log.warning("p2_generate_image_failed", error=image_error)
@@ -876,6 +968,7 @@ Output only the prompt text, nothing else.""", temp=0.7)
         "big_idea":             big_idea,
         "image_prompt":         image_prompt,
         "image_b64":            image_b64,
+        "images_b64":           images_b64,
         "image_error":          image_error,
         "channel_adaptations":  channel_adaptations,
     }

@@ -55,7 +55,7 @@ from app.config import get_settings
 from app.models import BriefRequest
 from app.pipeline import briefing_pipeline, root_agent
 from app.creative_pipeline import experiment_pipeline
-from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq, run_creative_pipeline_direct
+from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq, run_copy_agent, run_creative_pipeline_direct
 
 logger   = structlog.get_logger()
 settings = get_settings()
@@ -381,12 +381,22 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "Crafting Instagram & TikTok copy variants…",
             "Generating CTA and long-form body copy…",
         ], interval=18))
+        _channels_list = [str(c).lower() for c in brief.channels] if brief.channels else []
         try:
-            copy = await run_copy_with_groq(machine_brief, strategy, brand_locks)
+            copy = await run_copy_agent(machine_brief, strategy, brand_locks,
+                                        channels=_channels_list)
         finally:
             hb3.cancel()
         short_hl  = (copy.get("short")  or {}).get("headline", "")
         medium_hl = (copy.get("medium") or {}).get("headline", "")
+
+        # Build channel-specific copy fields dynamically from whatever was generated
+        _channel_copy: dict = {}
+        for key in copy.get("_channel_keys", []):
+            val = copy.get(key, "")
+            if val:
+                _channel_copy[key] = str(val)[:200]
+
         await push_event(campaign_id, "copy", "done", json.dumps({
             "_text":           f'Copy ready — "{short_hl}"' if short_hl else "Copy variants ready ✓",
             "short_headline":  short_hl,
@@ -394,8 +404,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "long_headline":   (copy.get("long") or {}).get("headline", ""),
             "body":            (copy.get("long") or {}).get("body", "")[:160] if copy.get("long") else "",
             "cta":             copy.get("cta", ""),
-            "instagram":       copy.get("instagram_caption", "")[:120] if copy.get("instagram_caption") else "",
-            "tiktok_hook":     copy.get("tiktok_hook", ""),
+            "channel_copy":    _channel_copy,
         }))
         await asyncio.sleep(8)  # Let user read copy deck
 
@@ -430,12 +439,25 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             logo_uri         = logos[0] if logos else "",
             brand_guidelines = brand_guidelines,
             big_idea_seed    = strategy.get("hero_message", ""),
+            copy_headline    = short_hl or medium_hl,
+            product_name     = brief.product if hasattr(brief, "product") else "",
+            fan_truth        = str(machine_brief.get("fan_truth", {}).get("statement", "")),
+            season           = brief.season if hasattr(brief, "season") else "",
+            market           = brief.market if hasattr(brief, "market") else "",
+            channels         = [str(c).lower() for c in brief.channels] if brief.channels else [],
             campaign_id      = campaign_id,
             progress_cb      = _progress,
         )
         ms2 = int((time.time() - t2) * 1000)
+        # Support both single image_b64 and multiple images_b64 list
+        _images = creative_result.get("images_b64") or (
+            [creative_result["image_b64"]] if creative_result.get("image_b64") else []
+        )
         logger.info("campaign_stage2_done", campaign_id=campaign_id, ms2=ms2,
-                    has_image=bool(creative_result.get("image_b64")))
+                    n_images=len(_images))
+        if _images:
+            await push_event(campaign_id, "kv", "milestone",
+                             json.dumps({"images_b64": _images}))
 
         # ── Channel Adapter (final step — after key visual generated) ─────
         await push_event(campaign_id, "channel", "running", "Packaging key visual for each channel…")
