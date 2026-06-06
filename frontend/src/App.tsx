@@ -801,21 +801,39 @@ function CopyPanel({ m }: { m?: Record<string,unknown> }) {
         </div>
       )}
 
-      {/* Social row */}
-      <div style={{ display: "flex", gap: 8 }}>
-        {!!m.instagram && (
-          <div style={{ flex: 1, padding: "9px 11px", borderRadius: 10, background: "#fdf4ff", border: "1px solid #e9d5ff" }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 4 }}>📸 Instagram</div>
-            <div style={{ fontSize: 11, color: "#6b21a8", lineHeight: 1.4 }}>{String(m.instagram).slice(0, 80)}{String(m.instagram).length > 80 ? "…" : ""}</div>
+      {/* Channel-specific copy — dynamic from whatever was selected */}
+      {(() => {
+        const channelCopy = m.channel_copy as Record<string, string> | null | undefined;
+        if (!channelCopy || Object.keys(channelCopy).length === 0) return null;
+        const COPY_CFG: Record<string, { icon: string; color: string; bg: string; border: string; label: string }> = {
+          instagram_caption: { icon: "📸", color: "#7c3aed", bg: "#fdf4ff", border: "#e9d5ff", label: "Instagram" },
+          tiktok_hook:       { icon: "🎵", color: "#be185d", bg: "#fff0f6", border: "#ffd6e7", label: "TikTok Hook" },
+          youtube_script:    { icon: "▶️", color: "#dc2626", bg: "#fff1f2", border: "#fecdd3", label: "YouTube" },
+          google_headline:   { icon: "🔍", color: "#1967d2", bg: "#eff6ff", border: "#bfdbfe", label: "Google Ads" },
+          meta_caption:      { icon: "📘", color: "#1877f2", bg: "#eff6ff", border: "#dbeafe", label: "Meta Ads" },
+          ooh_headline:      { icon: "🏙️", color: "#d97706", bg: "#fffbeb", border: "#fde68a", label: "OOH" },
+          web_headline:      { icon: "🌐", color: "#059669", bg: "#f0fdf4", border: "#86efac", label: "Website" },
+          email_subject:     { icon: "📧", color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd", label: "Email" },
+        };
+        const entries = Object.entries(m.channel_copy as Record<string, string>);
+        return (
+          <div style={{ display: "grid", gridTemplateColumns: entries.length > 1 ? "1fr 1fr" : "1fr", gap: 8 }}>
+            {entries.map(([key, val]) => {
+              const cfg = COPY_CFG[key] ?? { icon: "📢", color: "#64748b", bg: "#f8fafc", border: "#e2e8f0", label: key };
+              return (
+                <div key={key} style={{ padding: "9px 11px", borderRadius: 10, background: cfg.bg, border: `1px solid ${cfg.border}` }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: cfg.color, textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 4 }}>
+                    {cfg.icon} {cfg.label}
+                  </div>
+                  <div style={{ fontSize: 11, color: cfg.color, lineHeight: 1.4 }}>
+                    {val.slice(0, 90)}{val.length > 90 ? "…" : ""}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        )}
-        {!!m.tiktok_hook && (
-          <div style={{ flex: 1, padding: "9px 11px", borderRadius: 10, background: "#fff0f6", border: "1px solid #ffd6e7" }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: "#be185d", textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 4 }}>🎵 TikTok Hook</div>
-            <div style={{ fontSize: 11, color: "#9d174d", lineHeight: 1.4 }}>{String(m.tiktok_hook).slice(0, 80)}{String(m.tiktok_hook).length > 80 ? "…" : ""}</div>
-          </div>
-        )}
-      </div>
+        );
+      })()}
     </div>
   );
 }
@@ -926,20 +944,24 @@ function CulturePanel({ m }: { m?: Record<string,unknown> }) {
 }
 
 function KVPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
+  const [selectedImg, setSelectedImg] = useState(0);
   const brandLocks  = m?.brand_locks  ? String(m.brand_locks)  : "";
   const bigIdea     = m?.big_idea     ? String(m.big_idea)     : "";
   const imagePrompt = m?.image_prompt ? String(m.image_prompt) : "";
   const imageB64    = m?.image_b64    ? String(m.image_b64)    : "";
+  const imagesB64   = m?.images_b64   ? (m.images_b64 as string[]) : imageB64 ? [imageB64] : [];
 
   // Derive active step from what data has arrived
-  const activeStep = imageB64 ? 3 : imagePrompt ? 3 : bigIdea ? 2 : brandLocks ? 1 : 0;
-  const isGenerating = !imageB64 && (liveMsg?.toLowerCase().includes("imagen") || !!imagePrompt);
+  const activeStep = imagesB64.length > 0 ? 3 : imagePrompt ? 3 : bigIdea ? 2 : brandLocks ? 1 : 0;
+  const isGenerating = imagesB64.length === 0 && (liveMsg?.toLowerCase().includes("imagen") || !!imagePrompt);
 
+  const kvImageContent = imagesB64.length > 0 ? imagesB64[0] : "";
   const KV_STEPS = [
     { icon: "🔒", label: "Brand locks extracted",  dataKey: "brand_locks",  content: brandLocks },
     { icon: "💡", label: "Big Idea developed",      dataKey: "big_idea",     content: bigIdea },
     { icon: "🖼️", label: "Image prompt crafted",   dataKey: "image_prompt", content: imagePrompt },
-    { icon: "✨", label: "Generating key visual…",   dataKey: "image_b64",    content: imageB64 },
+    { icon: "✨", label: `${imagesB64.length > 1 ? imagesB64.length + " variations" : "Key visual"} generated`,
+      dataKey: "image_b64", content: kvImageContent },
   ];
 
   return (
@@ -948,7 +970,7 @@ function KVPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|n
         textTransform: "uppercase" as const, marginBottom: 10 }}>Image Generation Pipeline</div>
 
       {KV_STEPS.map((step, i) => {
-        const isDone   = i < activeStep || (i === 3 && !!imageB64);
+        const isDone   = i < activeStep || (i === 3 && imagesB64.length > 0);
         const isActive = !isDone && (i === activeStep || (i === 3 && isGenerating));
         const showContent = !!step.content;
 
@@ -979,10 +1001,30 @@ function KVPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|n
                 border: `1px solid ${isDone ? "#86efac" : "#fecdd3"}`,
                 borderTop: "none",
               }}>
-                {i === 3 && imageB64 ? (
-                  /* Generated image */
-                  <img src={`data:image/jpeg;base64,${imageB64}`} alt="Generated key visual"
-                    style={{ width: "100%", borderRadius: 8, display: "block" }} />
+                {i === 3 && imagesB64.length > 0 ? (
+                  /* Image gallery — show all variations with selection */
+                  <div>
+                    <img src={`data:image/jpeg;base64,${imagesB64[selectedImg]}`} alt="Key visual"
+                      style={{ width: "100%", borderRadius: 8, display: "block", marginBottom: imagesB64.length > 1 ? 8 : 0 }} />
+                    {imagesB64.length > 1 && (
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {imagesB64.map((img, idx) => (
+                          <div key={idx} onClick={() => setSelectedImg(idx)}
+                            style={{ flex: 1, cursor: "pointer", borderRadius: 6, overflow: "hidden",
+                              border: `2px solid ${idx === selectedImg ? "#be123c" : "transparent"}`,
+                              opacity: idx === selectedImg ? 1 : 0.6, transition: "all 0.2s" }}>
+                            <img src={`data:image/jpeg;base64,${img}`} alt={`Variation ${idx + 1}`}
+                              style={{ width: "100%", display: "block" }} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {imagesB64.length > 1 && (
+                      <div style={{ fontSize: 10, color: "#be123c", fontWeight: 600, marginTop: 5, textAlign: "center" as const }}>
+                        Variation {selectedImg + 1} of {imagesB64.length} — click to select
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   /* Text content — show first few lines */
                   <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6,
@@ -1370,6 +1412,16 @@ function KPIRow({ metric, target, flag }: { metric: string; target: string; flag
 // ── Distribute Campaign Panel ─────────────────────────────────
 const API_BASE_PUB = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+const PUBLISH_CHANNEL_CFG: Record<string, { icon: string; color: string; bg: string; border: string; desc: string; publishKey: string }> = {
+  "Instagram":  { icon: "📸", color: "#c026d3", bg: "#fdf4ff", border: "#e9d5ff", desc: "Feed + Stories post",   publishKey: "instagram" },
+  "TikTok":     { icon: "🎵", color: "#0f172a", bg: "#f1f5f9", border: "#cbd5e1", desc: "Short-form video",       publishKey: "tiktok"    },
+  "YouTube":    { icon: "▶️", color: "#dc2626", bg: "#fff1f2", border: "#fecdd3", desc: "Pre-roll ad",            publishKey: "youtube"   },
+  "OOH":        { icon: "🏙️", color: "#d97706", bg: "#fffbeb", border: "#fde68a", desc: "Digital billboard",     publishKey: "ooh"       },
+  "Google Ads": { icon: "🔍", color: "#1967d2", bg: "#eff6ff", border: "#bfdbfe", desc: "Responsive Search Ad",  publishKey: "google_ads"},
+  "Meta Ads":   { icon: "📘", color: "#1877f2", bg: "#eff6ff", border: "#dbeafe", desc: "FB + Instagram Ad",     publishKey: "meta_ads"  },
+  "Website":    { icon: "🌐", color: "#059669", bg: "#f0fdf4", border: "#86efac", desc: "Brand landing page",    publishKey: "landing_page"},
+  "Email":      { icon: "📧", color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd", desc: "Branded email blast",   publishKey: "email"     },
+};
 
 function DistributePanel({ output, campaignId }: {
   output: Record<string, unknown> | null; campaignId: string | null;
@@ -1377,29 +1429,25 @@ function DistributePanel({ output, campaignId }: {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [email,    setEmail]    = useState("");
   const [loading,  setLoading]  = useState(false);
+  const [published, setPublished] = useState(false);
   const [results,  setResults]  = useState<Record<string, any> | null>(null);
   const [error,    setError]    = useState("");
 
   const cp       = (output as any)?.creative_pipeline;
   const strategy = (output as any)?.creative_strategy;
   const copy     = (output as any)?.campaign_copy;
-  // brand from machine_brief spread, or extracted from campaign_id (format: campaign-{brand}-xxx)
-  const brandFromId = campaignId
-    ? campaignId.replace(/^campaign-/, "").split("-")[0]
-        .replace(/^(.)/, (c: string) => c.toUpperCase())
-    : "";
-  const brand = String((output as any)?.brand ?? brandFromId ?? "");
+  const brief    = (output as any)?.machine_brief ?? output as any;
+  const brandFromId = campaignId ? campaignId.replace(/^campaign-/, "").split("-")[0].replace(/^(.)/, (c: string) => c.toUpperCase()) : "";
+  const brand    = String((output as any)?.brand ?? brandFromId ?? "");
 
-  const toggle = (key: string) => setSelected(s => {
-    const n = new Set(s);
-    n.has(key) ? n.delete(key) : n.add(key);
-    return n;
-  });
+  // Channels selected in the wizard
+  const wizardChannels: string[] = Array.isArray(brief?.channels) ? brief.channels : [];
+
+  const toggle = (key: string) => setSelected(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
   const handlePublish = useCallback(async () => {
     if (selected.size === 0) return;
-    if (!campaignId) { setError("No campaign ID — run a full campaign first"); return; }
-    if (!brand) { setError("Brand not found in campaign output"); return; }
+    if (!campaignId) { setError("No campaign ID"); return; }
     setLoading(true); setError(""); setResults(null);
     try {
       const res = await fetch(`${API_BASE_PUB}/publish/${campaignId}`, {
@@ -1419,156 +1467,128 @@ function DistributePanel({ output, campaignId }: {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.detail ?? "Publish failed");
-      setResults(json.results);
-      // Auto-open landing page in new tab if published
+      setResults(json.results); setPublished(true);
       const lp = json.results?.landing_page;
-      if (lp?.status === "live" && lp?.url) {
-        window.open(`${API_BASE_PUB}${lp.url}`, "_blank");
-      }
+      if (lp?.status === "live" && lp?.url) window.open(`${API_BASE_PUB}${lp.url}`, "_blank");
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   }, [campaignId, brand, strategy, copy, cp, email, selected]);
 
   if (!strategy && !cp?.culture_brief) return null;
 
-  const CHANNELS = [
-    { key: "google_ads",   icon: "🔍", label: "Google Ads",    desc: "Responsive Search Ad" },
-    { key: "landing_page", icon: "🌐", label: "Brand Website", desc: `${brand} landing page` },
-    { key: "email",        icon: "📧", label: "Email Campaign", desc: "Branded HTML email" },
-  ];
-
-  const publishedCount = results
-    ? Object.values(results).filter((r: any) => r.status !== "skipped" && r.status !== "error").length
-    : 0;
+  const publishedCount = results ? Object.values(results).filter((r: any) => r.status !== "skipped" && r.status !== "error").length : 0;
 
   return (
-    <div style={{ gridColumn: "1 / -1", borderRadius: 16, overflow: "hidden",
-      border: "1.5px solid rgba(0,85,164,0.2)" }}>
+    <div style={{ borderRadius: 24, overflow: "hidden", boxShadow: "0 24px 80px rgba(0,0,0,0.18)" }}>
+      {/* Dark hero header */}
+      <div style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)", padding: "40px 40px 32px", position: "relative", overflow: "hidden" }}>
+        {/* Decorative circles */}
+        <div style={{ position: "absolute", top: -60, right: -60, width: 240, height: 240, borderRadius: "50%", background: "rgba(99,102,241,0.15)" }} />
+        <div style={{ position: "absolute", bottom: -40, left: -40, width: 160, height: 160, borderRadius: "50%", background: "rgba(16,185,129,0.1)" }} />
 
-      {/* Header */}
-      <div style={{ padding: "16px 24px", background: "#0055A4",
-        display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 22 }}>🚀</span>
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 800, color: "white" }}>Distribute Campaign</div>
-            <div style={{ fontSize: 11, color: "rgba(255,255,255,0.65)" }}>Select channels and publish</div>
+        <div style={{ position: "relative", zIndex: 1 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 8 }}>
+            Final Step
           </div>
-        </div>
-        {!results && selected.size > 0 && (
-          <button onClick={handlePublish} disabled={loading}
-            style={{ padding: "9px 24px", borderRadius: 99, border: "2px solid white",
-              background: loading ? "transparent" : "white", color: loading ? "white" : "#0055A4",
-              fontSize: 13, fontWeight: 800, cursor: "pointer" }}>
-            {loading ? "Publishing…" : `🚀 Publish to ${selected.size} channel${selected.size > 1 ? "s" : ""}`}
-          </button>
-        )}
-        {results && (
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#86efac" }}>
-            ✅ {publishedCount} channel{publishedCount !== 1 ? "s" : ""} published
+          <div style={{ fontSize: 30, fontWeight: 900, color: "white", lineHeight: 1.2, marginBottom: 8 }}>
+            {published ? `✅ Live on ${publishedCount} channel${publishedCount !== 1 ? "s" : ""}` : "🚀 Launch Campaign"}
           </div>
-        )}
-      </div>
+          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: published ? 0 : 28 }}>
+            {published ? "Your campaign is now live. Track performance in your dashboards." : `Select the channels to activate — ${wizardChannels.length || "all"} channels ready from your brief`}
+          </div>
 
-      <div style={{ padding: "20px 24px", background: "linear-gradient(135deg,#eff6ff,#f0f9ff)" }}>
-
-        {/* Channel selector cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 16 }}>
-          {CHANNELS.map(ch => {
-            const r    = results?.[ch.key];
-            const done = r?.status === "submitted" || r?.status === "live" || r?.status === "sent";
-            const isOn = selected.has(ch.key);
-            const canSelect = !results;
-
-            return (
-              <div key={ch.key}
-                onClick={() => canSelect && toggle(ch.key)}
-                style={{
-                  padding: "16px", borderRadius: 14, cursor: canSelect ? "pointer" : "default",
-                  transition: "all 0.2s",
-                  background: done ? "#f0fdf4" : isOn ? "#eff6ff" : "white",
-                  border: `2px solid ${done ? "#86efac" : isOn ? "#0055A4" : "#e2e8f0"}`,
-                  boxShadow: isOn && !done ? "0 0 0 3px rgba(0,85,164,0.12)" : "none",
-                }}>
-
-                {/* Icon + checkbox row */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                  <span style={{ fontSize: 24 }}>{ch.icon}</span>
-                  {!results && (
-                    <div style={{ width: 20, height: 20, borderRadius: 6,
-                      border: `2px solid ${isOn ? "#0055A4" : "#cbd5e1"}`,
-                      background: isOn ? "#0055A4" : "white",
+          {/* Channel preview row (when not yet published) */}
+          {!published && wizardChannels.length > 0 && (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {wizardChannels.map(ch => {
+                const cfg = PUBLISH_CHANNEL_CFG[ch];
+                if (!cfg) return null;
+                const isOn = selected.has(cfg.publishKey);
+                return (
+                  <div key={ch} onClick={() => toggle(cfg.publishKey)}
+                    style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
+                      borderRadius: 12, cursor: "pointer", transition: "all 0.2s",
+                      background: isOn ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)",
+                      border: `1.5px solid ${isOn ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.14)"}`,
+                      boxShadow: isOn ? "0 0 0 3px rgba(255,255,255,0.12)" : "none" }}>
+                    <span style={{ fontSize: 18 }}>{cfg.icon}</span>
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: isOn ? "white" : "rgba(255,255,255,0.65)" }}>{ch}</div>
+                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)" }}>{cfg.desc}</div>
+                    </div>
+                    <div style={{ width: 18, height: 18, borderRadius: "50%", marginLeft: 4, flexShrink: 0,
+                      background: isOn ? "#10b981" : "rgba(255,255,255,0.12)",
+                      border: `2px solid ${isOn ? "#10b981" : "rgba(255,255,255,0.25)"}`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 12, color: "white", fontWeight: 800 }}>
+                      fontSize: 10, color: "white", fontWeight: 800 }}>
                       {isOn ? "✓" : ""}
                     </div>
-                  )}
-                  {done && <span style={{ fontSize: 14, color: "#10b981", fontWeight: 800 }}>✓</span>}
-                </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
 
-                <div style={{ fontSize: 13, fontWeight: 700,
-                  color: done ? "#065f46" : isOn ? "#0055A4" : "#1a2332", marginBottom: 3 }}>
-                  {ch.label}
-                </div>
-                <div style={{ fontSize: 10, color: "#94a3b8" }}>{ch.desc}</div>
+      {/* Action bar */}
+      {!published && (
+        <div style={{ padding: "20px 40px", background: "#1e293b", display: "flex", alignItems: "center", gap: 16 }}>
+          {selected.has("email") && (
+            <input type="email" placeholder="Recipient email address" value={email} onChange={e => setEmail(e.target.value)}
+              style={{ flex: 1, padding: "11px 16px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,0.15)",
+                background: "rgba(255,255,255,0.07)", color: "white", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+          )}
+          {selected.size === 0 ? (
+            <div style={{ flex: 1, fontSize: 13, color: "rgba(255,255,255,0.4)", fontStyle: "italic" }}>
+              Select channels above to enable launch
+            </div>
+          ) : (
+            <div style={{ flex: 1, fontSize: 13, color: "rgba(255,255,255,0.6)" }}>
+              {selected.size} channel{selected.size > 1 ? "s" : ""} selected
+            </div>
+          )}
+          <button onClick={handlePublish} disabled={loading || selected.size === 0}
+            style={{ padding: "13px 32px", borderRadius: 12, border: "none", cursor: selected.size === 0 ? "not-allowed" : "pointer",
+              background: selected.size === 0 ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #6366f1, #4f46e5)",
+              color: selected.size === 0 ? "rgba(255,255,255,0.3)" : "white",
+              fontSize: 14, fontWeight: 800, letterSpacing: "0.02em", transition: "all 0.2s",
+              boxShadow: selected.size > 0 ? "0 4px 20px rgba(99,102,241,0.4)" : "none" }}>
+            {loading ? "Launching…" : selected.size === 0 ? "Select Channels" : `🚀 Launch to ${selected.size} Channel${selected.size > 1 ? "s" : ""}`}
+          </button>
+        </div>
+      )}
 
-                {/* Results per channel */}
-                {done && ch.key === "google_ads" && r && (
-                  <div style={{ marginTop: 10, padding: "8px 10px", borderRadius: 8,
-                    background: "#f0f9ff", border: "1px solid #bfdbfe",
-                    fontSize: 10, color: "#1e40af", lineHeight: 1.7 }}>
-                    <div>Ad ID: <b>{r.ad_id}</b></div>
-                    <div>Est. Reach: <b>{r.est_impressions}</b></div>
-                    <div>CPC: <b>{r.est_cpc}</b> · Quality: <b>{r.quality_score}/10</b></div>
-                  </div>
+      {/* Published results */}
+      {published && results && (
+        <div style={{ padding: "24px 40px", background: "#f0fdf4", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
+          {Object.entries(results).map(([key, r]: [string, any]) => {
+            const isDone = r.status !== "skipped" && r.status !== "error";
+            return (
+              <div key={key} style={{ padding: "14px 16px", borderRadius: 12, background: isDone ? "white" : "#f8fafc",
+                border: `1.5px solid ${isDone ? "#86efac" : "#e2e8f0"}` }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: isDone ? "#065f46" : "#94a3b8", marginBottom: 4 }}>
+                  {isDone ? "✅" : "⏭"} {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
+                </div>
+                {key === "landing_page" && r.url && (
+                  <a href={`${API_BASE_PUB}${r.url}`} target="_blank" rel="noreferrer"
+                    style={{ fontSize: 11, color: "#0055A4", fontWeight: 600 }}>🔗 Open page →</a>
                 )}
-                {done && ch.key === "landing_page" && r && (
-                  <div style={{ marginTop: 10 }}>
-                    <a href={`${API_BASE_PUB}${r.url}`} target="_blank" rel="noreferrer"
-                      style={{ display: "inline-flex", alignItems: "center", gap: 5,
-                        padding: "7px 14px", borderRadius: 99, background: "#0055A4",
-                        color: "white", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
-                      🔗 Open Landing Page
-                    </a>
-                  </div>
-                )}
-                {done && ch.key === "email" && r && (
-                  <div style={{ marginTop: 8, fontSize: 10, color: "#065f46" }}>
-                    ✉ Sent to <b>{r.to}</b>
-                  </div>
-                )}
+                {key === "email" && r.to && <div style={{ fontSize: 10, color: "#64748b" }}>Sent to {r.to}</div>}
+                {r.ad_id && <div style={{ fontSize: 10, color: "#64748b" }}>ID: {r.ad_id}</div>}
               </div>
             );
           })}
         </div>
+      )}
 
-        {/* Email input — only shown when email channel is selected */}
-        {selected.has("email") && !results && (
-          <div style={{ marginBottom: 14, display: "flex", alignItems: "center", gap: 10,
-            padding: "12px 16px", borderRadius: 12, background: "white", border: "1.5px solid #bfdbfe" }}>
-            <span style={{ fontSize: 18 }}>📧</span>
-            <input type="email" placeholder="Enter recipient email address"
-              value={email} onChange={e => setEmail(e.target.value)}
-              style={{ flex: 1, border: "none", outline: "none", fontSize: 13, fontFamily: "inherit", color: "#1a2332" }} />
-          </div>
-        )}
-
-        {/* No channel selected hint */}
-        {!results && selected.size === 0 && (
-          <div style={{ fontSize: 12, color: "#94a3b8", textAlign: "center" as const, padding: "8px 0" }}>
-            Select one or more channels above to publish your campaign
-          </div>
-        )}
-
-        {error && (
-          <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fee2e2",
-            border: "1px solid #fca5a5", fontSize: 12, color: "#991b1b" }}>{error}</div>
-        )}
-      </div>
+      {error && (
+        <div style={{ padding: "12px 40px", background: "#fef2f2", fontSize: 12, color: "#991b1b",
+          borderTop: "1px solid #fecaca" }}>{error}</div>
+      )}
     </div>
   );
 }
-
 // ── Results view ─────────────────────────────────────────────
 function ResultsView({ output, campaignId, onReset }: {
   output: Record<string, unknown> | null;
@@ -1576,18 +1596,42 @@ function ResultsView({ output, campaignId, onReset }: {
   onReset: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [selectedKV, setSelectedKV] = useState(0);
   const brief    = (output?.machine_brief ?? (output?.status ? output : null)) as any;
   const strategy = output?.creative_strategy as any;
   const copy     = output?.campaign_copy as any;
-
+  const cp       = (output as any)?.creative_pipeline;
   const isReady  = brief?.status === "READY";
-  // statusColor kept for potential future use
-  // const statusColor = isReady ? "#10b981" : brief?.status === "INCOMPLETE" ? "#ef4444" : "#f59e0b";
 
-  // Parse CDP insights into readable lines
-  const cdpLines = output?.audience_insights
-    ? String(output.audience_insights).split("\n").filter(l => l.trim())
-    : [];
+  const imagesB64: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
+  const adaptations = cp?.channel_adaptations as Record<string, {label: string; image_b64: string; ratio: string}> | undefined;
+
+  const CHANNEL_ICONS: Record<string, string> = {
+    instagram_feed: "📸", instagram_stories: "📱", tiktok: "🎵",
+    youtube: "▶️", google_ads: "🔍", meta_ads: "📘",
+    email: "📧", ooh: "🏙️", website: "🌐",
+  };
+
+  // Timeline entry wrapper
+  const TL = ({ step, icon, color, label, children }: { step: number; icon: string; color: string; label: string; children: React.ReactNode }) => (
+    <div style={{ display: "flex", gap: 20, marginBottom: 32 }}>
+      {/* Left: step indicator + connector */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
+        <div style={{ width: 44, height: 44, borderRadius: "50%", background: `linear-gradient(135deg, ${color}22, ${color}10)`,
+          border: `2px solid ${color}40`, display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 20, boxShadow: `0 0 0 4px ${color}10`, flexShrink: 0 }}>
+          {icon}
+        </div>
+        <div style={{ width: 2, flex: 1, minHeight: 24, background: `linear-gradient(${color}30, transparent)`, margin: "6px 0" }} />
+      </div>
+      {/* Right: content */}
+      <div style={{ flex: 1, paddingBottom: 8 }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: color, letterSpacing: "0.12em",
+          textTransform: "uppercase", marginBottom: 10 }}>Step {step} — {label}</div>
+        {children}
+      </div>
+    </div>
+  );
 
   return (
     <div style={styles.resultsPage}>
@@ -1602,7 +1646,7 @@ function ResultsView({ output, campaignId, onReset }: {
                 border: "1px solid #a7f3d0", display: "flex", alignItems: "center",
                 justifyContent: "center", fontSize: 16 }}>✅</div>
               <div>
-                <div style={styles.resultsTitle}>Campaign Brief Validated</div>
+                <div style={styles.resultsTitle}>Campaign Ready</div>
                 {campaignId && <div style={styles.campaignIdTag}>#{campaignId}</div>}
               </div>
             </div>
@@ -1611,7 +1655,7 @@ function ResultsView({ output, campaignId, onReset }: {
             <div style={{ padding: "6px 16px", borderRadius: 20, fontSize: 12, fontWeight: 700,
               background: isReady ? "#d1fae5" : "#fef3c7",
               color: isReady ? "#065f46" : "#92400e",
-              border: `1px solid ${isReady ? "#a7f3d0" : "#fde68a"}`, letterSpacing: "0.05em" }}>
+              border: `1px solid ${isReady ? "#a7f3d0" : "#fde68a"}` }}>
               {brief?.status ?? "—"}
             </div>
             <button className="reset-btn" onClick={onReset}>New Campaign</button>
@@ -1619,478 +1663,216 @@ function ResultsView({ output, campaignId, onReset }: {
         </div>
       </div>
 
-      <div style={styles.resultsGrid}>
-        {/* ── Brief Validation card ── */}
+      {/* Timeline */}
+      <div style={{ maxWidth: 860, margin: "0 auto", padding: "40px 24px 24px" }}>
+
+        {/* Step 1: Brief Validation */}
         {brief && (
-          <div style={styles.resultCard}>
-            <div style={styles.cardHeader}>📋 Brief Validation</div>
-
-            {/* Fan Truth Gauge */}
-            {brief.fan_truth && (
-              <ScoreGauge score={brief.fan_truth.overall ?? 0} verdict={brief.fan_truth.verdict ?? "FAIL"} />
-            )}
-
-            {/* Fan Truth statement */}
-            {brief.fan_truth?.statement && (
-              <div style={{ padding: "12px 16px", borderRadius: 10, marginBottom: 16,
-                background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.2)" }}>
-                <div style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600, letterSpacing: "0.06em",
-                  textTransform: "uppercase" as const, marginBottom: 6 }}>Fan Truth</div>
-                <div style={{ fontSize: 14, color: "#1a2332", fontStyle: "italic", lineHeight: 1.6 }}>
-                  "{brief.fan_truth.statement}"
+          <TL step={1} icon="📋" color="#7c3aed" label="Brief Validation">
+            <div style={{ background: "white", borderRadius: 16, border: "1px solid #e9d5ff",
+              overflow: "hidden", boxShadow: "0 2px 12px rgba(124,58,237,0.08)" }}>
+              {brief.fan_truth && (
+                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f3e8ff" }}>
+                  <ScoreGauge score={brief.fan_truth.overall ?? 0} verdict={brief.fan_truth.verdict ?? "FAIL"} />
+                  {brief.fan_truth.statement && (
+                    <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fdf4ff", border: "1px solid #e9d5ff", fontSize: 14, color: "#1a2332", fontStyle: "italic" }}>
+                      "{brief.fan_truth.statement}"
+                    </div>
+                  )}
                 </div>
-                {brief.fan_truth.notes && (
-                  <div style={{ fontSize: 12, color: "#64748b", marginTop: 8, lineHeight: 1.5 }}>
-                    {brief.fan_truth.notes}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* KPIs */}
-            {brief.kpis?.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: "#64748b", fontWeight: 600,
-                  letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 8 }}>KPIs</div>
-                {brief.kpis.map((k: any, i: number) => (
-                  <KPIRow key={i} metric={k.metric} target={k.target} flag={k.flag} note={k.note} />
-                ))}
-              </div>
-            )}
-
-            {/* Summary */}
-            {(brief.validation_notes || brief.brief_summary) && (
-              <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.7, margin: 0, paddingTop: 12,
-                borderTop: "1px solid #e2e8f0" }}>
-                {brief.validation_notes || brief.brief_summary}
-              </p>
-            )}
-          </div>
+              )}
+              {brief.kpis?.length > 0 && (
+                <div style={{ padding: "14px 20px", borderBottom: brief.validation_notes ? "1px solid #f3e8ff" : "none" }}>
+                  {brief.kpis.slice(0, 4).map((k: any, i: number) => (
+                    <KPIRow key={i} metric={k.metric} target={k.target} flag={k.flag} />
+                  ))}
+                </div>
+              )}
+              {brief.validation_notes && (
+                <div style={{ padding: "12px 20px", fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
+                  {brief.validation_notes}
+                </div>
+              )}
+            </div>
+          </TL>
         )}
 
-        {/* ── CDP Audience Intelligence ── */}
-        {cdpLines.length > 0 && (() => {
-          const getText = (key: string) => {
-            const l = cdpLines.find(l => l.toLowerCase().includes(key.toLowerCase()));
-            return l ? l.split(":").slice(1).join(":").trim() : null;
-          };
-          const profilesLine = cdpLines.find(l => l.includes("profiles"));
-          const profileCount = profilesLine?.match(/(\d[\d,]+)\s+\w+\s+profiles/)?.[1] ?? "—";
-          const matchLine    = cdpLines.find(l => l.includes("matched"));
-          const income       = getText("household income");
-          const meatSpend    = getText("meat/protein spend");
-          const deals        = getText("deal purchases");
-          const webVisits    = getText("web visits");
-          const channelsRaw  = getText("Top channels");
-          const channels     = channelsRaw?.split(",").map(c => c.trim()) ?? [];
-          const crmIdx       = cdpLines.findIndex(l => l.includes("CRM notes"));
-          const crmNote      = crmIdx >= 0 ? cdpLines.slice(crmIdx + 1).join(" ").slice(0, 200) : null;
-
-          const stat = (label: string, val: string | null, accent = "#0055A4") => val ? (
-            <div style={{ flex: 1, minWidth: 100, padding: "10px 12px", borderRadius: 10,
-              background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-              <div style={{ fontSize: 10, color: "#475569", fontWeight: 600, letterSpacing: "0.08em",
-                textTransform: "uppercase" as const, marginBottom: 4 }}>{label}</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: accent }}>{val}</div>
-            </div>
-          ) : null;
-
-          return (
-            <div style={styles.resultCard}>
-              {/* Header */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div style={styles.cardHeader}>👥 Audience Intelligence</div>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 12,
-                  background: "#e8f0fb", color: "#0055A4",
-                  border: "1px solid rgba(0,85,164,0.2)", letterSpacing: "0.06em" }}>
-                  KAGGLE CDP
-                </span>
-              </div>
-
-              {/* Profile count */}
-              <div style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 10,
-                background: "linear-gradient(135deg, #e8f0fb, #eff6ff)",
-                border: "1px solid rgba(0,85,164,0.15)" }}>
-                <div style={{ fontSize: 20, fontWeight: 800, color: "#0055A4" }}>{profileCount}</div>
-                <div style={{ fontSize: 12, color: "#64748b", marginTop: 2 }}>
-                  {matchLine?.trim() ?? "customer profiles analysed"}
+        {/* Step 2: Creative Strategy */}
+        {strategy?.hero_message && (
+          <TL step={2} icon="💡" color="#d97706" label="Creative Strategy">
+            <div style={{ background: "white", borderRadius: 16, border: "1px solid #fde68a",
+              overflow: "hidden", boxShadow: "0 2px 12px rgba(217,119,6,0.1)" }}>
+              <div style={{ background: "linear-gradient(135deg, #d97706, #ea580c)", padding: "20px 24px" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
+                  {strategy.big_idea || "Campaign Concept"}
                 </div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.25 }}>
+                  "{strategy.hero_message}"
+                </div>
+                {strategy.tagline && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 6 }}>{strategy.tagline}</div>}
               </div>
+              {strategy.strategic_framework && (
+                <div style={{ padding: "14px 20px", fontSize: 13, color: "#78350f", lineHeight: 1.6, background: "#fffbeb" }}>
+                  {strategy.strategic_framework.slice(0, 280)}{strategy.strategic_framework.length > 280 ? "…" : ""}
+                </div>
+              )}
+              {strategy.messaging_pillars?.length > 0 && (
+                <div style={{ padding: "10px 20px", borderTop: "1px solid #fef3c7", display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {strategy.messaging_pillars.slice(0, 3).map((p: string, i: number) => (
+                    <span key={i} style={{ fontSize: 11, padding: "3px 12px", borderRadius: 99, background: "#fef3c7", border: "1px solid #fde68a", color: "#92400e", fontWeight: 600 }}>
+                      {String(p).slice(0, 40)}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TL>
+        )}
 
-              {/* Stats grid */}
-              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: 14 }}>
-                {stat("Avg Income", income, "#10b981")}
-                {stat("Meat Spend/yr", meatSpend, "#10b981")}
-                {stat("Deal Purchases", deals, "#f59e0b")}
-                {stat("Web Visits/mo", webVisits, "#3b82f6")}
+        {/* Step 3: Campaign Copy */}
+        {copy?.short?.headline && (
+          <TL step={3} icon="✍️" color="#0055A4" label="Campaign Copy">
+            <div style={{ background: "white", borderRadius: 16, border: "1px solid #bfdbfe",
+              overflow: "hidden", boxShadow: "0 2px 12px rgba(0,85,164,0.08)" }}>
+              <div style={{ background: "linear-gradient(135deg, #0055A4, #0369a1)", padding: "16px 24px", textAlign: "center" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.55)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 6 }}>Short Headline</div>
+                <div style={{ fontSize: 24, fontWeight: 900, color: "white" }}>"{copy.short.headline}"</div>
               </div>
-
-              {/* Channels */}
-              {channels.length > 0 && (
-                <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 10, color: "#475569", fontWeight: 600,
-                    letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>
-                    Top Channels
+              {copy.cta && (
+                <div style={{ background: "#0055A4", padding: "8px", textAlign: "center" }}>
+                  <span style={{ display: "inline-block", padding: "5px 20px", borderRadius: 99, background: "white", color: "#0055A4", fontSize: 12, fontWeight: 800 }}>{copy.cta}</span>
+                </div>
+              )}
+              {copy.medium?.headline && (
+                <div style={{ padding: "12px 20px", borderBottom: "1px solid #e0f2fe" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Medium</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>"{copy.medium.headline}"</div>
+                </div>
+              )}
+              {copy.long?.body && (
+                <div style={{ padding: "12px 20px", borderBottom: "1px solid #e0f2fe", fontSize: 13, color: "#475569", lineHeight: 1.6 }}>
+                  {copy.long.body.slice(0, 150)}…
+                </div>
+              )}
+              {/* Channel-specific copy */}
+              {copy.channel_copy && Object.keys(copy.channel_copy as object).length > 0 && (() => {
+                const COPY_CH: Record<string, { icon: string; label: string; color: string; bg: string; border: string }> = {
+                  instagram_caption: { icon: "📸", label: "Instagram", color: "#7c3aed", bg: "#fdf4ff", border: "#e9d5ff" },
+                  tiktok_hook:       { icon: "🎵", label: "TikTok",    color: "#be185d", bg: "#fff0f6", border: "#ffd6e7" },
+                  youtube_script:    { icon: "▶️", label: "YouTube",   color: "#dc2626", bg: "#fff1f2", border: "#fecdd3" },
+                  google_headline:   { icon: "🔍", label: "Google",    color: "#1967d2", bg: "#eff6ff", border: "#bfdbfe" },
+                  meta_caption:      { icon: "📘", label: "Meta",      color: "#1877f2", bg: "#eff6ff", border: "#dbeafe" },
+                  ooh_headline:      { icon: "🏙️", label: "OOH",      color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+                  web_headline:      { icon: "🌐", label: "Website",   color: "#059669", bg: "#f0fdf4", border: "#86efac" },
+                  email_subject:     { icon: "📧", label: "Email",     color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd" },
+                };
+                const entries = Object.entries(copy.channel_copy as Record<string, string>);
+                return (
+                  <div style={{ padding: "12px 20px", display: "grid", gridTemplateColumns: entries.length > 2 ? "1fr 1fr" : "1fr", gap: 8 }}>
+                    {entries.map(([key, val]) => {
+                      const cfg = COPY_CH[key] ?? { icon: "📢", label: key, color: "#64748b", bg: "#f8fafc", border: "#e2e8f0" };
+                      return (
+                        <div key={key} style={{ padding: "9px 12px", borderRadius: 10, background: cfg.bg, border: `1px solid ${cfg.border}` }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: cfg.color, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{cfg.icon} {cfg.label}</div>
+                          <div style={{ fontSize: 12, color: cfg.color, lineHeight: 1.4 }}>{val.slice(0, 90)}{val.length > 90 ? "…" : ""}</div>
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                    {channels.map((ch, i) => (
-                      <span key={i} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 12,
-                        background: "#e8f0fb", color: "#0055A4",
-                        border: "1px solid rgba(0,85,164,0.2)", fontWeight: 600 }}>
-                        {ch}
-                      </span>
+                );
+              })()}
+            </div>
+          </TL>
+        )}
+
+        {/* Step 4: Cultural Intelligence */}
+        {cp?.culture_brief && (
+          <TL step={4} icon="🌍" color="#0d9488" label="Cultural Intelligence">
+            <div style={{ background: "white", borderRadius: 16, border: "1px solid #99f6e4",
+              padding: "16px 20px", boxShadow: "0 2px 12px rgba(13,148,136,0.08)" }}>
+              {cp.culture_brief.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/^#+\s*/gm, "").split(/(?<=[.!?])\s+/).filter((s: string) => s.length > 25).slice(0, 4).map((s: string, i: number) => (
+                <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, padding: "10px 12px", borderRadius: 10, background: i === 0 ? "#f0fdfa" : "#f8fafc", border: `1px solid ${i === 0 ? "#99f6e4" : "#e2e8f0"}` }}>
+                  <span style={{ fontSize: 16, flexShrink: 0 }}>{["🌍", "💫", "🎯", "⚡"][i]}</span>
+                  <span style={{ fontSize: 13, color: "#1a2332", lineHeight: 1.5 }}>{s}</span>
+                </div>
+              ))}
+            </div>
+          </TL>
+        )}
+
+        {/* Step 5: Key Visual */}
+        {imagesB64.length > 0 && (
+          <TL step={5} icon="🎨" color="#be123c" label={`Key Visual${imagesB64.length > 1 ? ` — ${imagesB64.length} Variations` : ""}`}>
+            <div style={{ background: "white", borderRadius: 16, border: "1px solid #fecdd3",
+              overflow: "hidden", boxShadow: "0 2px 12px rgba(190,18,60,0.1)" }}>
+              <img src={`data:image/jpeg;base64,${imagesB64[selectedKV]}`} alt="Key visual"
+                style={{ width: "100%", display: "block" }} />
+              {imagesB64.length > 1 && (
+                <div style={{ padding: "12px 16px", borderTop: "1px solid #fecdd3", background: "#fff8f8" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#be123c", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
+                    Pick Your Variation
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {imagesB64.map((img, idx) => (
+                      <div key={idx} onClick={() => setSelectedKV(idx)}
+                        style={{ flex: 1, cursor: "pointer", borderRadius: 8, overflow: "hidden",
+                          border: `3px solid ${idx === selectedKV ? "#be123c" : "transparent"}`,
+                          opacity: idx === selectedKV ? 1 : 0.55, transition: "all 0.2s",
+                          boxShadow: idx === selectedKV ? "0 0 0 2px rgba(190,18,60,0.2)" : "none" }}>
+                        <img src={`data:image/jpeg;base64,${img}`} alt={`V${idx + 1}`}
+                          style={{ width: "100%", display: "block" }} />
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              {/* CRM Quote */}
-              {crmNote && (
-                <div style={{ padding: "10px 12px", borderRadius: 8,
-                  background: "rgba(0,0,0,0.2)", borderLeft: "2px solid #7c3aed" }}>
-                  <div style={{ fontSize: 10, color: "#7c3aed", fontWeight: 600,
-                    letterSpacing: "0.08em", marginBottom: 4 }}>CRM NOTE</div>
-                  <div style={{ fontSize: 11, color: "#64748b", lineHeight: 1.6, fontStyle: "italic" }}>
-                    "{crmNote}..."
-                  </div>
+              {cp?.image_prompt && (
+                <div style={{ padding: "10px 16px", borderTop: "1px solid #fecdd3", fontSize: 10, color: "#94a3b8", lineHeight: 1.5, fontFamily: "monospace", background: "#fff8f8" }}>
+                  {cp.image_prompt.slice(0, 200)}…
                 </div>
               )}
             </div>
-          );
-        })()}
-
-        {/* ── Pipeline Output ── */}
-        {brief && (
-          <div style={styles.resultCard}>
-            <div style={styles.cardHeader}>⚡ Pipeline Output</div>
-
-            {/* Campaign details */}
-            {[
-              { label: "Campaign",  value: brief.campaign_name },
-              { label: "Channels",  value: Array.isArray(brief.channels) ? brief.channels.join(" · ") : brief.channels },
-              { label: "Market",    value: brief.market },
-              { label: "Season",    value: brief.season },
-              { label: "Budget",    value: brief.budget },
-              { label: "Moment",    value: brief.moment_type },
-              { label: "Audience",  value: brief.audience },
-            ].filter(r => r.value).map((row, i, arr) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between",
-                alignItems: "flex-start", padding: "8px 0",
-                borderBottom: i < arr.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600,
-                  textTransform: "uppercase" as const, letterSpacing: "0.07em", flexShrink: 0, paddingRight: 12 }}>
-                  {row.label}
-                </span>
-                <span style={{ fontSize: 12, color: "#1a2332", textAlign: "right" as const }}>
-                  {String(row.value)}
-                </span>
-              </div>
-            ))}
-
-            {/* Brief summary */}
-            {brief.brief_summary && (
-              <div style={{ marginTop: 14, padding: "10px 12px", borderRadius: 8,
-                background: "#eff6ff", borderLeft: "2px solid #0055A4" }}>
-                <div style={{ fontSize: 10, color: "#0055A4", fontWeight: 600,
-                  letterSpacing: "0.08em", marginBottom: 6 }}>BRIEF SUMMARY</div>
-                <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
-                  {brief.brief_summary}
-                </div>
-              </div>
-            )}
-
-            {/* Warnings */}
-            {brief.brand_warnings?.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                {brief.brand_warnings.map((w: string, i: number) => (
-                  <div key={i} style={{ fontSize: 12, color: "#f59e0b", display: "flex",
-                    gap: 6, padding: "4px 0" }}>
-                    <span>⚠</span><span>{w}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          </TL>
         )}
 
-        {/* ── Creative Intelligence (from Full Campaign pipeline) ── */}
-        {(() => {
-          const cp = (output as any)?.creative_pipeline;
-          if (!cp?.culture_brief && !cp?.big_idea) return null;
-          return (
-            <div style={{ ...styles.resultCard, gridColumn: "1 / -1",
-              background: "linear-gradient(135deg, #f0f7ff, #eff6ff)",
-              border: "1px solid rgba(0,85,164,0.15)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                <div style={styles.cardHeader}>🌍 Creative Intelligence</div>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 12,
-                  background: "#e8f0fb", color: "#0055A4", border: "1px solid rgba(0,85,164,0.2)" }}>
-                  FULL CAMPAIGN PIPELINE
-                </span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
-                {cp.big_idea && (
-                  <div style={{ padding: "14px 16px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
-                    <div style={styles.cardLabel}>Big Idea</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#0055A4", fontStyle: "italic",
-                      lineHeight: 1.5, marginTop: 6 }}>{cp.big_idea.split("\n")[0]}</div>
+        {/* Step 6: Channel Adaptations */}
+        {adaptations && Object.keys(adaptations).length > 0 && (
+          <TL step={6} icon="📐" color="#4338ca" label={`Channel Adaptations — ${Object.keys(adaptations).length} formats`}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+              {Object.entries(adaptations).map(([key, val]) => (
+                <div key={key} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(67,56,202,0.08)" }}>
+                  <div style={{ background: "#eef2ff", padding: "6px 12px", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #e0e7ff" }}>
+                    <span style={{ fontSize: 13 }}>{CHANNEL_ICONS[key] ?? "📺"}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#4338ca" }}>{val.label}</span>
+                    <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8", fontFamily: "monospace" }}>{val.ratio}</span>
                   </div>
-                )}
-                {cp.culture_brief && (
-                  <div style={{ padding: "14px 16px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
-                    <div style={styles.cardLabel}>Cultural Intelligence</div>
-                    <div style={{ fontSize: 12, color: "#4a5568", lineHeight: 1.6, marginTop: 6 }}>
-                      {cp.culture_brief.slice(0, 250)}...
-                    </div>
-                  </div>
-                )}
-                {cp.brand_summary && (
-                  <div style={{ padding: "14px 16px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
-                    <div style={styles.cardLabel}>Brand Locks</div>
-                    <div style={{ fontSize: 12, color: "#4a5568", lineHeight: 1.6, marginTop: 6 }}>
-                      {cp.brand_summary.slice(0, 250)}...
-                    </div>
-                  </div>
-                )}
-              </div>
-              {!cp.image_b64 && (
-                <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 8,
-                  background: "#fef3c7", border: "1px solid #fde68a", fontSize: 12, color: "#92400e" }}>
-                  ⚠ Key Visual pending — enable Gemini in Vertex AI Model Garden to generate images
+                  <img src={`data:image/jpeg;base64,${val.image_b64}`} alt={val.label} style={{ width: "100%", display: "block" }} />
                 </div>
-              )}
+              ))}
             </div>
-          );
-        })()}
-
-        {/* ── Key Visual (from Full Campaign pipeline) ── */}
-        {(() => {
-          const cp = (output as any)?.creative_pipeline;
-          if (!cp?.image_b64) return null;
-          return (
-            <div style={{ ...styles.resultCard, gridColumn: "1 / -1",
-              background: "#ffffff", border: "1px solid #e2e8f0" }}>
-              <div style={styles.cardHeader}>🎨 Key Visual — Generated by Imagen 4</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "start" }}>
-                <img
-                  src={`data:image/jpeg;base64,${cp.image_b64}`}
-                  alt="Generated Key Visual"
-                  style={{ width: "100%", borderRadius: 12, border: "1px solid #e2e8f0",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.08)" }}
-                />
-                <div>
-                  {cp.big_idea && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={styles.cardLabel}>Big Idea</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: "#0055A4",
-                        fontStyle: "italic", lineHeight: 1.5, marginTop: 6 }}>
-                        {cp.big_idea.split("\n")[0]}
-                      </div>
-                    </div>
-                  )}
-                  {cp.culture_brief && (
-                    <div style={{ marginBottom: 16 }}>
-                      <div style={styles.cardLabel}>Cultural Intelligence</div>
-                      <div style={{ fontSize: 12, color: "#4a5568", lineHeight: 1.6, marginTop: 6 }}>
-                        {cp.culture_brief.slice(0, 300)}...
-                      </div>
-                    </div>
-                  )}
-                  {cp.image_prompt && (
-                    <div>
-                      <div style={styles.cardLabel}>Image Prompt</div>
-                      <div style={{ fontSize: 11, color: "#94a3b8", lineHeight: 1.6, marginTop: 6,
-                        fontFamily: "monospace", background: "#f8fafc", padding: "8px 10px",
-                        borderRadius: 6, border: "1px solid #e2e8f0" }}>
-                        {cp.image_prompt.slice(0, 200)}...
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* ── Channel Adaptations ── */}
-        {(() => {
-          const cp = (output as any)?.creative_pipeline;
-          const adaptations = cp?.channel_adaptations as Record<string, {label: string; image_b64: string; ratio: string}> | undefined;
-          if (!adaptations || Object.keys(adaptations).length === 0) return null;
-
-          const CHANNEL_ICONS: Record<string, string> = {
-            instagram_feed: "📸", instagram_stories: "📱", tiktok: "🎵",
-            google_ads: "🔍", email: "📧", ooh: "🏙️",
-          };
-
-          return (
-            <div style={{ ...styles.resultCard, gridColumn: "1 / -1",
-              background: "#ffffff", border: "1px solid #e2e8f0" }}>
-              <div style={styles.cardHeader}>📐 Channel Adaptations</div>
-              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 16 }}>
-                The key visual automatically adapted for {Object.keys(adaptations).length} channels
-              </div>
-              <div style={{ display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 16 }}>
-                {Object.entries(adaptations).map(([key, val]) => (
-                  <div key={key} style={{ borderRadius: 12, overflow: "hidden",
-                    border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
-                    {/* Label bar */}
-                    <div style={{ background: "#f8fafc", padding: "7px 12px",
-                      borderBottom: "1px solid #e2e8f0", display: "flex",
-                      alignItems: "center", gap: 6 }}>
-                      <span style={{ fontSize: 14 }}>{CHANNEL_ICONS[key] ?? "📺"}</span>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#1a2332" }}>{val.label}</span>
-                      <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8",
-                        fontFamily: "monospace" }}>{val.ratio}</span>
-                    </div>
-                    {/* Adapted image */}
-                    <img src={`data:image/jpeg;base64,${val.image_b64}`}
-                      alt={val.label} style={{ width: "100%", display: "block" }} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })()}
-
-        {/* ── Creative Strategy ── */}
-        {strategy && (strategy.hero_message || strategy.big_idea || strategy.strategic_framework) && (
-          <div style={{ ...styles.resultCard, gridColumn: "1 / -1",
-            background: "linear-gradient(135deg, #f0f7ff, #eff6ff)",
-            border: "1px solid rgba(0,85,164,0.15)" }}>
-            <div style={styles.cardHeader}>💡 Creative Strategy</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: "#0055A4",
-              fontStyle: "italic", lineHeight: 1.4, marginBottom: 20,
-              borderBottom: "1px solid #e2e8f0", paddingBottom: 16 }}>
-              "{strategy.big_idea || strategy.hero_message}"
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
-              {strategy.strategic_framework && (
-                <div style={{ padding: "12px 14px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
-                  <div style={styles.cardLabel}>Strategic Framework</div>
-                  <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, marginTop: 6 }}>{strategy.strategic_framework}</div>
-                </div>
-              )}
-              {strategy.culture_context && (
-                <div style={{ padding: "12px 14px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
-                  <div style={styles.cardLabel}>Cultural Context</div>
-                  <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, marginTop: 6 }}>{strategy.culture_context}</div>
-                </div>
-              )}
-              {strategy.handoff_message && (
-                <div style={{ padding: "12px 14px", borderRadius: 10, background: "#ffffff", border: "1px solid #e2e8f0" }}>
-                  <div style={styles.cardLabel}>Creative Brief</div>
-                  <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.6, marginTop: 6 }}>{strategy.handoff_message}</div>
-                </div>
-              )}
-            </div>
-            {strategy.messaging_pillars?.length > 0 && (
-              <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
-                {strategy.messaging_pillars.map((p: string, i: number) => (
-                  <span key={i} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 20,
-                    background: "#e8f0fb", color: "#0055A4",
-                    border: "1px solid rgba(0,85,164,0.2)" }}>{p}</span>
-                ))}
-              </div>
-            )}
-          </div>
+          </TL>
         )}
 
-        {/* ── Campaign Copy ── */}
-        {copy && (copy.short || copy.medium || copy.long || copy.short_copy) && (
-          <div style={{ ...styles.resultCard, gridColumn: "1 / -1" }}>
-            <div style={styles.cardHeader}>✍️ Campaign Copy</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16 }}>
-              {/* Short */}
-              {(copy.short?.headline || copy.short_copy) && (
-                <div style={{ padding: "14px 16px", borderRadius: 12,
-                  background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.15)" }}>
-                  <div style={{ fontSize: 10, color: "#10b981", fontWeight: 700,
-                    letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>SHORT · OOH / KV</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#1a2332", lineHeight: 1.3 }}>
-                    {copy.short?.headline || copy.short_copy}
-                  </div>
-                  {copy.short?.subline && <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>{copy.short.subline}</div>}
-                </div>
-              )}
-              {/* Medium */}
-              {(copy.medium?.headline || copy.medium_copy) && (
-                <div style={{ padding: "14px 16px", borderRadius: 12,
-                  background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.15)" }}>
-                  <div style={{ fontSize: 10, color: "#3b82f6", fontWeight: 700,
-                    letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>MEDIUM · SOCIAL / DISPLAY</div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "#1a2332", lineHeight: 1.4 }}>
-                    {copy.medium?.headline || copy.medium_copy}
-                  </div>
-                  {copy.medium?.subline && <div style={{ fontSize: 13, color: "#64748b", marginTop: 6 }}>{copy.medium.subline}</div>}
-                </div>
-              )}
-              {/* Long */}
-              {(copy.long?.headline || copy.long_copy) && (
-                <div style={{ padding: "14px 16px", borderRadius: 12,
-                  background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.15)" }}>
-                  <div style={{ fontSize: 10, color: "#f59e0b", fontWeight: 700,
-                    letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>LONG · PRESS / EDITORIAL</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "#1a2332", lineHeight: 1.4 }}>
-                    {copy.long?.headline || copy.long_copy}
-                  </div>
-                  {copy.long?.body && <div style={{ fontSize: 13, color: "#4a5568", marginTop: 8, lineHeight: 1.7 }}>{copy.long.body}</div>}
-                </div>
-              )}
-            </div>
-            {/* CTA + Platform copy */}
-            {(copy.cta || copy.instagram_caption || copy.tiktok_hook) && (
-              <div style={{ marginTop: 16, display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
-                {copy.cta && (
-                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "#f8fafc",
-                    border: "1px solid #e2e8f0", textAlign: "center" as const }}>
-                    <div style={styles.cardLabel}>CTA</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: "#173563", marginTop: 4 }}>{copy.cta}</div>
-                  </div>
-                )}
-                {copy.instagram_caption && (
-                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "#f8fafc",
-                    border: "1px solid #e2e8f0" }}>
-                    <div style={styles.cardLabel}>Instagram Caption</div>
-                    <div style={{ fontSize: 12, color: "#374151", marginTop: 4, lineHeight: 1.5 }}>{copy.instagram_caption}</div>
-                  </div>
-                )}
-                {copy.tiktok_hook && (
-                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "#f8fafc",
-                    border: "1px solid #e2e8f0" }}>
-                    <div style={styles.cardLabel}>TikTok Hook (3s)</div>
-                    <div style={{ fontSize: 12, color: "#374151", marginTop: 4, lineHeight: 1.5 }}>{copy.tiktok_hook}</div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        {/* Step 7: Launch */}
+        <TL step={7} icon="🚀" color="#6366f1" label="Launch Campaign">
+          <DistributePanel output={output} campaignId={campaignId} />
+        </TL>
 
-        {/* ── Raw output ── */}
+        {/* Raw output toggle */}
         {output && (
-          <div style={{ ...styles.resultCard, gridColumn: "1 / -1" }}>
+          <div style={{ marginTop: 16, padding: "12px 16px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
             <button style={styles.expandBtn} onClick={() => setExpanded(e => !e)}>
-              {expanded ? "▲ Hide" : "▼ Show"} full pipeline output
+              {expanded ? "▲ Hide" : "▼ Show"} full pipeline output (JSON)
             </button>
             {expanded && <pre style={styles.jsonPre}>{JSON.stringify(output, null, 2)}</pre>}
           </div>
         )}
-
-        {/* ── Distribute Campaign ── */}
-        <DistributePanel output={output} campaignId={campaignId} />
-
       </div>
 
-      {/* bottom padding so content isn't hidden behind fixed footer */}
-      <div style={{ height: 100 }} />
+      <div style={{ height: 60 }} />
     </div>
   );
 }
-
-// ── Main App ─────────────────────────────────────────────────
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
 
