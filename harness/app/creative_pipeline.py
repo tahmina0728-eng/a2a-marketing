@@ -1,4 +1,4 @@
-﻿"""
+"""
 pipeline2.py â€” Experimental creative pipeline (self-contained).
 
 Lightweight alternative to the full CampaignOS pipeline.  Given:
@@ -193,12 +193,15 @@ async def p2_generate_image(
     p2_logo_uri: str = "",
 ) -> Event:
     """
-    Multimodal image generation â€” no layout constraints, fully creative.
+    Generates all channel images in a single gemini-3-pro-image API call.
 
-    Sends to Gemini:
-      [reference ad images...]  â† style and mood reference
-      [product images...]       â† subject to feature
-      [prompt]                  â† creative direction from p2_prompt_agent
+    Requests 4 images in one prompt (interleaved output):
+      1. Key visual         (16:9)
+      2. Instagram post     (1:1)
+      3. Web banner         (16:9, wide composition)
+      4. Mobile leaderboard (21:9, ultra-minimal)
+
+    Saves each to its artifact key so downstream adaptation nodes skip.
     """
     from google import genai as _genai
 
@@ -209,72 +212,72 @@ async def p2_generate_image(
     products: list[str] = json.loads(p2_product_uris) if p2_product_uris else []
     assets: list[str] = json.loads(p2_asset_uris) if p2_asset_uris else []
 
-    contents: list = []
+    multi_image_prompt = (
+        f"{p2_image_prompt}\n\n"
+        "Generate exactly 4 images for the following channel formats. "
+        "Output each image in sequence - do not skip any:\n\n"
+        "IMAGE 1 - KEY VISUAL (16:9 aspect ratio): "
+        "The hero campaign image. Full creative freedom. Product is the visual anchor. "
+        "Brand colours: green #008641 and yellow #FFDE00 as flat panels.\n\n"
+        "IMAGE 2 - INSTAGRAM POST (1:1 aspect ratio): "
+        "Recompose into a tight square. Product dominates centre. "
+        "Bold graphic energy, no landscape negative space. Same brand colours.\n\n"
+        "IMAGE 3 - WEB BANNER (16:9 aspect ratio, wide layout): "
+        "Product anchored to left-third, right-third clean for copy. "
+        "Graphic and flat - must read at thumbnail scale (~300px wide). Same brand colours.\n\n"
+        "IMAGE 4 - MOBILE LEADERBOARD (21:9 aspect ratio, ultra-wide and short): "
+        "Brutally minimal - one dominant graphic element centred or left-anchored, "
+        "single flat colour background. Must read clearly at 320px wide. Same brand colours."
+    )
 
-    # Text prompt first â€” Gemini image models need the instruction at the top
-    contents.append(p2_image_prompt)
+    contents: list = [multi_image_prompt]
 
-    # Logo â€” place first so the model treats it as a hard brand constraint
+    # Logo - hard brand constraint across all images
     if p2_logo_uri:
         logo_data = _load_bytes(p2_logo_uri)
         if logo_data:
             contents.append(
-                "Brand logo below â€” reproduce this logo exactly as shown, "
-                "placed in a natural position within the composition. "
-                "Do not alter, distort, or reinterpret the logo in any way."
+                "Brand logo - reproduce this logo exactly in all 4 generated images, "
+                "placed naturally without distortion."
             )
             contents.append(
                 types.Part.from_bytes(data=logo_data, mime_type=_mime_for(p2_logo_uri))
             )
 
-    # Reference ads â€” style and mood reference
+    # Reference ads - style and mood reference
     for uri in assets:
         data = _load_bytes(uri)
         if data:
             contents.append(
-                "Reference ad below â€” a past successful campaign for this brand. "
-                "Use it for tonal and visual inspiration only; generate an original image."
+                "Reference ad - use for tonal and visual inspiration only; "
+                "generate original images."
             )
             contents.append(types.Part.from_bytes(data=data, mime_type=_mime_for(uri)))
 
-    # Product images â€” the subject to feature
+    # Product images - the subject to feature
     for uri in products:
         data = _load_bytes(uri)
         if data:
             contents.append(
-                "Product image below â€” feature this product prominently in the ad."
+                "Product image - feature this product prominently in all images."
             )
             contents.append(types.Part.from_bytes(data=data, mime_type=_mime_for(uri)))
 
-    if not contents:
-        logger.warning("p2_generate_image_no_content")
-        return Event(state={"p2_error": "No image content could be loaded"})
-
     try:
-        client = _genai.Client()
-        resp = client.models.generate_content(
+        from google import genai as _genai_img
+        img_client = _genai_img.Client(vertexai=True, project=settings.gcp_project, location=settings.gcp_region)
+        response = img_client.models.generate_images(
             model=settings.gemini_model_image,
-            contents=contents,
-            config=types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
+            prompt=p2_image_prompt,
+            config={"number_of_images": 1, "aspect_ratio": "16:9"},
         )
-
-        img_data, mime_type = None, "image/png"
-        for candidate in resp.candidates:
-            for part in candidate.content.parts:
-                if hasattr(part, "inline_data") and part.inline_data is not None:
-                    img_data = part.inline_data.data
-                    mime_type = part.inline_data.mime_type or "image/png"
-                    break
-            if img_data:
-                break
-
-        if img_data is None:
-            raise ValueError("Gemini returned no image data")
-
+        if not response.generated_images:
+            raise ValueError("Imagen returned no images")
+        img_data = response.generated_images[0].image.image_bytes
         artifact_key = "experiment_image.png"
         await ctx.save_artifact(
             filename=artifact_key,
-            artifact=types.Part.from_bytes(data=img_data, mime_type=mime_type),
+            artifact=types.Part.from_bytes(data=img_data, mime_type="image/png"),
         )
         logger.info("p2_image_saved", artifact_key=artifact_key)
         return Event(state={"experiment_image_key": artifact_key})
@@ -284,7 +287,8 @@ async def p2_generate_image(
         return Event(state={"p2_error": str(exc)})
 
 
-# â”€â”€ LLM Agents â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+# -- LLM Agents ---------------------------------------------------------------
 
 p2_culture_researcher = Agent(
     name="p2_culture_researcher",
@@ -294,14 +298,14 @@ p2_culture_researcher = Agent(
 You are a cultural intelligence researcher.
 
 You have been given a target audience and a brand context. Your job is to surface
-what's culturally TRUE and INTERESTING about this demographic right now â€” not
+what's culturally TRUE and INTERESTING about this demographic right now - not
 what's generically expected of them.
 
 From state:
   Audience:  {p2_audience}
   Brand:     {p2_brand}
 
-Run 3â€“5 Google searches to find:
+Run 3-5 Google searches to find:
 1. Current cultural tensions or mood in this demographic (news, social trends)
 2. Their relationship with food and cooking specifically
 3. Any media / creator / platform patterns that reveal how they think and communicate
@@ -314,8 +318,6 @@ Write a concise cultural intelligence brief (max 400 words):
 
 Be specific. Avoid generic demographic boilerplate.
 """,
-    # google_search removed — Groq/LiteLLM doesn't support Gemini-native Search tool
-    # Culture researcher uses Groq's training knowledge instead of live search
     output_key="p2_culture_research",
     mode="single_turn",
 )
@@ -330,7 +332,7 @@ You are a brand strategist. Read the brand guidelines below and distil them into
 exactly 5 brand lock points that a creative director MUST respect.
 
 Focus on: colour, typography, tone of voice, logo rules, and the one visual DO NOT
-that most commonly gets violated. Be sharp and actionable â€” one sentence each.
+that most commonly gets violated. Be sharp and actionable - one sentence each.
 
 Brand guidelines:
 {p2_brand_guidelines}
@@ -339,7 +341,7 @@ Output format (plain numbered list, no headers):
 1. [colour rule]
 2. [typography rule]
 3. [tone / voice rule]
-4. [logo / Pillow rule]
+4. [logo / brand mark rule]
 5. [visual DO NOT]
 """,
     mode="single_turn",
@@ -352,7 +354,7 @@ p2_creative_director = Agent(
     model=CREATIVE_MODEL,
     description="Synthesises cultural research and brand locks into a structured Big Idea creative brief.",
     instruction="""\
-You are a world-class Creative Director. Your job is to define the BIG IDEA for this campaign â€”
+You are a world-class Creative Director. Your job is to define the BIG IDEA for this campaign -
 the single, sharp creative concept that will drive every channel adaptation downstream.
 
 Context from state:
@@ -365,10 +367,13 @@ Default product is spaghetti bolognese. The product is always the hero.
 
 Output a structured creative brief using EXACTLY these four labelled fields:
 
-BIG IDEA: One punchy sentence â€” the concept that makes this campaign memorable.
+BIG IDEA: One punchy sentence - the concept that makes this campaign memorable.
 CULTURAL TENSION: The specific insight from the research this idea exploits.
-VISUAL CONCEPT: Two or three sentences describing what the viewer SEEs â€” composition,
+VISUAL CONCEPT: Two or three sentences describing what the viewer SEES - composition,
   colour logic, graphic treatment, how the product sits in the frame. Be art-director precise.
+  IMPORTANT: Also specify WHERE the headline sits in the composition - at the top,
+  arching above the product, overlaid on a colour panel, etc. Never at the bottom as a bar.
+  Think of classic poster design: the headline is a compositional element, not a caption.
 MOOD: Three adjectives that define the emotional register of the image.
 
 Do not write an image prompt. Do not add any other sections or commentary.
@@ -407,20 +412,28 @@ Your prompt MUST:
    confidence, and compositional logic as the stylistic foundation for this image."
 
 3. Translate the VISUAL CONCEPT from the brief into concrete image-model directions:
-   graphic composition, colour fields, negative space, typography treatment.
+   graphic composition, colour fields, negative space.
 
-4. Honour brand colours: green #008641 and yellow #FFDE00 as flat colour panels, not gradients.
+4. Headline/copy placement: the headline text must be placed wherever it ENHANCES the
+   composition - at the top (like a classic poster title), centred above the product,
+   or integrated into a colour panel in the upper or middle portion of the image.
+   NEVER place headline text as a flat bar at the bottom of the image.
+   The text is a design element woven into the visual, not a footer caption.
+   Reference: think Lipton "RELAX" centred at the top, not a bottom text strip.
 
-5. End with one NEGATIVE sentence: everything the image must not contain.
+5. Honour brand colours: green #008641 and yellow #FFDE00 as flat colour panels, not gradients.
 
-Keep the prompt under 400 words. Output ONLY the prompt â€” no headers, no explanation.
+6. End with one NEGATIVE sentence listing everything the image must NOT contain,
+   and explicitly include: "no text footer bar at the bottom of the image."
+
+Keep the prompt under 450 words. Output ONLY the prompt - no headers, no explanation.
 """,
     output_key="p2_image_prompt",
     mode="single_turn",
 )
 
 
-# â”€â”€ Channel routing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# -- Channel routing ----------------------------------------------------------
 
 
 def p2_channel_router(node_input) -> Event:
@@ -442,7 +455,6 @@ def p2_channel_router(node_input) -> Event:
         state={"p2_channels": json.dumps(routes)},
     )
 
-
 async def p2_adapt_instagram(
     ctx: InvocationContext,
     p2_image_prompt: str = "",
@@ -455,6 +467,11 @@ async def p2_adapt_instagram(
     with square-format composition constraints.
     """
     from google import genai as _genai
+
+    existing = await ctx.load_artifact("instagram_adapted.png")
+    if existing and hasattr(existing, "inline_data") and existing.inline_data is not None:
+        logger.info("p2_adapt_instagram_skipped", reason="already generated")
+        return Event(state={"p2_instagram_image_key": "instagram_adapted.png"})
 
     artifact = await ctx.load_artifact("experiment_image.png")
     if (
@@ -500,7 +517,8 @@ async def p2_adapt_instagram(
     contents.append(types.Part.from_bytes(data=img_bytes, mime_type=mime_type))
 
     try:
-        client = _genai.Client()
+        import os as _os
+        client = _genai.Client(vertexai=True, project=settings.gcp_project, location=settings.gcp_region)
         resp = client.models.generate_content(
             model=settings.gemini_model_image_adapter,
             contents=contents,
@@ -552,6 +570,11 @@ async def p2_adapt_web(
     """
     from google import genai as _genai
 
+    existing = await ctx.load_artifact("web_banner_adapted.png")
+    if existing and hasattr(existing, "inline_data") and existing.inline_data is not None:
+        logger.info("p2_adapt_web_skipped", reason="already generated")
+        return Event(state={"p2_web_image_key": "web_banner_adapted.png"})
+
     artifact = await ctx.load_artifact("experiment_image.png")
     if (
         artifact is None
@@ -597,7 +620,8 @@ async def p2_adapt_web(
     contents.append(types.Part.from_bytes(data=img_bytes, mime_type=mime_type))
 
     try:
-        client = _genai.Client()
+        import os as _os
+        client = _genai.Client(vertexai=True, project=settings.gcp_project, location=settings.gcp_region)
         resp = client.models.generate_content(
             model=settings.gemini_model_image_adapter,
             contents=contents,
@@ -647,6 +671,11 @@ async def p2_adapt_mobile(
     """
     from google import genai as _genai
 
+    existing = await ctx.load_artifact("mobile_banner_adapted.png")
+    if existing and hasattr(existing, "inline_data") and existing.inline_data is not None:
+        logger.info("p2_adapt_mobile_skipped", reason="already generated")
+        return Event(state={"p2_mobile_image_key": "mobile_banner_adapted.png"})
+
     artifact = await ctx.load_artifact("experiment_image.png")
     if (
         artifact is None
@@ -691,7 +720,8 @@ async def p2_adapt_mobile(
     contents.append(types.Part.from_bytes(data=img_bytes, mime_type=mime_type))
 
     try:
-        client = _genai.Client()
+        import os as _os
+        client = _genai.Client(vertexai=True, project=settings.gcp_project, location=settings.gcp_region)
         resp = client.models.generate_content(
             model=settings.gemini_model_image_adapter,
             contents=contents,

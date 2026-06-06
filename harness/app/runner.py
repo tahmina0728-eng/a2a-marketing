@@ -500,71 +500,60 @@ def _apply_brand_overlay(img_data: bytes, brand: str, headline: str, product_uri
         overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         draw    = ImageDraw.Draw(overlay)
 
-        # Bottom bar (semi-transparent brand colour)
-        bar_h = int(H * 0.22)
-        bar_color = hex_to_rgba(colors["bar"], 210)
-        draw.rectangle([(0, H - bar_h), (W, H)], fill=bar_color)
-
-        # Subtle gradient fade into bar (top 30px of bar)
-        for i in range(30):
-            alpha = int(210 * (i / 30))
-            draw.rectangle([(0, H - bar_h - 30 + i), (W, H - bar_h - 29 + i)],
+        # ── Top bar: semi-transparent brand colour panel at the top ──────────
+        bar_h     = int(H * 0.22)
+        bar_color = hex_to_rgba(colors["bar"], 200)
+        draw.rectangle([(0, 0), (W, bar_h)], fill=bar_color)
+        # Fade out at bottom of bar
+        for i in range(40):
+            alpha = int(200 * (1 - i / 40))
+            draw.rectangle([(0, bar_h - 40 + i), (W, bar_h - 39 + i)],
                             fill=(*hex_to_rgba(colors["bar"])[:3], alpha))
 
-        # â"€â"€ Load fonts â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-        headline_size = max(32, W // 18)
-        brand_size    = max(18, W // 32)
+        # ── Fonts ─────────────────────────────────────────────────────────────
+        headline_size = max(30, W // 19)
+        brand_size    = max(16, W // 36)
         try:
-            if font_path:
-                font_headline = ImageFont.truetype(font_path, headline_size)
-                font_brand    = ImageFont.truetype(font_path, brand_size)
-            else:
-                font_headline = ImageFont.load_default(size=headline_size)
-                font_brand    = ImageFont.load_default(size=brand_size)
+            font_headline = ImageFont.truetype(font_path, headline_size) if font_path else ImageFont.load_default(size=headline_size)
+            font_brand    = ImageFont.truetype(font_path, brand_size)    if font_path else ImageFont.load_default(size=brand_size)
         except Exception:
             font_headline = ImageFont.load_default()
             font_brand    = ImageFont.load_default()
 
-        # â"€â"€ Draw headline â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-        text_color = hex_to_rgba(colors["text"])
-        # Word-wrap headline to 2 lines max
+        # ── Headline: word-wrap, centred in top bar ───────────────────────────
+        text_color   = hex_to_rgba(colors["text"])
+        accent_color = hex_to_rgba(colors["accent"])
         words = headline.split()
-        lines, current = [], []
+        lines, cur = [], []
         for w in words:
-            test = " ".join(current + [w])
-            bb   = draw.textbbox((0, 0), test, font=font_headline)
-            if bb[2] - bb[0] > W * 0.85 and current:
-                lines.append(" ".join(current))
-                current = [w]
+            test = " ".join(cur + [w])
+            bb = draw.textbbox((0, 0), test, font=font_headline)
+            if bb[2] - bb[0] > W * 0.82 and cur:
+                lines.append(" ".join(cur)); cur = [w]
             else:
-                current.append(w)
-        if current:
-            lines.append(" ".join(current))
+                cur.append(w)
+        if cur:
+            lines.append(" ".join(cur))
 
-        # Position: centered in bar
-        line_h  = headline_size + 6
-        total_h = len(lines) * line_h
-        y_start = H - bar_h + (bar_h - total_h - brand_size - 12) // 2
+        line_h  = headline_size + 8
+        total_h = len(lines) * line_h + brand_size + 10
+        y = max(8, (bar_h - total_h) // 2)
 
         for line in lines:
-            bb   = draw.textbbox((0, 0), line, font=font_headline)
-            tw   = bb[2] - bb[0]
-            draw.text(((W - tw) // 2, y_start), line, fill=text_color, font=font_headline)
-            y_start += line_h
+            bb = draw.textbbox((0, 0), line, font=font_headline)
+            draw.text(((W - (bb[2]-bb[0])) // 2, y), line, fill=text_color, font=font_headline)
+            y += line_h
 
-        # â"€â"€ Draw brand name â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-        accent_color = hex_to_rgba(colors["accent"])
-        brand_text   = brand.upper()
-        bb   = draw.textbbox((0, 0), brand_text, font=font_brand)
-        bw   = bb[2] - bb[0]
-        draw.text(((W - bw) // 2, y_start + 4), brand_text,
-                  fill=accent_color, font=font_brand)
+        # ── Brand name: accent colour, same style as logo, below headline ─────
+        y += 2
+        # Thin accent line separator
+        draw.rectangle([(W // 2 - 36, y), (W // 2 + 36, y + 2)], fill=accent_color)
+        y += 6
+        brand_text = brand.upper()
+        bb = draw.textbbox((0, 0), brand_text, font=font_brand)
+        draw.text(((W - (bb[2]-bb[0])) // 2, y), brand_text, fill=accent_color, font=font_brand)
 
-        # Accent line above brand name
-        line_y = H - brand_size - 20
-        draw.rectangle([(W // 2 - 40, line_y), (W // 2 + 40, line_y + 2)],
-                        fill=accent_color)
-
+        # ── Brand logo (top-left corner) ──────────────────────────────────────
         # ── Brand logo (top-left corner) ──────────────────────────────────────
         try:
             from app.brand_assets import get_asset_loader as _gal_ov
@@ -747,14 +736,14 @@ Create a Big Idea for this campaign. Output:
     }
     _brand_palette_str = _BRAND_PALETTE.get(brand, "brand primary colour, accent colour, white base")
 
-    image_prompt = await _llm(f"""You are a senior creative director writing Imagen 4 prompts for premium advertising campaigns.
+    image_prompt = await _llm(f"""You are a senior creative director writing Gemini 3 Pro Image prompts for premium advertising campaigns.
 
 Brand: {brand}
 Brand colour palette: {_brand_palette_str}
 Campaign Big Idea: {big_idea}
 Brand locks: {brand_summary}
 
-Write a Imagen 4 image generation prompt that produces a PREMIUM ADVERTISING KEY VISUAL.
+Write a Gemini 3 Pro Image generation prompt that produces a PREMIUM ADVERTISING KEY VISUAL.
 
 The prompt must describe:
 1. PHOTOGRAPHY STYLE: Professional advertising photography, DSLR shot, shallow depth of field (f/1.8-f/2.8), editorial quality, award-winning campaign imagery
@@ -773,7 +762,7 @@ STRICT RULES:
 Output only the prompt text, nothing else.""", temp=0.7)
     log.info("p2_prompt_agent_done")
     await _emit("kv", "step_data", _json2.dumps({"image_prompt": image_prompt[:350]}))
-    await _emit("kv", "running", "Generating key visual with Imagen 4…")
+    await _emit("kv", "running", "Generating key visual with Gemini 3 Pro Image…")
 
     # Stage 5: Image generation via Google AI
     image_b64 = None
@@ -837,41 +826,44 @@ Output only the prompt text, nothing else.""", temp=0.7)
                 f"{style_analysis}"
             )
 
-        # â"€â"€ Step C: Generate key visual with Imagen 4 â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-        image_model = os.getenv("IMAGE_GEN_MODEL", "imagen-4.0-generate-001")
+        # -- Step C: Generate key visual with Imagen 4 --------------------------------
+        image_model = _get_settings().gemini_model_image
+        headline_text = big_idea_seed if big_idea_seed else _extract_headline(big_idea)
         log.info("p2_generate_image_start", model=image_model, has_style_ref=bool(style_analysis))
-        await _emit("kv", "running", f"Generating key visual with {image_model}…")
+        await _emit("kv", "running", f"Generating key visual with {image_model}...")
+
         response = client.models.generate_images(
-            model  = image_model,
-            prompt = enriched_prompt,
-            config = {"number_of_images": 1, "aspect_ratio": "1:1"},
+            model=image_model,
+            prompt=enriched_prompt,
+            config={"number_of_images": 1, "aspect_ratio": "1:1"},
         )
-        if response.generated_images:
-            img_data = response.generated_images[0].image.image_bytes
+        if not response.generated_images:
+            raise ValueError("Imagen 4 returned no images")
+        img_data = response.generated_images[0].image.image_bytes
 
-            # Apply brand text overlay with Pillow
-            img_data = _apply_brand_overlay(
-                img_data    = img_data,
-                brand       = brand,
-                headline    = big_idea_seed if big_idea_seed else _extract_headline(big_idea),
-                product_uris= product_uris,
-            )
-            image_b64 = base64.b64encode(img_data).decode("utf-8")
-            log.info("p2_generate_image_done", size_kb=len(img_data) // 1024)
+        img_data = _apply_brand_overlay(
+            img_data     = img_data,
+            brand        = brand,
+            headline     = headline_text,
+            product_uris = product_uris,
+        )
 
-            # Generate channel adaptations (smart crops for different aspect ratios)
-            channel_adaptations: dict = {}
-            for rw, rh, label, key in _CHANNEL_FORMATS:
-                adapted = _create_channel_adaptation(img_data, rw, rh, label, brand)
-                if adapted:
-                    channel_adaptations[key] = {"label": label, "image_b64": adapted,
-                                                "ratio": f"{rw}:{rh}"}
-            log.info("p2_channel_adaptations_done", count=len(channel_adaptations))
+        image_b64 = base64.b64encode(img_data).decode("utf-8")
+        log.info("p2_generate_image_done", size_kb=len(img_data) // 1024)
 
-            # Push main image + adaptations as step_data
-            await _emit("kv", "step_data", _json2.dumps({"image_b64": image_b64}))
-            await _asyncio.sleep(5)  # Let UI display image before channel agent
-            await _emit("kv", "done", "Key visual generated ✓")
+        # Generate channel adaptations (smart crops for different aspect ratios)
+        channel_adaptations: dict = {}
+        for rw, rh, label, key in _CHANNEL_FORMATS:
+            adapted = _create_channel_adaptation(img_data, rw, rh, label, brand)
+            if adapted:
+                channel_adaptations[key] = {"label": label, "image_b64": adapted,
+                                            "ratio": f"{rw}:{rh}"}
+        log.info("p2_channel_adaptations_done", count=len(channel_adaptations))
+
+        # Push main image + adaptations as step_data
+        await _emit("kv", "step_data", _json2.dumps({"image_b64": image_b64}))
+        await _asyncio.sleep(5)  # Let UI display image before channel agent
+        await _emit("kv", "done", "Key visual generated ✓")
     except Exception as e:
         image_error = str(e)
         log.warning("p2_generate_image_failed", error=image_error)
