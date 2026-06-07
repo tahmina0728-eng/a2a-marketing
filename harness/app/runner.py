@@ -526,18 +526,14 @@ def _apply_brand_overlay(
     product_name: str = "",
 ) -> bytes:
     """
-    Editorial brand overlay — no background colour bar.
+    Editorial advertising overlay — no coloured bar.
 
-    1. Brand logo — top-left corner, transparent PNG pasted directly onto the
-       photo. A soft white glow behind the logo ensures it reads on any scene.
+    Design: billboard-scale word-by-word text stacked vertically in the left
+    zone of the image (variable font sizes, ALL CAPS, left-aligned), with a
+    soft dark bloom behind it so the white type reads on any background.
+    Brand logo at top-right corner (balances left text).
 
-    2. Campaign headline — placed at ~62 % image height so it floats between
-       the subject and the bottom edge (not top, not bottom).
-       Effect: dark soft-bloom shadow (Gaussian blur of black text) creates a
-       "magical" halo that integrates the white text into the photo without
-       any solid panel or rectangle.
-
-    Nothing else — no product text, no coloured bar, no gradient bleed.
+    References: Weleda "YOU / ARE / NATURE", Sunsilk, Dove editorial ads.
     """
     try:
         from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -546,7 +542,7 @@ def _apply_brand_overlay(
 
         img = Image.open(io.BytesIO(img_data)).convert("RGBA")
         W, H = img.size
-        margin = max(16, int(W * 0.025))
+        margin = max(20, int(W * 0.03))
 
         # ── Brand font ────────────────────────────────────────────────────────
         BRAND_FONT_PREFS = {
@@ -578,7 +574,92 @@ def _apply_brand_overlay(
             except Exception:
                 return ImageFont.load_default()
 
-        # ── 1. Brand logo — top-left, no background ───────────────────────────
+        # ── Brand colors ──────────────────────────────────────────────────────
+        BRAND_ACCENT = {
+            "Sunglow": (255, 199, 44),   # Sunshine Yellow #FFC72C
+            "Rnorr":   (255, 222,  0),   # Rnorr Yellow #FFDE00
+            "Boozt":   (  0, 134, 254),  # Boozt Blue #0086FE
+        }
+        accent_rgb = BRAND_ACCENT.get(brand, (255, 255, 255))
+
+        # ── 1. Split headline into words — one per line ───────────────────────
+        words = [w.strip() for w in (headline or "").split() if w.strip()]
+        if not words:
+            words = [brand.upper()]
+
+        # Variable font sizes — creates dramatic visual hierarchy like billboard ads
+        # Assign size category to each word index
+        n = len(words)
+        def _word_size(i: int) -> int:
+            if n == 1:
+                return max(72, W // 9)
+            if n == 2:
+                return max(64, W // 10) if i == 0 else max(72, W // 8)
+            if n == 3:
+                sizes = [max(36, W // 22), max(80, W // 8), max(44, W // 16)]
+                return sizes[i]
+            # 4+ words: first word small, next 1-2 words huge, rest medium
+            if i == 0:
+                return max(32, W // 24)       # small intro
+            elif i <= n // 2:
+                return max(76, W // 9)        # HUGE hero words
+            else:
+                return max(40, W // 18)       # medium outro
+
+        # Build line specs: (word_uppercase, font_size, font_object)
+        lines_spec = []
+        for i, word in enumerate(words):
+            sz = _word_size(i)
+            lines_spec.append((word.upper(), sz, _font(sz)))
+
+        # ── Measure text block ────────────────────────────────────────────────
+        _tmp = Image.new("RGBA", (W, 4))
+        _td  = ImageDraw.Draw(_tmp)
+        max_text_w = int(W * 0.50)   # text lives in left 50% of image
+
+        line_data = []   # (text, font, line_h, text_w)
+        for word, sz, fnt in lines_spec:
+            bb   = _td.textbbox((0, 0), word, font=fnt)
+            tw   = bb[2] - bb[0]
+            th   = bb[3] - bb[1]
+            gap  = max(4, int(sz * 0.10))   # inter-line gap proportional to size
+            line_data.append((word, fnt, th + gap, tw))
+
+        block_h = sum(ld[2] for ld in line_data)
+        block_w = max(ld[3] for ld in line_data)
+
+        # Vertically centre the block in the image
+        text_y_start = max(margin, (H - block_h) // 2)
+        text_x       = margin
+
+        # ── 2. Dark bloom shadow behind the entire text block ─────────────────
+        # Draw all words in black on a transparent layer, blur into a soft halo
+        bloom = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        bd    = ImageDraw.Draw(bloom)
+        y = text_y_start
+        for word, fnt, lh, tw in line_data:
+            # Thick black copies for strong bloom core
+            for dx, dy in [(-3,-3),(3,-3),(-3,3),(3,3),(0,-2),(0,2),(-2,0),(2,0),(0,0)]:
+                bd.text((text_x + dx, y + dy), word, font=fnt, fill=(0, 0, 0, 220))
+            y += lh
+
+        bloom_wide  = bloom.filter(ImageFilter.GaussianBlur(radius=24))   # wide soft halo
+        bloom_tight = bloom.filter(ImageFilter.GaussianBlur(radius=8))    # tight shadow core
+        img = Image.alpha_composite(img, bloom_wide)
+        img = Image.alpha_composite(img, bloom_tight)
+
+        # ── 3. White text — billboard scale, left-aligned ─────────────────────
+        draw = ImageDraw.Draw(img)
+        y = text_y_start
+        for i, (word, fnt, lh, tw) in enumerate(line_data):
+            # 1-px crisp shadow
+            draw.text((text_x + 2, y + 2), word, font=fnt, fill=(0, 0, 0, 120))
+            # Main text — first word in accent colour for visual pop, rest white
+            color = (*accent_rgb, 255) if i == 0 and len(line_data) > 1 else (255, 255, 255, 250)
+            draw.text((text_x, y), word, font=fnt, fill=color)
+            y += lh
+
+        # ── 4. Brand logo — top-right corner (balances left text) ────────────
         try:
             from app.brand_assets import get_asset_loader as _gal
             _logos = _gal().list_logos(brand)
@@ -601,97 +682,33 @@ def _apply_brand_overlay(
                         pass
                 if _logo_bytes:
                     _logo = Image.open(io.BytesIO(_logo_bytes)).convert("RGBA")
-                    # Scale: max 16 % of image width, max 12 % of image height
-                    max_lw = int(W * 0.16)
-                    max_lh = int(H * 0.12)
+                    max_lw = int(W * 0.14)
+                    max_lh = int(H * 0.10)
                     sc     = min(max_lw / max(1, _logo.width),
                                  max_lh / max(1, _logo.height), 1.0)
                     lw     = max(32, int(_logo.width  * sc))
                     lh     = max(32, int(_logo.height * sc))
                     _logo  = _logo.resize((lw, lh), Image.LANCZOS)
 
-                    # Soft white glow behind logo so it reads on any background
-                    glow_r = max(8, int(lw * 0.25))
-                    glow   = Image.new("RGBA", (lw + glow_r * 2, lh + glow_r * 2), (0, 0, 0, 0))
-                    gd     = ImageDraw.Draw(glow)
-                    gd.ellipse(
-                        [glow_r // 2, glow_r // 2,
-                         lw + glow_r + glow_r // 2, lh + glow_r + glow_r // 2],
-                        fill=(255, 255, 255, 60),
-                    )
-                    glow = glow.filter(ImageFilter.GaussianBlur(radius=glow_r))
-
-                    lx = margin
+                    # Soft white glow behind logo
+                    gr = max(6, int(lw * 0.2))
+                    glow = Image.new("RGBA", (lw + gr*2, lh + gr*2), (0,0,0,0))
+                    gd   = ImageDraw.Draw(glow)
+                    gd.ellipse([gr//2, gr//2, lw+gr+gr//2, lh+gr+gr//2],
+                               fill=(255,255,255,50))
+                    glow = glow.filter(ImageFilter.GaussianBlur(radius=gr))
+                    lx = W - lw - margin      # top-RIGHT
                     ly = margin
-                    img.paste(glow, (lx - glow_r, ly - glow_r), glow)
+                    img.paste(glow, (lx - gr, ly - gr), glow)
                     img.paste(_logo, (lx, ly), _logo)
         except Exception as _le:
             logger.debug("logo_skipped", brand=brand, error=str(_le))
 
-        # ── 2. Headline — editorial bloom overlay ─────────────────────────────
-        if headline:
-            hl_size  = max(34, W // 16)    # large, prominent
-            f_hl     = _font(hl_size)
-
-            # Word-wrap to 88 % of image width
-            max_tw = int(W * 0.88)
-            _tmp_img = Image.new("RGBA", (W, 4))
-            _tmp_d   = ImageDraw.Draw(_tmp_img)
-
-            words = headline.split()
-            lines, cur = [], []
-            for w in words:
-                test = " ".join(cur + [w])
-                bb = _tmp_d.textbbox((0, 0), test, font=f_hl)
-                if bb[2] - bb[0] > max_tw and cur:
-                    lines.append(" ".join(cur)); cur = [w]
-                else:
-                    cur.append(w)
-            if cur:
-                lines.append(" ".join(cur))
-
-            line_h = hl_size + int(hl_size * 0.18)
-            block_h = len(lines) * line_h
-
-            # Vertical position: 62 % down (floats between subject and frame edge)
-            text_top = int(H * 0.62) - block_h // 2
-            text_top = max(margin, min(text_top, H - block_h - margin))
-
-            # --- Step A: dark bloom shadow layer ---
-            # Draw text in opaque black on a transparent layer, blur heavily
-            bloom_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-            bd = ImageDraw.Draw(bloom_layer)
-            for line in lines:
-                bb  = bd.textbbox((0, 0), line, font=f_hl)
-                tw  = bb[2] - bb[0]
-                bx  = (W - tw) // 2          # horizontally centred
-                by  = text_top + lines.index(line) * line_h
-                # Draw several thick shadow copies for a strong bloom
-                for _dx, _dy in [(-2,-2),(2,-2),(-2,2),(2,2),(0,0)]:
-                    bd.text((bx + _dx, by + _dy), line, font=f_hl, fill=(0, 0, 0, 200))
-            bloom_blurred = bloom_layer.filter(ImageFilter.GaussianBlur(radius=18))
-            # Second pass with tighter blur for a sharper core
-            bloom_sharp   = bloom_layer.filter(ImageFilter.GaussianBlur(radius=6))
-            img = Image.alpha_composite(img, bloom_blurred)
-            img = Image.alpha_composite(img, bloom_sharp)
-
-            # --- Step B: white text on top ---
-            draw = ImageDraw.Draw(img)
-            for i, line in enumerate(lines):
-                bb  = draw.textbbox((0, 0), line, font=f_hl)
-                tw  = bb[2] - bb[0]
-                bx  = (W - tw) // 2
-                by  = text_top + i * line_h
-                # Subtle 1-px shadow for crispness
-                draw.text((bx + 1, by + 1), line, font=f_hl, fill=(0, 0, 0, 100))
-                draw.text((bx, by),         line, font=f_hl, fill=(255, 255, 255, 245))
-
-        # ── Output ────────────────────────────────────────────────────────────
         result = img.convert("RGB")
         buf    = io.BytesIO()
         result.save(buf, format="JPEG", quality=93)
         logger.info("brand_overlay_applied", brand=brand,
-                    headline=(headline or "")[:50], W=W, H=H)
+                    words=words, W=W, H=H)
         return buf.getvalue()
 
     except Exception as e:
@@ -862,21 +879,44 @@ Brand colour palette: {_brand_palette_str}
 Campaign Big Idea: {big_idea}
 Brand locks: {brand_summary}
 
-Write a Gemini 3 Pro Image generation prompt that produces a PREMIUM ADVERTISING KEY VISUAL.
+Write an Imagen 4 generation prompt for a PREMIUM PRINT / DIGITAL ADVERTISING KEY VISUAL.
+Think: Weleda "You Are Nature", Sunsilk, Dove, L'Oreal Elvive — bold, saturated, product-forward
+advertising that wins awards. This is NOT a lifestyle snapshot. It IS an ad.
 
-The prompt must describe:
-1. PHOTOGRAPHY STYLE: Professional advertising photography, DSLR shot, shallow depth of field (f/1.8-f/2.8), editorial quality, award-winning campaign imagery
-2. SCENE: A specific, cinematic lifestyle moment that connects emotionally with the audience. Show a real person in a real moment — not a product still life
-3. LIGHTING: Specific lighting setup (e.g. "golden hour natural light", "soft studio diffused light", "warm candlelit") that flatters the scene
-4. COMPOSITION: Rule of thirds, clear hero subject, intentional negative space for the brand mark
-5. COLOUR GRADING: The brand palette ({_brand_palette_str}) must be woven into the scene through props, wardrobe, environment — not as flat overlays
-6. MOOD: The emotional feeling the viewer should experience
+Choose ONE of these proven advertising composition patterns that best fits the Big Idea:
 
-STRICT RULES:
-- NO text, letters, words, brand names, logos, watermarks, or typography anywhere in the image
-- NO product packaging shown prominently — product appears naturally in context
-- Photorealistic, not illustrated or animated
-- Be 180-240 words
+A) BOLD SPLIT: Left ~45% = flat brand-primary colour field (zero photographic content, clean and clear).
+   Right 55% = subject (person) with dynamic energy bursting toward the left. Product prominently
+   featured in the foreground centre, straddling both halves. Result: clear left zone for large type.
+
+B) PRODUCT HERO + PERSON: Product at large display scale in foreground (label facing camera, lit
+   dramatically). Person positioned left or right providing emotional context. Brand colour fills
+   the background as a studio gradient. Like a Pantene or Sunsilk product campaign.
+
+C) EDITORIAL MAGAZINE COVER: Subject fills the frame. Brand colour appears as the environment
+   (wardrobe, backdrop, props ALL in brand palette). Product held naturally at waist or side,
+   clearly visible. Upper-left quarter is intentionally clear (simpler background) for type.
+
+For this brand and Big Idea, choose the pattern that best expresses the campaign emotion.
+
+Describe precisely:
+1. LAYOUT: Name the composition pattern (A, B, or C). State which zone is left clear for type
+   overlay and why it will have low visual complexity (flat colour, smooth gradient, or sky).
+2. SUBJECT: Person — who they are, emotional state, movement, expression. They embody the Big Idea.
+3. PRODUCT: The hero product MUST be prominently visible — label facing camera, lit beautifully,
+   placed in foreground or mid-ground. Specify exact placement and scale. This is an advertisement.
+4. LIGHTING: Named setup — beauty dish, golden hour rim light, soft studio key — that makes both
+   person and product look premium.
+5. COLOUR: Brand palette ({_brand_palette_str}) saturates the entire scene — wardrobe, props,
+   environment, product accent. Bold, punchy colour, not muted.
+6. MOOD: One sentence — the precise emotion the viewer feels in the first 2 seconds.
+
+ABSOLUTE RULES:
+- NO text, letters, logos, or watermarks rendered in the image
+- Product packaging IS expected — make it visible and beautiful
+- Photorealistic, DSLR-quality advertising photography
+- Bold, saturated, award-winning colour grading — not desaturated or moody
+- 210-260 words
 
 Output only the prompt text, nothing else.""", temp=0.7)
     log.info("p2_prompt_agent_done")

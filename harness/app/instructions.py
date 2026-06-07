@@ -533,25 +533,43 @@ that makes the image feel like a poster rather than a photo? Be specific
 about the visual architecture before describing individual elements.
 
 [LAYOUT & COMPOSITION]
-Describe the spatial arrangement in precise, designerly terms: the grid,
-the zones, the proportional relationships between image area and type area.
-What occupies which part of the frame? What is given breathing room?
-Name composition techniques if relevant.
+Choose one of these ADVERTISING COMPOSITION PATTERNS and name it:
+
+  BOLD SPLIT: Left 40-45% = flat brand-primary colour field (no photographic
+  content). Right 55-60% = person with dynamic energy toward the left.
+  Product in foreground centre straddling both halves.
+  Text zone: the clear left colour field.
+
+  PRODUCT HERO: Product at display scale in foreground, label facing camera.
+  Person left or right for emotional context. Brand colour as studio backdrop.
+  Text zone: upper-left quarter (smooth gradient or plain colour).
+
+  EDITORIAL COVER: Person fills frame. Brand colour in wardrobe/environment.
+  Product held naturally, clearly visible. Upper-left or lower-left is
+  intentionally simple (plain background, sky) for type overlay.
+
+Describe: which pattern, what occupies each zone, proportional relationships,
+how the left or upper-left zone is kept visually clean for large text overlay.
 
 [IMAGE ELEMENT]
+CRITICAL: The product MUST be prominently visible — this is an advertisement,
+not documentary photography. Label facing camera, lit to look premium.
+
 Identify which product key(s) from product_description_map to feature (1–3).
-For EACH product reference, state BOTH its key (Product1, Product2, etc.)
-and its real-world description from product_description_map, so the model
-knows exactly what it is rendering. For example:
+For EACH product, state BOTH the key (Product1, Product2, etc.) AND its
+real-world description from product_description_map. Example:
   "Product1 ({{product_description_map key=Product1}}) as hero — dominant
-  lower-centre, label facing camera, warm side-lit surface."
-State each product's role:
-  hero      — dominant subject, eye goes here first
-  supporting — context or scale reference, secondary read
-  detail    — texture, ingredient, or finish accent
-Describe scale, angle, lighting treatment, and surface quality.
-If the design approach requires photographic manipulation (duotone,
-grain, vignette, graphic treatment), specify it here.
+  foreground-centre, label facing camera, warm side-lit surface, large scale."
+
+Product roles:
+  hero      — dominant, eye goes here first; must be clearly identifiable
+  supporting — secondary scale/context reference
+  detail    — texture or ingredient accent
+
+Describe: scale (hero product should feel large and intentional), angle
+(label facing camera), lighting (beautiful, product-flattering), surface
+quality, and how it integrates with the composition pattern chosen above.
+The product is co-equal with the person — both earn their place in the frame.
 
 [COLOUR ARCHITECTURE]
 DO NOT write hex codes — Imagen renders them as visible text on the image.
@@ -565,21 +583,20 @@ brand_locks_json — but express them as colour names, never hex values.
 ALWAYS verify against brand_visual_rules for forbidden colour pairings.
 
 [TYPOGRAPHY DESIGN]
-⚠ DO NOT ask the image model to render any visible headline text.
-Typography and the campaign headline are applied in post-processing using
-the brand's actual TTF font file and approved copy from the copy agent.
-Asking Imagen to render text produces unreliable, low-quality type.
+⚠ DO NOT ask the image model to render any visible text, headline, or type.
+Typography is applied in post-processing at BILLBOARD SCALE using the brand
+TTF font — word-by-word, left-aligned, variable sizes (like Weleda, ONT Move).
 
-Instead, describe the VISUAL ZONE reserved for the headline overlay:
-  Reserved zone: which area of the frame the headline band occupies
-    (e.g. "lower 18% of frame — a solid brand-primary colour strip,
-            free of photographic content, reserved for headline overlay"
-           "left third — flat brand-colour panel, clear of image detail,
-            for bold typographic overlay")
-  Composition guidance: how the photographic content should relate to
-    the type zone — the image should NOT extend busy detail into this zone.
-    The zone should be compositionally intentional, not an afterthought.
-  Visual hierarchy: what the eye sees before arriving at the type zone
+Instead, describe the TEXT ZONE so the image composition honours it:
+  Zone location: LEFT THIRD of the frame (preferred) — this is where the
+  billboard text will be overlaid. OR upper-left quarter for editorial cover.
+  Zone requirement: this area must have LOW VISUAL COMPLEXITY — flat brand
+  colour field, clean gradient, simple sky, or smooth bokeh background.
+  NO busy detail, faces, or products in this zone.
+  Composition guidance: the person and product should occupy the RIGHT 60%
+  of the frame, leaning or facing LEFT toward the text zone.
+  Visual hierarchy: the photographic content draws the eye RIGHT first,
+  then the gaze travels LEFT to where the headline will live.
 
 [PHOTOGRAPHIC STYLE]
 Commercial still life? Editorial lifestyle? CGI product visualisation?
