@@ -514,6 +514,13 @@ space, rule, logo zone — is a design decision. Ask yourself:
 HOW TO WRITE YOUR NANO BANANA PRO PROMPT
 ════════════════════════════════════════════════════════════
 
+⚠ CRITICAL — HEX CODES IN IMAGE PROMPTS:
+NEVER include hex color codes (e.g. #FFDE00, #FFFFFF, #F9F7F9, #1A1A1A)
+anywhere in the image_prompt text. Imagen renders every hex code it sees as
+literal visible characters on the generated image. Describe ALL colors by
+name only — e.g. "brand yellow", "deep forest green", "soft off-white",
+"charcoal black", "Rnorr Green". Use brand color role names, never hex values.
+
 The image_prompt field is a Nano Banana Pro generation prompt passed
 DIRECTLY to the image model. Write it as a professional prompt engineer
 who is also a world-class art director. Structure it in labelled sections:
@@ -547,28 +554,32 @@ If the design approach requires photographic manipulation (duotone,
 grain, vignette, graphic treatment), specify it here.
 
 [COLOUR ARCHITECTURE]
-Reference exact hex codes from brand_locks_json. Name the role of each:
-which colour dominates the field, which is an accent, which is a structure
-colour (borders, rules, zones). Include any flat-colour panels or graphic
-colour fields. ALWAYS verify against brand_visual_rules — if a colour
-combination is listed as failing contrast, do not use it.
+DO NOT write hex codes — Imagen renders them as visible text on the image.
+Describe every colour by name and role only. Examples:
+  "Background field: Rnorr Green — the brand's dominant, saturated green"
+  "Type colour: deep charcoal — dark neutral, high contrast on off-white"
+  "Accent strip: brand yellow — Rnorr's warm, energetic highlight colour"
+  "Panel: soft off-white — the brand's neutral base, near-white"
+Use the brand's named colour roles (primary, accent, neutral) from
+brand_locks_json — but express them as colour names, never hex values.
+ALWAYS verify against brand_visual_rules for forbidden colour pairings.
 
 [TYPOGRAPHY DESIGN]
-This is not a placement note — it is a design specification.
-The headline and type are visual elements with mass and position.
-Specify:
-  Headline: "[SHORT.headline verbatim from campaign_copy — do not paraphrase]"
-  [optional] Subline: "[SHORT.subline verbatim, only if present]"
-  Layout role: where the type lives in the design and WHY
-    (e.g. "left-aligned flush column anchoring the left third of frame"
-          "massive headline bleeding off the right edge at 40% opacity"
-          "type reversed out of a solid brand-colour panel, lower quarter")
-  Scale: relative size (e.g. "display scale, headline ~15% of frame height")
-  Font: brand font from brand_locks_json, weight, tracking
-  Colour: hex from brand_locks_json — MUST pass contrast against background.
-          White (#FFFFFF) on Rnorr Yellow (#FFDE00) FAILS — never use.
-          Safe pairings: White on Green, Charcoal on White, Charcoal on Yellow.
-  Any other typographic detail: all-caps, letterspacing, line-break intent
+⚠ DO NOT ask the image model to render any visible headline text.
+Typography and the campaign headline are applied in post-processing using
+the brand's actual TTF font file and approved copy from the copy agent.
+Asking Imagen to render text produces unreliable, low-quality type.
+
+Instead, describe the VISUAL ZONE reserved for the headline overlay:
+  Reserved zone: which area of the frame the headline band occupies
+    (e.g. "lower 18% of frame — a solid brand-primary colour strip,
+            free of photographic content, reserved for headline overlay"
+           "left third — flat brand-colour panel, clear of image detail,
+            for bold typographic overlay")
+  Composition guidance: how the photographic content should relate to
+    the type zone — the image should NOT extend busy detail into this zone.
+    The zone should be compositionally intentional, not an afterthought.
+  Visual hierarchy: what the eye sees before arriving at the type zone
 
 [PHOTOGRAPHIC STYLE]
 Commercial still life? Editorial lifestyle? CGI product visualisation?

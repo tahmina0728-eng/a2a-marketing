@@ -75,6 +75,12 @@ const BRANDS = [
   { id: "Boozt",     label: "Boozt",      emoji: "💨" },
 ];
 
+const BRAND_WEBSITES: Record<string, string> = {
+  Rnorr:   "https://www.knorr.com",
+  Sunglow: "https://www.sunglow.com",
+  Boozt:   "https://www.boozt.com",
+};
+
 const BRAND_PRODUCTS: Record<string, string[]> = {
   Rnorr:     ["Chicken Stock Cubes", "Beef Stock Cubes", "Vegetable Stock Cubes",
               "Stock Pots", "Bouillon Powder", "Concentrated Liquid Stock",
@@ -1419,7 +1425,7 @@ const PUBLISH_CHANNEL_CFG: Record<string, { icon: string; color: string; bg: str
   "OOH":        { icon: "🏙️", color: "#d97706", bg: "#fffbeb", border: "#fde68a", desc: "Digital billboard",     publishKey: "ooh"       },
   "Google Ads": { icon: "🔍", color: "#1967d2", bg: "#eff6ff", border: "#bfdbfe", desc: "Responsive Search Ad",  publishKey: "google_ads"},
   "Meta Ads":   { icon: "📘", color: "#1877f2", bg: "#eff6ff", border: "#dbeafe", desc: "FB + Instagram Ad",     publishKey: "meta_ads"  },
-  "Website":    { icon: "🌐", color: "#059669", bg: "#f0fdf4", border: "#86efac", desc: "Brand landing page",    publishKey: "landing_page"},
+  "Website":    { icon: "🌐", color: "#059669", bg: "#f0fdf4", border: "#86efac", desc: "Opens brand website",   publishKey: "landing_page"},
   "Email":      { icon: "📧", color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd", desc: "Branded email blast",   publishKey: "email"     },
 };
 
@@ -1440,13 +1446,19 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
   const brandFromId = campaignId ? campaignId.replace(/^campaign-/, "").split("-")[0].replace(/^(.)/, (c: string) => c.toUpperCase()) : "";
   const brand    = String((output as any)?.brand ?? brandFromId ?? "");
 
-  // Channels selected in the wizard — may be a JSON string or an array
-  const _rawCh = brief?.channels ?? (output as any)?.channels;
+  // Channels from brief — try multiple locations in the output tree
+  const _rawCh = brief?.channels
+    ?? (output as any)?.channels
+    ?? (brief as any)?.structured_brief?.channels;
   const wizardChannels: string[] = Array.isArray(_rawCh)
     ? _rawCh
     : typeof _rawCh === "string"
-      ? (() => { try { const p = JSON.parse(_rawCh); return Array.isArray(p) ? p : []; } catch { return []; } })()
+      ? (() => { try { const p = JSON.parse(_rawCh); return Array.isArray(p) ? p : [_rawCh]; } catch { return []; } })()
       : [];
+  // Always show all channels — fall back to full list if brief data is absent
+  const displayChannels: string[] = wizardChannels.length > 0
+    ? wizardChannels
+    : Object.keys(PUBLISH_CHANNEL_CFG);
 
   const toggle = (key: string) => setSelected(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
@@ -1473,8 +1485,10 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
       const json = await res.json();
       if (!res.ok) throw new Error(json.detail ?? "Publish failed");
       setResults(json.results); setPublished(true);
-      const lp = json.results?.landing_page;
-      if (lp?.status === "live" && lp?.url) window.open(`${API_BASE_PUB}${lp.url}`, "_blank");
+      if (selected.has("landing_page")) {
+        const brandSite = BRAND_WEBSITES[brand];
+        if (brandSite) window.open(brandSite, "_blank");
+      }
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
   }, [campaignId, brand, strategy, copy, cp, email, selected, selectedImageB64]);
@@ -1499,13 +1513,13 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
             {published ? `✅ Live on ${publishedCount} channel${publishedCount !== 1 ? "s" : ""}` : "🚀 Launch Campaign"}
           </div>
           <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: published ? 0 : 28 }}>
-            {published ? "Your campaign is now live. Track performance in your dashboards." : `Select the channels to activate — ${wizardChannels.length || "all"} channels ready from your brief`}
+            {published ? "Your campaign is now live. Track performance in your dashboards." : `Select channels to activate — ${displayChannels.length} available`}
           </div>
 
-          {/* Channel preview row (when not yet published) */}
-          {!published && wizardChannels.length > 0 && (
+          {/* Channel selection chips */}
+          {!published && (
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {wizardChannels.map(ch => {
+              {displayChannels.map(ch => {
                 const cfg = PUBLISH_CHANNEL_CFG[ch];
                 if (!cfg) return null;
                 const isOn = selected.has(cfg.publishKey);
@@ -1539,6 +1553,18 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
       {/* Action bar */}
       {!published && (
         <div style={{ padding: "20px 40px", background: "#1e293b", display: "flex", alignItems: "center", gap: 16 }}>
+          {/* Selected image thumbnail */}
+          {selectedImageB64 && (
+            <div style={{ flexShrink: 0, position: "relative" as const }}>
+              <img src={`data:image/jpeg;base64,${selectedImageB64}`} alt="Selected key visual"
+                style={{ width: 52, height: 52, objectFit: "cover" as const, borderRadius: 8,
+                  border: "2px solid rgba(255,255,255,0.3)", display: "block" }} />
+              <div style={{ position: "absolute" as const, top: -5, right: -5, width: 16, height: 16,
+                borderRadius: "50%", background: "#10b981", border: "2px solid #1e293b",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 8, color: "white", fontWeight: 800, lineHeight: 1 }}>✓</div>
+            </div>
+          )}
           {selected.has("email") && (
             <input type="email" placeholder="Recipient email address" value={email} onChange={e => setEmail(e.target.value)}
               style={{ flex: 1, padding: "11px 16px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,0.15)",
