@@ -526,33 +526,27 @@ def _apply_brand_overlay(
     product_name: str = "",
 ) -> bytes:
     """
-    Composite a clean branded top-bar onto the Imagen output.
+    Editorial brand overlay — no background colour bar.
 
-    Layout:
-    ┌──────────────────────────────────────────────────────┐  top of image
-    │ [LOGO]   Headline from copy agent                    │  solid brand bar
-    │          ─── accent divider ───                      │
-    │          BRAND  ·  Product Name                      │
-    ├──────────────────────────────────────────────────────┤  clean hard edge
-    │  3 px accent-colour rule                             │
-    ├──────────────────────────────────────────────────────┤
-    │                                                      │
-    │          [clean Imagen photographic scene]           │
-    │                                                      │
-    └──────────────────────────────────────────────────────┘
+    1. Brand logo — top-left corner, transparent PNG pasted directly onto the
+       photo. A soft white glow behind the logo ensures it reads on any scene.
 
-    No gradient bleeding into the photo.
-    Logo from bucket/brands/{brand}/Logos/ — primary PNG (no colour variant).
-    Font from bucket/brands/{brand}/Font/ — display TTF (non-italic).
-    Colors hardcoded from official brand guidelines.
+    2. Campaign headline — placed at ~62 % image height so it floats between
+       the subject and the bottom edge (not top, not bottom).
+       Effect: dark soft-bloom shadow (Gaussian blur of black text) creates a
+       "magical" halo that integrates the white text into the photo without
+       any solid panel or rectangle.
+
+    Nothing else — no product text, no coloured bar, no gradient bleed.
     """
     try:
-        from PIL import Image, ImageDraw, ImageFont
+        from PIL import Image, ImageDraw, ImageFont, ImageFilter
         import io
         from pathlib import Path as _P
 
         img = Image.open(io.BytesIO(img_data)).convert("RGBA")
         W, H = img.size
+        margin = max(16, int(W * 0.025))
 
         # ── Brand font ────────────────────────────────────────────────────────
         BRAND_FONT_PREFS = {
@@ -573,27 +567,6 @@ def _apply_brand_overlay(
                     if "italic" not in f.name.lower()]
             font_path = str(hits[0]) if hits else None
 
-        # ── Official brand colors ──────────────────────────────────────────────
-        BRAND_COLORS = {
-            "Sunglow": {"bar": "#B00064", "accent": "#FFC72C", "text": "#FFFFFF"},
-            "Rnorr":   {"bar": "#008641", "accent": "#FFDE00", "text": "#FFFFFF"},
-            "Boozt":   {"bar": "#0E105E", "accent": "#0086FE", "text": "#FFFFFF"},
-        }
-        col        = BRAND_COLORS.get(brand, {"bar": "#1a1a2e", "accent": "#0055A4", "text": "#FFFFFF"})
-
-        def hex_rgba(h: str, a: int = 255) -> tuple:
-            h = h.lstrip("#")
-            return tuple(int(h[i:i+2], 16) for i in (0, 2, 4)) + (a,)
-
-        bar_rgb    = hex_rgba(col["bar"])[:3]
-        accent_rgb = hex_rgba(col["accent"])[:3]
-        text_rgba  = hex_rgba(col["text"])
-
-        # ── Font helpers ──────────────────────────────────────────────────────
-        hl_size      = max(30, W // 18)    # headline — dominant
-        brand_sz     = max(16, W // 32)    # brand · product line
-        rule_sz      = max(2, W // 320)    # accent rule thickness
-
         def _font(size: int):
             if font_path:
                 try:
@@ -605,107 +578,11 @@ def _apply_brand_overlay(
             except Exception:
                 return ImageFont.load_default()
 
-        f_hl    = _font(hl_size)
-        f_brand = _font(brand_sz)
-
-        # ── Measure text to size the bar correctly ────────────────────────────
-        # temp draw for measurements
-        _tmp = Image.new("RGBA", (W, 4))
-        _d   = ImageDraw.Draw(_tmp)
-
-        def _tw(text: str, font) -> int:
-            bb = _d.textbbox((0, 0), text, font=font)
-            return bb[2] - bb[0]
-
-        def _th(text: str, font) -> int:
-            bb = _d.textbbox((0, 0), text, font=font)
-            return max(1, bb[3] - bb[1])
-
-        # Wrap headline to max 80% of text-area width (leaves room for logo)
-        logo_zone = int(W * 0.20)   # logo occupies left 20%
-        text_x    = logo_zone + int(W * 0.02)
-        max_tw    = W - text_x - int(W * 0.02)
-
-        words = (headline or "").split()
-        lines_hl, cur = [], []
-        for w in words:
-            test = " ".join(cur + [w])
-            if _tw(test, f_hl) > max_tw and cur:
-                lines_hl.append(" ".join(cur)); cur = [w]
-            else:
-                cur.append(w)
-        if cur:
-            lines_hl.append(" ".join(cur))
-
-        # Brand + product label: "SUNGLOW  ·  Define & Glow Serum"
-        product_label = ""
-        if product_name:
-            pname = product_name.strip()
-            # Prefix brand if not already there
-            if not pname.lower().startswith(brand.lower()):
-                pname = f"{brand} {pname}"
-            product_label = pname
-
-        brand_line = brand.upper()
-        if product_label:
-            brand_line = f"{brand.upper()}  ·  {product_label}"
-
-        gap      = max(6, int(H * 0.008))
-        pad_v    = max(12, int(H * 0.015))   # vertical padding inside bar
-        hl_line_h = _th(lines_hl[0] if lines_hl else "A", f_hl) + 4
-        total_hl_h = len(lines_hl) * hl_line_h
-        sep_h    = rule_sz + gap * 2
-        brand_h  = _th(brand_line, f_brand)
-        bar_h    = pad_v + total_hl_h + sep_h + brand_h + pad_v
-        bar_h    = max(80, bar_h)
-
-        # ── Draw solid bar — NO gradient bleeding ─────────────────────────────
-        overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        draw    = ImageDraw.Draw(overlay)
-        draw.rectangle([(0, 0), (W, bar_h)], fill=(*bar_rgb, 238))
-
-        # Thin accent rule at the bottom of the bar (3 px)
-        draw.rectangle([(0, bar_h), (W, bar_h + rule_sz * 2)],
-                        fill=(*accent_rgb, 255))
-
-        # ── Headline text ──────────────────────────────────────────────────────
-        y = pad_v
-        for line in lines_hl:
-            tw = _tw(line, f_hl)
-            x  = text_x
-            # Drop shadow
-            draw.text((x + 1, y + 1), line, font=f_hl, fill=(0, 0, 0, 110))
-            draw.text((x, y),         line, font=f_hl, fill=text_rgba)
-            y += hl_line_h
-
-        # ── Thin accent separator ─────────────────────────────────────────────
-        y += gap
-        draw.rectangle([(text_x, y), (text_x + int(max_tw * 0.55), y + rule_sz)],
-                        fill=(*accent_rgb, 255))
-        y += rule_sz + gap
-
-        # ── Brand · Product line ───────────────────────────────────────────────
-        # Brand name in accent color, product in white
-        brand_part = brand.upper()
-        if product_label:
-            mid  = f"  ·  {product_label}"
-            bx   = text_x
-            # Brand name (accent)
-            draw.text((bx + 1, y + 1), brand_part, font=f_brand, fill=(0, 0, 0, 90))
-            draw.text((bx, y),         brand_part, font=f_brand, fill=(*accent_rgb, 255))
-            bx2 = bx + _tw(brand_part, f_brand)
-            # Separator · product (white, dimmed)
-            draw.text((bx2 + 1, y + 1), mid, font=f_brand, fill=(0, 0, 0, 90))
-            draw.text((bx2, y),         mid, font=f_brand, fill=(*text_rgba[:3], 210))
-        else:
-            draw.text((text_x + 1, y + 1), brand_part, font=f_brand, fill=(0, 0, 0, 90))
-            draw.text((text_x, y),         brand_part, font=f_brand, fill=(*accent_rgb, 255))
-
-        # ── Brand logo — top-left corner, vertically centred in bar ───────────
+        # ── 1. Brand logo — top-left, no background ───────────────────────────
         try:
             from app.brand_assets import get_asset_loader as _gal
-            _logos   = _gal().list_logos(brand)
-            _sfx     = {"green", "red", "yellow", "orange", "purple", "blue"}
+            _logos = _gal().list_logos(brand)
+            _sfx   = {"green", "red", "yellow", "orange", "purple", "blue"}
             _primary = next(
                 (p for p in _logos
                  if p.lower().endswith(".png")
@@ -724,28 +601,97 @@ def _apply_brand_overlay(
                         pass
                 if _logo_bytes:
                     _logo = Image.open(io.BytesIO(_logo_bytes)).convert("RGBA")
-                    max_lw = int(logo_zone * 0.85)
-                    max_lh = int(bar_h * 0.70)
+                    # Scale: max 16 % of image width, max 12 % of image height
+                    max_lw = int(W * 0.16)
+                    max_lh = int(H * 0.12)
                     sc     = min(max_lw / max(1, _logo.width),
                                  max_lh / max(1, _logo.height), 1.0)
-                    _logo  = _logo.resize(
-                        (max(24, int(_logo.width * sc)), max(24, int(_logo.height * sc))),
-                        Image.LANCZOS,
+                    lw     = max(32, int(_logo.width  * sc))
+                    lh     = max(32, int(_logo.height * sc))
+                    _logo  = _logo.resize((lw, lh), Image.LANCZOS)
+
+                    # Soft white glow behind logo so it reads on any background
+                    glow_r = max(8, int(lw * 0.25))
+                    glow   = Image.new("RGBA", (lw + glow_r * 2, lh + glow_r * 2), (0, 0, 0, 0))
+                    gd     = ImageDraw.Draw(glow)
+                    gd.ellipse(
+                        [glow_r // 2, glow_r // 2,
+                         lw + glow_r + glow_r // 2, lh + glow_r + glow_r // 2],
+                        fill=(255, 255, 255, 60),
                     )
-                    # Centre logo in the left zone
-                    lx = (logo_zone - _logo.width) // 2
-                    ly = (bar_h - _logo.height) // 2
-                    overlay.paste(_logo, (lx, ly), _logo)
+                    glow = glow.filter(ImageFilter.GaussianBlur(radius=glow_r))
+
+                    lx = margin
+                    ly = margin
+                    img.paste(glow, (lx - glow_r, ly - glow_r), glow)
+                    img.paste(_logo, (lx, ly), _logo)
         except Exception as _le:
             logger.debug("logo_skipped", brand=brand, error=str(_le))
 
-        # ── Composite ──────────────────────────────────────────────────────────
-        result = Image.alpha_composite(img, overlay).convert("RGB")
+        # ── 2. Headline — editorial bloom overlay ─────────────────────────────
+        if headline:
+            hl_size  = max(34, W // 16)    # large, prominent
+            f_hl     = _font(hl_size)
+
+            # Word-wrap to 88 % of image width
+            max_tw = int(W * 0.88)
+            _tmp_img = Image.new("RGBA", (W, 4))
+            _tmp_d   = ImageDraw.Draw(_tmp_img)
+
+            words = headline.split()
+            lines, cur = [], []
+            for w in words:
+                test = " ".join(cur + [w])
+                bb = _tmp_d.textbbox((0, 0), test, font=f_hl)
+                if bb[2] - bb[0] > max_tw and cur:
+                    lines.append(" ".join(cur)); cur = [w]
+                else:
+                    cur.append(w)
+            if cur:
+                lines.append(" ".join(cur))
+
+            line_h = hl_size + int(hl_size * 0.18)
+            block_h = len(lines) * line_h
+
+            # Vertical position: 62 % down (floats between subject and frame edge)
+            text_top = int(H * 0.62) - block_h // 2
+            text_top = max(margin, min(text_top, H - block_h - margin))
+
+            # --- Step A: dark bloom shadow layer ---
+            # Draw text in opaque black on a transparent layer, blur heavily
+            bloom_layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            bd = ImageDraw.Draw(bloom_layer)
+            for line in lines:
+                bb  = bd.textbbox((0, 0), line, font=f_hl)
+                tw  = bb[2] - bb[0]
+                bx  = (W - tw) // 2          # horizontally centred
+                by  = text_top + lines.index(line) * line_h
+                # Draw several thick shadow copies for a strong bloom
+                for _dx, _dy in [(-2,-2),(2,-2),(-2,2),(2,2),(0,0)]:
+                    bd.text((bx + _dx, by + _dy), line, font=f_hl, fill=(0, 0, 0, 200))
+            bloom_blurred = bloom_layer.filter(ImageFilter.GaussianBlur(radius=18))
+            # Second pass with tighter blur for a sharper core
+            bloom_sharp   = bloom_layer.filter(ImageFilter.GaussianBlur(radius=6))
+            img = Image.alpha_composite(img, bloom_blurred)
+            img = Image.alpha_composite(img, bloom_sharp)
+
+            # --- Step B: white text on top ---
+            draw = ImageDraw.Draw(img)
+            for i, line in enumerate(lines):
+                bb  = draw.textbbox((0, 0), line, font=f_hl)
+                tw  = bb[2] - bb[0]
+                bx  = (W - tw) // 2
+                by  = text_top + i * line_h
+                # Subtle 1-px shadow for crispness
+                draw.text((bx + 1, by + 1), line, font=f_hl, fill=(0, 0, 0, 100))
+                draw.text((bx, by),         line, font=f_hl, fill=(255, 255, 255, 245))
+
+        # ── Output ────────────────────────────────────────────────────────────
+        result = img.convert("RGB")
         buf    = io.BytesIO()
         result.save(buf, format="JPEG", quality=93)
         logger.info("brand_overlay_applied", brand=brand,
-                    headline=(headline or "")[:50], product=product_name,
-                    bar_h=bar_h, W=W, H=H)
+                    headline=(headline or "")[:50], W=W, H=H)
         return buf.getvalue()
 
     except Exception as e:
