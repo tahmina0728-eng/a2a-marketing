@@ -818,7 +818,7 @@ Be specific, avoid generic boilerplate.""")
     await _emit("culture", "done", "Cultural intelligence ready ✓")
     import json as _json
     await _emit("culture", "milestone", _json.dumps({"brief": culture[:600]}))
-    await _asyncio.sleep(10)
+    await _asyncio.sleep(3)
 
     # Stage 2: Brand summariser
     log.info("p2_brand_summariser_start")
@@ -845,7 +845,7 @@ Cover: colours (with HEX), typography/font, logo rules, tone, forbidden treatmen
     import json as _json2
     await _emit("kv", "step_data", _json2.dumps({"brand_locks": brand_summary[:500]}))
     await _emit("kv", "running", "Brand locks extracted — building Big Idea…")
-    await _asyncio.sleep(10)
+    await _asyncio.sleep(3)
 
     # Stage 3: Creative director → Big Idea
     log.info("p2_creative_director_start")
@@ -865,11 +865,11 @@ Create a Big Idea for this campaign. Output:
     log.info("p2_creative_director_done")
     await _emit("kv", "step_data", _json2.dumps({"big_idea": big_idea[:400]}))
     await _emit("kv", "running", "Big Idea ready — crafting image prompt…")
-    await _asyncio.sleep(10)
+    await _asyncio.sleep(3)
 
     # Stage 4: Generate 5 distinct scene concept prompts from brief context
     log.info("p2_prompt_agent_start")
-    await _emit("kv", "running", "Crafting 5 scene concepts from your brief…")
+    await _emit("kv", "running", "Crafting 2 scene concepts from your brief…")
     _BRAND_PALETTE = {
         "Sunglow": "hot magenta pink, sunshine yellow, off-white cream",
         "Rnorr":   "deep forest green, bright sunshine yellow, white",
@@ -975,7 +975,10 @@ Output EXACTLY this format (nothing else):
     concept_prompts = concept_prompts[:2] or [scene_concepts_raw[:600]]
 
     log.info("p2_prompt_agent_done", n_concepts=len(concept_prompts))
-    await _emit("kv", "step_data", _json2.dumps({"concepts": [p[:200] for p in concept_prompts]}))
+    await _emit("kv", "step_data", _json2.dumps({
+        "image_prompt": concept_prompts[0][:350] if concept_prompts else "",
+        "concepts":     [p[:200] for p in concept_prompts],
+    }))
     await _emit("kv", "running", f"Brief analysed — generating {len(concept_prompts)} campaign visuals…")
 
     # Stage 5: Image generation via Google AI
