@@ -678,22 +678,51 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
 
     # ── 3. Email ──────────────────────────────────────────────────────────────
     if "email" in selected:
-      if req.to_email:
-        results["email"] = send_campaign_email(
-            to_email       = req.to_email,
-            brand          = req.brand,
-            hero_message   = req.hero_message,
-            short_headline = req.short_headline,
-            email_subject  = req.email_subject,
-            body_copy      = req.body,
-            cta            = req.cta,
-            image_url      = _img_url,    # HTTPS URL — works in Gmail
-            logo_url       = _logo_url,   # HTTPS URL — works in Gmail
-            landing_url    = landing_url,
-            product_name   = req.product_name,
-        )
-      else:
-        results["email"] = {"status": "skipped", "reason": "No recipient email provided"}
+        # Fall back to EMAIL_FROM env var when no recipient typed in the UI
+        _recipient = req.to_email or os.getenv("EMAIL_FROM", "")
+        logger.info("email_publish_attempt",
+                    campaign_id  = campaign_id,
+                    brand        = req.brand,
+                    to_email_req = req.to_email or "(empty)",
+                    to_email_use = _recipient or "(none)",
+                    has_image    = bool(req.image_b64),
+                    has_subject  = bool(req.email_subject),
+                    smtp_user    = bool(os.getenv("EMAIL_FROM")),
+                    smtp_pass    = bool(os.getenv("EMAIL_APP_PASSWORD")),
+                    image_url    = _img_url or "(none)",
+                    logo_url     = _logo_url,
+                    )
+        if _recipient:
+            try:
+                results["email"] = send_campaign_email(
+                    to_email       = _recipient,
+                    brand          = req.brand,
+                    hero_message   = req.hero_message,
+                    short_headline = req.short_headline,
+                    email_subject  = req.email_subject,
+                    body_copy      = req.body,
+                    cta            = req.cta,
+                    image_url      = _img_url,
+                    logo_url       = _logo_url,
+                    landing_url    = landing_url,
+                    product_name   = req.product_name,
+                )
+                logger.info("email_publish_result",
+                            campaign_id = campaign_id,
+                            result      = results["email"])
+            except Exception as _email_exc:
+                logger.error("email_publish_error",
+                             campaign_id = campaign_id,
+                             error       = str(_email_exc))
+                results["email"] = {"status": "error", "error": str(_email_exc)}
+        else:
+            logger.warning("email_skipped_no_recipient",
+                           campaign_id = campaign_id,
+                           hint        = "Set EMAIL_FROM in .env or enter email in UI")
+            results["email"] = {
+                "status": "skipped",
+                "reason": "No recipient — enter email in the launch panel or set EMAIL_FROM in .env",
+            }
 
     return {"status": "ok", "campaign_id": campaign_id, "results": results}
 
