@@ -18,7 +18,7 @@ steps:
       - '--port=8080'
       - '--memory=4Gi'
       - '--cpu=2'
-      - '--timeout=600'
+      - '--timeout=3600'
       - '--concurrency=10'
       - >-
         --set-env-vars=GOOGLE_CLOUD_PROJECT=$PROJECT_ID,
@@ -33,6 +33,8 @@ steps:
         CREATIVE_MODEL=gemini-3.5-flash,
         GEMINI_MODEL_IMAGE=gemini-3-pro-image,
         GEMINI_MODEL_IMAGE_ADAPTER=gemini-3-pro-image,
+        VEO_MODEL=veo-3.1-generate-001,
+        REEL_ENABLED=true,
         USE_GEMINI_EMBEDDINGS=true,
         GEMINI_EMBEDDING_MODEL=gemini-embedding-2,
         PGVECTOR_HOST=/cloudsql/dauntless-karma-497108-b0:us-central1:campaignos-pgvector,
