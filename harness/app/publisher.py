@@ -168,9 +168,9 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
 
     logo_src     = _gcs_to_b64(logos[0],    "image/png", max_kb=200) if logos    else ""
     prod_srcs    = [_gcs_to_b64(p, "image/jpeg", max_kb=800) for p in products[:3]]
-    asset_src    = _gcs_to_b64(assets[0],   "image/jpeg", max_kb=600) if assets   else ""
-    campaign_src = (f"data:image/jpeg;base64,{campaign_image_b64}"
-                   if campaign_image_b64 else asset_src)
+    hero_asset_src = _gcs_to_b64(assets[0], "image/jpeg", max_kb=800) if assets else ""
+    campaign_src   = (f"data:image/jpeg;base64,{campaign_image_b64}"
+                     if campaign_image_b64 else hero_asset_src)
 
     logo_html = (f'<img src="{logo_src}" alt="{brand}" style="height:44px;object-fit:contain;">'
                 if logo_src else
@@ -192,7 +192,8 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
         for f in features[:4]
     ])
 
-    bg_section = f'background-image: url("{campaign_src}"); background-size: cover; background-position: center;' if campaign_src else f"background: linear-gradient(135deg, {cfg['primary']}, {cfg['secondary']});"
+    # Use brand lifestyle asset (no text overlay) for hero; KV image in campaign section only
+    bg_section = f'background-image: url("{hero_asset_src}"); background-size: cover; background-position: center;' if hero_asset_src else f"background: linear-gradient(135deg, {cfg['primary']}, {cfg['secondary']});"
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -355,23 +356,30 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
 
     logo_src  = _gcs_to_b64(logos[0],   "image/png",  200) if logos    else ""
     prod_srcs = [_gcs_to_b64(p, "image/jpeg", 800) for p in products[:6]]
-    hero_src  = _gcs_to_b64(assets[0],  "image/jpeg", 600) if assets   else ""
-    camp_src  = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else hero_src
+    # Use brand asset (no text overlay) for hero background; KV image only in campaign section
+    hero_bg_src = _gcs_to_b64(assets[0], "image/jpeg", 800) if assets else ""
+    camp_src    = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else hero_bg_src
 
     logo_html = (f'<img src="{logo_src}" alt="Rnorr" style="height:40px;object-fit:contain;">'
                 if logo_src else '<span style="font-size:26px;font-weight:900;color:#FFDE00;letter-spacing:-0.02em;">Rnorr</span>')
 
     recipes = [
-        {"name":"Chicken & Herb Pasta","time":"25 min","diff":"Easy"},
-        {"name":"Beef Stock Risotto","time":"40 min","diff":"Medium"},
-        {"name":"Vegetable Soup","time":"20 min","diff":"Easy"},
+        {"name":"Chicken & Herb Pasta",  "time":"25 min","diff":"Easy",
+         "emoji":"🍝","grad":"linear-gradient(135deg,#fff3e0,#ffe0b2)","accent":"#e65100","tag":"Quick & Easy"},
+        {"name":"Beef Stock Risotto",     "time":"40 min","diff":"Medium",
+         "emoji":"🥘","grad":"linear-gradient(135deg,#fbe9e7,#ffccbc)","accent":"#bf360c","tag":"Comfort Food"},
+        {"name":"Golden Vegetable Soup",  "time":"20 min","diff":"Easy",
+         "emoji":"🍜","grad":"linear-gradient(135deg,#f9fbe7,#f0f4c3)","accent":"#827717","tag":"Family Favourite"},
     ]
     recipe_cards = "".join([f"""
     <div class="recipe-card">
-      <div class="recipe-img" style="background:linear-gradient(135deg,#e8f5e9,#c8e6c9);display:flex;align-items:center;justify-content:center;font-size:48px;">🍲</div>
+      <div class="recipe-img" style="{r['grad']};height:200px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
+        <div style="font-size:72px;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.15));transform:rotate(-8deg)">{r['emoji']}</div>
+        <div style="position:absolute;top:14px;left:14px;background:white;color:{r['accent']};font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:99px;">{r['tag']}</div>
+      </div>
       <div class="recipe-body">
         <div class="recipe-name">{r['name']}</div>
-        <div class="recipe-meta">⏱ {r['time']} · {r['diff']}</div>
+        <div class="recipe-meta">⏱ {r['time']} &nbsp;·&nbsp; {r['diff']}</div>
         <a href="#" class="recipe-btn">Get Recipe</a>
       </div>
     </div>""" for r in recipes])
@@ -411,7 +419,7 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
 
     /* Hero — full-bleed with image */
     .hero{{position:relative;height:520px;display:flex;align-items:center;overflow:hidden;background:#005c2c}}
-    .hero-bg{{position:absolute;inset:0;background-size:cover;background-position:center;{f'background-image:url("{camp_src}");' if camp_src else "background:linear-gradient(135deg,#008641,#005c2c);"}filter:brightness(0.5)}}
+    .hero-bg{{position:absolute;inset:0;background-size:cover;background-position:center;{f'background-image:url("{hero_bg_src}");' if hero_bg_src else "background:linear-gradient(135deg,#008641,#005c2c);"}filter:brightness(0.55)}}
     .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,107,63,0.9) 0%,rgba(0,107,63,0.5) 50%,transparent 100%)}}
     .hero-content{{position:relative;z-index:2;padding:0 80px;max-width:600px}}
     .hero-badge{{display:inline-block;background:#FFDE00;color:#008641;font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;padding:5px 14px;border-radius:99px;margin-bottom:18px}}
@@ -576,10 +584,10 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
     products = loader.list_products("Boozt")
     assets   = loader.list_assets("Boozt")
 
-    logo_src  = _gcs_to_b64(logos[0],   "image/png",  200) if logos    else ""
-    prod_srcs = [_gcs_to_b64(p, "image/jpeg", 800) for p in products[:6]]
-    hero_src  = _gcs_to_b64(assets[0],  "image/jpeg", 600) if assets   else ""
-    camp_src  = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else hero_src
+    logo_src     = _gcs_to_b64(logos[0],   "image/png",  200) if logos    else ""
+    prod_srcs    = [_gcs_to_b64(p, "image/jpeg", 800) for p in products[:6]]
+    hero_bg_src  = _gcs_to_b64(assets[0], "image/jpeg", 800) if assets   else ""
+    camp_src     = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else hero_bg_src
 
     logo_html = (f'<img src="{logo_src}" alt="Boozt" style="height:38px;object-fit:contain;">'
                 if logo_src else '<span style="font-size:26px;font-weight:900;color:white;letter-spacing:-0.02em;">BOOZT</span>')
@@ -640,7 +648,7 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
 
     /* Hero — Boots-style promo banner */
     .hero{{position:relative;height:500px;display:flex;align-items:center;overflow:hidden;background:#0E105E}}
-    .hero-bg{{position:absolute;inset:0;background-size:cover;background-position:center top;{f'background-image:url("{camp_src}");' if camp_src else "background:linear-gradient(135deg,#0E105E,#2d2d4e);"}filter:brightness(0.45)}}
+    .hero-bg{{position:absolute;inset:0;background-size:cover;background-position:center top;{f'background-image:url("{hero_bg_src}");' if hero_bg_src else "background:linear-gradient(135deg,#0E105E,#2d2d4e);"}filter:brightness(0.45)}}
     .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(26,26,46,0.92) 0%,rgba(26,26,46,0.55) 55%,transparent 100%)}}
     .hero-content{{position:relative;z-index:2;padding:0 80px;max-width:580px}}
     .hero-tag{{display:inline-block;background:#0086FE;color:white;font-size:11px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;padding:5px 14px;border-radius:99px;margin-bottom:16px}}
