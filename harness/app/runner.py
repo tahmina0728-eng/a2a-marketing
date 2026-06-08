@@ -618,15 +618,15 @@ def _apply_brand_overlay(
         text_y_start = max(margin, (H - block_h) // 2)
         text_x       = margin
 
-        # ── 2. No vignette — rely on thick text shadow for readability ───────
+        # ── 2. No vignette ────────────────────────────────────────────────────
 
-        # ── 3. Billboard text — full-bleed, no zone restriction ───────────────
+        # ── 3. Billboard text — full-bleed, tight outline only ───────────────
         draw = ImageDraw.Draw(img)
         y = text_y_start
         for i, (word, fnt, lh, tw) in enumerate(line_data):
-            # Multi-offset thick shadow for crisp readability on any background
-            for dx, dy in [(-3,-3),(3,-3),(-3,3),(3,3),(0,4),(4,0),(-4,0),(0,-4)]:
-                draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,180))
+            # Tight 1px outline shadow — low opacity to avoid dark blotch
+            for dx, dy in [(-1,-1),(1,-1),(-1,1),(1,1),(0,2),(2,0)]:
+                draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,80))
             color = (*accent_rgb, 255) if i == 0 and len(line_data) > 1 else (255, 255, 255, 255)
             draw.text((text_x, y), word, font=fnt, fill=color)
             y += lh
@@ -1179,7 +1179,10 @@ Output EXACTLY this format (nothing else):
                     resp = await loop.run_in_executor(None, lambda: client.models.generate_content(
                         model    = image_model,
                         contents = contents,
-                        config   = _gtypes.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
+                        config   = _gtypes.GenerateContentConfig(
+                            response_modalities = ["IMAGE", "TEXT"],
+                            image_config        = _gtypes.ImageConfig(aspect_ratio="16:9"),
+                        ),
                     ))
                     for part in resp.candidates[0].content.parts:
                         if hasattr(part, "inline_data") and part.inline_data is not None:
