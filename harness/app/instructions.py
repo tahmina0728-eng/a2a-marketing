@@ -439,10 +439,11 @@ labels facing camera, large scale (15-20% of image height each). This is a PRODU
 advertisement — the product is co-equal with the model. Never hide or minimise it.
 
 HAIR/MODEL VARIETY: Do NOT describe the same model type every campaign.
-For hair brands: vary the style (blowout, braids, sleek press, voluminous coils,
-locs, straight, wavy). For Boozt (volume brand): woman of ANY ethnicity with
-dramatic volume/bounce — NOT Afro hair. For Sunglow: Black/mixed heritage woman
-with a VARIED natural or styled look.
+For Sunglow: ROTATE ethnicity each campaign — South Asian with long glossy waves,
+East Asian with straight silky hair, Latina with loose voluminous curls, mixed-race
+with a sleek blowout, or European with wavy highlighted hair. NEVER always choose
+a dark-skinned Black woman with 4C/Afro curls — vary every time.
+For Boozt: woman of ANY ethnicity with dramatic volume/bounce, NOT Afro hair.
 
 ════════════════════════════════════════════════════════════
 YOUR BRIEF — ALL IN CONTEXT
