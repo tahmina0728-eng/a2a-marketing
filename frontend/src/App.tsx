@@ -75,11 +75,6 @@ const BRANDS = [
   { id: "Boozt",     label: "Boozt",      emoji: "💨" },
 ];
 
-const BRAND_WEBSITES: Record<string, string> = {
-  Rnorr:   "https://www.knorr.com",
-  Sunglow: "https://www.sunglow.com",
-  Boozt:   "https://www.boozt.com",
-};
 
 const BRAND_PRODUCTS: Record<string, string[]> = {
   Rnorr:     ["Chicken Stock Cubes", "Beef Stock Cubes", "Vegetable Stock Cubes",
@@ -1438,6 +1433,10 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
   const [published, setPublished] = useState(false);
   const [results,  setResults]  = useState<Record<string, any> | null>(null);
   const [error,    setError]    = useState("");
+  const [landingUrl, setLandingUrl] = useState<string>(() => {
+    // Restore persisted landing URL for this campaign on mount
+    return campaignId ? localStorage.getItem(`landing_url_${campaignId}`) ?? "" : "";
+  });
 
   const cp       = (output as any)?.creative_pipeline;
   const strategy = (output as any)?.creative_strategy;
@@ -1490,9 +1489,12 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
       const json = await res.json();
       if (!res.ok) throw new Error(json.detail ?? "Publish failed");
       setResults(json.results); setPublished(true);
-      if (selected.has("landing_page")) {
-        const brandSite = BRAND_WEBSITES[brand];
-        if (brandSite) window.open(brandSite, "_blank");
+      // Persist landing page URL so it survives navigation / page reload
+      const _lpResult = json.results?.landing_page;
+      if (_lpResult?.url && campaignId) {
+        const _fullUrl = `${API_BASE_PUB}${_lpResult.url}`;
+        localStorage.setItem(`landing_url_${campaignId}`, _fullUrl);
+        setLandingUrl(_fullUrl);
       }
     } catch (e: any) { setError(e.message); }
     finally { setLoading(false); }
@@ -1596,6 +1598,23 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
       )}
 
       {/* Published results */}
+      {/* Persistent landing page URL banner — always visible once created */}
+      {landingUrl && (
+        <div style={{ padding: "16px 40px", background: "linear-gradient(90deg,#ecfdf5,#f0fdf4)", borderTop: "1.5px solid #86efac", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 20 }}>🌐</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#065f46", letterSpacing: "0.08em", textTransform: "uppercase" }}>Landing Page Live</div>
+              <div style={{ fontSize: 12, color: "#475569", marginTop: 2, wordBreak: "break-all" }}>{landingUrl}</div>
+            </div>
+          </div>
+          <a href={landingUrl} target="_blank" rel="noreferrer"
+            style={{ background: "#059669", color: "white", padding: "10px 24px", borderRadius: 99, fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", textDecoration: "none" }}>
+            Open Website →
+          </a>
+        </div>
+      )}
+
       {published && results && (
         <div style={{ padding: "24px 40px", background: "#f0fdf4", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
           {Object.entries(results).map(([key, r]: [string, any]) => {
@@ -1606,10 +1625,6 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
                 <div style={{ fontSize: 13, fontWeight: 700, color: isDone ? "#065f46" : "#94a3b8", marginBottom: 4 }}>
                   {isDone ? "✅" : "⏭"} {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                 </div>
-                {key === "landing_page" && r.url && (
-                  <a href={`${API_BASE_PUB}${r.url}`} target="_blank" rel="noreferrer"
-                    style={{ fontSize: 11, color: "#0055A4", fontWeight: 600 }}>🔗 Open page →</a>
-                )}
                 {key === "email" && r.to && <div style={{ fontSize: 10, color: "#64748b" }}>Sent to {r.to}</div>}
                 {r.ad_id && <div style={{ fontSize: 10, color: "#64748b" }}>ID: {r.ad_id}</div>}
               </div>
