@@ -464,6 +464,13 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             await push_event(campaign_id, "kv", "milestone",
                              json.dumps({"images_b64": _images}))
 
+        # Push reel video if generated
+        _video_b64 = creative_result.get("video_b64", "")
+        if _video_b64:
+            await push_event(campaign_id, "reel", "milestone",
+                             json.dumps({"video_b64": _video_b64}))
+            await push_event(campaign_id, "reel", "done", "Campaign reel ready ✓")
+
         # ── Channel Adapter (final step — after key visual generated) ─────
         await push_event(campaign_id, "channel", "running", "Packaging key visual for each channel…")
         channels_list = [c.lower() for c in brief.channels] if brief.channels else []

@@ -184,7 +184,8 @@ const HARNESS_STAGES = [
   { key: "strategy", icon: "💡", label: "Creative Director", desc: "Building big idea & strategy" },
   { key: "copy",     icon: "✍️", label: "Copy Agent",        desc: "Writing campaign copy variants" },
   { key: "culture",  icon: "🌍", label: "Culture Analyst",   desc: "Researching cultural intelligence" },
-  { key: "kv",       icon: "🎨", label: "KV Generator",      desc: "Generating key visual with Imagen 4" },
+  { key: "kv",       icon: "🎨", label: "KV Generator",      desc: "Generating key visual with Gemini 3 Pro Image" },
+  { key: "reel",     icon: "🎬", label: "Reel Generator",    desc: "Generating 6s campaign reel with Veo" },
   { key: "channel",  icon: "📡", label: "Channel Adapter",   desc: "Publishing to Instagram, TikTok & more" },
 ];
 
@@ -944,13 +945,14 @@ function CulturePanel({ m }: { m?: Record<string,unknown> }) {
   );
 }
 
-function KVPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
+function KVPanel({ m, liveMsg, reelMilestone }: { m?: Record<string,unknown>; liveMsg: string|null; reelMilestone?: Record<string,unknown> }) {
   const [selectedImg, setSelectedImg] = useState(0);
   const brandLocks  = m?.brand_locks  ? String(m.brand_locks)  : "";
   const bigIdea     = m?.big_idea     ? String(m.big_idea)     : "";
   const imagePrompt = m?.image_prompt ? String(m.image_prompt) : "";
   const imageB64    = m?.image_b64    ? String(m.image_b64)    : "";
   const imagesB64   = m?.images_b64   ? (m.images_b64 as string[]) : imageB64 ? [imageB64] : [];
+  const videoB64    = reelMilestone?.video_b64 ? String(reelMilestone.video_b64) : "";
 
   // Derive active step from what data has arrived
   const activeStep = imagesB64.length > 0 ? 3 : imagePrompt ? 3 : bigIdea ? 2 : brandLocks ? 1 : 0;
@@ -1040,6 +1042,22 @@ function KVPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|n
           </div>
         );
       })}
+
+    {/* Campaign Reel video player */}
+    {videoB64 && (
+      <div style={{ marginTop: 16, padding: "14px 16px", background: "#0f172a", borderRadius: 12 }}>
+        <div style={{ fontSize: 11, fontWeight: 800, color: "#f59e0b", letterSpacing: "0.1em",
+          textTransform: "uppercase" as const, marginBottom: 10 }}>🎬 Campaign Reel · 6s</div>
+        <video controls autoPlay loop muted playsInline
+          style={{ width: "100%", borderRadius: 8, display: "block" }}
+          src={`data:video/mp4;base64,${videoB64}`} />
+        <a href={`data:video/mp4;base64,${videoB64}`} download={`campaign-reel.mp4`}
+          style={{ display: "inline-block", marginTop: 10, fontSize: 11, fontWeight: 700,
+            color: "#f59e0b", textDecoration: "none" }}>
+          ⬇ Download Reel
+        </a>
+      </div>
+    )}
     </div>
   );
 }
@@ -1231,7 +1249,7 @@ function RunningView({
               {displayKey === "culture" && milestones.culture
                 ? <CulturePanel m={milestones.culture} />
                 : displayKey === "culture" && <div style={{ fontSize: 14, color: "#64748b", fontStyle: "italic" }}>{liveMsg ?? "Researching cultural trends…"}</div>}
-              {displayKey === "kv" && <KVPanel m={milestones.kv} liveMsg={liveMsg} />}
+              {displayKey === "kv" && <KVPanel m={milestones.kv} liveMsg={liveMsg} reelMilestone={milestones.reel as Record<string,unknown> | undefined} />}
               {displayKey === "channel" && <ChannelPanel m={milestones.channel} liveMsg={liveMsg} />}
             </div>
 
@@ -1660,6 +1678,7 @@ function ResultsView({ output, campaignId, onReset }: {
     : [];
 
   const imagesB64: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
+  const videoB64: string = cp?.video_b64 ? String(cp.video_b64) : "";
   const adaptations = cp?.channel_adaptations as Record<string, {label: string; image_b64: string; ratio: string}> | undefined;
 
   const CHANNEL_ICONS: Record<string, string> = {
@@ -1924,7 +1943,25 @@ function ResultsView({ output, campaignId, onReset }: {
           </TL>
         )}
 
-        {/* Step 6: Channel Adaptations */}
+        {/* Step 6: Campaign Reel */}
+        {videoB64 && (
+          <TL step={6} icon="🎬" color="#b45309" label="Campaign Reel — 6s Veo">
+            <div style={{ background: "#0f172a", borderRadius: 12, overflow: "hidden" }}>
+              <video controls autoPlay loop muted playsInline
+                style={{ width: "100%", display: "block" }}
+                src={`data:video/mp4;base64,${videoB64}`} />
+              <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: 11, color: "#94a3b8" }}>6s · 16:9 · Veo 3</span>
+                <a href={`data:video/mp4;base64,${videoB64}`} download="campaign-reel.mp4"
+                  style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textDecoration: "none" }}>
+                  ⬇ Download mp4
+                </a>
+              </div>
+            </div>
+          </TL>
+        )}
+
+        {/* Step 7: Channel Adaptations */}
         {adaptations && Object.keys(adaptations).length > 0 && (
           <TL step={6} icon="📐" color="#4338ca" label={`Channel Adaptations — ${Object.keys(adaptations).length} formats`}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>

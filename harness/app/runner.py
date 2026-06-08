@@ -682,6 +682,120 @@ def _apply_brand_overlay(
 
 
 
+async def generate_campaign_reel(
+    brand: str,
+    big_idea: str,
+    fan_truth: str,
+    season: str,
+    product_name: str,
+    audience: str,
+    gcs_bucket: str,
+    gcp_project: str,
+    gcp_region: str,
+    campaign_id: str,
+    reasoning_model: str = "gemini-3.5-flash",
+) -> tuple[str, str]:
+    """
+    Generate a 6-second campaign reel using Veo via Vertex AI.
+    Returns (video_b64, gcs_uri) — video_b64 is empty on failure.
+    """
+    import asyncio, base64, time
+    import google.genai as _veo_genai
+    from google.genai.types import GenerateVideosConfig
+
+    log = logger.bind(campaign_id=campaign_id)
+    output_uri = f"gs://{gcs_bucket}/outputs/{campaign_id}/reel.mp4"
+
+    # ── Build a cinematic video prompt via reasoning model ────────────────────
+    _BRAND_REEL = {
+        "Sunglow": (
+            "A beautiful woman doing a slow-motion hair flip, her incredibly shiny voluminous hair "
+            "cascading through golden light particles and warm bokeh. Magenta-pink and sunshine yellow "
+            "brand colours. Studio setting with dramatic rim lighting. "
+            "Sunglow product bottles visible in foreground catching the light."
+        ),
+        "Rnorr":   (
+            "A home cook ladling rich steaming soup into a bowl in a warm golden kitchen. "
+            "Dramatic close-up of steam rising, golden food particles suspended in warm amber light. "
+            "Rnorr product cubes/boxes on the counter beside fresh herbs and vegetables. "
+            "Deep forest green and sunshine yellow brand colours in background accents."
+        ),
+        "Boozt":   (
+            "A confident woman with gravity-defying voluminous hair, standing in an electric blue "
+            "studio. Neon light trails and energy arcs surround her as wind machine makes her hair "
+            "explode with volume. Boozt product bottles displayed dramatically in foreground. "
+            "Deep midnight navy and electric cobalt blue brand colours."
+        ),
+    }
+    brand_scene = _BRAND_REEL.get(brand, f"A premium advertising scene for {brand} with dynamic energy.")
+
+    _gc = _veo_genai.Client(vertexai=True, project=gcp_project, location=gcp_region)
+    video_prompt = await asyncio.get_event_loop().run_in_executor(None, lambda: _gc.models.generate_content(
+        model=reasoning_model,
+        contents=f"""Write a single cinematic video generation prompt (60-80 words) for a 6-second {brand} campaign reel.
+
+Brand: {brand}
+Product: {product_name}
+Campaign Big Idea: {big_idea}
+Fan Truth: {fan_truth}
+Season: {season}
+Audience: {audience}
+
+Base visual direction: {brand_scene}
+
+Rules: photorealistic, premium FMCG ad quality, dynamic motion, brand colours prominent.
+No text or typography. Output the prompt only.""",
+    ))
+    final_prompt = video_prompt.text.strip()
+    log.info("veo_prompt_ready", prompt=final_prompt[:120])
+
+    # ── Call Veo ──────────────────────────────────────────────────────────────
+    loop = asyncio.get_event_loop()
+    try:
+        veo_model = os.getenv("VEO_MODEL", "veo-3.1-generate-001")
+        operation = await loop.run_in_executor(None, lambda: _gc.models.generate_videos(
+            model=veo_model,
+            prompt=final_prompt,
+            config=GenerateVideosConfig(
+                aspect_ratio="16:9",
+                duration_seconds=6,
+                output_gcs_uri=output_uri,
+                number_of_videos=1,
+            ),
+        ))
+        log.info("veo_operation_started", name=getattr(operation, "name", "unknown"))
+
+        # Poll until complete (max 8 min)
+        deadline = time.time() + 480
+        while not operation.done:
+            if time.time() > deadline:
+                log.warning("veo_timeout")
+                return "", ""
+            await asyncio.sleep(20)
+            operation = await loop.run_in_executor(None, lambda: _gc.operations.get(operation))
+
+        if not operation.result or not operation.result.generated_videos:
+            log.warning("veo_no_videos_returned")
+            return "", ""
+
+        video_gcs = operation.result.generated_videos[0].video.uri
+        log.info("veo_done", uri=video_gcs)
+
+        # ── Download from GCS and return as base64 ────────────────────────────
+        from google.cloud import storage as _gcs
+        without = video_gcs[5:]  # strip gs://
+        bucket_name, _, blob_path = without.partition("/")
+        video_bytes = await loop.run_in_executor(
+            None,
+            lambda: _gcs.Client().bucket(bucket_name).blob(blob_path).download_as_bytes()
+        )
+        return base64.b64encode(video_bytes).decode("utf-8"), video_gcs
+
+    except Exception as e:
+        log.warning("veo_failed", error=str(e))
+        return "", ""
+
+
 async def run_creative_pipeline_direct(
     brand: str,
     audience: str,
@@ -1129,6 +1243,35 @@ Output EXACTLY this format (nothing else):
         log.warning("p2_generate_image_failed", error=image_error)
         await _emit("kv", "error", f"Image generation failed: {image_error[:80]}")
 
+    # ── Stage 6: Campaign Reel via Veo ────────────────────────────────────────
+    video_b64 = ""
+    video_uri = ""
+    if os.getenv("REEL_ENABLED", "true").lower() not in ("false", "0", "no"):
+        try:
+            await _emit("reel", "running", "Generating 6-second campaign reel with Veo…")
+            _settings_r = _get_settings()
+            video_b64, video_uri = await generate_campaign_reel(
+                brand           = brand,
+                big_idea        = big_idea,
+                fan_truth       = fan_truth,
+                season          = season,
+                product_name    = product_name,
+                audience        = audience,
+                gcs_bucket      = _settings_r.gcs_bucket,
+                gcp_project     = _settings_r.gcp_project,
+                gcp_region      = _settings_r.gcp_region,
+                campaign_id     = campaign_id,
+                reasoning_model = _settings_r.gemini_model_reasoning,
+            )
+            if video_b64:
+                await _emit("reel", "milestone", _json2.dumps({"video_b64": video_b64}))
+                await _emit("reel", "done", "Campaign reel ready ✓")
+            else:
+                await _emit("reel", "error", "Reel generation failed or timed out")
+        except Exception as e:
+            log.warning("p2_reel_failed", error=str(e))
+            await _emit("reel", "error", f"Reel error: {str(e)[:80]}")
+
     return {
         "campaign_id":          campaign_id,
         "culture_brief":        culture,
@@ -1139,6 +1282,8 @@ Output EXACTLY this format (nothing else):
         "images_b64":           images_b64,
         "image_error":          image_error,
         "channel_adaptations":  channel_adaptations,
+        "video_b64":            video_b64,
+        "video_uri":            video_uri,
     }
 
 
