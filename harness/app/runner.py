@@ -532,30 +532,27 @@ def _apply_brand_overlay(
     product_name: str = "",
 ) -> bytes:
     """
-    Editorial advertising overlay — no coloured bar.
+    Full-bleed advertising overlay — no split panel.
 
-    Design: billboard-scale word-by-word text stacked vertically in the left
-    zone of the image (variable font sizes, ALL CAPS, left-aligned), with a
-    soft dark bloom behind it so the white type reads on any background.
-    Brand logo at top-right corner (balances left text).
-
-    References: Weleda "YOU / ARE / NATURE", Sunsilk, Dove editorial ads.
+    Design: billboard text floats over the full image with a natural dark
+    gradient vignette behind it (left edge darkens gently to transparent),
+    so text reads on any photo. Logo top-right. Inspired by Sunsilk, Knorr,
+    Pantene full-bleed FMCG ads.
     """
     try:
         from PIL import Image, ImageDraw, ImageFont, ImageFilter
+        import numpy as np
         import io
         from pathlib import Path as _P
 
-        # Allow large Imagen 4 outputs (can be 100M+ pixels) — resize after open
         Image.MAX_IMAGE_PIXELS = None
         img = Image.open(io.BytesIO(img_data)).convert("RGBA")
-        # Downscale to max 1536px to keep compositing fast and output reasonable
         if max(img.size) > 1536:
             scale = 1536 / max(img.size)
             img   = img.resize((int(img.width * scale), int(img.height * scale)),
                                Image.LANCZOS)
         W, H = img.size
-        margin = max(20, int(W * 0.03))
+        margin = max(24, int(W * 0.035))
 
         # ── Brand font ────────────────────────────────────────────────────────
         BRAND_FONT_PREFS = {
@@ -572,110 +569,87 @@ def _apply_brand_overlay(
             if font_path:
                 break
         if not font_path:
-            hits = [f for f in sorted(font_dir.glob("*.ttf"))
-                    if "italic" not in f.name.lower()]
+            hits = [f for f in sorted(font_dir.glob("*.ttf")) if "italic" not in f.name.lower()]
             font_path = str(hits[0]) if hits else None
 
         def _font(size: int):
             if font_path:
-                try:
-                    return ImageFont.truetype(font_path, size)
-                except Exception:
-                    pass
-            try:
-                return ImageFont.load_default(size=size)
-            except Exception:
-                return ImageFont.load_default()
+                try: return ImageFont.truetype(font_path, size)
+                except Exception: pass
+            try: return ImageFont.load_default(size=size)
+            except Exception: return ImageFont.load_default()
 
-        # ── Brand colors ──────────────────────────────────────────────────────
+        # ── Brand accent colour ───────────────────────────────────────────────
         BRAND_ACCENT = {
-            "Sunglow": (255, 199, 44),   # Sunshine Yellow #FFC72C
-            "Rnorr":   (255, 222,  0),   # Rnorr Yellow #FFDE00
-            "Boozt":   (  0, 134, 254),  # Boozt Blue #0086FE
+            "Sunglow": (255, 199,  44),
+            "Rnorr":   (255, 222,   0),
+            "Boozt":   (  0, 134, 254),
         }
         accent_rgb = BRAND_ACCENT.get(brand, (255, 255, 255))
 
-        # ── 1. Split headline into words — one per line ───────────────────────
+        # ── 1. Split headline into words — billboard stacked layout ───────────
         words = [w.strip() for w in (headline or "").split() if w.strip()]
         if not words:
             words = [brand.upper()]
 
-        # Variable font sizes — creates dramatic visual hierarchy like billboard ads
-        # Assign size category to each word index
         n = len(words)
         def _word_size(i: int) -> int:
-            if n == 1:
-                return max(72, W // 9)
-            if n == 2:
-                return max(64, W // 10) if i == 0 else max(72, W // 8)
+            if n == 1: return max(80, W // 8)
+            if n == 2: return max(60, W // 11) if i == 0 else max(80, W // 7)
             if n == 3:
-                sizes = [max(36, W // 22), max(80, W // 8), max(44, W // 16)]
-                return sizes[i]
-            # 4+ words: first word small, next 1-2 words huge, rest medium
-            if i == 0:
-                return max(32, W // 24)       # small intro
-            elif i <= n // 2:
-                return max(76, W // 9)        # HUGE hero words
-            else:
-                return max(40, W // 18)       # medium outro
+                return [max(34, W // 24), max(86, W // 7), max(42, W // 17)][i]
+            if i == 0:   return max(30, W // 26)
+            elif i <= n // 2: return max(80, W // 8)
+            else:        return max(38, W // 19)
 
-        # Build line specs: (word_uppercase, font_size, font_object)
-        lines_spec = []
-        for i, word in enumerate(words):
-            sz = _word_size(i)
-            lines_spec.append((word.upper(), sz, _font(sz)))
+        lines_spec = [(w.upper(), _word_size(i), _font(_word_size(i))) for i, w in enumerate(words)]
 
-        # ── Measure text block ────────────────────────────────────────────────
         _tmp = Image.new("RGBA", (W, 4))
         _td  = ImageDraw.Draw(_tmp)
-        max_text_w = int(W * 0.50)   # text lives in left 50% of image
-
-        line_data = []   # (text, font, line_h, text_w)
+        line_data = []
         for word, sz, fnt in lines_spec:
-            bb   = _td.textbbox((0, 0), word, font=fnt)
-            tw   = bb[2] - bb[0]
-            th   = bb[3] - bb[1]
-            gap  = max(4, int(sz * 0.10))   # inter-line gap proportional to size
-            line_data.append((word, fnt, th + gap, tw))
+            bb  = _td.textbbox((0, 0), word, font=fnt)
+            tw, th = bb[2] - bb[0], bb[3] - bb[1]
+            line_data.append((word, fnt, th + max(4, int(sz * 0.08)), tw))
 
         block_h = sum(ld[2] for ld in line_data)
         block_w = max(ld[3] for ld in line_data)
 
-        # Vertically centre the block in the image
+        # Place text vertically centred, left-aligned with margin
         text_y_start = max(margin, (H - block_h) // 2)
         text_x       = margin
 
-        # ── 2. Subtle drop-shadow layer — no panel, left zone is already clean ──
-        shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        sd     = ImageDraw.Draw(shadow)
-        y = text_y_start
-        for word, fnt, lh, tw in line_data:
-            for dx, dy in [(-2, -2), (2, -2), (-2, 2), (2, 2), (0, 3), (3, 0)]:
-                sd.text((text_x + dx, y + dy), word, font=fnt, fill=(0, 0, 0, 160))
-            y += lh
-        shadow_blur = shadow.filter(ImageFilter.GaussianBlur(radius=4))
-        img = Image.alpha_composite(img, shadow_blur)
+        # ── 2. Gradient vignette behind text (left → transparent) ────────────
+        # Builds a smooth dark gradient over the left portion so text always reads
+        vignette_w = int(min(block_w + margin * 4, W * 0.55))
+        grad = np.zeros((H, W, 4), dtype=np.uint8)
+        for x in range(vignette_w):
+            # Cosine falloff: darkest at left edge, fully transparent at vignette_w
+            t       = x / vignette_w
+            alpha   = int(185 * (0.5 * (1 + np.cos(np.pi * t))))  # 185 → 0
+            grad[:, x, 3] = alpha
+        vignette = Image.fromarray(grad, "RGBA")
+        img = Image.alpha_composite(img, vignette)
 
-        # ── 3. White text — billboard scale, left-aligned ─────────────────────
+        # ── 3. Billboard text — full-bleed, no zone restriction ───────────────
         draw = ImageDraw.Draw(img)
         y = text_y_start
         for i, (word, fnt, lh, tw) in enumerate(line_data):
-            # 1-px crisp shadow
-            draw.text((text_x + 2, y + 2), word, font=fnt, fill=(0, 0, 0, 120))
-            # Main text — first word in accent colour for visual pop, rest white
-            color = (*accent_rgb, 255) if i == 0 and len(line_data) > 1 else (255, 255, 255, 250)
+            # Multi-offset thick shadow for crisp readability on any background
+            for dx, dy in [(-3,-3),(3,-3),(-3,3),(3,3),(0,4),(4,0),(-4,0),(0,-4)]:
+                draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,180))
+            color = (*accent_rgb, 255) if i == 0 and len(line_data) > 1 else (255, 255, 255, 255)
             draw.text((text_x, y), word, font=fnt, fill=color)
             y += lh
 
-        # ── 4. Brand logo — top-right corner (balances left text) ────────────
+        # ── 4. Brand logo — top-right ─────────────────────────────────────────
         try:
             from app.brand_assets import get_asset_loader as _gal
             _logos = _gal().list_logos(brand)
-            _sfx   = {"green", "red", "yellow", "orange", "purple", "blue"}
+            _sfx   = {"green","red","yellow","orange","purple","blue"}
             _primary = next(
-                (p for p in _logos
-                 if p.lower().endswith(".png")
-                 and not any(p.lower().rsplit(".", 1)[0].endswith(s) for s in _sfx)),
+                (p for p in _logos if p.lower().endswith(".png")
+                 and not any(p.lower().rsplit(".",1)[0].endswith(s) for s in _sfx)),
                 _logos[0] if _logos else None,
             )
             if _primary:
@@ -686,37 +660,31 @@ def _apply_brand_overlay(
                     try:
                         from app.creative_pipeline import _load_bytes as _clb
                         _logo_bytes = _clb(_primary)
-                    except Exception:
-                        pass
+                    except Exception: pass
                 if _logo_bytes:
                     _logo = Image.open(io.BytesIO(_logo_bytes)).convert("RGBA")
                     max_lw = int(W * 0.14)
                     max_lh = int(H * 0.10)
-                    sc     = min(max_lw / max(1, _logo.width),
-                                 max_lh / max(1, _logo.height), 1.0)
-                    lw     = max(32, int(_logo.width  * sc))
-                    lh     = max(32, int(_logo.height * sc))
-                    _logo  = _logo.resize((lw, lh), Image.LANCZOS)
-
-                    # Soft white glow behind logo
-                    gr = max(6, int(lw * 0.2))
-                    glow = Image.new("RGBA", (lw + gr*2, lh + gr*2), (0,0,0,0))
+                    sc  = min(max_lw / max(1, _logo.width), max_lh / max(1, _logo.height), 1.0)
+                    lw  = max(32, int(_logo.width * sc))
+                    lh2 = max(32, int(_logo.height * sc))
+                    _logo = _logo.resize((lw, lh2), Image.LANCZOS)
+                    gr   = max(6, int(lw * 0.25))
+                    glow = Image.new("RGBA", (lw + gr*2, lh2 + gr*2), (0,0,0,0))
                     gd   = ImageDraw.Draw(glow)
-                    gd.ellipse([gr//2, gr//2, lw+gr+gr//2, lh+gr+gr//2],
-                               fill=(255,255,255,50))
+                    gd.ellipse([gr//2, gr//2, lw+gr+gr//2, lh2+gr+gr//2], fill=(255,255,255,60))
                     glow = glow.filter(ImageFilter.GaussianBlur(radius=gr))
-                    lx = W - lw - margin      # top-RIGHT
+                    lx = W - lw - margin
                     ly = margin
-                    img.paste(glow, (lx - gr, ly - gr), glow)
+                    img.paste(glow, (lx-gr, ly-gr), glow)
                     img.paste(_logo, (lx, ly), _logo)
         except Exception as _le:
             logger.debug("logo_skipped", brand=brand, error=str(_le))
 
         result = img.convert("RGB")
-        buf    = io.BytesIO()
+        buf = io.BytesIO()
         result.save(buf, format="JPEG", quality=93)
-        logger.info("brand_overlay_applied", brand=brand,
-                    words=words, W=W, H=H)
+        logger.info("brand_overlay_applied", brand=brand, words=words, W=W, H=H)
         return buf.getvalue()
 
     except Exception as e:
@@ -957,12 +925,14 @@ Output EXACTLY this format (nothing else):
 [CONCEPT 2 - INTIMATE]: <170-200 word detailed image generation prompt>
 
 ═══ MANDATORY RULES ═══
-- LEFT 40% = clean flat {_brand_palette_str} background ONLY — zero people, products, or props
-- Model + products in RIGHT 60% only
+- FULL BLEED — subject and background fill the entire frame edge to edge, no flat panels
+- LEFT SIDE naturally darker/hazier/more atmospheric than right (scene depth, not a flat colour)
+  so overlaid typography reads clearly — achieved through lighting, depth of field, or shadows
+- Model and products positioned centre-right or right, facing slightly left into the frame
 - Photorealistic DSLR advertising photography quality
 - Magical effects: {_magic['effects']}
 - Bold saturated colours — award-winning art direction
-- NO text, words, letters, numbers, or typography anywhere
+- NO text, words, letters, numbers, or typography anywhere in the image
 - Fan truth ({_ft_ctx}) visible in model's expression and scene energy
 - Season ({_season_ctx}) woven into atmosphere, lighting temperature, and mood""", temp=0.9)
 
@@ -1044,7 +1014,7 @@ Output EXACTLY this format (nothing else):
             "CRITICAL: Do NOT render ANY text, words, letters, numbers, logos, "
             "or typography anywhere in the image. The image must be purely photographic "
             "with zero text elements — text will be added separately in post-production.\n\n"
-            "LEFT 40% of image must be a clean flat background with NO people, products, or props.\n\n"
+            "LEFT SIDE of image should be naturally darker/more atmospheric to allow text overlay.\n\n"
         )
         _style_suffix = (
             f"\n\nBRAND VISUAL STYLE (match this aesthetic):\n{style_analysis}"
