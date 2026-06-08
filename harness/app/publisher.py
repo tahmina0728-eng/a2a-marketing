@@ -985,6 +985,47 @@ def generate_landing_html(brand: str, hero_message: str, tagline: str,
 
 # ── Email ──────────────────────────────────────────────────────────────────────
 
+def _get_logo_b64(brand: str) -> str:
+    """
+    Load the primary brand logo PNG and return a base64-encoded data URI string.
+    Tries local bucket first (dev), then GCS (production) via asset loader.
+    Returns empty string if logo not found — email falls back to text wordmark.
+    """
+    try:
+        from pathlib import Path as _P
+        # Local bucket path (dev mode)
+        logo_dir = _P(__file__).parent.parent / "bucket" / "brands" / brand / "Logos"
+        if logo_dir.is_dir():
+            _sfx = {"green", "red", "yellow", "orange", "purple", "blue"}
+            candidates = sorted(logo_dir.glob("*.png"))
+            logo_file  = next(
+                (f for f in candidates
+                 if not any(f.stem.lower().endswith(s) for s in _sfx)),
+                candidates[0] if candidates else None,
+            )
+            if logo_file:
+                return base64.b64encode(logo_file.read_bytes()).decode("utf-8")
+        # GCS fallback
+        from app.brand_assets import get_asset_loader as _gal
+        logos = _gal().list_logos(brand)
+        _sfx  = {"green", "red", "yellow", "orange", "purple", "blue"}
+        primary = next(
+            (p for p in logos
+             if p.lower().endswith(".png")
+             and not any(p.lower().rsplit(".", 1)[0].endswith(s) for s in _sfx)),
+            logos[0] if logos else None,
+        )
+        if primary and primary.startswith("gs://"):
+            from google.cloud import storage as _gcs
+            without = primary[5:]
+            bucket_name, _, blob_path = without.partition("/")
+            data = _gcs.Client().bucket(bucket_name).blob(blob_path).download_as_bytes()
+            return base64.b64encode(data).decode("utf-8")
+    except Exception as _e:
+        logger.debug("logo_b64_failed", brand=brand, error=str(_e))
+    return ""
+
+
 def _build_email_html(
     brand:          str,
     hero_message:   str,
@@ -994,6 +1035,7 @@ def _build_email_html(
     image_b64:      str,
     landing_url:    str,
     product_name:   str = "",
+    email_subject:  str = "",
 ) -> str:
     """
     Build a premium brand-specific HTML email.
@@ -1027,15 +1069,43 @@ def _build_email_html(
     features   = cfg.get("features", [])
     cta_label  = cta or "Discover More"
 
+    # Email channel headline — prefer email_subject from copy agent, fall back to hero_message
+    email_headline  = email_subject or hero_message
+    # Eyebrow above headline — use tagline or short_headline as a teaser line
+    email_eyebrow   = tagline.upper() if tagline else (short_headline[:60] if short_headline else brand.upper())
+
+    # Load brand logo as base64-encoded PNG (embedded inline — works in Gmail, Apple Mail)
+    logo_b64    = _get_logo_b64(brand)
+    logo_block  = (
+        f'<img src="data:image/png;base64,{logo_b64}" alt="{brand}" '
+        f'style="height:44px;max-width:160px;display:block;border:0;" />'
+        if logo_b64
+        else f'<span style="font-family:{font_stack};font-size:26px;font-weight:900;'
+             f'color:white;letter-spacing:-0.02em;">{brand.upper()}</span>'
+    )
+
     img_block = ""
     if image_b64:
         img_block = f"""
-        <!-- Hero image -->
+        <!-- Hero KV image from campaign -->
         <tr>
-          <td style="padding:0;line-height:0;">
+          <td style="padding:0;line-height:0;font-size:0;">
             <img src="data:image/jpeg;base64,{image_b64}"
-                 width="600" alt="{brand} campaign"
-                 style="display:block;width:100%;max-width:600px;border:0;" />
+                 width="600" alt="{email_headline}"
+                 style="display:block;width:100%;max-width:600px;height:auto;border:0;" />
+          </td>
+        </tr>"""
+    else:
+        # Fallback: gradient banner when no KV image available
+        img_block = f"""
+        <!-- Gradient banner fallback -->
+        <tr>
+          <td style="background:linear-gradient(135deg,{primary} 0%,{secondary} 50%,{accent}88 100%);
+                      padding:48px 40px;text-align:center;">
+            <div style="font-family:{font_stack};font-size:32px;font-weight:900;
+                         color:white;letter-spacing:-0.02em;line-height:1.2;">
+              {email_headline}
+            </div>
           </td>
         </tr>"""
 
@@ -1086,14 +1156,14 @@ def _build_email_html(
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{brand} — {hero_message}</title>
+  <title>{brand} — {email_headline}</title>
   {font_import}
 </head>
 <body style="margin:0;padding:0;background:{body_bg};font-family:{font_stack};">
 
-  <!-- Pre-header (shown in inbox preview, hidden in email body) -->
+  <!-- Pre-header (inbox preview line — hidden in body) -->
   <div style="display:none;max-height:0;overflow:hidden;color:{body_bg};">
-    {short_headline} — {hero_tag} &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+    {email_headline} &zwnj;&nbsp;&zwnj;&nbsp;{short_headline[:60] if short_headline else ""}&zwnj;&nbsp;
   </div>
 
   <!-- Outer wrapper -->
@@ -1107,22 +1177,17 @@ def _build_email_html(
                style="max-width:600px;width:100%;border-radius:16px;
                       overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.12);">
 
-          <!-- ① HEADER BAR -->
+          <!-- ① HEADER BAR — brand logo + campaign badge -->
           <tr>
             <td style="background:linear-gradient(135deg,{primary} 0%,{secondary} 100%);
-                        padding:28px 40px;">
+                        padding:22px 32px;">
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td>
-                    <!-- Brand wordmark -->
-                    <div style="font-family:{font_stack};font-size:28px;font-weight:900;
-                                 color:white;letter-spacing:-0.02em;line-height:1;">
-                      {brand.upper()}
-                    </div>
-                    {f'<div style="font-size:12px;font-weight:700;color:{accent};letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">{hero_tag}</div>' if hero_tag else ""}
+                  <td style="vertical-align:middle;">
+                    {logo_block}
+                    {f'<div style="font-size:11px;font-weight:700;color:{accent};letter-spacing:0.1em;text-transform:uppercase;margin-top:6px;">{hero_tag}</div>' if hero_tag else ""}
                   </td>
                   <td align="right" style="vertical-align:middle;">
-                    <!-- Campaign badge -->
                     <span style="display:inline-block;background:rgba(255,255,255,0.15);
                                   border:1.5px solid rgba(255,255,255,0.35);
                                   color:white;font-size:10px;font-weight:700;
@@ -1138,20 +1203,20 @@ def _build_email_html(
 
           {img_block}
 
-          <!-- ② HEADLINE + SUBLINE -->
+          <!-- ② HEADLINE from copy agent email channel -->
           <tr>
-            <td style="padding:40px 40px 24px;background:white;">
-              <!-- Eyebrow -->
+            <td style="padding:36px 40px 24px;background:white;">
+              <!-- Eyebrow — email subject line as teaser -->
               <div style="font-size:11px;font-weight:700;color:{accent};
                            letter-spacing:0.14em;text-transform:uppercase;
-                           margin-bottom:14px;">
-                {tagline.upper() if tagline else brand.upper()}
+                           margin-bottom:12px;">
+                {email_eyebrow}
               </div>
-              <!-- Hero headline -->
-              <h1 style="font-family:{font_stack};font-size:32px;font-weight:900;
-                          color:{primary};line-height:1.2;margin:0 0 16px;
+              <!-- Main headline — email_subject from copy agent -->
+              <h1 style="font-family:{font_stack};font-size:30px;font-weight:900;
+                          color:{primary};line-height:1.25;margin:0 0 14px;
                           letter-spacing:-0.02em;">
-                {hero_message}
+                {email_headline}
               </h1>
               <!-- Subline -->
               <p style="font-size:17px;color:#475569;line-height:1.7;
@@ -1226,9 +1291,10 @@ def _build_email_html(
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td>
-                    <div style="font-size:18px;font-weight:900;color:white;
-                                 letter-spacing:-0.01em;margin-bottom:6px;">
-                      {brand.upper()}
+                    <!-- Footer logo -->
+                    <div style="margin-bottom:10px;">
+                      {logo_block.replace('height:44px', 'height:32px') if logo_b64
+                       else f'<span style="font-size:18px;font-weight:900;color:white;">{brand.upper()}</span>'}
                     </div>
                     {f'<div style="font-size:12px;color:{accent};font-weight:700;margin-bottom:12px;">{tagline}</div>' if tagline else ""}
                     <div style="font-size:20px;margin-bottom:12px;letter-spacing:0.1em;">
@@ -1267,6 +1333,7 @@ def send_campaign_email(
     cta:            str,
     image_b64:      str,
     landing_url:    str,
+    email_subject:  str = "",
     body_copy:      str = "",
     product_name:   str = "",
 ) -> dict:
@@ -1316,6 +1383,7 @@ def send_campaign_email(
         brand          = brand,
         hero_message   = hero_message,
         short_headline = short_headline,
+        email_subject  = email_subject,
         body_copy      = body_copy,
         cta            = cta,
         image_b64      = image_b64,
@@ -1323,7 +1391,8 @@ def send_campaign_email(
         product_name   = product_name,
     )
 
-    subject = f"{hero_message or short_headline} — {brand}"
+    # Subject line: email_subject from copy agent if available, else hero_message
+    subject = f"{email_subject or hero_message or short_headline} — {brand}"
 
     msg               = MIMEMultipart("alternative")
     msg["Subject"]    = subject

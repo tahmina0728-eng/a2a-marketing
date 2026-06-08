@@ -599,6 +599,8 @@ class PublishRequest(_BaseModel):
     body:            str = ""
     cta:             str = ""
     tagline:         str = ""
+    email_subject:   str = ""   # email-channel copy from copy agent channel_copy.email_subject
+    product_name:    str = ""   # selected product for email product spotlight
     image_b64:       str = ""
     to_email:        str = ""
     channels:        list = []  # ["google_ads", "landing_page", "email"] — empty = all
@@ -652,9 +654,12 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
             brand          = req.brand,
             hero_message   = req.hero_message,
             short_headline = req.short_headline,
+            email_subject  = req.email_subject,
+            body_copy      = req.body,
             cta            = req.cta,
             image_b64      = req.image_b64,
             landing_url    = landing_url,
+            product_name   = req.product_name,
         )
       else:
         results["email"] = {"status": "skipped", "reason": "No recipient email provided"}

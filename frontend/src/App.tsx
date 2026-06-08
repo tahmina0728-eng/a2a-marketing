@@ -1477,6 +1477,11 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
           body:            copy?.long?.body       ?? "",
           cta:             copy?.cta              ?? "",
           tagline:         strategy?.tagline      ?? "",
+          // Email-channel specific copy from copy agent
+          email_subject:   (copy as any)?.channel_copy?.email_subject ?? copy?.short?.headline ?? "",
+          // Product name for email footer / product spotlight
+          product_name:    String((output as any)?.product_name ?? brief?.structured_brief?.product ?? ""),
+          // KV image — use explicitly selected variation first
           image_b64:       selectedImageB64 ?? cp?.images_b64?.[0] ?? cp?.image_b64 ?? "",
           to_email:        selected.has("email") ? email : "",
           channels:        Array.from(selected),
