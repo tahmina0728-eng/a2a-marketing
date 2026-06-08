@@ -901,9 +901,11 @@ Emotional Energy: {_magic['energy']}
 Colours: {_brand_palette_str}
 
 ═══ PRODUCT REFERENCE ═══
-I am providing you reference images of the actual {brand} product packaging and logo.
+Selected product: {_product_ctx}
+I am providing reference images of the actual {brand} {_product_ctx} packaging and logo.
 Reproduce the EXACT product design, colours, and label from those reference images.
-Show 2-3 products prominently in the RIGHT zone.
+Every product in the image MUST show '{brand}' and '{_product_ctx}' on the label.
+Show 2-3 of these products prominently in the RIGHT zone.
 
 ═══ TWO DIFFERENT CONCEPTS ═══
 Concept 1 — DYNAMIC ENERGY: Model is in full motion (hair flip, jump, spin, or dramatic reach). Background has maximum magical effects. Products displayed dramatically.
@@ -1000,13 +1002,15 @@ Output EXACTLY this format (nothing else):
 
         # â"€â"€ Step B: Enrich each concept prompt with style + no-text rule ─────────
         _no_text_rule = (
-            f"CRITICAL BRAND RULE: This is the brand '{brand}'. "
-            f"The selected product is '{_product_ctx}'. "
-            f"All product packaging in the image MUST clearly show the brand name '{brand}' — "
-            f"NOT any other brand name. Reproduce the exact packaging from the reference images provided.\n\n"
-            "CRITICAL: Do NOT render ANY other text, words, letters, numbers, or typography "
-            "anywhere in the image beyond what appears on the product packaging itself. "
-            "The image must have zero additional text elements — all copy will be added in post-production.\n\n"
+            f"CRITICAL BRAND + PRODUCT RULE:\n"
+            f"Brand: '{brand}'\n"
+            f"Selected product: '{_product_ctx}'\n"
+            f"Show 2-3 '{brand}' product bottles/packages in the image. "
+            f"The label on EVERY product MUST read '{brand}' and '{_product_ctx}'. "
+            f"Reproduce the exact packaging design, colours, and label from the reference product images provided. "
+            f"Do NOT show any other brand name (e.g. NOT 'Knorr', NOT 'L'Oréal', NOT generic labels).\n\n"
+            "TYPOGRAPHY RULE: No text anywhere in the image EXCEPT on the product packaging labels themselves. "
+            "Zero headlines, zero slogans, zero copy — all will be added in post-production.\n\n"
         )
         _style_suffix = (
             f"\n\nBRAND VISUAL STYLE (match this aesthetic):\n{style_analysis}"
@@ -1037,7 +1041,7 @@ Output EXACTLY this format (nothing else):
                 continue
             _pdata = _load_bytes(_uri)
             if _pdata and len(_pdata) > 1024:
-                _ref_parts.append(f"PRODUCT REFERENCE for brand '{brand}' — reproduce this EXACT '{brand}' product packaging design prominently in the image. Show the '{brand}' brand name clearly on the packaging:")
+                _ref_parts.append(f"PRODUCT REFERENCE — This is a '{brand}' '{_product_ctx}' product. Reproduce this EXACT packaging: same bottle/box shape, same colours, same label design. The label MUST show '{brand}' and '{_product_ctx}'. Feature 2-3 of these products prominently:")
                 _ref_parts.append(_gtypes.Part.from_bytes(data=_pdata, mime_type=_pmime))
 
         log.info("p2_ref_parts_loaded", n=len([p for p in _ref_parts if not isinstance(p, str)]))
