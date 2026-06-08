@@ -648,8 +648,10 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
 
     # Base URL for HTTPS image links in email (Gmail-compatible)
     _harness_base = os.getenv("HARNESS_URL", "http://localhost:8000").rstrip("/")
-    _img_url  = f"{_harness_base}/campaign-image/{campaign_id}" if req.image_b64 else ""
-    _logo_url = f"{_harness_base}/brand-logo/{req.brand}"
+    _is_local = "localhost" in _harness_base or "127.0.0.1" in _harness_base
+    # Localhost URLs are unreachable by Gmail — use empty string so email falls back to base64
+    _img_url  = "" if _is_local else (f"{_harness_base}/campaign-image/{campaign_id}" if req.image_b64 else "")
+    _logo_url = "" if _is_local else f"{_harness_base}/brand-logo/{req.brand}"
 
     landing_url = f"{_harness_base}/landing/{campaign_id}"  # default before landing page created
 
@@ -713,6 +715,7 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
                     cta            = req.cta,
                     image_url      = _img_url,
                     logo_url       = _logo_url,
+                    image_b64      = req.image_b64,   # base64 fallback when URL is localhost
                     landing_url    = landing_url,
                     product_name   = req.product_name,
                 )
