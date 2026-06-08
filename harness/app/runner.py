@@ -707,28 +707,75 @@ async def generate_campaign_reel(
     log = logger.bind(campaign_id=campaign_id)
     output_uri = f"gs://{gcs_bucket}/outputs/{campaign_id}/reel.mp4"
 
-    # ── Build a cinematic video prompt via reasoning model ────────────────────
-    _BRAND_REEL = {
-        "Sunglow": (
-            "A beautiful woman doing a slow-motion hair flip, her incredibly shiny voluminous hair "
-            "cascading through golden light particles and warm bokeh. Magenta-pink and sunshine yellow "
-            "brand colours. Studio setting with dramatic rim lighting. "
-            "Sunglow product bottles visible in foreground catching the light."
-        ),
-        "Rnorr":   (
-            "A home cook ladling rich steaming soup into a bowl in a warm golden kitchen. "
-            "Dramatic close-up of steam rising, golden food particles suspended in warm amber light. "
-            "Rnorr product cubes/boxes on the counter beside fresh herbs and vegetables. "
-            "Deep forest green and sunshine yellow brand colours in background accents."
-        ),
-        "Boozt":   (
-            "A confident woman with gravity-defying voluminous hair, standing in an electric blue "
-            "studio. Neon light trails and energy arcs surround her as wind machine makes her hair "
-            "explode with volume. Boozt product bottles displayed dramatically in foreground. "
-            "Deep midnight navy and electric cobalt blue brand colours."
-        ),
+    # ── Product-aware brand scene directions ─────────────────────────────────
+    _prod = product_name or f"{brand} product"
+
+    def _sunglow_scene(p: str) -> str:
+        if any(x in p.lower() for x in ["serum", "oil", "scalp", "treat"]):
+            return (
+                f"Close-up slow-motion of a woman applying {p} drops onto her fingertips, "
+                f"then running them through her hair as golden light particles trail behind. "
+                f"The {p} bottle gleams in warm studio light in the foreground. "
+                f"Magenta-pink and sunshine yellow brand colours. Warm glowing bokeh."
+            )
+        elif any(x in p.lower() for x in ["conditioner", "mask", "repair"]):
+            return (
+                f"A woman in a steamy bathroom smoothing {p} through her hair, eyes closed in bliss. "
+                f"Rich creamy product trails through shiny hair in slow motion. "
+                f"The {p} tube displayed prominently. Sunglow magenta-pink and yellow palette."
+            )
+        else:  # shampoo, default
+            return (
+                f"A beautiful woman doing a slow-motion hair flip after washing with {p}, "
+                f"her incredibly shiny hair cascading through golden light particles and warm bokeh. "
+                f"The {p} bottle visible in foreground catching the light. "
+                f"Magenta-pink and sunshine yellow brand colours, dramatic rim lighting."
+            )
+
+    def _rnorr_scene(p: str) -> str:
+        if any(x in p.lower() for x in ["gravy", "sauce", "cook-in", "liquid"]):
+            return (
+                f"A home cook pouring rich golden {p} over a sizzling pan of vegetables, "
+                f"dramatic steam and golden sauce trails catching warm kitchen light. "
+                f"The {p} bottle/pack on the counter, deep green and yellow brand accents."
+            )
+        elif any(x in p.lower() for x in ["bouillon", "powder", "seasoning"]):
+            return (
+                f"A close-up of {p} being sprinkled into a bubbling pot, golden powder "
+                f"dissolving into rich broth with cinematic steam wisps rising. "
+                f"Rnorr {p} pack beside fresh herbs. Deep forest green and yellow palette."
+            )
+        else:  # stock cubes, stock pots, default
+            return (
+                f"A home cook dropping a {p} into a steaming pot, watching it dissolve "
+                f"into rich golden broth — steam rising dramatically in warm amber kitchen light. "
+                f"The {p} box/jar on the counter beside fresh vegetables. "
+                f"Deep forest green and sunshine yellow brand colours."
+            )
+
+    def _boozt_scene(p: str) -> str:
+        if any(x in p.lower() for x in ["mousse", "spray", "lift", "root"]):
+            return (
+                f"A woman applying {p} to her roots, then running fingers through as her hair "
+                f"instantly lifts to dramatic cloud-like volume. Wind machine makes it explode. "
+                f"The {p} bottle displayed in electric blue studio light. "
+                f"Deep midnight navy and electric cobalt blue brand colours, neon energy trails."
+            )
+        else:  # shampoo, thickening, default
+            return (
+                f"A confident woman washing and then revealing incredible volume after using {p}. "
+                f"Gravity-defying full hair in slow motion, neon light trails and energy arcs. "
+                f"The {p} bottle dramatically lit in foreground. "
+                f"Deep midnight navy and electric cobalt blue brand colours."
+            )
+
+    _BRAND_SCENE_FN = {
+        "Sunglow": _sunglow_scene,
+        "Rnorr":   _rnorr_scene,
+        "Boozt":   _boozt_scene,
     }
-    brand_scene = _BRAND_REEL.get(brand, f"A premium advertising scene for {brand} with dynamic energy.")
+    brand_scene = _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN \
+        else f"A premium advertising scene featuring {_prod} with dynamic energy and brand colours."
 
     _gc = _veo_genai.Client(vertexai=True, project=gcp_project, location=gcp_region)
     _voiceover_line = (
