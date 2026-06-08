@@ -693,6 +693,7 @@ async def generate_campaign_reel(
     gcp_project: str,
     gcp_region: str,
     campaign_id: str,
+    copy_headline: str = "",
     reasoning_model: str = "gemini-3.5-flash",
 ) -> tuple[str, str]:
     """
@@ -730,9 +731,13 @@ async def generate_campaign_reel(
     brand_scene = _BRAND_REEL.get(brand, f"A premium advertising scene for {brand} with dynamic energy.")
 
     _gc = _veo_genai.Client(vertexai=True, project=gcp_project, location=gcp_region)
+    _voiceover_line = (
+        f'A warm confident voiceover says: "{copy_headline}"' if copy_headline
+        else "A warm confident voiceover narrates the campaign tagline."
+    )
     video_prompt = await asyncio.get_event_loop().run_in_executor(None, lambda: _gc.models.generate_content(
         model=reasoning_model,
-        contents=f"""Write a single cinematic video+audio generation prompt (70-90 words) for a 6-second {brand} campaign reel.
+        contents=f"""Write a single cinematic video+audio generation prompt (80-100 words) for a 6-second {brand} campaign reel with voiceover.
 
 Brand: {brand}
 Product: {product_name}
@@ -740,13 +745,14 @@ Campaign Big Idea: {big_idea}
 Fan Truth: {fan_truth}
 Season: {season}
 Audience: {audience}
+Campaign Headline (voiceover text): "{copy_headline or big_idea}"
 
 Base visual direction: {brand_scene}
 
 Rules:
 - Photorealistic, premium FMCG ad quality, dynamic motion, brand colours prominent
-- Include AUDIO direction: describe the sound (upbeat music genre, ambient sounds, energy level)
-- No spoken words or voiceover — music and ambient sounds only
+- AUDIO: upbeat brand-appropriate background music + {_voiceover_line}
+- The voiceover should be delivered confidently and warmly over the music
 - No text or typography in the image
 Output the prompt only.""",
     ))
@@ -1269,6 +1275,7 @@ Output EXACTLY this format (nothing else):
                 gcp_project     = _settings_r.gcp_project,
                 gcp_region      = _settings_r.gcp_region,
                 campaign_id     = campaign_id,
+                copy_headline   = copy_headline,
                 reasoning_model = _settings_r.gemini_model_reasoning,
             )
             if video_b64:
