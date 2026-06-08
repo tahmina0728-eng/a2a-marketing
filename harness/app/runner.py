@@ -541,7 +541,6 @@ def _apply_brand_overlay(
     """
     try:
         from PIL import Image, ImageDraw, ImageFont, ImageFilter
-        import numpy as np
         import io
         from pathlib import Path as _P
 
@@ -619,17 +618,7 @@ def _apply_brand_overlay(
         text_y_start = max(margin, (H - block_h) // 2)
         text_x       = margin
 
-        # ── 2. Gradient vignette behind text (left → transparent) ────────────
-        # Builds a smooth dark gradient over the left portion so text always reads
-        vignette_w = int(min(block_w + margin * 4, W * 0.55))
-        grad = np.zeros((H, W, 4), dtype=np.uint8)
-        for x in range(vignette_w):
-            # Cosine falloff: darkest at left edge, fully transparent at vignette_w
-            t       = x / vignette_w
-            alpha   = int(185 * (0.5 * (1 + np.cos(np.pi * t))))  # 185 → 0
-            grad[:, x, 3] = alpha
-        vignette = Image.fromarray(grad, "RGBA")
-        img = Image.alpha_composite(img, vignette)
+        # ── 2. No vignette — rely on thick text shadow for readability ───────
 
         # ── 3. Billboard text — full-bleed, no zone restriction ───────────────
         draw = ImageDraw.Draw(img)
@@ -1011,10 +1000,13 @@ Output EXACTLY this format (nothing else):
 
         # â"€â"€ Step B: Enrich each concept prompt with style + no-text rule ─────────
         _no_text_rule = (
-            "CRITICAL: Do NOT render ANY text, words, letters, numbers, logos, "
-            "or typography anywhere in the image. The image must be purely photographic "
-            "with zero text elements — text will be added separately in post-production.\n\n"
-            "LEFT SIDE of image should be naturally darker/more atmospheric to allow text overlay.\n\n"
+            f"CRITICAL BRAND RULE: This is the brand '{brand}'. "
+            f"The selected product is '{_product_ctx}'. "
+            f"All product packaging in the image MUST clearly show the brand name '{brand}' — "
+            f"NOT any other brand name. Reproduce the exact packaging from the reference images provided.\n\n"
+            "CRITICAL: Do NOT render ANY other text, words, letters, numbers, or typography "
+            "anywhere in the image beyond what appears on the product packaging itself. "
+            "The image must have zero additional text elements — all copy will be added in post-production.\n\n"
         )
         _style_suffix = (
             f"\n\nBRAND VISUAL STYLE (match this aesthetic):\n{style_analysis}"
@@ -1045,7 +1037,7 @@ Output EXACTLY this format (nothing else):
                 continue
             _pdata = _load_bytes(_uri)
             if _pdata and len(_pdata) > 1024:
-                _ref_parts.append("PRODUCT REFERENCE — feature this exact product packaging prominently in the RIGHT side of the image:")
+                _ref_parts.append(f"PRODUCT REFERENCE for brand '{brand}' — reproduce this EXACT '{brand}' product packaging design prominently in the image. Show the '{brand}' brand name clearly on the packaging:")
                 _ref_parts.append(_gtypes.Part.from_bytes(data=_pdata, mime_type=_pmime))
 
         log.info("p2_ref_parts_loaded", n=len([p for p in _ref_parts if not isinstance(p, str)]))
