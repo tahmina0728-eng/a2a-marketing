@@ -272,7 +272,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         hb1 = asyncio.create_task(_heartbeat(campaign_id, "briefing", [
             "Querying Fan Truth benchmarks from CDP…",
             "Scoring campaign KPIs against historical data…",
-            "Gemini 2.5 Flash is validating your brief…",
+            "Gemini 3.5 Flash is validating your brief…",
             "Cross-checking audience insights & channel data…",
             "Almost there — scoring Fan Truth quality…",
         ], interval=22))

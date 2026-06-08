@@ -29,13 +29,13 @@ from google.genai.types import Content, Part
 logger = structlog.get_logger()
 
 
-async def _vertex_generate(client, model: str, prompt: str, temperature: float = 0.5, retries: int = 4) -> str:
+async def _vertex_generate(client, model: str, prompt: str, retries: int = 4) -> str:
     """Call Vertex AI generate_content with exponential backoff on 429."""
     loop = asyncio.get_event_loop()
     for attempt in range(retries):
         try:
             r = await loop.run_in_executor(None, lambda: client.models.generate_content(
-                model=model, contents=prompt, config={"temperature": temperature},
+                model=model, contents=prompt,
             ))
             return r.text.strip()
         except Exception as e:
@@ -199,7 +199,7 @@ Apply brand locks. Return ONLY valid JSON â€" no markdown, no explanation:
     from app.config import get_settings as _gs_brief
     _sb = _gs_brief()
     _gc_brief = _genai_brief.Client(vertexai=True, project=_sb.gcp_project, location=_sb.gcp_region)
-    raw = await _vertex_generate(_gc_brief, os.getenv("GEMINI_MODEL_REASONING", "gemini-2.5-flash"), prompt, temperature=0.3)
+    raw = await _vertex_generate(_gc_brief, os.getenv("GEMINI_MODEL_REASONING", "gemini-3.5-flash"), prompt)
     return _parse_agent_response(raw)
 
 
@@ -316,7 +316,7 @@ Produce a creative strategy as valid JSON only â€" no markdown, no explanatio
     from app.config import get_settings as _gs
     _ss = _gs()
     _gc = _g.Client(vertexai=True, project=_ss.gcp_project, location=_ss.gcp_region)
-    raw = await _vertex_generate(_gc, os.getenv('CREATIVE_MODEL', 'gemini-2.5-flash'), prompt, temperature=0.5)
+    raw = await _vertex_generate(_gc, os.getenv('CREATIVE_MODEL', 'gemini-3.5-flash'), prompt)
     return _parse_agent_response(raw)
 
 
@@ -379,7 +379,7 @@ Only include the channel fields listed below.
 {channel_json_lines}
 }}"""
 
-    raw = await _vertex_generate(_gc2, os.getenv("CREATIVE_MODEL", "gemini-2.5-flash"), prompt, temperature=0.7)
+    raw = await _vertex_generate(_gc2, os.getenv("CREATIVE_MODEL", "gemini-3.5-flash"), prompt)
     result = _parse_agent_response(raw)
     result["_channel_keys"] = [k for k, _ in channel_fields]
     return result
@@ -427,7 +427,7 @@ Produce campaign copy as valid JSON only â€" no markdown, no explanation:
     from app.config import get_settings as _gs2
     _ss2 = _gs2()
     _gc2 = _g2.Client(vertexai=True, project=_ss2.gcp_project, location=_ss2.gcp_region)
-    raw2 = await _vertex_generate(_gc2, os.getenv('CREATIVE_MODEL', 'gemini-2.5-flash'), prompt, temperature=0.7)
+    raw2 = await _vertex_generate(_gc2, os.getenv('CREATIVE_MODEL', 'gemini-3.5-flash'), prompt)
     return _parse_agent_response(raw2)
 
 
@@ -645,21 +645,21 @@ def _apply_brand_overlay(
         text_y_start = max(margin, (H - block_h) // 2)
         text_x       = margin
 
-        # ── 2. Dark bloom shadow behind the entire text block ─────────────────
-        # Draw all words in black on a transparent layer, blur into a soft halo
-        bloom = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        bd    = ImageDraw.Draw(bloom)
-        y = text_y_start
-        for word, fnt, lh, tw in line_data:
-            # Thick black copies for strong bloom core
-            for dx, dy in [(-3,-3),(3,-3),(-3,3),(3,3),(0,-2),(0,2),(-2,0),(2,0),(0,0)]:
-                bd.text((text_x + dx, y + dy), word, font=fnt, fill=(0, 0, 0, 220))
-            y += lh
-
-        bloom_wide  = bloom.filter(ImageFilter.GaussianBlur(radius=24))   # wide soft halo
-        bloom_tight = bloom.filter(ImageFilter.GaussianBlur(radius=8))    # tight shadow core
-        img = Image.alpha_composite(img, bloom_wide)
-        img = Image.alpha_composite(img, bloom_tight)
+        # ── 2. Semi-transparent panel behind the text block ──────────────────
+        # Solid dark rectangle so text reads cleanly on any background
+        pad_x = max(12, int(W * 0.02))
+        pad_y = max(10, int(H * 0.015))
+        panel_x0 = text_x - pad_x
+        panel_y0 = text_y_start - pad_y
+        panel_x1 = text_x + block_w + pad_x
+        panel_y1 = text_y_start + block_h + pad_y
+        # Clamp to image bounds
+        panel_x1 = min(panel_x1, int(W * 0.52))
+        panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        pd    = ImageDraw.Draw(panel)
+        pd.rectangle([panel_x0, panel_y0, panel_x1, panel_y1], fill=(0, 0, 0, 140))
+        panel_blur = panel.filter(ImageFilter.GaussianBlur(radius=6))
+        img = Image.alpha_composite(img, panel_blur)
 
         # ── 3. White text — billboard scale, left-aligned ─────────────────────
         draw = ImageDraw.Draw(img)
@@ -769,7 +769,7 @@ async def run_creative_pipeline_direct(
     from app.config import get_settings as _get_settings
     _s = _get_settings()
     _gemini = _genai.Client(vertexai=True, project=_s.gcp_project, location=_s.gcp_region)
-    _text_model = os.getenv("CREATIVE_MODEL", "gemini-2.5-flash")
+    _text_model = os.getenv("CREATIVE_MODEL", "gemini-3.5-flash")
 
     async def _llm(prompt: str, temp: float = 0.5, retries: int = 3,
                    with_brand_imgs: bool = False) -> str:
@@ -783,7 +783,6 @@ async def run_creative_pipeline_direct(
                 r = await loop.run_in_executor(None, lambda: _gemini.models.generate_content(
                     model    = _text_model,
                     contents = contents,
-                    config   = {"temperature": temp},
                 ))
                 # Extract text — vision models may return mixed parts
                 txt = ""
@@ -873,10 +872,9 @@ Create a Big Idea for this campaign. Output:
     await _emit("kv", "running", "Big Idea ready — crafting image prompt…")
     await _asyncio.sleep(10)
 
-    # Stage 4: Prompt agent → image generation prompt
+    # Stage 4: Generate 5 distinct scene concept prompts from brief context
     log.info("p2_prompt_agent_start")
-    await _emit("kv", "running", "Crafting Imagen 4 prompt from Big Idea…")
-    # ── Brand-specific palette (colour names only — no hex codes for Imagen) ──
+    await _emit("kv", "running", "Crafting 5 scene concepts from your brief…")
     _BRAND_PALETTE = {
         "Sunglow": "hot magenta pink, sunshine yellow, off-white cream",
         "Rnorr":   "deep forest green, bright sunshine yellow, white",
@@ -884,116 +882,76 @@ Create a Big Idea for this campaign. Output:
     }
     _brand_palette_str = _BRAND_PALETTE.get(brand, "brand primary colour, accent colour, white")
 
-    # ── Per-brand model & hair direction (prevents repetitive Afro-only renders) ──
-    _BRAND_MODEL = {
-        "Sunglow": (
-            "Model: A beautiful woman — ANY ethnicity. ROTATE each campaign: "
-            "South Asian woman with long glossy waves, OR East Asian woman with silky straight hair, "
-            "OR Latina woman with voluminous loose curls, OR mixed-race woman with a sleek blowout, "
-            "OR light-skinned woman with wavy highlighted hair. "
-            "DO NOT generate a dark-skinned Black woman with tight Afro or 4C curls — "
-            "choose a different ethnicity and hair type every time for variety. "
-            "Hair must look INCREDIBLE: shiny, healthy, bouncy, full of life. "
-            "Studio background in warm magenta-pink or golden tones."
-        ),
-        "Rnorr": (
-            "Model: A home cook (woman or man, any ethnicity, age 25-45, warm and relatable). "
-            "Natural kitchen environment or warm studio set with cooking props. "
-            "Approachable, confident, like the friend who actually knows how to cook. "
-            "NO specific hair focus — face and personality are the hero."
-        ),
-        "Boozt": (
-            "Model: A woman (any ethnicity — Asian, Caucasian, Latina, mixed — vary each campaign). "
-            "Hair must show DRAMATIC VOLUME AND BODY: could be fine hair lifted to cloud-like "
-            "fullness, or thick hair with incredible bounce and movement. "
-            "Hair is the HERO: gravity-defying volume, flyaway energy, shiny and full. "
-            "Studio background or bold brand navy/blue. NOT curly Afro hair — this brand "
-            "targets fine or flat hair wanting volume."
-        ),
+    # ── Brief context strings ─────────────────────────────────────────────────
+    _season_ctx  = season  or "year-round"
+    _market_ctx  = market  or "UK"
+    _product_ctx = product_name or f"{brand} product range"
+    _ft_ctx      = fan_truth or "people love this brand"
+    _aud_ctx     = audience or "adults 25-45"
+
+    _BRAND_SCENE = {
+        "Sunglow": {
+            "setting": "beauty studio, bathroom, or dressing room",
+            "prop":    "hair tools, mirror, towel, sunlight streaming in",
+            "vibe":    "confidence, transformation, self-care ritual",
+        },
+        "Rnorr": {
+            "setting": "real home kitchen, dining table, or outdoor BBQ",
+            "prop":    "cooking pots, fresh ingredients, steam rising from bowl",
+            "vibe":    "warmth, family, effortless delicious cooking",
+        },
+        "Boozt": {
+            "setting": "beauty studio or bold coloured backdrop",
+            "prop":    "wind machine, soft lighting, hair movement",
+            "vibe":    "volume, freedom, dramatic hair transformation",
+        },
     }
-    _brand_model_dir = _BRAND_MODEL.get(brand, "Model: an attractive, expressive person whose look embodies the brand.")
+    _scene_ctx = _BRAND_SCENE.get(brand, {"setting": "studio", "prop": "product", "vibe": "premium"})
 
-    # ── Per-brand product display guidance ────────────────────────────────────
-    _BRAND_PRODUCT = {
-        "Sunglow": (
-            "Show 2-3 Sunglow product bottles/tubes displayed together — "
-            "shampoo, conditioner, serum — arranged like a product lineup. "
-            "Labels fully visible and facing the camera. Products are large: "
-            "each bottle occupies at least 15-20% of the image height. "
-            "Products placed in foreground right or centre-right."
-        ),
-        "Rnorr": (
-            "Show 2-3 Rnorr stock cube boxes or stock pot jars displayed together. "
-            "Products clearly branded, large enough to read, warm studio lighting. "
-            "Placed in foreground alongside the food preparation scene."
-        ),
-        "Boozt": (
-            "Show 2-3 Boozt products (shampoo, mousse, spray) displayed together as a lineup. "
-            "Products are large (15-20% of image height), labels facing camera, "
-            "lit with dramatic rim light. Placed in lower-right foreground."
-        ),
-    }
-    _brand_product_dir = _BRAND_PRODUCT.get(brand, "Show the hero product prominently in the foreground, label facing camera.")
-
-    image_prompt = await _llm(f"""You are a senior creative director generating Imagen 4 prompts.
-Study these Sunsilk and Pantene advertisements as your visual reference:
-- Woman with long flowing shiny hair, studio dark background, 2 products displayed bottom-right
-- Neon/bright solid colour background, woman holds product in one hand, bold graphic energy
-- Pastel studio background, woman in brand-colour outfit, products displayed alongside her
-
-Your goal: produce a PREMIUM ADVERTISING KEY VISUAL that looks like a real FMCG hair/food campaign.
+    scene_concepts_raw = await _llm(f"""You are a senior FMCG creative director. Generate 2 DISTINCT advertising key visual concepts.
 
 Brand: {brand}
-Brand colour palette: {_brand_palette_str}
+Product: {_product_ctx}
 Campaign Big Idea: {big_idea}
+Fan Truth (emotional insight): {_ft_ctx}
+Target Audience: {_aud_ctx}
+Season: {_season_ctx}
+Market: {_market_ctx}
+Brand Colours: {_brand_palette_str}
+Typical Setting: {_scene_ctx['setting']}
+Brand Vibe: {_scene_ctx['vibe']}
 
-════ MODEL & HAIR ════
-{_brand_model_dir}
+Each concept must be a DIFFERENT scene — vary location, mood, and emotional angle.
+Ground each concept in the Fan Truth and season. Think real-life moments this audience experiences.
 
-════ PRODUCT DISPLAY ════
-{_brand_product_dir}
+Reference style: premium FMCG ads like Knorr, Pantene, L'Oréal — full photographic lifestyle scenes,
+aspirational but real, warm and human.
 
-════ COMPOSITION — choose one ════
+Output EXACTLY this format (no other text):
+[CONCEPT 1 - LIFESTYLE]: <140-160 word image generation prompt>
+[CONCEPT 2 - STUDIO HERO]: <140-160 word image generation prompt>
 
-PATTERN A — STUDIO PRODUCT LINEUP:
-Background is a SOLID studio colour (brand primary or gradient). Model stands LEFT of frame,
-turned slightly toward camera, hair/expression is the emotional hook. Products are arranged
-RIGHT side of frame in a clean lineup — 2-3 bottles/boxes, labels all facing camera, large scale.
-Top-left or upper-centre is clear sky/gradient for text overlay.
+MANDATORY RULES FOR BOTH CONCEPTS:
+- LEFT 40% of image = clean flat brand-colour background (solid or simple gradient) — NO people, NO products, NO props in left zone
+- Model and products positioned in RIGHT 60% only
+- Brand colours ({_brand_palette_str}) dominant throughout
+- 2-3 {brand} products visible with clear labels in RIGHT zone
+- Photorealistic DSLR quality, bold saturated colours
+- NO text, words, letters, or typography anywhere in the image
+- Season ({_season_ctx}) reflected in lighting, wardrobe, props, and atmosphere
+- Market ({_market_ctx}) reflected in model diversity and setting authenticity""", temp=0.85)
 
-PATTERN B — BOLD COLOUR SPLIT:
-Left ~45% = FLAT brand-colour panel (zero photographic content — just solid colour or clean gradient).
-Right 55% = model with hair/emotion taking up the full right half.
-Products appear large in the centre foreground straddling the split.
+    # Parse the 2 concept prompts
+    import re as _re
+    _concept_blocks = _re.findall(r'\[CONCEPT \d+[^\]]*\]:\s*(.*?)(?=\[CONCEPT \d+|\Z)', scene_concepts_raw, _re.DOTALL)
+    concept_prompts = [c.strip() for c in _concept_blocks if c.strip()]
+    if not concept_prompts:
+        concept_prompts = [l.strip() for l in scene_concepts_raw.split('\n') if len(l.strip()) > 80]
+    concept_prompts = concept_prompts[:2] or [scene_concepts_raw[:600]]
 
-PATTERN C — MODEL + PRODUCT FOREGROUND:
-Model fills left 60% of frame — large, confident, hair as visual hero.
-Products are 40% of the frame on the right: 2-3 bottles/packages standing upright,
-displayed at large scale with clear labels, surrounded by brand-colour accents
-(sparkles, liquid splashes, light rays) that make the products feel premium.
-
-Choose the pattern that best fits the Big Idea. Describe it precisely:
-
-1. BACKGROUND: Exact studio colour or gradient. MUST be a solid or simple gradient —
-   not outdoor, not complex. This ensures the left/upper zone reads cleanly for text.
-2. MODEL: Appearance, emotion, pose, movement, specific hair state (from Model & Hair guidance above).
-3. HAIR: Describe the specific hair look in cinematic detail — texture, movement,
-   lighting treatment, what makes it look incredible.
-4. PRODUCTS: Exactly how the products are arranged, their scale, lighting, and placement.
-5. COLOUR GRADING: Brand palette ({_brand_palette_str}) in wardrobe, background, accents.
-   Bold and saturated — this is advertising, not editorial photography.
-6. LIGHTING: Named professional setup (beauty dish + rim light, studio softbox, dramatic key).
-7. MOOD: One sentence — what the viewer feels in 2 seconds.
-
-RULES:
-- NO text, words, letters, or logos rendered anywhere in the image
-- Products MUST be prominently shown — this is a product advertisement
-- Photorealistic, DSLR studio advertising quality
-- Bold saturated colours — award-winning art direction
-- 220-270 words. Output the prompt text only.""", temp=0.7)
-    log.info("p2_prompt_agent_done")
-    await _emit("kv", "step_data", _json2.dumps({"image_prompt": image_prompt[:350]}))
-    await _emit("kv", "running", "Generating key visual with Gemini 3 Pro Image…")
+    log.info("p2_prompt_agent_done", n_concepts=len(concept_prompts))
+    await _emit("kv", "step_data", _json2.dumps({"concepts": [p[:200] for p in concept_prompts]}))
+    await _emit("kv", "running", f"Brief analysed — generating {len(concept_prompts)} campaign visuals…")
 
     # Stage 5: Image generation via Google AI
     image_b64  = None
@@ -1040,7 +998,7 @@ RULES:
                     *ref_parts,
                 ]
                 vision_resp = client.models.generate_content(
-                    model    = "gemini-2.5-flash",
+                    model    = _settings.gemini_model_reasoning,
                     contents = vision_contents,
                 )
                 style_analysis = vision_resp.text.strip()
@@ -1049,42 +1007,73 @@ RULES:
                 log.warning("p2_brand_style_failed", error=str(vision_err),
                             note="skipping style analysis, Imagen 4 will use prompt only")
 
-        # â"€â"€ Step B: Enrich image prompt with brand visual style â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-        enriched_prompt = image_prompt
-        if style_analysis:
-            enriched_prompt = (
-                f"{image_prompt}\n\n"
-                f"BRAND VISUAL STYLE (derived from existing campaign imagery - match this aesthetic):\n"
-                f"{style_analysis}"
-            )
-
-        # -- Step C: Generate 3 key visual variations with Imagen 4 -------------------
-        image_model = _get_settings().gemini_model_image
-        log.info("p2_generate_image_start", model=image_model, n=3)
-        await _emit("kv", "running", "Generating 3 key visual variations...")
-
-        response = client.models.generate_images(
-            model  = image_model,
-            prompt = enriched_prompt,
-            config = {"number_of_images": 3, "aspect_ratio": "1:1"},
+        # â"€â"€ Step B: Enrich each concept prompt with style + no-text rule ─────────
+        _no_text_rule = (
+            "CRITICAL: Do NOT render ANY text, words, letters, numbers, logos, "
+            "or typography anywhere in the image. The image must be purely photographic "
+            "with zero text elements — text will be added separately in post-production.\n\n"
+            "LEFT 40% of image must be a clean flat background with NO people, products, or props.\n\n"
         )
-        if not response.generated_images:
-            raise ValueError("Imagen 4 returned no images")
+        _style_suffix = (
+            f"\n\nBRAND VISUAL STYLE (match this aesthetic):\n{style_analysis}"
+            if style_analysis else ""
+        )
+        enriched_concepts = [
+            f"{_no_text_rule}{p}{_style_suffix}" for p in concept_prompts
+        ]
+
+        # -- Step C: Generate one image per concept in parallel -------------------
+        image_model = _get_settings().gemini_model_image
+        log.info("p2_generate_image_start", model=image_model, n=len(enriched_concepts))
+        await _emit("kv", "running", f"Generating {len(enriched_concepts)} campaign visuals in parallel…")
+
+        async def _gen_one_image(prompt: str, delay: float = 0.0) -> bytes | None:
+            if delay:
+                await asyncio.sleep(delay)
+            loop = asyncio.get_event_loop()
+            for attempt in range(4):
+                try:
+                    resp = await loop.run_in_executor(None, lambda: client.models.generate_content(
+                        model    = image_model,
+                        contents = [prompt],
+                        config   = _gtypes.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
+                    ))
+                    for part in resp.candidates[0].content.parts:
+                        if hasattr(part, "inline_data") and part.inline_data is not None:
+                            return part.inline_data.data
+                    return None
+                except Exception as _e:
+                    if "429" in str(_e) and attempt < 3:
+                        wait = 20 * (2 ** attempt)  # 20s, 40s, 80s
+                        log.warning("p2_image_rate_limit", attempt=attempt + 1, wait_s=wait)
+                        await asyncio.sleep(wait)
+                    else:
+                        log.warning("p2_gen_one_image_failed", error=str(_e))
+                        return None
+            return None
+
+        # Stagger starts by 5s each to avoid simultaneous 429s
+        _img_results = await asyncio.gather(*[
+            _gen_one_image(p, delay=i * 5) for i, p in enumerate(enriched_concepts)
+        ])
+        generated_bytes_list = [r for r in _img_results if r is not None]
+        if not generated_bytes_list:
+            raise ValueError("Gemini Pro Image returned no images")
 
         # Apply brand overlay (logo + headline + brand name + product) to every variation
         _headline_overlay = copy_headline or _extract_headline(big_idea)
-        primary_bytes = response.generated_images[0].image.image_bytes  # raw, for channel crops
+        primary_bytes = generated_bytes_list[0]  # raw, for channel crops
         images_b64 = []
-        for _gi in response.generated_images:
+        for _img_bytes in generated_bytes_list:
             _overlaid = _apply_brand_overlay(
-                _gi.image.image_bytes, brand, _headline_overlay, product_uris, product_name
+                _img_bytes, brand, _headline_overlay, product_uris, product_name
             )
             images_b64.append(base64.b64encode(_overlaid).decode("utf-8"))
         image_b64 = images_b64[0] if images_b64 else None
         log.info("p2_generate_image_done", n_generated=len(images_b64))
 
         # Channel adaptations — only for channels selected in the wizard
-        primary_bytes = response.generated_images[0].image.image_bytes
+        primary_bytes = generated_bytes_list[0]
         selected_ch = {c.lower().strip() for c in (channels or [])}
         if selected_ch:
             active_keys: set = set()
@@ -1116,7 +1105,7 @@ RULES:
         "culture_brief":        culture,
         "brand_summary":        brand_summary,
         "big_idea":             big_idea,
-        "image_prompt":         image_prompt,
+        "image_prompt":         concept_prompts[0] if concept_prompts else "",
         "image_b64":            image_b64,
         "images_b64":           images_b64,
         "image_error":          image_error,

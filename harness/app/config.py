@@ -19,7 +19,10 @@ class Settings(BaseSettings):
         default="campaignos-prod",
         validation_alias=AliasChoices("gcp_project", "google_cloud_project"),
     )
-    gcp_region:  str = "us-central1"
+    gcp_region: str = Field(
+        default="us-central1",
+        validation_alias=AliasChoices("gcp_region", "google_cloud_location"),
+    )
 
     # ── Cloud Storage ─────────────────────────────────────────────────────
     # gs://{gcs_bucket}/brands/{brand}/Guidelines/brand_guidelines.md  ← brand rules
@@ -54,9 +57,9 @@ class Settings(BaseSettings):
 
     # ── Models ────────────────────────────────────────────────────────────
     # Supports Vertex AI (gemini-2.0-flash-001) or Groq via LiteLLM (groq/llama-3.3-70b-versatile)
-    gemini_model_reasoning:       str = "gemini-2.5-flash"
-    gemini_model_image:           str = "imagen-4.0-generate-001"
-    gemini_model_image_adapter:   str = "imagen-4.0-generate-001"
+    gemini_model_reasoning:       str = "gemini-3.5-flash"
+    gemini_model_image:           str = "gemini-3-pro-image"
+    gemini_model_image_adapter:   str = "gemini-3-pro-image"
     groq_api_key:                 str = ""
 
     @property

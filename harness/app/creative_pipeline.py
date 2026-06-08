@@ -213,6 +213,8 @@ async def p2_generate_image(
     assets: list[str] = json.loads(p2_asset_uris) if p2_asset_uris else []
 
     multi_image_prompt = (
+        "CRITICAL: Do NOT render ANY text, words, letters, numbers, logos, or typography "
+        "anywhere in any of the images. Purely photographic — text will be added in post-production.\n\n"
         f"{p2_image_prompt}\n\n"
         "Generate exactly 4 images for the following channel formats. "
         "Output each image in sequence - do not skip any:\n\n"
@@ -266,14 +268,19 @@ async def p2_generate_image(
     try:
         from google import genai as _genai_img
         img_client = _genai_img.Client(vertexai=True, project=settings.gcp_project, location=settings.gcp_region)
-        response = img_client.models.generate_images(
+        contents.append(p2_image_prompt)
+        response = img_client.models.generate_content(
             model=settings.gemini_model_image,
-            prompt=p2_image_prompt,
-            config={"number_of_images": 1, "aspect_ratio": "16:9"},
+            contents=contents,
+            config=types.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
         )
-        if not response.generated_images:
-            raise ValueError("Imagen returned no images")
-        img_data = response.generated_images[0].image.image_bytes
+        img_data = None
+        for part in response.candidates[0].content.parts:
+            if hasattr(part, "inline_data") and part.inline_data is not None:
+                img_data = part.inline_data.data
+                break
+        if not img_data:
+            raise ValueError("Gemini returned no image data")
         artifact_key = "experiment_image.png"
         await ctx.save_artifact(
             filename=artifact_key,
