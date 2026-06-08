@@ -985,63 +985,365 @@ def generate_landing_html(brand: str, hero_message: str, tagline: str,
 
 # ── Email ──────────────────────────────────────────────────────────────────────
 
-def send_campaign_email(to_email: str, brand: str, hero_message: str,
-                         short_headline: str, cta: str,
-                         image_b64: str, landing_url: str) -> dict:
-    """Send HTML campaign email via SMTP (Gmail app password)."""
+def _build_email_html(
+    brand:          str,
+    hero_message:   str,
+    short_headline: str,
+    body_copy:      str,
+    cta:            str,
+    image_b64:      str,
+    landing_url:    str,
+    product_name:   str = "",
+) -> str:
+    """
+    Build a premium brand-specific HTML email.
+
+    Layout:
+      1. Pre-header (hidden preview text for inbox)
+      2. Brand header bar  — brand primary colour, brand name in accent
+      3. Hero image        — full-width KV from campaign (base64 inline)
+      4. Headline section  — hero_message large, short_headline as subline
+      5. Body copy         — paragraph from campaign copy agent
+      6. Feature pills     — 3–4 brand attribute chips
+      7. CTA button        — accent-colour pill with landing URL
+      8. Product spotlight — product name + tagline if provided
+      9. Footer            — tagline, social icons (emoji), unsubscribe link
+
+    All styles are inline for maximum email client compatibility.
+    Google Fonts loaded via @import for clients that support it (fallback: system fonts).
+    """
+    cfg        = BRAND_CONFIG.get(brand, DEFAULT_BRAND)
+    primary    = cfg["primary"]
+    secondary  = cfg.get("secondary", primary)
+    accent     = cfg["accent"]
+    accent2    = cfg.get("accent2", accent)
+    body_bg    = cfg.get("body_bg", "#f9f9f9")
+    section_bg = cfg.get("section_bg", "#f4f4f4")
+    font_stack = cfg.get("font", "Inter, Arial, sans-serif")
+    font_url   = cfg.get("font_url", "")
+    tagline    = cfg.get("tagline", "")
+    hero_tag   = cfg.get("hero_tag", "")
+    brand_copy = body_copy or cfg.get("copy", "")
+    features   = cfg.get("features", [])
+    cta_label  = cta or "Discover More"
+
+    img_block = ""
+    if image_b64:
+        img_block = f"""
+        <!-- Hero image -->
+        <tr>
+          <td style="padding:0;line-height:0;">
+            <img src="data:image/jpeg;base64,{image_b64}"
+                 width="600" alt="{brand} campaign"
+                 style="display:block;width:100%;max-width:600px;border:0;" />
+          </td>
+        </tr>"""
+
+    feature_pills = ""
+    if features:
+        pills = "".join(
+            f'<span style="display:inline-block;background:{section_bg};'
+            f'border:1.5px solid {accent};color:{primary};'
+            f'font-size:12px;font-weight:700;padding:6px 14px;border-radius:99px;'
+            f'margin:4px 4px 4px 0;letter-spacing:0.03em;">'
+            f'{f}</span>'
+            for f in features[:4]
+        )
+        feature_pills = f"""
+        <!-- Feature pills -->
+        <tr>
+          <td style="padding:12px 40px 28px;background:white;">
+            {pills}
+          </td>
+        </tr>"""
+
+    product_block = ""
+    if product_name:
+        product_block = f"""
+        <!-- Product spotlight -->
+        <tr>
+          <td style="padding:0 40px 32px;background:white;">
+            <table cellpadding="0" cellspacing="0" width="100%">
+              <tr>
+                <td style="border-left:4px solid {accent};padding:12px 16px;
+                            background:{section_bg};border-radius:0 8px 8px 0;">
+                  <div style="font-size:10px;font-weight:700;color:{primary};
+                               letter-spacing:0.12em;text-transform:uppercase;
+                               margin-bottom:4px;">Featured Product</div>
+                  <div style="font-size:17px;font-weight:800;color:{primary};
+                               font-family:{font_stack};">{product_name}</div>
+                  {f'<div style="font-size:13px;color:#64748b;margin-top:4px;">{tagline}</div>' if tagline else ""}
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>"""
+
+    font_import = f'<style>@import url("{font_url}");</style>' if font_url else ""
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{brand} — {hero_message}</title>
+  {font_import}
+</head>
+<body style="margin:0;padding:0;background:{body_bg};font-family:{font_stack};">
+
+  <!-- Pre-header (shown in inbox preview, hidden in email body) -->
+  <div style="display:none;max-height:0;overflow:hidden;color:{body_bg};">
+    {short_headline} — {hero_tag} &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+  </div>
+
+  <!-- Outer wrapper -->
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation"
+         style="background:{body_bg};padding:32px 16px;">
+    <tr>
+      <td align="center">
+
+        <!-- Email card — 600 px wide -->
+        <table width="600" cellpadding="0" cellspacing="0" role="presentation"
+               style="max-width:600px;width:100%;border-radius:16px;
+                      overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.12);">
+
+          <!-- ① HEADER BAR -->
+          <tr>
+            <td style="background:linear-gradient(135deg,{primary} 0%,{secondary} 100%);
+                        padding:28px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <!-- Brand wordmark -->
+                    <div style="font-family:{font_stack};font-size:28px;font-weight:900;
+                                 color:white;letter-spacing:-0.02em;line-height:1;">
+                      {brand.upper()}
+                    </div>
+                    {f'<div style="font-size:12px;font-weight:700;color:{accent};letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;">{hero_tag}</div>' if hero_tag else ""}
+                  </td>
+                  <td align="right" style="vertical-align:middle;">
+                    <!-- Campaign badge -->
+                    <span style="display:inline-block;background:rgba(255,255,255,0.15);
+                                  border:1.5px solid rgba(255,255,255,0.35);
+                                  color:white;font-size:10px;font-weight:700;
+                                  padding:6px 14px;border-radius:99px;letter-spacing:0.08em;
+                                  text-transform:uppercase;">
+                      New Campaign
+                    </span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {img_block}
+
+          <!-- ② HEADLINE + SUBLINE -->
+          <tr>
+            <td style="padding:40px 40px 24px;background:white;">
+              <!-- Eyebrow -->
+              <div style="font-size:11px;font-weight:700;color:{accent};
+                           letter-spacing:0.14em;text-transform:uppercase;
+                           margin-bottom:14px;">
+                {tagline.upper() if tagline else brand.upper()}
+              </div>
+              <!-- Hero headline -->
+              <h1 style="font-family:{font_stack};font-size:32px;font-weight:900;
+                          color:{primary};line-height:1.2;margin:0 0 16px;
+                          letter-spacing:-0.02em;">
+                {hero_message}
+              </h1>
+              <!-- Subline -->
+              <p style="font-size:17px;color:#475569;line-height:1.7;
+                         margin:0 0 28px;font-weight:400;">
+                {short_headline}
+              </p>
+              <!-- Body copy -->
+              {f'<p style="font-size:15px;color:#64748b;line-height:1.8;margin:0 0 32px;">{brand_copy}</p>' if brand_copy else ""}
+              <!-- CTA button -->
+              <table cellpadding="0" cellspacing="0">
+                <tr>
+                  <td style="border-radius:99px;background:linear-gradient(135deg,{primary},{secondary});">
+                    <a href="{landing_url}"
+                       style="display:inline-block;padding:16px 40px;
+                               font-family:{font_stack};font-size:15px;font-weight:800;
+                               color:white;text-decoration:none;letter-spacing:0.02em;
+                               border-radius:99px;">
+                      {cta_label} &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          {feature_pills}
+
+          {product_block}
+
+          <!-- ③ ACCENT DIVIDER STRIP -->
+          <tr>
+            <td style="background:linear-gradient(90deg,{primary},{accent},{accent2},{primary});
+                        height:4px;line-height:4px;font-size:0;">&nbsp;</td>
+          </tr>
+
+          <!-- ④ SECONDARY CONTENT — brand promise -->
+          <tr>
+            <td style="background:{section_bg};padding:32px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <!-- Left: brand quote / promise -->
+                  <td style="width:56%;vertical-align:top;padding-right:24px;">
+                    <div style="font-size:10px;font-weight:700;color:{primary};
+                                 letter-spacing:0.1em;text-transform:uppercase;
+                                 margin-bottom:10px;">Our Promise</div>
+                    <p style="font-size:14px;color:#334155;line-height:1.7;margin:0;
+                               font-style:italic;">
+                      &ldquo;{cfg.get('copy','')[:120]}{"…" if len(cfg.get("copy",""))>120 else ""}&rdquo;
+                    </p>
+                  </td>
+                  <!-- Right: stats / social proof -->
+                  <td style="width:44%;vertical-align:top;border-left:2px solid {accent};
+                              padding-left:24px;">
+                    <div style="font-size:10px;font-weight:700;color:{primary};
+                                 letter-spacing:0.1em;text-transform:uppercase;
+                                 margin-bottom:10px;">Campaign Channels</div>
+                    <div style="font-size:13px;color:#475569;line-height:1.9;">
+                      📸 Instagram &amp; Stories<br/>
+                      🔍 Google Ads<br/>
+                      🌐 Website Banner<br/>
+                      📘 Meta Ads
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ⑤ FOOTER -->
+          <tr>
+            <td style="background:{primary};padding:28px 40px;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <div style="font-size:18px;font-weight:900;color:white;
+                                 letter-spacing:-0.01em;margin-bottom:6px;">
+                      {brand.upper()}
+                    </div>
+                    {f'<div style="font-size:12px;color:{accent};font-weight:700;margin-bottom:12px;">{tagline}</div>' if tagline else ""}
+                    <div style="font-size:20px;margin-bottom:12px;letter-spacing:0.1em;">
+                      📸 &nbsp; 🎵 &nbsp; ▶️ &nbsp; 🌐
+                    </div>
+                    <div style="font-size:11px;color:rgba(255,255,255,0.5);line-height:1.8;">
+                      You received this because you subscribed to {brand} campaign updates.<br/>
+                      <a href="#" style="color:{accent};text-decoration:underline;">Unsubscribe</a>
+                      &nbsp;·&nbsp;
+                      <a href="{landing_url}" style="color:{accent};text-decoration:none;">View in browser</a>
+                      &nbsp;·&nbsp;
+                      <span>AI-generated by CampaignOS &bull; Infosys Aster</span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+        <!-- /Email card -->
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>"""
+
+
+def send_campaign_email(
+    to_email:       str,
+    brand:          str,
+    hero_message:   str,
+    short_headline: str,
+    cta:            str,
+    image_b64:      str,
+    landing_url:    str,
+    body_copy:      str = "",
+    product_name:   str = "",
+) -> dict:
+    """
+    Send a premium branded HTML campaign email via SMTP.
+
+    SMTP configuration (set in .env or Cloud Run env vars):
+      EMAIL_SMTP_HOST     — SMTP server hostname  (default: smtp.gmail.com)
+      EMAIL_SMTP_PORT     — SMTP port             (default: 587 / STARTTLS)
+      EMAIL_FROM          — Sender address        e.g. campaigns@yourbrand.com
+      EMAIL_APP_PASSWORD  — SMTP password / app password
+      EMAIL_FROM_NAME     — Display name          (default: brand name)
+
+    Gmail setup:
+      1. Enable 2-Step Verification on your Google account
+      2. Go to myaccount.google.com → Security → App Passwords
+      3. Create an app password for "Mail"
+      4. Use that 16-char password as EMAIL_APP_PASSWORD
+
+    SendGrid / Mailgun:
+      Set EMAIL_SMTP_HOST=smtp.sendgrid.net, EMAIL_SMTP_PORT=587
+      EMAIL_FROM=apikey, EMAIL_APP_PASSWORD=<your-sendgrid-api-key>
+    """
     import smtplib
     from email.mime.multipart import MIMEMultipart
-    from email.mime.text import MIMEText
+    from email.mime.text      import MIMEText
 
-    smtp_host     = os.getenv("EMAIL_SMTP_HOST", "smtp.gmail.com")
-    smtp_port     = int(os.getenv("EMAIL_SMTP_PORT", "587"))
-    smtp_user     = os.getenv("EMAIL_FROM", "")
-    smtp_password = os.getenv("EMAIL_APP_PASSWORD", "")
+    smtp_host  = os.getenv("EMAIL_SMTP_HOST",    "smtp.gmail.com")
+    smtp_port  = int(os.getenv("EMAIL_SMTP_PORT", "587"))
+    smtp_user  = os.getenv("EMAIL_FROM",          "")
+    smtp_pass  = os.getenv("EMAIL_APP_PASSWORD",  "")
+    from_name  = os.getenv("EMAIL_FROM_NAME",     brand)
 
-    if not smtp_user or not smtp_password:
-        logger.warning("email_skipped", reason="EMAIL_FROM or EMAIL_APP_PASSWORD not set")
-        return {"status": "skipped", "reason": "SMTP credentials not configured in .env"}
+    if not smtp_user or not smtp_pass:
+        logger.warning("email_skipped",
+                       reason="EMAIL_FROM or EMAIL_APP_PASSWORD not set in environment")
+        return {
+            "status": "skipped",
+            "reason": (
+                "SMTP credentials not configured. "
+                "Set EMAIL_FROM and EMAIL_APP_PASSWORD in .env "
+                "(or Cloud Run env vars) to enable email sending."
+            ),
+        }
 
-    cfg = BRAND_CONFIG.get(brand, DEFAULT_BRAND)
-    img_src = f"data:image/jpeg;base64,{image_b64}" if image_b64 else ""
+    html_body = _build_email_html(
+        brand          = brand,
+        hero_message   = hero_message,
+        short_headline = short_headline,
+        body_copy      = body_copy,
+        cta            = cta,
+        image_b64      = image_b64,
+        landing_url    = landing_url,
+        product_name   = product_name,
+    )
 
-    html_body = f"""
-    <html><body style="margin:0;padding:0;font-family:Inter,Arial,sans-serif;background:#f8f9fa;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:32px auto;">
-        <tr><td style="background:{cfg['primary']};padding:28px 40px;border-radius:16px 16px 0 0;">
-          <div style="font-size:26px;font-weight:900;color:{cfg['accent']};letter-spacing:-0.02em;">{brand}</div>
-        </td></tr>
-        {f'<tr><td><img src="{img_src}" width="600" style="display:block;width:100%;" /></td></tr>' if img_src else ""}
-        <tr><td style="background:white;padding:40px;">
-          <h1 style="font-size:28px;font-weight:900;color:{cfg['primary']};margin:0 0 16px;">{hero_message}</h1>
-          <p style="font-size:16px;color:#475569;line-height:1.7;margin:0 0 28px;">{short_headline}</p>
-          <a href="{landing_url}" style="display:inline-block;background:{cfg['primary']};color:white;
-            padding:14px 36px;border-radius:99px;font-weight:800;font-size:15px;text-decoration:none;">
-            {cta or "Discover More"} →
-          </a>
-        </td></tr>
-        <tr><td style="background:#f1f5f9;padding:20px 40px;border-radius:0 0 16px 16px;
-          text-align:center;font-size:11px;color:#94a3b8;">
-          AI-generated campaign by CampaignOS · <a href="{landing_url}" style="color:{cfg['accent']};">View landing page</a>
-        </td></tr>
-      </table>
-    </body></html>
-    """
+    subject = f"{hero_message or short_headline} — {brand}"
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"{brand}: {short_headline or hero_message}"
-    msg["From"]    = smtp_user
-    msg["To"]      = to_email
-    msg.attach(MIMEText(html_body, "html"))
+    msg               = MIMEMultipart("alternative")
+    msg["Subject"]    = subject
+    msg["From"]       = f"{from_name} <{smtp_user}>"
+    msg["To"]         = to_email
+    msg["X-Mailer"]   = "CampaignOS / Infosys Aster"
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
 
     try:
         with smtplib.SMTP(smtp_host, smtp_port) as server:
             server.ehlo()
             server.starttls()
-            server.login(smtp_user, smtp_password)
-            server.sendmail(smtp_user, to_email, msg.as_string())
-        logger.info("email_sent", to=to_email, brand=brand)
-        return {"status": "sent", "to": to_email, "subject": msg["Subject"]}
+            server.login(smtp_user, smtp_pass)
+            server.sendmail(smtp_user, [to_email], msg.as_string())
+        logger.info("email_sent", to=to_email, brand=brand, subject=subject)
+        return {"status": "sent", "to": to_email, "subject": subject}
+    except smtplib.SMTPAuthenticationError:
+        logger.error("email_auth_failed", user=smtp_user)
+        return {"status": "error",
+                "error": "SMTP authentication failed — check EMAIL_APP_PASSWORD"}
     except Exception as e:
         logger.error("email_failed", error=str(e))
         return {"status": "error", "error": str(e)}
