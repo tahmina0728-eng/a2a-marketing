@@ -49,7 +49,7 @@ steps:
         EMAIL_SMTP_HOST=smtp.gmail.com,
         EMAIL_SMTP_PORT=587,
         EMAIL_FROM_NAME=CampaignOS
-      - '--set-secrets=GROQ_API_KEY=GROQ_API_KEY:latest,GOOGLE_API_KEY=GOOGLE_EMBEDDING_KEY:latest'
+      - '--set-secrets=GROQ_API_KEY=GROQ_API_KEY:latest,GOOGLE_API_KEY=GOOGLE_EMBEDDING_KEY:latest,EMAIL_APP_PASSWORD=EMAIL_APP_PASSWORD:latest,EMAIL_FROM=EMAIL_FROM:latest'
       - '--add-cloudsql-instances=dauntless-karma-497108-b0:us-central1:campaignos-pgvector'
       - '--service-account=958438970145-compute@developer.gserviceaccount.com'
 
