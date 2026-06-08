@@ -645,21 +645,16 @@ def _apply_brand_overlay(
         text_y_start = max(margin, (H - block_h) // 2)
         text_x       = margin
 
-        # ── 2. Semi-transparent panel behind the text block ──────────────────
-        # Solid dark rectangle so text reads cleanly on any background
-        pad_x = max(12, int(W * 0.02))
-        pad_y = max(10, int(H * 0.015))
-        panel_x0 = text_x - pad_x
-        panel_y0 = text_y_start - pad_y
-        panel_x1 = text_x + block_w + pad_x
-        panel_y1 = text_y_start + block_h + pad_y
-        # Clamp to image bounds
-        panel_x1 = min(panel_x1, int(W * 0.52))
-        panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        pd    = ImageDraw.Draw(panel)
-        pd.rectangle([panel_x0, panel_y0, panel_x1, panel_y1], fill=(0, 0, 0, 140))
-        panel_blur = panel.filter(ImageFilter.GaussianBlur(radius=6))
-        img = Image.alpha_composite(img, panel_blur)
+        # ── 2. Subtle drop-shadow layer — no panel, left zone is already clean ──
+        shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        sd     = ImageDraw.Draw(shadow)
+        y = text_y_start
+        for word, fnt, lh, tw in line_data:
+            for dx, dy in [(-2, -2), (2, -2), (-2, 2), (2, 2), (0, 3), (3, 0)]:
+                sd.text((text_x + dx, y + dy), word, font=fnt, fill=(0, 0, 0, 160))
+            y += lh
+        shadow_blur = shadow.filter(ImageFilter.GaussianBlur(radius=4))
+        img = Image.alpha_composite(img, shadow_blur)
 
         # ── 3. White text — billboard scale, left-aligned ─────────────────────
         draw = ImageDraw.Draw(img)
@@ -889,57 +884,87 @@ Create a Big Idea for this campaign. Output:
     _ft_ctx      = fan_truth or "people love this brand"
     _aud_ctx     = audience or "adults 25-45"
 
-    _BRAND_SCENE = {
+    # ── Brand-specific magic elements ────────────────────────────────────────
+    _BRAND_MAGIC = {
         "Sunglow": {
-            "setting": "beauty studio, bathroom, or dressing room",
-            "prop":    "hair tools, mirror, towel, sunlight streaming in",
-            "vibe":    "confidence, transformation, self-care ritual",
+            "effects":  "floating golden light particles, warm bokeh orbs, soft lens flare, shimmering hair highlights catching studio rim light",
+            "model":    "beautiful woman, ANY ethnicity (South Asian / East Asian / Latina / mixed — vary each time), age 22-35, ECSTATIC expression, head tilted back mid-laugh OR doing a dramatic hair-flip, hair FLYING and catching the light",
+            "hair":     "hair is the ABSOLUTE HERO — impossibly shiny, flowing, volumised, cascading waves or sleek blowout, lit from behind with golden rim light creating a halo glow",
+            "bg":       "rich magenta-pink to warm golden gradient, glowing from centre, deep and saturated",
+            "wardrobe": "magenta, hot pink, or sunshine yellow outfit matching brand palette",
+            "energy":   "euphoric, empowered, like the best hair day of her life",
         },
         "Rnorr": {
-            "setting": "real home kitchen, dining table, or outdoor BBQ",
-            "prop":    "cooking pots, fresh ingredients, steam rising from bowl",
-            "vibe":    "warmth, family, effortless delicious cooking",
+            "effects":  "photorealistic steam wisps rising dramatically, golden food particles suspended mid-air, warm amber bokeh, rich aromatic atmosphere",
+            "model":    "warm relatable home cook (woman OR man, any ethnicity, age 28-45, {_market_ctx} authentic), genuinely delighted expression, caught in a moment of tasting or stirring",
+            "hair":     "natural, realistic — face and personality are the hero, not hair",
+            "bg":       "deep forest green to warm golden-yellow gradient, rich and appetising, warm kitchen ambient light",
+            "wardrobe": "warm earthy tones, apron, casual and real",
+            "energy":   "joy, pride, the magic of effortless delicious cooking",
         },
         "Boozt": {
-            "setting": "beauty studio or bold coloured backdrop",
-            "prop":    "wind machine, soft lighting, hair movement",
-            "vibe":    "volume, freedom, dramatic hair transformation",
+            "effects":  "electric cobalt blue light trails, neon energy arcs, dramatic wind-blown hair particles, studio strobe sparks, high-voltage energy",
+            "model":    "confident woman (any ethnicity — Asian / Caucasian / Latina — vary each time), age 20-35, POWERFUL pose — chin up, hand in voluminous hair, or dramatic over-shoulder look",
+            "hair":     "MAXIMUM VOLUME — gravity-defying fullness, incredible bounce and body, lit with electric rim light creating a halo, fine hair lifted to cloud-like perfection",
+            "bg":       "deep midnight navy to electric cobalt blue gradient, dramatic studio lighting, high-contrast",
+            "wardrobe": "electric blue, cobalt, or sharp white outfit — bold and graphic",
+            "energy":   "power, transformation, unstoppable confidence",
         },
     }
-    _scene_ctx = _BRAND_SCENE.get(brand, {"setting": "studio", "prop": "product", "vibe": "premium"})
+    _magic = _BRAND_MAGIC.get(brand, {
+        "effects":  "sparkling light particles, soft bokeh, premium studio lighting",
+        "model":    "attractive confident person, dynamic pose, genuine emotion",
+        "hair":     "natural and beautiful",
+        "bg":       f"{_brand_palette_str} gradient, bold and saturated",
+        "wardrobe": f"colours matching {_brand_palette_str}",
+        "energy":   "aspiration and confidence",
+    })
 
-    scene_concepts_raw = await _llm(f"""You are a senior FMCG creative director. Generate 2 DISTINCT advertising key visual concepts.
+    scene_concepts_raw = await _llm(f"""You are a world-class FMCG advertising creative director.
+Study these reference ad styles: Sunsilk (dynamic hair, sparkles, vibrant energy), Pantene (cinematic hair movement, golden glow), Knorr (warm kitchen magic, steam, real moments), L'Oréal (empowered model, bold colour, premium feel).
 
+Generate 2 DISTINCT, MAGICAL, HIGH-ENERGY advertising key visual prompts for this campaign.
+
+═══ CAMPAIGN BRIEF ═══
 Brand: {brand}
 Product: {_product_ctx}
-Campaign Big Idea: {big_idea}
-Fan Truth (emotional insight): {_ft_ctx}
-Target Audience: {_aud_ctx}
-Season: {_season_ctx}
-Market: {_market_ctx}
-Brand Colours: {_brand_palette_str}
-Typical Setting: {_scene_ctx['setting']}
-Brand Vibe: {_scene_ctx['vibe']}
+Big Idea: {big_idea}
+Fan Truth: {_ft_ctx}
+Audience: {_aud_ctx}
+Season: {_season_ctx} — reflect in lighting, atmosphere, wardrobe
+Market: {_market_ctx} — reflect in model authenticity
 
-Each concept must be a DIFFERENT scene — vary location, mood, and emotional angle.
-Ground each concept in the Fan Truth and season. Think real-life moments this audience experiences.
+═══ BRAND VISUAL DNA ═══
+Background: {_magic['bg']}
+Model: {_magic['model']}
+Hair/Focus: {_magic['hair']}
+Magic Effects: {_magic['effects']}
+Wardrobe: {_magic['wardrobe']}
+Emotional Energy: {_magic['energy']}
+Colours: {_brand_palette_str}
 
-Reference style: premium FMCG ads like Knorr, Pantene, L'Oréal — full photographic lifestyle scenes,
-aspirational but real, warm and human.
+═══ PRODUCT REFERENCE ═══
+I am providing you reference images of the actual {brand} product packaging and logo.
+Reproduce the EXACT product design, colours, and label from those reference images.
+Show 2-3 products prominently in the RIGHT zone.
 
-Output EXACTLY this format (no other text):
-[CONCEPT 1 - LIFESTYLE]: <140-160 word image generation prompt>
-[CONCEPT 2 - STUDIO HERO]: <140-160 word image generation prompt>
+═══ TWO DIFFERENT CONCEPTS ═══
+Concept 1 — DYNAMIC ENERGY: Model is in full motion (hair flip, jump, spin, or dramatic reach). Background has maximum magical effects. Products displayed dramatically.
+Concept 2 — INTIMATE GLOW: Model is closer to camera, intense eye contact, softer but deeply saturated. Background glows behind her. Products at her side, intimately placed.
 
-MANDATORY RULES FOR BOTH CONCEPTS:
-- LEFT 40% of image = clean flat brand-colour background (solid or simple gradient) — NO people, NO products, NO props in left zone
-- Model and products positioned in RIGHT 60% only
-- Brand colours ({_brand_palette_str}) dominant throughout
-- 2-3 {brand} products visible with clear labels in RIGHT zone
-- Photorealistic DSLR quality, bold saturated colours
-- NO text, words, letters, or typography anywhere in the image
-- Season ({_season_ctx}) reflected in lighting, wardrobe, props, and atmosphere
-- Market ({_market_ctx}) reflected in model diversity and setting authenticity""", temp=0.85)
+Output EXACTLY this format (nothing else):
+[CONCEPT 1 - DYNAMIC]: <170-200 word detailed image generation prompt>
+[CONCEPT 2 - INTIMATE]: <170-200 word detailed image generation prompt>
+
+═══ MANDATORY RULES ═══
+- LEFT 40% = clean flat {_brand_palette_str} background ONLY — zero people, products, or props
+- Model + products in RIGHT 60% only
+- Photorealistic DSLR advertising photography quality
+- Magical effects: {_magic['effects']}
+- Bold saturated colours — award-winning art direction
+- NO text, words, letters, numbers, or typography anywhere
+- Fan truth ({_ft_ctx}) visible in model's expression and scene energy
+- Season ({_season_ctx}) woven into atmosphere, lighting temperature, and mood""", temp=0.9)
 
     # Parse the 2 concept prompts
     import re as _re
@@ -992,9 +1017,13 @@ MANDATORY RULES FOR BOTH CONCEPTS:
             await _emit("kv", "running", f"Analyzing {len(ref_parts)} brand reference images…")
             try:
                 vision_contents = [
-                    "These are existing campaign images for this brand. Analyze them and describe in 3-4 sentences: "
-                    "the photography style, color palette, mood, lighting, composition, and the type of subjects/scenes used. "
-                    "This will guide generating a NEW campaign image consistent with this brand's visual identity.",
+                    "These are existing campaign images for this brand. Analyze them and describe in 5-6 sentences covering: "
+                    "1) exact background colours and any gradient/glow effects, "
+                    "2) model energy — pose, expression, movement, hair treatment, "
+                    "3) magical/special effects — sparkles, light rays, bokeh, particles, steam, energy arcs, "
+                    "4) product placement — how products are staged, lit, and scaled, "
+                    "5) overall mood and emotional tone. "
+                    "Be precise and visual — this description will directly guide a new AI image generation.",
                     *ref_parts,
                 ]
                 vision_resp = client.models.generate_content(
@@ -1022,20 +1051,51 @@ MANDATORY RULES FOR BOTH CONCEPTS:
             f"{_no_text_rule}{p}{_style_suffix}" for p in concept_prompts
         ]
 
-        # -- Step C: Generate one image per concept in parallel -------------------
+        # -- Step C: Load reference images (product + logo) for multimodal input --
+        SUPPORTED_MIME = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+        _ref_parts: list = []
+
+        # Logo first — most important brand anchor
+        if logo_uri:
+            _logo_mime = _mime_for(logo_uri)
+            if _logo_mime in SUPPORTED_MIME:
+                _logo_data = _load_bytes(logo_uri)
+                if _logo_data:
+                    _ref_parts.append("BRAND LOGO — reproduce the exact shape, colours and design of this logo on the product packaging:")
+                    _ref_parts.append(_gtypes.Part.from_bytes(data=_logo_data, mime_type=_logo_mime))
+                    log.info("p2_logo_ref_loaded", uri=logo_uri)
+
+        # Product images — up to 3
+        for _uri in (product_uris or [])[:3]:
+            _pmime = _mime_for(_uri)
+            if _pmime not in SUPPORTED_MIME:
+                continue
+            _pdata = _load_bytes(_uri)
+            if _pdata and len(_pdata) > 1024:
+                _ref_parts.append("PRODUCT REFERENCE — feature this exact product packaging prominently in the RIGHT side of the image:")
+                _ref_parts.append(_gtypes.Part.from_bytes(data=_pdata, mime_type=_pmime))
+
+        log.info("p2_ref_parts_loaded", n=len([p for p in _ref_parts if not isinstance(p, str)]))
+
+        # -- Step D: Generate one image per concept in parallel -------------------
         image_model = _get_settings().gemini_model_image
         log.info("p2_generate_image_start", model=image_model, n=len(enriched_concepts))
-        await _emit("kv", "running", f"Generating {len(enriched_concepts)} campaign visuals in parallel…")
+        await _emit("kv", "running", f"Generating {len(enriched_concepts)} campaign visuals with brand references…")
 
         async def _gen_one_image(prompt: str, delay: float = 0.0) -> bytes | None:
             if delay:
                 await asyncio.sleep(delay)
             loop = asyncio.get_event_loop()
+            # Build multimodal contents: reference images first, then prompt
+            contents: list = []
+            if _ref_parts:
+                contents.extend(_ref_parts)
+            contents.append(prompt)
             for attempt in range(4):
                 try:
                     resp = await loop.run_in_executor(None, lambda: client.models.generate_content(
                         model    = image_model,
-                        contents = [prompt],
+                        contents = contents,
                         config   = _gtypes.GenerateContentConfig(response_modalities=["IMAGE", "TEXT"]),
                     ))
                     for part in resp.candidates[0].content.parts:
@@ -1044,7 +1104,7 @@ MANDATORY RULES FOR BOTH CONCEPTS:
                     return None
                 except Exception as _e:
                     if "429" in str(_e) and attempt < 3:
-                        wait = 20 * (2 ** attempt)  # 20s, 40s, 80s
+                        wait = 20 * (2 ** attempt)
                         log.warning("p2_image_rate_limit", attempt=attempt + 1, wait_s=wait)
                         await asyncio.sleep(wait)
                     else:
