@@ -34,6 +34,7 @@ from pydantic import BaseModel as _BaseModel  # avoid clash with app.models
 # Index-based: each SSE client tracks its own read position in the events list.
 # No queue needed — avoids duplicate replay bugs.
 _pipelines: dict[str, dict] = {}  # {cid: {"events": [...], "signal": asyncio.Event}}
+_channel_adaptations: dict[str, dict] = {}  # {campaign_id: channel_adaptations}
 
 
 async def push_event(cid: str, agent: str, status: str, message: str) -> None:
@@ -453,6 +454,10 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         _images = creative_result.get("images_b64") or (
             [creative_result["image_b64"]] if creative_result.get("image_b64") else []
         )
+        # Store channel adaptations for use by the landing page generator
+        _ch_adapt = creative_result.get("channel_adaptations", {})
+        if _ch_adapt:
+            _channel_adaptations[campaign_id] = _ch_adapt
         logger.info("campaign_stage2_done", campaign_id=campaign_id, ms2=ms2,
                     n_images=len(_images))
         if _images:
@@ -661,6 +666,9 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
 
     # ── 2. Brand landing page ─────────────────────────────────────────────────
     if "landing_page" in selected:
+        # Use the 16:9 website banner adaptation as the hero image if available
+        _adapt = _channel_adaptations.get(campaign_id, {})
+        _website_banner_b64 = (_adapt.get("website") or {}).get("image_b64", "")
         html = generate_brand_website(
             brand              = req.brand,
             hero_message       = req.hero_message,
@@ -668,6 +676,7 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
             body_copy          = req.body,
             cta                = req.cta,
             campaign_image_b64 = req.image_b64,
+            hero_image_b64     = _website_banner_b64,
             campaign_id        = campaign_id,
         )
         _landing_pages[campaign_id] = html

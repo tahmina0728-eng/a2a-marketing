@@ -136,20 +136,21 @@ def _gcs_to_b64(uri: str, mime: str = "image/jpeg", max_kb: int = 800) -> str:
 
 def generate_brand_website(brand: str, hero_message: str = "", tagline: str = "",
                             body_copy: str = "", cta: str = "",
-                            campaign_image_b64: str = "", campaign_id: str = "") -> str:
+                            campaign_image_b64: str = "", hero_image_b64: str = "",
+                            campaign_id: str = "") -> str:
     """Route to the correct brand website generator."""
     if brand.lower() == "rnorr":
-        return generate_rnorr_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta)
+        return generate_rnorr_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64)
     if brand.lower() == "boozt":
-        return generate_boozt_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta)
-    # Sunglow and others: use generic Sunsilk-inspired generator
+        return generate_boozt_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64)
     return _generate_sunglow_website(brand, hero_message, tagline, body_copy, cta,
-                                     campaign_image_b64, campaign_id)
+                                     campaign_image_b64, campaign_id, hero_image_b64)
 
 
 def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
                                body_copy: str, cta: str,
-                               campaign_image_b64: str, campaign_id: str) -> str:
+                               campaign_image_b64: str, campaign_id: str,
+                               hero_image_b64: str = "") -> str:
     """
     Generate a full Sunsilk-inspired brand website HTML page.
     Loads logo, product images, and assets directly from GCS bucket.
@@ -171,6 +172,9 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
     hero_asset_src = _gcs_to_b64(assets[0], "image/jpeg", max_kb=800) if assets else ""
     campaign_src   = (f"data:image/jpeg;base64,{campaign_image_b64}"
                      if campaign_image_b64 else hero_asset_src)
+    # Website banner (16:9 channel adaptation) takes priority as hero background
+    hero_src_final = (f"data:image/jpeg;base64,{hero_image_b64}"
+                      if hero_image_b64 else hero_asset_src)
 
     logo_html = (f'<img src="{logo_src}" alt="{brand}" style="height:44px;object-fit:contain;">'
                 if logo_src else
@@ -192,8 +196,7 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
         for f in features[:4]
     ])
 
-    # Use brand lifestyle asset (no text overlay) for hero; KV image in campaign section only
-    bg_section = f'background-image: url("{hero_asset_src}"); background-size: cover; background-position: center;' if hero_asset_src else f"background: linear-gradient(135deg, {cfg['primary']}, {cfg['secondary']});"
+    bg_section = f'background-image: url("{hero_src_final}"); background-size: cover; background-position: center;' if hero_src_final else f"background: linear-gradient(135deg, {cfg['primary']}, {cfg['secondary']});"
 
     return f"""<!DOCTYPE html>
 <html lang="en">
@@ -346,7 +349,8 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
 
 
 def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
-                            hero_message: str = "", body_copy: str = "", cta: str = "") -> str:
+                            hero_message: str = "", body_copy: str = "", cta: str = "",
+                            hero_image_b64: str = "") -> str:
     """Knorr-inspired brand website for Rnorr."""
     from app.brand_assets import get_asset_loader
     loader   = get_asset_loader()
@@ -356,9 +360,10 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
 
     logo_src  = _gcs_to_b64(logos[0],   "image/png",  200) if logos    else ""
     prod_srcs = [_gcs_to_b64(p, "image/jpeg", 800) for p in products[:6]]
-    # Use brand asset (no text overlay) for hero background; KV image only in campaign section
     hero_bg_src = _gcs_to_b64(assets[0], "image/jpeg", 800) if assets else ""
     camp_src    = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else hero_bg_src
+    # Website banner (16:9 channel adaptation) takes priority as hero background
+    hero_bg_src = f"data:image/jpeg;base64,{hero_image_b64}" if hero_image_b64 else hero_bg_src
 
     logo_html = (f'<img src="{logo_src}" alt="Rnorr" style="height:40px;object-fit:contain;">'
                 if logo_src else '<span style="font-size:26px;font-weight:900;color:#FFDE00;letter-spacing:-0.02em;">Rnorr</span>')
@@ -576,7 +581,8 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
 
 
 def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
-                            hero_message: str = "", body_copy: str = "", cta: str = "") -> str:
+                            hero_message: str = "", body_copy: str = "", cta: str = "",
+                            hero_image_b64: str = "") -> str:
     """Boots-inspired brand website for Boozt hair care."""
     from app.brand_assets import get_asset_loader
     loader   = get_asset_loader()
@@ -588,6 +594,8 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
     prod_srcs    = [_gcs_to_b64(p, "image/jpeg", 800) for p in products[:6]]
     hero_bg_src  = _gcs_to_b64(assets[0], "image/jpeg", 800) if assets   else ""
     camp_src     = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else hero_bg_src
+    # Website banner (16:9 channel adaptation) takes priority as hero background
+    hero_bg_src  = f"data:image/jpeg;base64,{hero_image_b64}" if hero_image_b64 else hero_bg_src
 
     logo_html = (f'<img src="{logo_src}" alt="Boozt" style="height:38px;object-fit:contain;">'
                 if logo_src else '<span style="font-size:26px;font-weight:900;color:white;letter-spacing:-0.02em;">BOOZT</span>')
