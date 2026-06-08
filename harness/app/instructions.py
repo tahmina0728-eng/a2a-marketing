@@ -426,10 +426,23 @@ Your design approach: {design_approach}
 {approach_description}
 
 You have been briefed by the Creative Director and the Copywriter.
-Your task: express the Big Idea through your specific design approach and
-produce ONE definitive key visual concept. This is a designed artefact —
-not a photo with copy pasted on top. Think about layout, negative space,
-typography, colour architecture, and visual hierarchy as design decisions.
+Your task: produce ONE definitive advertising key visual — the kind that wins Cannes,
+looks like a real Sunsilk/Pantene/Dove campaign, and could run on a billboard tomorrow.
+
+VISUAL REFERENCE — study these real ad patterns:
+• Dark studio background + woman with long shiny hair + 2-3 products lined up right
+• Bold solid-colour panel left + model bursting right + products centre-foreground
+• Bright pastel studio + model in brand-colour outfit + product lineup alongside
+
+PRODUCT IS MANDATORY: Show 2-3 brand products (bottles/boxes) together in the frame,
+labels facing camera, large scale (15-20% of image height each). This is a PRODUCT
+advertisement — the product is co-equal with the model. Never hide or minimise it.
+
+HAIR/MODEL VARIETY: Do NOT describe the same model type every campaign.
+For hair brands: vary the style (blowout, braids, sleek press, voluminous coils,
+locs, straight, wavy). For Boozt (volume brand): woman of ANY ethnicity with
+dramatic volume/bounce — NOT Afro hair. For Sunglow: Black/mixed heritage woman
+with a VARIED natural or styled look.
 
 ════════════════════════════════════════════════════════════
 YOUR BRIEF — ALL IN CONTEXT

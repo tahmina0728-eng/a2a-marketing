@@ -863,62 +863,120 @@ Create a Big Idea for this campaign. Output:
     # Stage 4: Prompt agent → image generation prompt
     log.info("p2_prompt_agent_start")
     await _emit("kv", "running", "Crafting Imagen 4 prompt from Big Idea…")
-    # Inject exact brand colors so Imagen 4 generates on-brand visuals
-    # No hex codes — Imagen renders them literally as signs/labels in the scene
+    # ── Brand-specific palette (colour names only — no hex codes for Imagen) ──
     _BRAND_PALETTE = {
-        "Sunglow": "hot magenta pink, sunshine yellow, off-white",
-        "Rnorr":   "forest green, bright yellow, white",
-        "Boozt":   "deep midnight navy, electric blue, sky blue, white",
+        "Sunglow": "hot magenta pink, sunshine yellow, off-white cream",
+        "Rnorr":   "deep forest green, bright sunshine yellow, white",
+        "Boozt":   "deep midnight navy, electric cobalt blue, sky blue, white",
     }
     _brand_palette_str = _BRAND_PALETTE.get(brand, "brand primary colour, accent colour, white")
 
-    image_prompt = await _llm(f"""You are a senior creative director writing Imagen 4 prompts for premium advertising campaigns.
+    # ── Per-brand model & hair direction (prevents repetitive Afro-only renders) ──
+    _BRAND_MODEL = {
+        "Sunglow": (
+            "Model: A beautiful woman of African, Caribbean, or mixed heritage. "
+            "IMPORTANT — vary the hair style across campaigns: one campaign might show "
+            "a sleek blowout, another a defined twist-out, another long straight-pressed hair, "
+            "another voluminous coils, another braids or locs. "
+            "The hair must look INCREDIBLE — shiny, healthy, full of life and movement. "
+            "DO NOT default to a tight Afro every time. Choose the style that best suits "
+            "the Big Idea's visual world. Studio background in magenta-pink tones."
+        ),
+        "Rnorr": (
+            "Model: A home cook (woman or man, any ethnicity, age 25-45, warm and relatable). "
+            "Natural kitchen environment or warm studio set with cooking props. "
+            "Approachable, confident, like the friend who actually knows how to cook. "
+            "NO specific hair focus — face and personality are the hero."
+        ),
+        "Boozt": (
+            "Model: A woman (any ethnicity — Asian, Caucasian, Latina, mixed — vary each campaign). "
+            "Hair must show DRAMATIC VOLUME AND BODY: could be fine hair lifted to cloud-like "
+            "fullness, or thick hair with incredible bounce and movement. "
+            "Hair is the HERO: gravity-defying volume, flyaway energy, shiny and full. "
+            "Studio background or bold brand navy/blue. NOT curly Afro hair — this brand "
+            "targets fine or flat hair wanting volume."
+        ),
+    }
+    _brand_model_dir = _BRAND_MODEL.get(brand, "Model: an attractive, expressive person whose look embodies the brand.")
+
+    # ── Per-brand product display guidance ────────────────────────────────────
+    _BRAND_PRODUCT = {
+        "Sunglow": (
+            "Show 2-3 Sunglow product bottles/tubes displayed together — "
+            "shampoo, conditioner, serum — arranged like a product lineup. "
+            "Labels fully visible and facing the camera. Products are large: "
+            "each bottle occupies at least 15-20% of the image height. "
+            "Products placed in foreground right or centre-right."
+        ),
+        "Rnorr": (
+            "Show 2-3 Rnorr stock cube boxes or stock pot jars displayed together. "
+            "Products clearly branded, large enough to read, warm studio lighting. "
+            "Placed in foreground alongside the food preparation scene."
+        ),
+        "Boozt": (
+            "Show 2-3 Boozt products (shampoo, mousse, spray) displayed together as a lineup. "
+            "Products are large (15-20% of image height), labels facing camera, "
+            "lit with dramatic rim light. Placed in lower-right foreground."
+        ),
+    }
+    _brand_product_dir = _BRAND_PRODUCT.get(brand, "Show the hero product prominently in the foreground, label facing camera.")
+
+    image_prompt = await _llm(f"""You are a senior creative director generating Imagen 4 prompts.
+Study these Sunsilk and Pantene advertisements as your visual reference:
+- Woman with long flowing shiny hair, studio dark background, 2 products displayed bottom-right
+- Neon/bright solid colour background, woman holds product in one hand, bold graphic energy
+- Pastel studio background, woman in brand-colour outfit, products displayed alongside her
+
+Your goal: produce a PREMIUM ADVERTISING KEY VISUAL that looks like a real FMCG hair/food campaign.
 
 Brand: {brand}
 Brand colour palette: {_brand_palette_str}
 Campaign Big Idea: {big_idea}
-Brand locks: {brand_summary}
 
-Write an Imagen 4 generation prompt for a PREMIUM PRINT / DIGITAL ADVERTISING KEY VISUAL.
-Think: Weleda "You Are Nature", Sunsilk, Dove, L'Oreal Elvive — bold, saturated, product-forward
-advertising that wins awards. This is NOT a lifestyle snapshot. It IS an ad.
+════ MODEL & HAIR ════
+{_brand_model_dir}
 
-Choose ONE of these proven advertising composition patterns that best fits the Big Idea:
+════ PRODUCT DISPLAY ════
+{_brand_product_dir}
 
-A) BOLD SPLIT: Left ~45% = flat brand-primary colour field (zero photographic content, clean and clear).
-   Right 55% = subject (person) with dynamic energy bursting toward the left. Product prominently
-   featured in the foreground centre, straddling both halves. Result: clear left zone for large type.
+════ COMPOSITION — choose one ════
 
-B) PRODUCT HERO + PERSON: Product at large display scale in foreground (label facing camera, lit
-   dramatically). Person positioned left or right providing emotional context. Brand colour fills
-   the background as a studio gradient. Like a Pantene or Sunsilk product campaign.
+PATTERN A — STUDIO PRODUCT LINEUP:
+Background is a SOLID studio colour (brand primary or gradient). Model stands LEFT of frame,
+turned slightly toward camera, hair/expression is the emotional hook. Products are arranged
+RIGHT side of frame in a clean lineup — 2-3 bottles/boxes, labels all facing camera, large scale.
+Top-left or upper-centre is clear sky/gradient for text overlay.
 
-C) EDITORIAL MAGAZINE COVER: Subject fills the frame. Brand colour appears as the environment
-   (wardrobe, backdrop, props ALL in brand palette). Product held naturally at waist or side,
-   clearly visible. Upper-left quarter is intentionally clear (simpler background) for type.
+PATTERN B — BOLD COLOUR SPLIT:
+Left ~45% = FLAT brand-colour panel (zero photographic content — just solid colour or clean gradient).
+Right 55% = model with hair/emotion taking up the full right half.
+Products appear large in the centre foreground straddling the split.
 
-For this brand and Big Idea, choose the pattern that best expresses the campaign emotion.
+PATTERN C — MODEL + PRODUCT FOREGROUND:
+Model fills left 60% of frame — large, confident, hair as visual hero.
+Products are 40% of the frame on the right: 2-3 bottles/packages standing upright,
+displayed at large scale with clear labels, surrounded by brand-colour accents
+(sparkles, liquid splashes, light rays) that make the products feel premium.
 
-Describe precisely:
-1. LAYOUT: Name the composition pattern (A, B, or C). State which zone is left clear for type
-   overlay and why it will have low visual complexity (flat colour, smooth gradient, or sky).
-2. SUBJECT: Person — who they are, emotional state, movement, expression. They embody the Big Idea.
-3. PRODUCT: The hero product MUST be prominently visible — label facing camera, lit beautifully,
-   placed in foreground or mid-ground. Specify exact placement and scale. This is an advertisement.
-4. LIGHTING: Named setup — beauty dish, golden hour rim light, soft studio key — that makes both
-   person and product look premium.
-5. COLOUR: Brand palette ({_brand_palette_str}) saturates the entire scene — wardrobe, props,
-   environment, product accent. Bold, punchy colour, not muted.
-6. MOOD: One sentence — the precise emotion the viewer feels in the first 2 seconds.
+Choose the pattern that best fits the Big Idea. Describe it precisely:
 
-ABSOLUTE RULES:
-- NO text, letters, logos, or watermarks rendered in the image
-- Product packaging IS expected — make it visible and beautiful
-- Photorealistic, DSLR-quality advertising photography
-- Bold, saturated, award-winning colour grading — not desaturated or moody
-- 210-260 words
+1. BACKGROUND: Exact studio colour or gradient. MUST be a solid or simple gradient —
+   not outdoor, not complex. This ensures the left/upper zone reads cleanly for text.
+2. MODEL: Appearance, emotion, pose, movement, specific hair state (from Model & Hair guidance above).
+3. HAIR: Describe the specific hair look in cinematic detail — texture, movement,
+   lighting treatment, what makes it look incredible.
+4. PRODUCTS: Exactly how the products are arranged, their scale, lighting, and placement.
+5. COLOUR GRADING: Brand palette ({_brand_palette_str}) in wardrobe, background, accents.
+   Bold and saturated — this is advertising, not editorial photography.
+6. LIGHTING: Named professional setup (beauty dish + rim light, studio softbox, dramatic key).
+7. MOOD: One sentence — what the viewer feels in 2 seconds.
 
-Output only the prompt text, nothing else.""", temp=0.7)
+RULES:
+- NO text, words, letters, or logos rendered anywhere in the image
+- Products MUST be prominently shown — this is a product advertisement
+- Photorealistic, DSLR studio advertising quality
+- Bold saturated colours — award-winning art direction
+- 220-270 words. Output the prompt text only.""", temp=0.7)
     log.info("p2_prompt_agent_done")
     await _emit("kv", "step_data", _json2.dumps({"image_prompt": image_prompt[:350]}))
     await _emit("kv", "running", "Generating key visual with Gemini 3 Pro Image…")
