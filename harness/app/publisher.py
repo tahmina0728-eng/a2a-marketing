@@ -103,24 +103,30 @@ def publish_google_ads(campaign_id: str, brand: str,
 # ── Brand Landing Page ─────────────────────────────────────────────────────────
 
 def _gcs_to_b64(uri: str, mime: str = "image/jpeg", max_kb: int = 800) -> str:
-    """Load a GCS asset, resize with Pillow, return as base64 data URI."""
+    """
+    Load a brand asset, resize to max 600 px, return as base64 data URI.
+    Handles very large source images (brand banner JPEGs can be 100-300 MP).
+    """
     try:
         from app.creative_pipeline import _load_bytes
         data = _load_bytes(uri)
         if not data:
             return ""
-        # Always resize — reduces payload regardless of original size
         try:
             from PIL import Image
+            # Brand source files can be enormous (13K×13K px).
+            # Disable the decompression-bomb limit — we immediately thumbnail down.
+            Image.MAX_IMAGE_PIXELS = None
             img = Image.open(io.BytesIO(data)).convert("RGB")
-            img.thumbnail((600, 600))   # max 600px, preserves aspect ratio
+            img.thumbnail((600, 600), Image.LANCZOS)   # resize in-place to ≤600px
             buf = io.BytesIO()
-            img.save(buf, format="JPEG", quality=70)
+            img.save(buf, format="JPEG", quality=72)
             data = buf.getvalue()
             mime = "image/jpeg"
-        except Exception:
+        except Exception as _pe:
+            logger.debug("gcs_to_b64_pil_failed", uri=uri, error=str(_pe))
             if len(data) > max_kb * 1024:
-                return ""  # skip if Pillow fails and file is huge
+                return ""  # skip oversized raw file if Pillow can't resize it
         b64 = base64.b64encode(data).decode()
         return f"data:{mime};base64,{b64}"
     except Exception as e:

@@ -620,11 +620,24 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
     # Determine which channels to publish — empty list means all
     selected = set(req.channels) if req.channels else {"google_ads", "landing_page", "email"}
 
-    # Store KV image bytes for HTTPS serving (Gmail blocks data: URIs)
+    # Store KV image resized to 600px wide for email (Gmail blocks data: URIs;
+    # also Imagen 4 raw output can be very large — resize before serving).
     if req.image_b64:
         try:
-            import base64 as _b64
-            _campaign_images[campaign_id] = _b64.b64decode(req.image_b64)
+            import base64 as _b64, io as _io
+            raw = _b64.b64decode(req.image_b64)
+            try:
+                from PIL import Image as _PILImg
+                _PILImg.MAX_IMAGE_PIXELS = None   # allow large Imagen outputs
+                _img = _PILImg.open(_io.BytesIO(raw)).convert("RGB")
+                if _img.width > 600:
+                    _new_h = int(_img.height * 600 / _img.width)
+                    _img   = _img.resize((600, _new_h), _PILImg.LANCZOS)
+                _buf = _io.BytesIO()
+                _img.save(_buf, format="JPEG", quality=88)
+                _campaign_images[campaign_id] = _buf.getvalue()
+            except Exception:
+                _campaign_images[campaign_id] = raw   # store raw if PIL fails
         except Exception:
             pass
 

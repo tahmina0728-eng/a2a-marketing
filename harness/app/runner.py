@@ -447,7 +447,13 @@ def _create_channel_adaptation(img_data: bytes, ratio_w: int, ratio_h: int,
         from PIL import Image, ImageDraw, ImageFont
         import io as _io, base64 as _b64
 
+        Image.MAX_IMAGE_PIXELS = None   # allow large Imagen 4 outputs
         img = Image.open(_io.BytesIO(img_data)).convert("RGB")
+        # Cap at 2048px before cropping/adapting
+        if max(img.size) > 2048:
+            scale = 2048 / max(img.size)
+            img   = img.resize((int(img.width * scale), int(img.height * scale)),
+                               Image.LANCZOS)
         W, H = img.size
         target_ratio = ratio_w / ratio_h
         current_ratio = W / H
@@ -540,7 +546,14 @@ def _apply_brand_overlay(
         import io
         from pathlib import Path as _P
 
+        # Allow large Imagen 4 outputs (can be 100M+ pixels) — resize after open
+        Image.MAX_IMAGE_PIXELS = None
         img = Image.open(io.BytesIO(img_data)).convert("RGBA")
+        # Downscale to max 1536px to keep compositing fast and output reasonable
+        if max(img.size) > 1536:
+            scale = 1536 / max(img.size)
+            img   = img.resize((int(img.width * scale), int(img.height * scale)),
+                               Image.LANCZOS)
         W, H = img.size
         margin = max(20, int(W * 0.03))
 
