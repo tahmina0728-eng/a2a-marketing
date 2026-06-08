@@ -732,7 +732,7 @@ async def generate_campaign_reel(
     _gc = _veo_genai.Client(vertexai=True, project=gcp_project, location=gcp_region)
     video_prompt = await asyncio.get_event_loop().run_in_executor(None, lambda: _gc.models.generate_content(
         model=reasoning_model,
-        contents=f"""Write a single cinematic video generation prompt (60-80 words) for a 6-second {brand} campaign reel.
+        contents=f"""Write a single cinematic video+audio generation prompt (70-90 words) for a 6-second {brand} campaign reel.
 
 Brand: {brand}
 Product: {product_name}
@@ -743,8 +743,12 @@ Audience: {audience}
 
 Base visual direction: {brand_scene}
 
-Rules: photorealistic, premium FMCG ad quality, dynamic motion, brand colours prominent.
-No text or typography. Output the prompt only.""",
+Rules:
+- Photorealistic, premium FMCG ad quality, dynamic motion, brand colours prominent
+- Include AUDIO direction: describe the sound (upbeat music genre, ambient sounds, energy level)
+- No spoken words or voiceover — music and ambient sounds only
+- No text or typography in the image
+Output the prompt only.""",
     ))
     final_prompt = video_prompt.text.strip()
     log.info("veo_prompt_ready", prompt=final_prompt[:120])
@@ -761,6 +765,7 @@ No text or typography. Output the prompt only.""",
                 duration_seconds=6,
                 output_gcs_uri=output_uri,
                 number_of_videos=1,
+                generate_audio=True,
             ),
         ))
         log.info("veo_operation_started", name=getattr(operation, "name", "unknown"))
