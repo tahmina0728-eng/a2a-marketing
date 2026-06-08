@@ -44,7 +44,11 @@ steps:
         BQ_OUTPUT_DATASET=campaign_outputs,
         BQ_LOGGING_ENABLED=true,
         ENVIRONMENT=production,
-        LOG_LEVEL=INFO
+        LOG_LEVEL=INFO,
+        HARNESS_URL=https://campaignos-harness-958438970145.us-central1.run.app,
+        EMAIL_SMTP_HOST=smtp.gmail.com,
+        EMAIL_SMTP_PORT=587,
+        EMAIL_FROM_NAME=CampaignOS
       - '--set-secrets=GROQ_API_KEY=GROQ_API_KEY:latest,GOOGLE_API_KEY=GOOGLE_EMBEDDING_KEY:latest'
       - '--add-cloudsql-instances=dauntless-karma-497108-b0:us-central1:campaignos-pgvector'
       - '--service-account=958438970145-compute@developer.gserviceaccount.com'

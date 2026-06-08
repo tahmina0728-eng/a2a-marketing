@@ -1032,8 +1032,10 @@ def _build_email_html(
     short_headline: str,
     body_copy:      str,
     cta:            str,
-    image_b64:      str,
     landing_url:    str,
+    image_url:      str = "",   # HTTPS URL for KV image (Gmail-compatible)
+    logo_url:       str = "",   # HTTPS URL for brand logo (Gmail-compatible)
+    image_b64:      str = "",   # fallback base64 (Apple Mail / Outlook)
     product_name:   str = "",
     email_subject:  str = "",
 ) -> str:
@@ -1074,31 +1076,41 @@ def _build_email_html(
     # Eyebrow above headline — use tagline or short_headline as a teaser line
     email_eyebrow   = tagline.upper() if tagline else (short_headline[:60] if short_headline else brand.upper())
 
-    # Load brand logo as base64-encoded PNG (embedded inline — works in Gmail, Apple Mail)
-    logo_b64    = _get_logo_b64(brand)
-    logo_block  = (
-        f'<img src="data:image/png;base64,{logo_b64}" alt="{brand}" '
+    # ── Logo: prefer HTTPS URL (Gmail-compatible), fallback to base64 ────────
+    logo_b64   = ""
+    _logo_src  = logo_url  # HTTPS URL passed from main.py
+    if not _logo_src:
+        logo_b64  = _get_logo_b64(brand)  # base64 fallback (Apple Mail)
+        _logo_src = f"data:image/png;base64,{logo_b64}" if logo_b64 else ""
+
+    logo_block = (
+        f'<img src="{_logo_src}" alt="{brand}" '
         f'style="height:44px;max-width:160px;display:block;border:0;" />'
-        if logo_b64
+        if _logo_src
         else f'<span style="font-family:{font_stack};font-size:26px;font-weight:900;'
              f'color:white;letter-spacing:-0.02em;">{brand.upper()}</span>'
     )
 
+    # ── KV Image: prefer HTTPS URL, fallback to base64 ────────────────────────
+    _img_src = image_url  # HTTPS URL passed from main.py
+    if not _img_src and image_b64:
+        _img_src = f"data:image/jpeg;base64,{image_b64}"
+
     img_block = ""
-    if image_b64:
+    if _img_src:
         img_block = f"""
-        <!-- Hero KV image from campaign -->
+        <!-- Hero KV image — hosted URL works in Gmail -->
         <tr>
           <td style="padding:0;line-height:0;font-size:0;">
-            <img src="data:image/jpeg;base64,{image_b64}"
+            <img src="{_img_src}"
                  width="600" alt="{email_headline}"
                  style="display:block;width:100%;max-width:600px;height:auto;border:0;" />
           </td>
         </tr>"""
     else:
-        # Fallback: gradient banner when no KV image available
+        # Gradient banner fallback when no image
         img_block = f"""
-        <!-- Gradient banner fallback -->
+        <!-- Gradient banner — no image available -->
         <tr>
           <td style="background:linear-gradient(135deg,{primary} 0%,{secondary} 50%,{accent}88 100%);
                       padding:48px 40px;text-align:center;">
@@ -1331,8 +1343,10 @@ def send_campaign_email(
     hero_message:   str,
     short_headline: str,
     cta:            str,
-    image_b64:      str,
     landing_url:    str,
+    image_url:      str = "",   # HTTPS URL — preferred (Gmail-compatible)
+    logo_url:       str = "",   # HTTPS URL — preferred (Gmail-compatible)
+    image_b64:      str = "",   # fallback base64 (Apple Mail, Outlook)
     email_subject:  str = "",
     body_copy:      str = "",
     product_name:   str = "",
@@ -1386,7 +1400,9 @@ def send_campaign_email(
         email_subject  = email_subject,
         body_copy      = body_copy,
         cta            = cta,
-        image_b64      = image_b64,
+        image_url      = image_url,
+        logo_url       = logo_url,
+        image_b64      = image_b64,   # fallback
         landing_url    = landing_url,
         product_name   = product_name,
     )

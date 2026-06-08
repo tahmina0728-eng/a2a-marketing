@@ -588,7 +588,8 @@ async def run_pipeline(brief: BriefRequest):
 
 
 # ── In-memory landing pages ───────────────────────────────────────────────────
-_landing_pages: dict[str, str] = {}  # {campaign_id: html}
+_landing_pages:   dict[str, str]   = {}  # {campaign_id: html}
+_campaign_images: dict[str, bytes] = {}  # {campaign_id: jpeg_bytes}
 
 
 class PublishRequest(_BaseModel):
@@ -619,6 +620,21 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
     # Determine which channels to publish — empty list means all
     selected = set(req.channels) if req.channels else {"google_ads", "landing_page", "email"}
 
+    # Store KV image bytes for HTTPS serving (Gmail blocks data: URIs)
+    if req.image_b64:
+        try:
+            import base64 as _b64
+            _campaign_images[campaign_id] = _b64.b64decode(req.image_b64)
+        except Exception:
+            pass
+
+    # Base URL for HTTPS image links in email (Gmail-compatible)
+    _harness_base = os.getenv("HARNESS_URL", "http://localhost:8000").rstrip("/")
+    _img_url  = f"{_harness_base}/campaign-image/{campaign_id}" if req.image_b64 else ""
+    _logo_url = f"{_harness_base}/brand-logo/{req.brand}"
+
+    landing_url = f"{_harness_base}/landing/{campaign_id}"  # default before landing page created
+
     # ── 1. Google Ads (mock) ──────────────────────────────────────────────────
     if "google_ads" in selected:
         results["google_ads"] = publish_google_ads(
@@ -642,8 +658,9 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
             campaign_id        = campaign_id,
         )
         _landing_pages[campaign_id] = html
-        landing_url = f"/landing/{campaign_id}"
-        results["landing_page"] = {"status": "live", "url": landing_url, "public_url": landing_url}
+        landing_url = f"{_harness_base}/landing/{campaign_id}"
+        results["landing_page"] = {"status": "live", "url": f"/landing/{campaign_id}",
+                                   "public_url": landing_url}
         logger.info("landing_page_created", campaign_id=campaign_id, brand=req.brand)
 
     # ── 3. Email ──────────────────────────────────────────────────────────────
@@ -657,7 +674,8 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
             email_subject  = req.email_subject,
             body_copy      = req.body,
             cta            = req.cta,
-            image_b64      = req.image_b64,
+            image_url      = _img_url,    # HTTPS URL — works in Gmail
+            logo_url       = _logo_url,   # HTTPS URL — works in Gmail
             landing_url    = landing_url,
             product_name   = req.product_name,
         )
@@ -674,6 +692,58 @@ async def serve_landing_page(campaign_id: str):
     if not html:
         raise HTTPException(status_code=404, detail="Landing page not found — publish first")
     return HTMLResponse(content=html)
+
+
+@app.get("/brand-logo/{brand}")
+async def serve_brand_logo(brand: str):
+    """
+    Serve the primary brand logo PNG for email embedding.
+    Tries local bucket first, then GCS. Returns PNG with 24h cache.
+    Used by email templates as a hosted image URL (Gmail blocks data: URIs).
+    """
+    from fastapi.responses import Response
+    from app.brand_assets import get_asset_loader
+    try:
+        loader = get_asset_loader()
+        logos  = loader.list_logos(brand)
+        _sfx   = {"green", "red", "yellow", "orange", "purple", "blue"}
+        primary = next(
+            (p for p in logos
+             if p.lower().endswith(".png")
+             and not any(p.lower().rsplit(".", 1)[0].endswith(s) for s in _sfx)),
+            logos[0] if logos else None,
+        )
+        if not primary:
+            raise HTTPException(status_code=404, detail=f"No logo found for {brand}")
+        if primary.startswith("gs://"):
+            from google.cloud import storage as _gcs
+            without = primary[5:]
+            bn, _, bp = without.partition("/")
+            data = _gcs.Client().bucket(bn).blob(bp).download_as_bytes()
+        else:
+            from pathlib import Path
+            data = Path(primary).read_bytes()
+        return Response(content=data, media_type="image/png",
+                        headers={"Cache-Control": "public, max-age=86400"})
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/campaign-image/{campaign_id}")
+async def serve_campaign_image(campaign_id: str):
+    """
+    Serve the generated KV image for email embedding.
+    Image is stored in memory when the campaign is published.
+    Used by email templates as a hosted image URL (Gmail blocks data: URIs).
+    """
+    from fastapi.responses import Response
+    data = _campaign_images.get(campaign_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="Campaign image not found — publish first")
+    return Response(content=data, media_type="image/jpeg",
+                    headers={"Cache-Control": "no-cache, no-store"})
 
 
 @app.get("/brand/{brand_name}", response_class=HTMLResponse)
