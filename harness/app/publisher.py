@@ -368,26 +368,40 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
     logo_html = (f'<img src="{logo_src}" alt="Rnorr" style="height:40px;object-fit:contain;">'
                 if logo_src else '<span style="font-size:26px;font-weight:900;color:#FFDE00;letter-spacing:-0.02em;">Rnorr</span>')
 
-    # Use actual brand product/asset images for recipe cards (Knorr-style photo cards)
+    # Recipe cards — use product/asset images; rich brand-colour gradients as fallback
     _recipe_img_srcs = [_gcs_to_b64(p, "image/jpeg", 600) for p in (products + assets)[:3]]
     recipes = [
-        {"name": "Give It More with Rnorr: Elevate Your Everyday Meals", "tag": "Recipes"},
-        {"name": "Quick & Flavourful Weeknight Dinners",                  "tag": "Inspiration"},
-        {"name": "Tips & Tricks from Our Kitchen",                        "tag": "Tips"},
+        {"name": "Give It More with Rnorr: Elevate Your Everyday Meals",
+         "sub": "Discover how a single cube transforms a simple pot into something extraordinary.",
+         "tag": "Recipes", "tag_color": "#FFDE00", "tag_text": "#008641",
+         "fallback": "linear-gradient(145deg,#005c2c 0%,#008641 50%,#00a352 100%)"},
+        {"name": "Quick & Flavourful Weeknight Dinners",
+         "sub": "30-minute meals the whole family will ask for again. Real flavour, real fast.",
+         "tag": "Inspiration", "tag_color": "#FFDE00", "tag_text": "#008641",
+         "fallback": "linear-gradient(145deg,#003d20 0%,#006633 50%,#008641 100%)"},
+        {"name": "Tips & Tricks from Our Kitchen",
+         "sub": "Chef-tested techniques to get the most out of every Rnorr product.",
+         "tag": "Tips", "tag_color": "#008641", "tag_text": "#FFDE00",
+         "fallback": "linear-gradient(145deg,#1a3a1a 0%,#2d6a2d 50%,#008641 100%)"},
     ]
     recipe_cards = ""
     for i, r in enumerate(recipes):
         img_src = _recipe_img_srcs[i] if i < len(_recipe_img_srcs) else ""
-        bg = f'background-image:url("{img_src}");background-size:cover;background-position:center;' if img_src else "background:#1a3a1a;"
+        if img_src:
+            photo_layer = f'<div style="position:absolute;inset:0;background-image:url(\'{img_src}\');background-size:cover;background-position:center;transition:transform 0.5s ease;" onmouseover="this.style.transform=\'scale(1.06)\'" onmouseout="this.style.transform=\'scale(1)\'"></div>'
+        else:
+            photo_layer = f'<div style="position:absolute;inset:0;background:{r["fallback"]};"></div>'
         recipe_cards += f"""
-    <div class="recipe-card" style="cursor:pointer;">
-      <div style="position:relative;height:240px;overflow:hidden;border-radius:16px;">
-        <div style="{bg}width:100%;height:100%;transition:transform 0.4s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"></div>
-        <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.72) 0%,rgba(0,0,0,0.1) 60%,transparent 100%);border-radius:16px;"></div>
-        <div style="position:absolute;top:14px;left:14px;background:#FFDE00;color:#008641;font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:99px;">{r['tag']}</div>
-        <div style="position:absolute;bottom:0;left:0;right:0;padding:16px 18px;">
-          <div style="font-family:Antonio,sans-serif;font-size:15px;font-weight:700;color:white;line-height:1.3;">{r['name']}</div>
-        </div>
+    <div style="cursor:pointer;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.13);transition:box-shadow 0.3s,transform 0.3s;" onmouseover="this.style.boxShadow=\'0 12px 40px rgba(0,0,0,0.22)\';this.style.transform=\'translateY(-4px)\'" onmouseout="this.style.boxShadow=\'0 4px 24px rgba(0,0,0,0.13)\';this.style.transform=\'translateY(0)\'">
+      <div style="position:relative;height:220px;overflow:hidden;">
+        {photo_layer}
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,30,10,0.85) 0%,rgba(0,0,0,0.25) 55%,transparent 100%);"></div>
+        <div style="position:absolute;top:16px;left:16px;background:{r['tag_color']};color:{r['tag_text']};font-size:10px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;padding:5px 14px;border-radius:99px;">{r['tag']}</div>
+      </div>
+      <div style="background:white;padding:20px 22px 24px;">
+        <div style="font-family:Antonio,sans-serif;font-size:17px;font-weight:900;color:#1a2332;line-height:1.25;margin-bottom:8px;">{r['name']}</div>
+        <div style="font-size:13px;color:#64748b;line-height:1.55;margin-bottom:16px;">{r['sub']}</div>
+        <a href="#" style="display:inline-flex;align-items:center;gap:6px;color:#008641;font-size:13px;font-weight:700;text-decoration:none;">Read more <span style="font-size:16px;">→</span></a>
       </div>
     </div>"""
 
@@ -551,12 +565,17 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
   <div class="prod-grid">{prod_cards or '<div style="text-align:center;color:#94a3b8;width:100%;padding:40px">Products loading from GCS…</div>'}</div>
 </section>
 
-<section class="section alt" id="recipes">
-  <div class="section-head">
-    <div class="section-label">Today, I&apos;m looking for</div>
-    <div class="section-title" style="font-size:32px;font-weight:900;color:#008641;text-align:left;margin-bottom:28px;">Today, I&apos;m looking for</div>
+<section class="section alt" id="recipes" style="padding:72px 48px;">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:40px;">
+      <div>
+        <div class="section-label" style="margin-bottom:10px;">Explore &amp; Discover</div>
+        <h2 style="font-family:Antonio,sans-serif;font-size:clamp(26px,3vw,38px);font-weight:900;color:#005c2c;line-height:1.1;margin:0;">Today, I&apos;m looking for</h2>
+      </div>
+      <a href="#" style="white-space:nowrap;color:#008641;font-size:14px;font-weight:700;text-decoration:none;border-bottom:2px solid #FFDE00;padding-bottom:2px;">See all articles →</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:24px;">{recipe_cards}</div>
   </div>
-  <div class="recipe-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;max-width:1100px;margin:0 auto;">{recipe_cards}</div>
 </section>
 
 {'<section class="campaign"><div class="camp-img"><img src="' + camp_src + '" alt="Campaign"></div><div class="camp-text"><div class="camp-label">AI Campaign · ' + campaign_id[:16] + '</div><h2 class="camp-title">' + (hero_message or "Home cooking is how you say I care") + '</h2><p class="camp-body">' + (body_copy or "Every great meal starts with great stock.") + '</p><a href="#cta" class="btn-yellow">' + (cta or "Shop Now") + '</a></div></section>' if camp_src else ""}

@@ -1446,7 +1446,7 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
   output: Record<string, unknown> | null; campaignId: string | null; selectedImageB64?: string;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [email,    setEmail]    = useState("tahmina0728@gmail.com");
+  const [email,    setEmail]    = useState("d.hendon17@gmail.com");
   const [loading,  setLoading]  = useState(false);
   const [published, setPublished] = useState(false);
   const [results,  setResults]  = useState<Record<string, any> | null>(null);

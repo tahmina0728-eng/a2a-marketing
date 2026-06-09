@@ -593,25 +593,41 @@ def _apply_brand_overlay(
 
         n = len(words)
         def _word_size(i: int) -> int:
-            if n == 1: return max(80, W // 8)
-            if n == 2: return max(60, W // 11) if i == 0 else max(80, W // 7)
+            if n == 1: return max(70, W // 10)
+            if n == 2: return max(48, W // 14) if i == 0 else max(70, W // 9)
             if n == 3:
-                return [max(34, W // 24), max(86, W // 7), max(42, W // 17)][i]
-            if i == 0:   return max(30, W // 26)
-            elif i <= n // 2: return max(80, W // 8)
-            else:        return max(38, W // 19)
+                return [max(30, W // 28), max(72, W // 10), max(36, W // 20)][i]
+            if i == 0:   return max(26, W // 30)
+            elif i <= n // 2: return max(64, W // 12)
+            else:        return max(32, W // 22)
 
         lines_spec = [(w.upper(), _word_size(i), _font(_word_size(i))) for i, w in enumerate(words)]
 
         _tmp = Image.new("RGBA", (W, 4))
         _td  = ImageDraw.Draw(_tmp)
-        line_data = []
-        for word, sz, fnt in lines_spec:
-            bb  = _td.textbbox((0, 0), word, font=fnt)
-            tw, th = bb[2] - bb[0], bb[3] - bb[1]
-            line_data.append((word, fnt, th + max(4, int(sz * 0.08)), tw))
 
+        def _build_line_data(spec):
+            data = []
+            for word, sz, fnt in spec:
+                bb = _td.textbbox((0, 0), word, font=fnt)
+                tw, th = bb[2] - bb[0], bb[3] - bb[1]
+                # 125% leading — standard typographic line advance, no overlap
+                lh = max(th + max(12, int(sz * 0.25)), int(sz * 1.25))
+                data.append((word, fnt, lh, tw))
+            return data
+
+        line_data = _build_line_data(lines_spec)
         block_h = sum(ld[2] for ld in line_data)
+
+        # If block overflows 85% of image height, scale all font sizes down to fit
+        max_block_h = int(H * 0.70)
+        if block_h > max_block_h:
+            scale = max_block_h / block_h
+            lines_spec = [(w, max(18, int(sz * scale)), _font(max(18, int(sz * scale))))
+                          for w, sz, _ in lines_spec]
+            line_data = _build_line_data(lines_spec)
+            block_h = sum(ld[2] for ld in line_data)
+
         block_w = max(ld[3] for ld in line_data)
 
         # Place text vertically centred, left-aligned with margin
@@ -1173,16 +1189,25 @@ Output EXACTLY this format (nothing else):
                             note="skipping style analysis, Imagen 4 will use prompt only")
 
         # â"€â"€ Step B: Enrich each concept prompt with style + no-text rule ─────────
+        # Brand-specific confusion guard: Rnorr looks like Knorr to the model
+        _brand_confusion_note = (
+            f"SPELLING CRITICAL: The brand name is '{brand}'. "
+            f"It is a completely fictional brand. "
+            + (f"It is NOT 'Knorr'. It is NOT related to Knorr in any way. "
+               f"Spell it exactly: {' — '.join(brand.upper())}. "
+               if brand.lower() == "rnorr" else "")
+        )
         _no_text_rule = (
             f"CRITICAL BRAND + PRODUCT RULE:\n"
             f"Brand: '{brand}'\n"
             f"Selected product: '{_product_ctx}'\n"
-            f"Show 2-3 '{brand}' product bottles/packages in the image. "
-            f"The label on EVERY product MUST read '{brand}' and '{_product_ctx}'. "
-            f"Reproduce the exact packaging design, colours, and label from the reference product images provided. "
-            f"Do NOT show any other brand name (e.g. NOT 'Knorr', NOT 'L'Oréal', NOT generic labels).\n\n"
-            "TYPOGRAPHY RULE: No text anywhere in the image EXCEPT on the product packaging labels themselves. "
-            "Zero headlines, zero slogans, zero copy — all will be added in post-production.\n\n"
+            f"Show 2-3 '{brand}' product packages/bottles prominently in the scene. "
+            f"Match the packaging SHAPE and COLOURS from the reference product images. "
+            f"The label on every product MUST clearly show the brand name '{brand}' and '{_product_ctx}'.\n"
+            f"{_brand_confusion_note}"
+            f"Do NOT show any real-world brand name (not 'Knorr', not 'Unilever', not any other real brand).\n\n"
+            "TYPOGRAPHY RULE: No text anywhere in the image EXCEPT the product packaging labels. "
+            "Zero headlines, zero slogans, zero copy — all will be composited in post-production.\n\n"
         )
         _style_suffix = (
             f"\n\nBRAND VISUAL STYLE (match this aesthetic):\n{style_analysis}"
@@ -1213,7 +1238,7 @@ Output EXACTLY this format (nothing else):
                 continue
             _pdata = _load_bytes(_uri)
             if _pdata and len(_pdata) > 1024:
-                _ref_parts.append(f"PRODUCT REFERENCE — This is a '{brand}' '{_product_ctx}' product. Reproduce this EXACT packaging: same bottle/box shape, same colours, same label design. The label MUST show '{brand}' and '{_product_ctx}'. Feature 2-3 of these products prominently:")
+                _ref_parts.append(f"PRODUCT REFERENCE — Reproduce this '{brand}' '{_product_ctx}' product: same packaging shape, same colours, same label design. Label must show '{brand}' on every product. Feature 2-3 of these products prominently:")
                 _ref_parts.append(_gtypes.Part.from_bytes(data=_pdata, mime_type=_pmime))
 
         log.info("p2_ref_parts_loaded", n=len([p for p in _ref_parts if not isinstance(p, str)]))
@@ -1296,13 +1321,53 @@ Output EXACTLY this format (nothing else):
                                             "ratio": f"{rw}:{rh}"}
         log.info("p2_channel_adaptations_done", count=len(channel_adaptations))
 
-        await _emit("kv", "step_data", _json2.dumps({"image_b64": image_b64, "images_b64": images_b64}))
-        await _asyncio.sleep(5)
-        await _emit("kv", "done", f"{len(images_b64)} key visual variations ready")
     except Exception as e:
         image_error = str(e)
         log.warning("p2_generate_image_failed", error=image_error)
         await _emit("kv", "error", f"Image generation failed: {image_error[:80]}")
+
+    # ── Upload KV images + channel adaptations to GCS (outside image try block) ─
+    _gcs_uris: list = []
+    if images_b64 and not image_error:
+        try:
+            from google.cloud import storage as _gcs_client
+            _gcs = _gcs_client.Client()
+            _bucket_obj = _gcs.bucket(_settings.gcs_bucket)
+
+            def _upload(data: bytes, path: str, mime: str = "image/jpeg") -> str:
+                blob = _bucket_obj.blob(path)
+                blob.upload_from_string(data, content_type=mime)
+                return f"gs://{_settings.gcs_bucket}/{path}"
+
+            # KV images (with overlay) — upload each independently
+            for idx, _overlaid_bytes in enumerate(images_b64):
+                try:
+                    _raw = base64.b64decode(_overlaid_bytes)
+                    _uri = _upload(_raw, f"outputs/{campaign_id}/kv_image_{idx + 1}.jpg")
+                    _gcs_uris.append(_uri)
+                    log.info("p2_kv_uploaded", idx=idx + 1, uri=_uri)
+                except Exception as _kv_err:
+                    log.warning("p2_kv_upload_failed", idx=idx + 1, error=str(_kv_err))
+
+            # Channel adaptations — upload each independently
+            for key, val in channel_adaptations.items():
+                if val.get("image_b64"):
+                    try:
+                        _raw = base64.b64decode(val["image_b64"])
+                        _uri = _upload(_raw, f"outputs/{campaign_id}/channels/{key}.jpg")
+                        channel_adaptations[key]["gcs_uri"] = _uri
+                    except Exception as _ch_err:
+                        log.warning("p2_channel_upload_failed", key=key, error=str(_ch_err))
+
+            log.info("p2_gcs_upload_done", n_images=len(_gcs_uris),
+                     n_channels=sum(1 for v in channel_adaptations.values() if v.get("gcs_uri")))
+        except Exception as _gcs_err:
+            log.warning("p2_gcs_upload_failed", error=str(_gcs_err))
+
+        await _emit("kv", "step_data", _json2.dumps({"image_b64": image_b64, "images_b64": images_b64,
+                                                      "gcs_uris": _gcs_uris}))
+        await _asyncio.sleep(5)
+        await _emit("kv", "done", f"{len(images_b64)} key visual variations ready")
 
     # ── Stage 6: Campaign Reel via Veo ────────────────────────────────────────
     video_b64 = ""
@@ -1343,6 +1408,7 @@ Output EXACTLY this format (nothing else):
         "image_b64":            image_b64,
         "images_b64":           images_b64,
         "image_error":          image_error,
+        "gcs_uris":             _gcs_uris,
         "channel_adaptations":  channel_adaptations,
         "video_b64":            video_b64,
         "video_uri":            video_uri,
