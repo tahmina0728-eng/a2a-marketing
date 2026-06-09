@@ -29,22 +29,28 @@ from google.genai.types import Content, Part
 logger = structlog.get_logger()
 
 
-async def _vertex_generate(client, model: str, prompt: str, retries: int = 4) -> str:
-    """Call Vertex AI generate_content with exponential backoff on 429."""
+async def _vertex_generate(client, model: str, prompt: str, retries: int = 3) -> str:
+    """Call Vertex AI generate_content with backoff on 429, auto-fallback to cheaper model."""
+    import os as _os
+    _fallback = _os.getenv("FALLBACK_CREATIVE_MODEL", "gemini-2.0-flash")
     loop = asyncio.get_event_loop()
-    for attempt in range(retries):
-        try:
-            r = await loop.run_in_executor(None, lambda: client.models.generate_content(
-                model=model, contents=prompt,
-            ))
-            return r.text.strip()
-        except Exception as e:
-            if "429" in str(e) and attempt < retries - 1:
-                wait = 20 * (2 ** attempt)  # 20s, 40s, 80s
-                logger.warning("vertex_rate_limit_retry", attempt=attempt + 1, wait_s=wait, model=model)
-                await asyncio.sleep(wait)
-            else:
-                raise
+    for _model in ([model, _fallback] if _fallback and _fallback != model else [model]):
+        for attempt in range(retries):
+            try:
+                r = await loop.run_in_executor(None, lambda m=_model: client.models.generate_content(
+                    model=m, contents=prompt,
+                ))
+                return r.text.strip()
+            except Exception as e:
+                if "429" in str(e) and attempt < retries - 1:
+                    wait = 8 * (2 ** attempt)   # 8s, 16s — shorter initial wait
+                    logger.warning("vertex_rate_limit_retry", attempt=attempt+1, wait_s=wait, model=_model)
+                    await asyncio.sleep(wait)
+                elif "429" in str(e):
+                    logger.warning("vertex_quota_exhausted_switching", from_model=_model, to_model=_fallback)
+                    break   # try fallback model
+                else:
+                    raise
     return ""
 
 session_service = InMemorySessionService()
@@ -960,35 +966,42 @@ async def run_creative_pipeline_direct(
     _gemini = _genai.Client(vertexai=True, project=_s.gcp_project, location=_s.gcp_region)
     _text_model = os.getenv("CREATIVE_MODEL", "gemini-3.5-flash")
 
+    _fallback_text_model = os.getenv("FALLBACK_CREATIVE_MODEL", "gemini-2.0-flash")
+
     async def _llm(prompt: str, temp: float = 0.5, retries: int = 3,
                    with_brand_imgs: bool = False) -> str:
-        """Call creative model via Vertex AI. Passes brand images when model supports vision."""
+        """Call creative model via Vertex AI with backoff + fallback model on quota errors."""
         import asyncio
         loop = asyncio.get_event_loop()
-        is_vision = any(x in _text_model.lower() for x in ["image", "vision", "pro"])
-        contents = [prompt] + (_brand_img_parts[:6] if with_brand_imgs and is_vision and _brand_img_parts else [])
-        for attempt in range(retries):
-            try:
-                r = await loop.run_in_executor(None, lambda: _gemini.models.generate_content(
-                    model    = _text_model,
-                    contents = contents,
-                ))
-                # Extract text — vision models may return mixed parts
-                txt = ""
+        _models = ([_text_model, _fallback_text_model]
+                   if _fallback_text_model and _fallback_text_model != _text_model
+                   else [_text_model])
+        for _m in _models:
+            is_vision = any(x in _m.lower() for x in ["image", "vision", "pro"])
+            contents = [prompt] + (_brand_img_parts[:6] if with_brand_imgs and is_vision and _brand_img_parts else [])
+            for attempt in range(retries):
                 try:
-                    for _p in (r.candidates[0].content.parts if r.candidates else []):
-                        if hasattr(_p, "text") and _p.text:
-                            txt += _p.text
-                except Exception:
-                    pass
-                return (txt or r.text or "").strip()
-            except Exception as e:
-                if "429" in str(e) and attempt < retries - 1:
-                    wait = 30 * (attempt + 1)
-                    log.warning("gemini_rate_limit_retry", attempt=attempt+1, wait=wait)
-                    await asyncio.sleep(wait)
-                else:
-                    raise
+                    r = await loop.run_in_executor(None, lambda m=_m: _gemini.models.generate_content(
+                        model=m, contents=contents,
+                    ))
+                    txt = ""
+                    try:
+                        for _p in (r.candidates[0].content.parts if r.candidates else []):
+                            if hasattr(_p, "text") and _p.text:
+                                txt += _p.text
+                    except Exception:
+                        pass
+                    return (txt or r.text or "").strip()
+                except Exception as e:
+                    if "429" in str(e) and attempt < retries - 1:
+                        wait = 8 * (2 ** attempt)   # 8s, 16s
+                        log.warning("gemini_rate_limit_retry", attempt=attempt+1, wait=wait, model=_m)
+                        await asyncio.sleep(wait)
+                    elif "429" in str(e):
+                        log.warning("gemini_quota_exhausted_switching", from_model=_m, to_model=_fallback_text_model)
+                        break
+                    else:
+                        raise
         return ""
 
     import asyncio as _asyncio
@@ -1553,7 +1566,7 @@ Output EXACTLY this format (nothing else):
                     return None
                 except Exception as _e:
                     if "429" in str(_e) and attempt < 3:
-                        wait = 20 * (2 ** attempt)
+                        wait = 8 * (2 ** attempt)
                         log.warning("p2_image_rate_limit", attempt=attempt + 1, wait_s=wait)
                         await asyncio.sleep(wait)
                     else:
