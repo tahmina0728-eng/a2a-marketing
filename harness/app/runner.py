@@ -1115,89 +1115,182 @@ Create a Big Idea for this campaign. Output:
     })
 
     # ── Audience-driven persona override ─────────────────────────────────────
-    # Parse age range and segment from audience string, then override the
-    # brand's default model description so images actually reflect who was chosen.
+    # Keys match EXACT UI interest strings (lowercase) per brand.
+    # Rnorr:   Home cooks | Families | Students | Budget shoppers | Food lovers | Meal preppers | Time-poor professionals
+    # Sunglow: Natural hair community | Protective styles | Wash day routines | Scalp health | Curl definition | Black hair care | Beauty enthusiasts
+    # Boozt:   Fine hair | Volume seekers | On-the-go styling | Beauty enthusiasts | Festival-goers | Bridal & occasion
     _AUDIENCE_PERSONAS = {
-        "students": {
-            "person":  "university student (18-24), casual everyday style, fresh youthful energy, backpack or notebook nearby",
-            "setting": "campus café, bright student apartment, study space with natural light",
-            "energy":  "carefree, ambitious, socially connected",
-            "wardrobe": "casual streetwear, hoodie, jeans — relaxed student aesthetic",
+        # ── Rnorr ─────────────────────────────────────────────────────────────
+        "home cooks": {
+            "person":   "passionate home cook (any gender, any ethnicity, 28-50), fully absorbed in making something delicious from scratch",
+            "setting":  "well-loved home kitchen, pots and fresh ingredients everywhere, steam rising",
+            "energy":   "creative, proud, completely in their element — this is their happy place",
+            "wardrobe": "casual home clothes, colourful apron, real and relaxed",
         },
         "families": {
-            "person":  "young parent (late 20s–early 30s) with one or two children aged 4-10, all laughing and interacting naturally",
-            "setting": "warm family kitchen, dining table with food, cozy bright home",
-            "energy":  "warm, loving, genuine family togetherness",
+            "person":   "young parent (late 20s–30s) with one or two children aged 4-10, all laughing and cooking together",
+            "setting":  "warm bright family kitchen, kids helping at the counter, wholesome meal in progress",
+            "energy":   "warm, loving, joyful family togetherness around food",
             "wardrobe": "relaxed home clothes, bright and approachable colours",
         },
-        "professionals": {
-            "person":  "confident professional (28-42), polished smart-casual attire, poised and focused",
-            "setting": "sleek modern kitchen, stylish home, premium environment",
-            "energy":  "accomplished, aspirational, time-efficient",
-            "wardrobe": "smart casual — blazer or crisp shirt, sophisticated",
+        "students": {
+            "person":   "university student (any ethnicity), casual and resourceful, cooking a quick flavourful meal",
+            "setting":  "compact student apartment kitchen — minimal but cosy, practical and lived-in",
+            "energy":   "resourceful, carefree, discovering the joy of cooking independently",
+            "wardrobe": "casual streetwear — hoodie, jeans, relaxed student aesthetic",
         },
-        "fitness": {
-            "person":  "athletic person (22-38), toned and energetic, sporty and vibrant",
-            "setting": "bright modern kitchen, post-workout vibe, healthy lifestyle environment",
-            "energy":  "energetic, healthy, performance-driven",
-            "wardrobe": "activewear, sports kit, athletic and dynamic",
+        "budget shoppers": {
+            "person":   "savvy everyday shopper (25-45, any ethnicity), proud of making great meals affordably",
+            "setting":  "cheerful everyday kitchen, practical ingredients, satisfied smile at an incredible result",
+            "energy":   "empowered, smart — incredible flavour without breaking the bank",
+            "wardrobe": "everyday casual, practical and approachable",
         },
-        "gen-z": {
-            "person":  "Gen-Z person (18-26), expressive personal style, authentic and unfiltered — any gender",
-            "setting": "urban apartment, vibrant and colourful modern space",
-            "energy":  "bold, authentic, digitally native, self-expressive",
-            "wardrobe": "bold streetwear, eclectic personal style, on-trend",
+        "food lovers": {
+            "person":   "food-obsessed enthusiast (25-45), eyes wide with delight, completely absorbed in aromas and flavours",
+            "setting":  "beautiful home kitchen, artisan cookware, quality fresh ingredients, food-photography aesthetic",
+            "energy":   "passionate, sensory, joyful — food is an experience and an art form",
+            "wardrobe": "stylish casual or a beautiful apron, food-influencer aesthetic",
         },
-        "millennials": {
-            "person":  "millennial (28-38), on-trend urban style, socially conscious",
-            "setting": "trendy city apartment kitchen, Instagrammable aesthetic",
-            "energy":  "aspirational, social, experience-driven",
-            "wardrobe": "smart casual with personality — contemporary and curated",
+        "meal preppers": {
+            "person":   "organised home cook (25-45), confidently batch-cooking multiple dishes at once, totally in control",
+            "setting":  "tidy organised kitchen, multiple pots on the go, glass containers lined up and ready",
+            "energy":   "efficient, satisfyingly productive — Sunday prep is a weekly ritual",
+            "wardrobe": "practical casual, sleeves rolled up, ready to work",
         },
-        "foodies": {
-            "person":  "passionate food enthusiast (25-45), eyes lit up, completely absorbed in the cooking",
-            "setting": "beautiful home kitchen with fresh ingredients, artisan cookware",
-            "energy":  "passionate, sensory, joyful discovery",
-            "wardrobe": "casual home clothes or stylish apron",
+        "time-poor professionals": {
+            "person":   "busy professional (28-45), smart-casual, cooking a quick impressive meal straight after work",
+            "setting":  "sleek modern kitchen, minimal clutter, quick prep underway, laptop bag still on the chair",
+            "energy":   "efficient, accomplished — turning 15 minutes into something that tastes like hours",
+            "wardrobe": "work smart-casual — shirt sleeves rolled up, transitioning from office to kitchen",
         },
-        "beauty lovers": {
-            "person":  "beauty-conscious person (20-38), impeccable grooming, polished and stylish",
-            "setting": "well-lit aesthetic space, beautiful surroundings",
-            "energy":  "glamorous, self-expressive, aspirational",
-            "wardrobe": "chic and stylish outfit matching brand palette",
+        # ── Sunglow ───────────────────────────────────────────────────────────
+        "natural hair community": {
+            "person":   "Black woman (20-40) with stunning natural hair — 4C coils, full afro, or defined curls — radiantly and unapologetically confident",
+            "setting":  "bright outdoor or studio setting, golden rim light crowning her natural hair like a halo",
+            "energy":   "deeply confident, joyful, unapologetically herself — natural hair is her crown",
+            "wardrobe": "vibrant outfit in brand palette, celebrating natural identity",
+        },
+        "protective styles": {
+            "person":   "Black woman (18-38) showcasing gorgeous protective styling — box braids, twists, or locs — looking powerful and intentional",
+            "setting":  "golden-lit studio, intricate protective style catching every ray of light beautifully",
+            "energy":   "powerful, intentional, celebrating the artistry and heritage of protective styling",
+            "wardrobe": "bold colourful outfit, accessories that complement the hairstyle",
+        },
+        "wash day routines": {
+            "person":   "Black woman (20-40) mid wash-day ritual — fresh out of shower, product in hair, glowing and relaxed",
+            "setting":  "luxurious bathroom with warm steam, golden light, self-care sanctuary atmosphere",
+            "energy":   "self-loving, indulgent — wash day is a ritual of celebration and self-care",
+            "wardrobe": "beautiful robe or cosy comfort wear, wash-day energy",
+        },
+        "scalp health": {
+            "person":   "Woman (20-45) massaging product into scalp with eyes closed in pleasure, visibly healthy radiant scalp",
+            "setting":  "bright clean bathroom, warm clinical-beautiful aesthetic with golden accent light",
+            "energy":   "nurturing, deeply satisfied — healthy hair starts at the scalp",
+            "wardrobe": "white or cream tones, clean fresh health-focused aesthetic",
+        },
+        "curl definition": {
+            "person":   "Woman (18-38) with perfectly defined, bouncy, glistening curls — any curl type 2B to 4C, absolutely stunning",
+            "setting":  "bright studio or outdoor with dappled light making every curl spring and shine",
+            "energy":   "euphoric — curls are perfectly popped, springy, and absolutely stunning today",
+            "wardrobe": "vibrant or white outfit to contrast and showcase the curl perfection",
+        },
+        "black hair care": {
+            "person":   "Black woman (18-50), any texture from 3A to 4C, glowing with deep healthy-hair confidence",
+            "setting":  "premium beauty setting with rich dramatic lighting that reveals every strand's texture and sheen",
+            "energy":   "confident, celebratory — Black hair is powerful, diverse, and endlessly beautiful",
+            "wardrobe": "bold statement outfit in brand palette, sophisticated and expressive",
+        },
+        "beauty enthusiasts": {
+            "person":   "beauty-obsessed woman (20-38), immaculate grooming, polished and styled, radiating confidence",
+            "setting":  "beautiful aesthetic vanity or chic studio environment, aspirational beauty-influencer vibe",
+            "energy":   "glamorous, self-expressive — beauty is a lifestyle and a passion",
+            "wardrobe": "on-trend fashion-forward outfit, beauty-influencer aesthetic",
+        },
+        # ── Boozt ─────────────────────────────────────────────────────────────
+        "fine hair": {
+            "person":   "woman (20-40) with fine hair utterly transformed — hair suddenly has gravity-defying body and lift, looking astonished and thrilled",
+            "setting":  "dramatic studio, electric lighting revealing every single lifted strand in stunning detail",
+            "energy":   "transformation revelation — fine hair is now impossibly full and powerful",
+            "wardrobe": "clean minimal outfit — white or black — so all focus goes to the incredible hair volume",
+        },
+        "volume seekers": {
+            "person":   "woman (18-40) in the middle of a hair-volume explosion — hair defying gravity, cloud-like fullness all around her",
+            "setting":  "high-energy studio, electric lighting, wind machine creating maximum hair drama",
+            "energy":   "euphoric, unstoppable — more volume than she ever thought her hair could achieve",
+            "wardrobe": "bold graphic outfit, electric blue or sharp white — all attention on the volume",
+        },
+        "on-the-go styling": {
+            "person":   "busy woman (22-38) looking effortlessly polished — great volume, styled in seconds, confidently on-the-move",
+            "setting":  "dynamic urban setting — city street, rushing out the door, morning energy and movement",
+            "energy":   "efficient, confident — looks incredible without trying, busy life but perfect hair every day",
+            "wardrobe": "smart casual chic, modern and professional with attitude",
+        },
+        "festival-goers": {
+            "person":   "woman (18-30) with wild, free, festival-ready voluminous hair — glitter, accessories, full of life and movement",
+            "setting":  "festival atmosphere — coloured lights, outdoor energy, golden hour, crowd in the background",
+            "energy":   "free-spirited, bold, dancing — hair flying, the ultimate festival look",
+            "wardrobe": "festival fashion — bold, expressive, colourful, glitter and accessories",
+        },
+        "bridal & occasion": {
+            "person":   "woman (22-40) with breathtaking volumised bridal or occasion-ready hair — flawlessly elegant and radiant",
+            "setting":  "luxury setting — hotel suite, garden venue, golden soft romantic lighting",
+            "energy":   "radiant, emotional, luminous — the most beautiful version of herself on the most important day",
+            "wardrobe": "elegant bridal or occasion dress, sophisticated and timeless",
         },
     }
     _AGE_OVERRIDES = {
-        "18-24": "specifically aged 18-24, young adult face and fresh energy",
-        "18–24": "specifically aged 18-24, young adult face and fresh energy",
-        "25-34": "specifically aged 25-34, young professional energy",
-        "25–34": "specifically aged 25-34, young professional energy",
-        "35-54": "specifically aged 35-54, established and confident",
-        "35–54": "specifically aged 35-54, established and confident",
-        "55+":   "specifically aged 55+, distinguished and warmly experienced",
+        "13-17": "specifically a teenager aged 13-17, youthful, relatable and authentic",
+        "13–17": "specifically a teenager aged 13-17, youthful, relatable and authentic",
+        "18-24": "specifically aged 18-24, young adult face and fresh vibrant energy",
+        "18–24": "specifically aged 18-24, young adult face and fresh vibrant energy",
+        "25-34": "specifically aged 25-34, young professional energy and confidence",
+        "25–34": "specifically aged 25-34, young professional energy and confidence",
+        "35-44": "specifically aged 35-44, established mid-life confidence and warmth",
+        "35–44": "specifically aged 35-44, established mid-life confidence and warmth",
+        "45-54": "specifically aged 45-54, mature, vibrant and powerfully confident",
+        "45–54": "specifically aged 45-54, mature, vibrant and powerfully confident",
+        "55+":   "specifically aged 55+, distinguished, experienced and warmly radiant",
     }
-    # Brand-specific expression/pose to preserve regardless of audience
+    # Brand expression/pose always preserved — audience changes WHO, brand DNA stays HOW
     _BRAND_EXPRESSION = {
-        "Sunglow": "ECSTATIC expression, dramatic hair-flip or head thrown back mid-laugh, hair FLYING and catching light — hair is always the HERO",
-        "Rnorr":   "genuinely delighted expression, caught mid-moment of cooking — tasting, stirring, or reacting to the aroma",
-        "Boozt":   "POWERFUL pose — chin up, hand in voluminous hair, or dramatic over-shoulder look, radiating unstoppable energy",
+        "Sunglow": "ECSTATIC expression, dramatic hair-flip or head thrown back mid-laugh, hair FLYING and catching golden light — hair is always the ABSOLUTE HERO",
+        "Rnorr":   "genuinely delighted expression, caught mid-moment of cooking — tasting, stirring, or reacting to the aroma with pure joy",
+        "Boozt":   "POWERFUL pose — chin up, hand in voluminous hair, or dramatic over-shoulder look, radiating unstoppable electric energy",
     }
-    # Brand-specific setting must always anchor to the product category
+    # Brand-specific settings anchored to product world — keyed to exact UI interest strings
     _BRAND_SETTING = {
-        "Sunglow":  {"students": "student bathroom or campus shoot, golden rim lighting highlighting the hair",
-                     "families": "bright family bathroom, warm morning light on hair",
-                     "professionals": "luxury bathroom or salon, premium lighting",
-                     "default": "studio shoot with golden hour rim light"},
-        "Rnorr":    {"students": "student apartment kitchen — compact, lived-in, cosy",
-                     "families": "warm family kitchen with fresh vegetables and steam",
-                     "professionals": "sleek modern kitchen, premium cookware",
-                     "fitness": "bright open kitchen, healthy fresh ingredients",
-                     "default": "warm home kitchen, aromatic cooking atmosphere"},
-        "Boozt":    {"students": "urban campus gym or lively social space with electric lighting",
-                     "families": "bright energetic family home, dynamic and active",
-                     "professionals": "corporate gym or sleek office break room",
-                     "fitness": "high-performance gym, dramatic lighting",
-                     "default": "dramatic studio with electric cobalt lighting"},
+        "Sunglow": {
+            "natural hair community": "bright outdoor or studio, golden rim light crowning the natural hair",
+            "protective styles":      "golden-lit studio, intricate style catching the light beautifully",
+            "wash day routines":      "luxury bathroom, steam and warm golden light, self-care sanctuary",
+            "scalp health":           "clean bright bathroom, clinical-beautiful aesthetic, warm accent light",
+            "curl definition":        "bright studio or outdoor dappled light making curls spring and shine",
+            "black hair care":        "premium beauty setting, rich dramatic lighting on hair texture",
+            "beauty enthusiasts":     "chic studio or beauty-influencer environment, aspirational aesthetic",
+            "students":               "bright campus bathroom or dorm, golden rim light on hair",
+            "families":               "warm family bathroom, morning golden light on hair",
+            "default":                "studio with golden hour rim light, hair as the centrepiece",
+        },
+        "Rnorr": {
+            "home cooks":              "well-loved home kitchen, pots on the stove, fresh ingredients, steam rising",
+            "families":                "warm family kitchen, kids at the counter, wholesome meal in progress",
+            "students":                "compact student apartment kitchen, lived-in and cosy",
+            "budget shoppers":         "cheerful everyday kitchen, practical and satisfying",
+            "food lovers":             "beautiful home kitchen, artisan cookware, quality fresh ingredients",
+            "meal preppers":           "tidy organised kitchen, multiple pots on the go, glass containers ready",
+            "time-poor professionals": "sleek modern kitchen, quick prep underway after a long work day",
+            "default":                 "warm home kitchen, aromatic cooking atmosphere",
+        },
+        "Boozt": {
+            "fine hair":          "dramatic studio, electric lighting revealing every strand of lifted hair",
+            "volume seekers":     "high-energy studio, wind machine, electric cobalt lighting — maximum drama",
+            "on-the-go styling":  "dynamic urban street or modern apartment hallway, morning rush energy",
+            "festival-goers":     "festival outdoor setting, coloured lights, golden hour, crowd energy",
+            "bridal & occasion":  "luxury venue or hotel suite, soft romantic golden lighting",
+            "beauty enthusiasts": "chic studio with electric blue accent lighting",
+            "students":           "urban campus or lively social space with electric lighting",
+            "default":            "dramatic studio with electric cobalt lighting, high-contrast",
+        },
     }
 
     _aud_lower = (_aud_ctx or "").lower()
