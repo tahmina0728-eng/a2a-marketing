@@ -1082,7 +1082,7 @@ Create a Big Idea for this campaign. Output:
     _BRAND_MAGIC = {
         "Sunglow": {
             "effects":  "floating golden light particles, warm bokeh orbs, soft lens flare, shimmering hair highlights catching studio rim light",
-            "model":    "beautiful woman, ANY ethnicity (South Asian / East Asian / Latina / mixed — vary each time), age 22-35, ECSTATIC expression, head tilted back mid-laugh OR doing a dramatic hair-flip, hair FLYING and catching the light",
+            "model":    "beautiful woman, age 22-35, ECSTATIC expression, head tilted back mid-laugh OR doing a dramatic hair-flip, hair FLYING and catching the light — ethnicity matches the selected market",
             "hair":     "hair is the ABSOLUTE HERO — impossibly shiny, flowing, volumised, cascading waves or sleek blowout, lit from behind with golden rim light creating a halo glow",
             "bg":       "rich magenta-pink to warm golden gradient, glowing from centre, deep and saturated",
             "wardrobe": "magenta, hot pink, or sunshine yellow outfit matching brand palette",
@@ -1090,7 +1090,7 @@ Create a Big Idea for this campaign. Output:
         },
         "Rnorr": {
             "effects":  "photorealistic steam wisps rising dramatically, golden food particles suspended mid-air, warm amber bokeh, rich aromatic atmosphere",
-            "model":    "warm relatable home cook (woman OR man, any ethnicity, age 28-45, {_market_ctx} authentic), genuinely delighted expression, caught in a moment of tasting or stirring",
+            "model":    "warm relatable home cook (woman OR man, age 28-45), genuinely delighted expression, caught in a moment of tasting or stirring — ethnicity and look authentic to the selected market",
             "hair":     "natural, realistic — face and personality are the hero, not hair",
             "bg":       "deep forest green to warm golden-yellow gradient, rich and appetising, warm kitchen ambient light",
             "wardrobe": "warm earthy tones, apron, casual and real",
@@ -1098,7 +1098,7 @@ Create a Big Idea for this campaign. Output:
         },
         "Boozt": {
             "effects":  "electric cobalt blue light trails, neon energy arcs, dramatic wind-blown hair particles, studio strobe sparks, high-voltage energy",
-            "model":    "confident woman (any ethnicity — Asian / Caucasian / Latina — vary each time), age 20-35, POWERFUL pose — chin up, hand in voluminous hair, or dramatic over-shoulder look",
+            "model":    "confident woman, age 20-35, POWERFUL pose — chin up, hand in voluminous hair, or dramatic over-shoulder look — ethnicity matches the selected market",
             "hair":     "MAXIMUM VOLUME — gravity-defying fullness, incredible bounce and body, lit with electric rim light creating a halo, fine hair lifted to cloud-like perfection",
             "bg":       "deep midnight navy to electric cobalt blue gradient, dramatic studio lighting, high-contrast",
             "wardrobe": "electric blue, cobalt, or sharp white outfit — bold and graphic",
@@ -1251,6 +1251,22 @@ Create a Big Idea for this campaign. Output:
         "45–54": "specifically aged 45-54, mature, vibrant and powerfully confident",
         "55+":   "specifically aged 55+, distinguished, experienced and warmly radiant",
     }
+    # Market drives ethnicity/cultural representation — model should look like they belong there
+    _MARKET_DEMOGRAPHICS = {
+        "united kingdom": "British — reflect the UK's diverse multicultural population (White British, South Asian, Black British, mixed heritage — vary naturally)",
+        "australia":      "Australian — reflect Australia's diverse population (Anglo-Australian, East Asian, South Asian, Aboriginal, Pacific Islander — vary naturally)",
+        "united states":  "American — reflect the USA's diverse population (White American, Black American, Hispanic/Latino, East Asian, South Asian — vary naturally)",
+        "new zealand":    "New Zealand — reflect NZ's diverse population including Māori, Pākehā, Pacific Islander, and Asian New Zealanders",
+        "sea":            "Southeast Asian — specifically Filipino, Indonesian, Thai, Malaysian, or Vietnamese appearance, authentic SEA cultural context",
+        "global":         "globally diverse — any ethnicity, universally relatable, celebrate diversity",
+    }
+    # Sunglow interests that are specifically about Black/textured hair — retain cultural context but market-anchor
+    _SUNGLOW_BLACK_HAIR_INTERESTS = {
+        "natural hair community", "protective styles", "wash day routines",
+        "scalp health", "curl definition", "black hair care",
+    }
+    _market_lower = (_market_ctx or "").lower()
+    _market_demo  = next((v for k, v in _MARKET_DEMOGRAPHICS.items() if k in _market_lower), "")
     # Brand expression/pose always preserved — audience changes WHO, brand DNA stays HOW
     _BRAND_EXPRESSION = {
         "Sunglow": "ECSTATIC expression, dramatic hair-flip or head thrown back mid-laugh, hair FLYING and catching golden light — hair is always the ABSOLUTE HERO",
@@ -1309,17 +1325,36 @@ Create a Big Idea for this campaign. Output:
             (_brand_settings[k] for k in _brand_settings if k in _aud_lower),
             _brand_settings.get("default", _matched_persona["setting"])
         )
-        # Blend: audience tells us WHO, brand tells us HOW they look and WHERE (within brand world)
-        _magic["model"]    = (f"{_matched_persona['person']}"
-                               f"{', ' + _age_note if _age_note else ''}. "
-                               f"{_brand_expr}. "
-                               f"Setting: {_resolved_setting}")
+        # Market demographic: drives ethnicity for all personas EXCEPT Sunglow's
+        # Black-hair-specific interests which retain cultural context but are market-anchored.
+        _seg_key_matched = next((k for k in _AUDIENCE_PERSONAS if k in _aud_lower), "")
+        _is_black_hair_interest = (brand == "Sunglow" and
+                                   _seg_key_matched in _SUNGLOW_BLACK_HAIR_INTERESTS)
+        if _is_black_hair_interest and _market_demo:
+            # Keep the Black/textured-hair context but market-anchor (e.g. "UK Black British")
+            _ethnicity_note = f"specifically from the {_market_ctx} Black community — {_market_demo}"
+        elif _market_demo:
+            _ethnicity_note = _market_demo
+        else:
+            _ethnicity_note = ""
+
+        _magic["model"] = (
+            f"{_matched_persona['person']}"
+            f"{', ' + _age_note if _age_note else ''}. "
+            f"{_ethnicity_note + '. ' if _ethnicity_note else ''}"
+            f"{_brand_expr}. "
+            f"Setting: {_resolved_setting}"
+        )
         # Preserve brand effects/hair/bg — only blend energy and wardrobe
         _magic["energy"]   = f"{_matched_persona['energy']} — {_magic['energy']}"
         _magic["wardrobe"] = f"{_matched_persona['wardrobe']}, colours drawn from brand palette: {_brand_palette_str}"
-    elif _age_note:
-        # No matching segment — just adjust the age
-        _magic["model"] = _magic["model"] + f" — {_age_note}"
+    elif _age_note or _market_demo:
+        # No matching segment — still apply age + market demographic to brand default
+        _magic["model"] = (
+            _magic["model"]
+            + (f" — {_age_note}" if _age_note else "")
+            + (f". Market: {_market_demo}" if _market_demo else "")
+        )
 
     scene_concepts_raw = await _llm(f"""You are a world-class FMCG advertising creative director.
 Study these reference ad styles: Sunsilk (dynamic hair, sparkles, vibrant energy), Pantene (cinematic hair movement, golden glow), Knorr (warm kitchen magic, steam, real moments), L'Oréal (empowered model, bold colour, premium feel).
