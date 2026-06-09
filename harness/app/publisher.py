@@ -137,20 +137,20 @@ def _gcs_to_b64(uri: str, mime: str = "image/jpeg", max_kb: int = 800) -> str:
 def generate_brand_website(brand: str, hero_message: str = "", tagline: str = "",
                             body_copy: str = "", cta: str = "",
                             campaign_image_b64: str = "", hero_image_b64: str = "",
-                            campaign_id: str = "") -> str:
+                            campaign_id: str = "", video_b64: str = "") -> str:
     """Route to the correct brand website generator."""
     if brand.lower() == "rnorr":
-        return generate_rnorr_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64)
+        return generate_rnorr_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     if brand.lower() == "boozt":
-        return generate_boozt_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64)
+        return generate_boozt_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     return _generate_sunglow_website(brand, hero_message, tagline, body_copy, cta,
-                                     campaign_image_b64, campaign_id, hero_image_b64)
+                                     campaign_image_b64, campaign_id, hero_image_b64, video_b64)
 
 
 def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
                                body_copy: str, cta: str,
                                campaign_image_b64: str, campaign_id: str,
-                               hero_image_b64: str = "") -> str:
+                               hero_image_b64: str = "", video_b64: str = "") -> str:
     """
     Generate a full Sunsilk-inspired brand website HTML page.
     Loads logo, product images, and assets directly from GCS bucket.
@@ -350,7 +350,7 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
 
 def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
                             hero_message: str = "", body_copy: str = "", cta: str = "",
-                            hero_image_b64: str = "") -> str:
+                            hero_image_b64: str = "", video_b64: str = "") -> str:
     """Knorr-inspired brand website for Rnorr."""
     from app.brand_assets import get_asset_loader
     loader   = get_asset_loader()
@@ -368,26 +368,28 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
     logo_html = (f'<img src="{logo_src}" alt="Rnorr" style="height:40px;object-fit:contain;">'
                 if logo_src else '<span style="font-size:26px;font-weight:900;color:#FFDE00;letter-spacing:-0.02em;">Rnorr</span>')
 
+    # Use actual brand product/asset images for recipe cards (Knorr-style photo cards)
+    _recipe_img_srcs = [_gcs_to_b64(p, "image/jpeg", 600) for p in (products + assets)[:3]]
     recipes = [
-        {"name":"Chicken & Herb Pasta",  "time":"25 min","diff":"Easy",
-         "emoji":"🍝","grad":"linear-gradient(135deg,#fff3e0,#ffe0b2)","accent":"#e65100","tag":"Quick & Easy"},
-        {"name":"Beef Stock Risotto",     "time":"40 min","diff":"Medium",
-         "emoji":"🥘","grad":"linear-gradient(135deg,#fbe9e7,#ffccbc)","accent":"#bf360c","tag":"Comfort Food"},
-        {"name":"Golden Vegetable Soup",  "time":"20 min","diff":"Easy",
-         "emoji":"🍜","grad":"linear-gradient(135deg,#f9fbe7,#f0f4c3)","accent":"#827717","tag":"Family Favourite"},
+        {"name": "Give It More with Rnorr: Elevate Your Everyday Meals", "tag": "Recipes"},
+        {"name": "Quick & Flavourful Weeknight Dinners",                  "tag": "Inspiration"},
+        {"name": "Tips & Tricks from Our Kitchen",                        "tag": "Tips"},
     ]
-    recipe_cards = "".join([f"""
-    <div class="recipe-card">
-      <div class="recipe-img" style="{r['grad']};height:200px;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;">
-        <div style="font-size:72px;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.15));transform:rotate(-8deg)">{r['emoji']}</div>
-        <div style="position:absolute;top:14px;left:14px;background:white;color:{r['accent']};font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:99px;">{r['tag']}</div>
+    recipe_cards = ""
+    for i, r in enumerate(recipes):
+        img_src = _recipe_img_srcs[i] if i < len(_recipe_img_srcs) else ""
+        bg = f'background-image:url("{img_src}");background-size:cover;background-position:center;' if img_src else "background:#1a3a1a;"
+        recipe_cards += f"""
+    <div class="recipe-card" style="cursor:pointer;">
+      <div style="position:relative;height:240px;overflow:hidden;border-radius:16px;">
+        <div style="{bg}width:100%;height:100%;transition:transform 0.4s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'"></div>
+        <div style="position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.72) 0%,rgba(0,0,0,0.1) 60%,transparent 100%);border-radius:16px;"></div>
+        <div style="position:absolute;top:14px;left:14px;background:#FFDE00;color:#008641;font-size:10px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;padding:4px 12px;border-radius:99px;">{r['tag']}</div>
+        <div style="position:absolute;bottom:0;left:0;right:0;padding:16px 18px;">
+          <div style="font-family:Antonio,sans-serif;font-size:15px;font-weight:700;color:white;line-height:1.3;">{r['name']}</div>
+        </div>
       </div>
-      <div class="recipe-body">
-        <div class="recipe-name">{r['name']}</div>
-        <div class="recipe-meta">⏱ {r['time']} &nbsp;·&nbsp; {r['diff']}</div>
-        <a href="#" class="recipe-btn">Get Recipe</a>
-      </div>
-    </div>""" for r in recipes])
+    </div>"""
 
     prod_cards = "".join([f"""
     <div class="prod-card">
@@ -399,9 +401,20 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
       </div>
     </div>""" for i, src in enumerate(prod_srcs)])
 
+    # Pre-compute reel section (can't use nested f-string inside f-string)
+    reel_section = f"""
+<section style="background:#0d2e1a;padding:56px 48px;text-align:center;">
+  <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#FFDE00;margin-bottom:12px;">Campaign Reel</div>
+  <h2 style="font-family:Antonio,sans-serif;font-size:28px;font-weight:900;color:white;margin-bottom:24px;">{hero_message}</h2>
+  <div style="max-width:800px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+    <video controls autoplay loop muted playsinline style="width:100%;display:block;" src="data:video/mp4;base64,{video_b64}"></video>
+  </div>
+  <a href="#cta" style="display:inline-block;margin-top:24px;background:#FFDE00;color:#008641;padding:14px 40px;border-radius:99px;font-weight:800;font-size:15px;text-decoration:none;">{cta or 'Shop Now'}</a>
+</section>""" if video_b64 else ""
+
     return f"""<!DOCTYPE html><html lang="en"><head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Rnorr — Tastes like time.</title>
+  <title>Rnorr -- Tastes like time.</title>
   <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;700&family=Rubik:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
   <style>
     *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
@@ -540,13 +553,15 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
 
 <section class="section alt" id="recipes">
   <div class="section-head">
-    <div class="section-label">Inspiration</div>
-    <div class="section-title">Recipes Made with Rnorr</div>
+    <div class="section-label">Today, I&apos;m looking for</div>
+    <div class="section-title" style="font-size:32px;font-weight:900;color:#008641;text-align:left;margin-bottom:28px;">Today, I&apos;m looking for</div>
   </div>
-  <div class="recipe-grid">{recipe_cards}</div>
+  <div class="recipe-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;max-width:1100px;margin:0 auto;">{recipe_cards}</div>
 </section>
 
 {'<section class="campaign"><div class="camp-img"><img src="' + camp_src + '" alt="Campaign"></div><div class="camp-text"><div class="camp-label">AI Campaign · ' + campaign_id[:16] + '</div><h2 class="camp-title">' + (hero_message or "Home cooking is how you say I care") + '</h2><p class="camp-body">' + (body_copy or "Every great meal starts with great stock.") + '</p><a href="#cta" class="btn-yellow">' + (cta or "Shop Now") + '</a></div></section>' if camp_src else ""}
+
+{reel_section}
 
 <section class="cta-band" id="cta">
   <h2>Flavour that Brings Families Together</h2>
@@ -582,7 +597,7 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
 
 def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
                             hero_message: str = "", body_copy: str = "", cta: str = "",
-                            hero_image_b64: str = "") -> str:
+                            hero_image_b64: str = "", video_b64: str = "") -> str:
     """Boots-inspired brand website for Boozt hair care."""
     from app.brand_assets import get_asset_loader
     loader   = get_asset_loader()
