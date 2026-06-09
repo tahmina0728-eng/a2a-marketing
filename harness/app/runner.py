@@ -1012,7 +1012,7 @@ Be specific, avoid generic boilerplate.""")
     await _emit("culture", "done", "Cultural intelligence ready ✓")
     import json as _json
     await _emit("culture", "milestone", _json.dumps({"brief": culture[:600]}))
-    await _asyncio.sleep(3)
+    await _asyncio.sleep(0.5)
 
     # Stage 2: Brand summariser
     log.info("p2_brand_summariser_start")
@@ -1039,7 +1039,7 @@ Cover: colours (with HEX), typography/font, logo rules, tone, forbidden treatmen
     import json as _json2
     await _emit("kv", "step_data", _json2.dumps({"brand_locks": brand_summary[:500]}))
     await _emit("kv", "running", "Brand locks extracted — building Big Idea…")
-    await _asyncio.sleep(3)
+    await _asyncio.sleep(0.5)
 
     # Stage 3: Creative director → Big Idea
     log.info("p2_creative_director_start")
@@ -1059,7 +1059,7 @@ Create a Big Idea for this campaign. Output:
     log.info("p2_creative_director_done")
     await _emit("kv", "step_data", _json2.dumps({"big_idea": big_idea[:400]}))
     await _emit("kv", "running", "Big Idea ready — crafting image prompt…")
-    await _asyncio.sleep(3)
+    await _asyncio.sleep(0.5)
 
     # Stage 4: Generate 5 distinct scene concept prompts from brief context
     log.info("p2_prompt_agent_start")
@@ -1325,18 +1325,8 @@ Create a Big Idea for this campaign. Output:
             (_brand_settings[k] for k in _brand_settings if k in _aud_lower),
             _brand_settings.get("default", _matched_persona["setting"])
         )
-        # Market demographic: drives ethnicity for all personas EXCEPT Sunglow's
-        # Black-hair-specific interests which retain cultural context but are market-anchored.
-        _seg_key_matched = next((k for k in _AUDIENCE_PERSONAS if k in _aud_lower), "")
-        _is_black_hair_interest = (brand == "Sunglow" and
-                                   _seg_key_matched in _SUNGLOW_BLACK_HAIR_INTERESTS)
-        if _is_black_hair_interest and _market_demo:
-            # Keep the Black/textured-hair context but market-anchor (e.g. "UK Black British")
-            _ethnicity_note = f"specifically from the {_market_ctx} Black community — {_market_demo}"
-        elif _market_demo:
-            _ethnicity_note = _market_demo
-        else:
-            _ethnicity_note = ""
+        # Market fully drives ethnicity — no exceptions
+        _ethnicity_note = _market_demo
 
         _magic["model"] = (
             f"{_matched_persona['person']}"
@@ -1573,7 +1563,7 @@ Output EXACTLY this format (nothing else):
 
         # Stagger starts by 5s each to avoid simultaneous 429s
         _img_results = await asyncio.gather(*[
-            _gen_one_image(p, delay=i * 5) for i, p in enumerate(enriched_concepts)
+            _gen_one_image(p, delay=i * 2) for i, p in enumerate(enriched_concepts)
         ])
         generated_bytes_list = [r for r in _img_results if r is not None]
         if not generated_bytes_list:
@@ -1656,7 +1646,7 @@ Output EXACTLY this format (nothing else):
 
         await _emit("kv", "step_data", _json2.dumps({"image_b64": image_b64, "images_b64": images_b64,
                                                       "gcs_uris": _gcs_uris}))
-        await _asyncio.sleep(5)
+        await _asyncio.sleep(0.5)
         await _emit("kv", "done", f"{len(images_b64)} key visual variations ready")
 
     # ── Stage 6: Campaign Reel via Veo ────────────────────────────────────────
