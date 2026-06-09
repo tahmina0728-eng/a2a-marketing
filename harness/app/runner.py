@@ -686,6 +686,55 @@ def _apply_brand_overlay(
         except Exception as _le:
             logger.debug("logo_skipped", brand=brand, error=str(_le))
 
+        # ── 5. Product label stamp — brand + product name in product zone ────────
+        # Placed bottom-right where products sit; guarantees brand name is readable
+        # even if the AI model rendered wrong/no text on the packaging.
+        try:
+            _LABEL_COLORS = {
+                "Sunglow": {"bg": (176, 0, 100, 220),   "text": (255, 255, 255), "accent": (255, 199, 44)},
+                "Rnorr":   {"bg": (0, 86, 41, 220),     "text": (255, 255, 255), "accent": (255, 222, 0)},
+                "Boozt":   {"bg": (14, 16, 94, 220),    "text": (255, 255, 255), "accent": (0, 186, 254)},
+            }
+            _lc = _LABEL_COLORS.get(brand, {"bg": (20, 20, 20, 200), "text": (255, 255, 255), "accent": (255, 200, 0)})
+            _sw = int(W * 0.17)
+            _sh = int(H * 0.11)
+            _sx = W - _sw - margin
+            _sy = H - _sh - int(H * 0.14)  # lower-right, above crop safe zone
+
+            _stamp = Image.new("RGBA", (_sw, _sh), (0, 0, 0, 0))
+            _sdrw  = ImageDraw.Draw(_stamp)
+            _cr    = max(8, _sh // 5)
+
+            # Main background pill
+            _sdrw.rounded_rectangle([0, 0, _sw, _sh], radius=_cr, fill=_lc["bg"])
+            # Accent strip at top (brand colour bar)
+            _sdrw.rounded_rectangle([0, 0, _sw, _sh // 3], radius=_cr,
+                                     fill=(*_lc["accent"], 255))
+            _sdrw.rectangle([0, _sh // 4, _sw, _sh // 3], fill=(*_lc["accent"], 255))
+
+            # Brand name — large, centred
+            _bf_sz  = max(14, int(_sh * 0.40))
+            _bf     = _font(_bf_sz)
+            _bb     = _sdrw.textbbox((0, 0), brand.upper(), font=_bf)
+            _bx     = (_sw - (_bb[2] - _bb[0])) // 2
+            _by     = _sh // 3 + max(3, int(_sh * 0.05))
+            _sdrw.text((_bx + 1, _by + 1), brand.upper(), font=_bf, fill=(0, 0, 0, 90))
+            _sdrw.text((_bx, _by), brand.upper(), font=_bf, fill=(*_lc["text"], 255))
+
+            # Product name — smaller, below brand
+            if product_name:
+                _pf_sz = max(9, int(_sh * 0.20))
+                _pf    = _font(_pf_sz)
+                _plbl  = product_name[:22].upper()
+                _pb    = _sdrw.textbbox((0, 0), _plbl, font=_pf)
+                _px    = (_sw - (_pb[2] - _pb[0])) // 2
+                _py    = _by + (_bb[3] - _bb[1]) + max(2, int(_sh * 0.04))
+                _sdrw.text((_px, _py), _plbl, font=_pf, fill=(*_lc["accent"], 230))
+
+            img.paste(_stamp, (_sx, _sy), _stamp)
+        except Exception as _stamp_err:
+            logger.debug("product_stamp_skipped", brand=brand, error=str(_stamp_err))
+
         result = img.convert("RGB")
         buf = io.BytesIO()
         result.save(buf, format="JPEG", quality=93)
@@ -1065,6 +1114,120 @@ Create a Big Idea for this campaign. Output:
         "energy":   "aspiration and confidence",
     })
 
+    # ── Audience-driven persona override ─────────────────────────────────────
+    # Parse age range and segment from audience string, then override the
+    # brand's default model description so images actually reflect who was chosen.
+    _AUDIENCE_PERSONAS = {
+        "students": {
+            "person":  "university student (18-24), casual everyday style, fresh youthful energy, backpack or notebook nearby",
+            "setting": "campus café, bright student apartment, study space with natural light",
+            "energy":  "carefree, ambitious, socially connected",
+            "wardrobe": "casual streetwear, hoodie, jeans — relaxed student aesthetic",
+        },
+        "families": {
+            "person":  "young parent (late 20s–early 30s) with one or two children aged 4-10, all laughing and interacting naturally",
+            "setting": "warm family kitchen, dining table with food, cozy bright home",
+            "energy":  "warm, loving, genuine family togetherness",
+            "wardrobe": "relaxed home clothes, bright and approachable colours",
+        },
+        "professionals": {
+            "person":  "confident professional (28-42), polished smart-casual attire, poised and focused",
+            "setting": "sleek modern kitchen, stylish home, premium environment",
+            "energy":  "accomplished, aspirational, time-efficient",
+            "wardrobe": "smart casual — blazer or crisp shirt, sophisticated",
+        },
+        "fitness": {
+            "person":  "athletic person (22-38), toned and energetic, sporty and vibrant",
+            "setting": "bright modern kitchen, post-workout vibe, healthy lifestyle environment",
+            "energy":  "energetic, healthy, performance-driven",
+            "wardrobe": "activewear, sports kit, athletic and dynamic",
+        },
+        "gen-z": {
+            "person":  "Gen-Z person (18-26), expressive personal style, authentic and unfiltered — any gender",
+            "setting": "urban apartment, vibrant and colourful modern space",
+            "energy":  "bold, authentic, digitally native, self-expressive",
+            "wardrobe": "bold streetwear, eclectic personal style, on-trend",
+        },
+        "millennials": {
+            "person":  "millennial (28-38), on-trend urban style, socially conscious",
+            "setting": "trendy city apartment kitchen, Instagrammable aesthetic",
+            "energy":  "aspirational, social, experience-driven",
+            "wardrobe": "smart casual with personality — contemporary and curated",
+        },
+        "foodies": {
+            "person":  "passionate food enthusiast (25-45), eyes lit up, completely absorbed in the cooking",
+            "setting": "beautiful home kitchen with fresh ingredients, artisan cookware",
+            "energy":  "passionate, sensory, joyful discovery",
+            "wardrobe": "casual home clothes or stylish apron",
+        },
+        "beauty lovers": {
+            "person":  "beauty-conscious person (20-38), impeccable grooming, polished and stylish",
+            "setting": "well-lit aesthetic space, beautiful surroundings",
+            "energy":  "glamorous, self-expressive, aspirational",
+            "wardrobe": "chic and stylish outfit matching brand palette",
+        },
+    }
+    _AGE_OVERRIDES = {
+        "18-24": "specifically aged 18-24, young adult face and fresh energy",
+        "18–24": "specifically aged 18-24, young adult face and fresh energy",
+        "25-34": "specifically aged 25-34, young professional energy",
+        "25–34": "specifically aged 25-34, young professional energy",
+        "35-54": "specifically aged 35-54, established and confident",
+        "35–54": "specifically aged 35-54, established and confident",
+        "55+":   "specifically aged 55+, distinguished and warmly experienced",
+    }
+    # Brand-specific expression/pose to preserve regardless of audience
+    _BRAND_EXPRESSION = {
+        "Sunglow": "ECSTATIC expression, dramatic hair-flip or head thrown back mid-laugh, hair FLYING and catching light — hair is always the HERO",
+        "Rnorr":   "genuinely delighted expression, caught mid-moment of cooking — tasting, stirring, or reacting to the aroma",
+        "Boozt":   "POWERFUL pose — chin up, hand in voluminous hair, or dramatic over-shoulder look, radiating unstoppable energy",
+    }
+    # Brand-specific setting must always anchor to the product category
+    _BRAND_SETTING = {
+        "Sunglow":  {"students": "student bathroom or campus shoot, golden rim lighting highlighting the hair",
+                     "families": "bright family bathroom, warm morning light on hair",
+                     "professionals": "luxury bathroom or salon, premium lighting",
+                     "default": "studio shoot with golden hour rim light"},
+        "Rnorr":    {"students": "student apartment kitchen — compact, lived-in, cosy",
+                     "families": "warm family kitchen with fresh vegetables and steam",
+                     "professionals": "sleek modern kitchen, premium cookware",
+                     "fitness": "bright open kitchen, healthy fresh ingredients",
+                     "default": "warm home kitchen, aromatic cooking atmosphere"},
+        "Boozt":    {"students": "urban campus gym or lively social space with electric lighting",
+                     "families": "bright energetic family home, dynamic and active",
+                     "professionals": "corporate gym or sleek office break room",
+                     "fitness": "high-performance gym, dramatic lighting",
+                     "default": "dramatic studio with electric cobalt lighting"},
+    }
+
+    _aud_lower = (_aud_ctx or "").lower()
+    _matched_persona = None
+    for _seg_key, _persona in _AUDIENCE_PERSONAS.items():
+        if _seg_key in _aud_lower:
+            _matched_persona = _persona
+            break
+    _age_note = next((desc for key, desc in _AGE_OVERRIDES.items() if key in _aud_ctx), "")
+    _brand_expr = _BRAND_EXPRESSION.get(brand, "confident genuine expression, dynamic and engaging")
+
+    if _matched_persona:
+        # Resolve brand-aware setting for this persona
+        _brand_settings = _BRAND_SETTING.get(brand, {})
+        _resolved_setting = next(
+            (_brand_settings[k] for k in _brand_settings if k in _aud_lower),
+            _brand_settings.get("default", _matched_persona["setting"])
+        )
+        # Blend: audience tells us WHO, brand tells us HOW they look and WHERE (within brand world)
+        _magic["model"]    = (f"{_matched_persona['person']}"
+                               f"{', ' + _age_note if _age_note else ''}. "
+                               f"{_brand_expr}. "
+                               f"Setting: {_resolved_setting}")
+        # Preserve brand effects/hair/bg — only blend energy and wardrobe
+        _magic["energy"]   = f"{_matched_persona['energy']} — {_magic['energy']}"
+        _magic["wardrobe"] = f"{_matched_persona['wardrobe']}, colours drawn from brand palette: {_brand_palette_str}"
+    elif _age_note:
+        # No matching segment — just adjust the age
+        _magic["model"] = _magic["model"] + f" — {_age_note}"
+
     scene_concepts_raw = await _llm(f"""You are a world-class FMCG advertising creative director.
 Study these reference ad styles: Sunsilk (dynamic hair, sparkles, vibrant energy), Pantene (cinematic hair movement, golden glow), Knorr (warm kitchen magic, steam, real moments), L'Oréal (empowered model, bold colour, premium feel).
 
@@ -1111,7 +1274,7 @@ Output EXACTLY this format (nothing else):
 - Photorealistic DSLR advertising photography quality
 - Magical effects: {_magic['effects']}
 - Bold saturated colours — award-winning art direction
-- NO text, words, letters, numbers, or typography anywhere in the image
+- NO text anywhere EXCEPT on product packaging labels (which must show '{brand}' clearly)
 - Fan truth ({_ft_ctx}) visible in model's expression and scene energy
 - Season ({_season_ctx}) woven into atmosphere, lighting temperature, and mood""", temp=0.9)
 
@@ -1189,25 +1352,24 @@ Output EXACTLY this format (nothing else):
                             note="skipping style analysis, Imagen 4 will use prompt only")
 
         # â"€â"€ Step B: Enrich each concept prompt with style + no-text rule ─────────
-        # Brand-specific confusion guard: Rnorr looks like Knorr to the model
-        _brand_confusion_note = (
-            f"SPELLING CRITICAL: The brand name is '{brand}'. "
-            f"It is a completely fictional brand. "
-            + (f"It is NOT 'Knorr'. It is NOT related to Knorr in any way. "
-               f"Spell it exactly: {' — '.join(brand.upper())}. "
-               if brand.lower() == "rnorr" else "")
-        )
+        # Spell brand name character by character for every brand to prevent AI substitution
+        _brand_spelled = " – ".join(brand.upper())
+        _REAL_BRAND_WARNINGS = {
+            "rnorr":   "NOT 'Knorr', NOT 'Unilever', NOT any real food brand",
+            "sunglow": "NOT 'Sunsilk', NOT 'Pantene', NOT any real haircare brand",
+            "boozt":   "NOT 'Monster', NOT 'Red Bull', NOT any real energy/haircare brand",
+        }
+        _real_brand_warn = _REAL_BRAND_WARNINGS.get(brand.lower(), "NOT any real-world brand")
         _no_text_rule = (
             f"CRITICAL BRAND + PRODUCT RULE:\n"
-            f"Brand: '{brand}'\n"
+            f"Brand name spelled exactly: {_brand_spelled}  ← copy this spelling letter-for-letter onto every product label.\n"
             f"Selected product: '{_product_ctx}'\n"
             f"Show 2-3 '{brand}' product packages/bottles prominently in the scene. "
             f"Match the packaging SHAPE and COLOURS from the reference product images. "
-            f"The label on every product MUST clearly show the brand name '{brand}' and '{_product_ctx}'.\n"
-            f"{_brand_confusion_note}"
-            f"Do NOT show any real-world brand name (not 'Knorr', not 'Unilever', not any other real brand).\n\n"
-            "TYPOGRAPHY RULE: No text anywhere in the image EXCEPT the product packaging labels. "
-            "Zero headlines, zero slogans, zero copy — all will be composited in post-production.\n\n"
+            f"The label on EVERY product MUST display '{brand}' (spelled {_brand_spelled}) and '{_product_ctx}' in large, clear, readable text.\n"
+            f"This is a completely fictional brand — {_real_brand_warn}.\n\n"
+            "TYPOGRAPHY RULE: No text anywhere in the image EXCEPT on the product packaging labels themselves. "
+            "Zero headlines, zero slogans, zero copy on backgrounds — all added in post-production.\n\n"
         )
         _style_suffix = (
             f"\n\nBRAND VISUAL STYLE (match this aesthetic):\n{style_analysis}"
