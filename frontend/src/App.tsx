@@ -2982,97 +2982,63 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 
 // ── Sidebar ───────────────────────────────────────────────────
 
-function SidebarBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
-  const [hov, setHov] = useState(false);
+function Sidebar() {
   return (
-    <button onClick={onClick}
-      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
-      style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "7px 10px",
-        borderRadius: 8, border: "none", background: hov ? "#f3f4f6" : "none", cursor: "pointer",
-        fontSize: 13, color: "#374151", fontFamily: "inherit", textAlign: "left" as const,
-        transition: "background 0.15s" }}>
-      <span style={{ width: 16, display: "flex", alignItems: "center", justifyContent: "center",
-        color: "#6b7280", flexShrink: 0 }}>{icon}</span>
-      {label}
-    </button>
-  );
-}
+    <div style={{ width: 220, flexShrink: 0, height: "100vh",
+      background: "linear-gradient(170deg, #0a0020 0%, #16003a 45%, #0c0028 100%)",
+      borderRight: "1px solid rgba(168,85,247,0.18)",
+      display: "flex", flexDirection: "column" as const,
+      position: "relative" as const, overflow: "hidden" }}>
 
-function Sidebar({ history, onNew }: {
-  history: Array<{ id: string; name: string }>;
-  onNew: () => void;
-}) {
-  return (
-    <div style={{ width: 270, flexShrink: 0, height: "100vh", background: "#fafafa",
-      borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column" as const }}>
+      {/* Aurora blob — top */}
+      <div style={{ position: "absolute" as const, top: -70, left: -50,
+        width: 260, height: 260, borderRadius: "50%", pointerEvents: "none" as const,
+        background: "radial-gradient(circle, rgba(168,85,247,0.28) 0%, transparent 65%)",
+        animation: "hub-beat 5s ease-in-out infinite" }} />
 
-      {/* Logo */}
-      <div style={{ padding: "18px 18px 12px", display: "flex", alignItems: "center", gap: 10 }}>
-        <GradientOrb size={36} />
-        <div style={{ display: "flex", flexDirection: "column" as const, lineHeight: 1.25 }}>
-          {/* A2A — large gradient wordmark */}
+      {/* Aurora blob — bottom */}
+      <div style={{ position: "absolute" as const, bottom: 40, right: -60,
+        width: 200, height: 200, borderRadius: "50%", pointerEvents: "none" as const,
+        background: "radial-gradient(circle, rgba(240,40,204,0.18) 0%, transparent 65%)",
+        animation: "hub-beat 6s 1.5s ease-in-out infinite" }} />
+
+      {/* Subtle grid */}
+      <div style={{ position: "absolute" as const, inset: 0, opacity: 0.04,
+        backgroundImage: "linear-gradient(rgba(168,85,247,1) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,1) 1px, transparent 1px)",
+        backgroundSize: "36px 36px", pointerEvents: "none" as const }} />
+
+      {/* Logo — orb + wordmark horizontal */}
+      <div style={{ padding: "28px 20px 24px", display: "flex", alignItems: "center",
+        gap: 14, position: "relative" as const, zIndex: 2 }}>
+        <GradientOrb size={48} />
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 5 }}>
           <span style={{
-            fontSize: 20, fontWeight: 900, letterSpacing: "-0.04em",
-            fontFamily: "'Inter', system-ui, sans-serif",
-            background: "linear-gradient(110deg, #7c3aed 0%, #c026d3 45%, #f97316 100%)",
+            fontSize: 28, fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1,
+            background: ORB_BG,
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+            filter: "drop-shadow(0 0 10px rgba(240,40,204,0.55))",
           }}>A2A</span>
-          {/* Tagline — small caps, shimmer gradient */}
           <span style={{
-            fontSize: 8.5, fontWeight: 700, letterSpacing: "0.12em",
+            fontSize: 7.5, fontWeight: 700, letterSpacing: "0.13em", lineHeight: 1,
             textTransform: "uppercase" as const,
-            background: "linear-gradient(110deg, #9b59b6 0%, #e91e8c 50%, #f97316 100%)",
-            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-          }}>Marketing · Advertising · Media</span>
+            color: "rgba(255,255,255,0.35)",
+          }}>Marketing<br/>Advertising · Media</span>
         </div>
       </div>
 
-      {/* Nav actions */}
-      <div style={{ padding: "2px 8px 10px" }}>
-        <SidebarBtn onClick={onNew} icon={
-          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
-            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-          </svg>
-        } label="Create New" />
-        <SidebarBtn icon={
-          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
-            <circle cx={11} cy={11} r={8}/><path d="M21 21l-4.35-4.35"/>
-          </svg>
-        } label="Search" />
-      </div>
+      {/* Divider */}
+      <div style={{ height: 1, margin: "0 20px",
+        background: "linear-gradient(90deg, transparent, rgba(168,85,247,0.3), transparent)",
+        position: "relative" as const, zIndex: 2 }} />
 
-      {/* History */}
-      <div style={{ flex: 1, overflowY: "auto" as const, padding: "4px 18px 8px",
-        borderTop: "1px solid #f3f4f6", marginTop: 4 }}>
-        <div style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", letterSpacing: "0.06em",
-          textTransform: "uppercase" as const, marginBottom: 4, paddingLeft: 2, paddingTop: 8 }}>
-          History
-        </div>
-        {history.length === 0 ? (
-          <div style={{ fontSize: 12, color: "#d1d5db", padding: "4px 10px" }}>No campaigns yet</div>
-        ) : (
-          history.slice(0, 8).map(h => (
-            <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 10px",
-              borderRadius: 8, cursor: "pointer" }}
-              onMouseEnter={e => (e.currentTarget.style.background = "#f3f4f6")}
-              onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth={1.8}
-                style={{ flexShrink: 0 }}>
-                <circle cx={12} cy={12} r={10}/><polyline points="12 6 12 12 16 14"/>
-              </svg>
-              <span style={{ fontSize: 12, color: "#6b7280", overflow: "hidden",
-                textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
-                {h.name}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
 
-      {/* Powered by Infosys Aster — always visible at sidebar bottom */}
-      <div style={{ padding: "14px 18px", borderTop: "1px solid #f3f4f6", flexShrink: 0 }}>
-        <AsterLogo size={0.65} />
+      {/* Powered by Infosys Aster — inverted for dark bg */}
+      <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(168,85,247,0.12)",
+        position: "relative" as const, zIndex: 2,
+        filter: "brightness(0) invert(1)", opacity: 0.45 }}>
+        <AsterLogo size={0.62} />
       </div>
     </div>
   );
@@ -3289,17 +3255,6 @@ export default function App() {
   const [wizardStarted, setWizardStarted]   = useState(false);
   const [campaignName,  setCampaignName]    = useState("New Campaign");
   const [briefData,     setBriefData]       = useState<import("./types/pipeline").HarnessBriefRequest | null>(null);
-  const [history,       setHistory]         = useState<Array<{ id: string; name: string }>>([]);
-
-  // Add to history when pipeline completes
-  useEffect(() => {
-    if (state.status === "done" && state.campaign_id) {
-      setHistory(h => [
-        { id: state.campaign_id!, name: campaignName },
-        ...h.filter(x => x.id !== state.campaign_id).slice(0, 5),
-      ]);
-    }
-  }, [state.status, state.campaign_id]);
 
   const handleReset = () => {
     reset();
@@ -3332,7 +3287,7 @@ export default function App() {
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
         {/* Left: Sidebar */}
-        <Sidebar history={history} onNew={handleReset} />
+        <Sidebar />
 
         {/* Middle: Steps panel — hidden during wakeup (before any agent starts) */}
         {(state.status === "running" || state.status === "done") &&
