@@ -2185,7 +2185,7 @@ const RIGHT_X = 60;
 const LEFT_X  = -176;
 
 const CARD_OFF: [number, number][] = [
-  [-58, -80],      // 0 Logos — centred above avatar: co[0]=(54-170)/2, co[1]=-(card_h+gap)
+  [-58, -90],      // 0 Logos — centred above avatar: co[0]=(54-170)/2, co[1]=-(card_h+gap)
   [RIGHT_X, -10],  // 1 Helia
   [RIGHT_X, -12],  // 2 Ideon
   [RIGHT_X,   6],  // 3 Aether
