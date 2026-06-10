@@ -2139,12 +2139,13 @@ function Sidebar({ history, onNew }: {
 }
 
 // ── Steps panel ───────────────────────────────────────────────
+// All 7 agents mapped to their workflow stage
 const WORKFLOW_STAGES = [
   { id: "brief",    label: "Brief Intake",        agents: ["briefing"] },
   { id: "creative", label: "Creative Direction",  agents: ["culture", "strategy", "copy", "kv", "reel"] },
   { id: "channel",  label: "Channel Adoption",    agents: ["channel"] },
-  { id: "activate", label: "Activation",          agents: [] },
-  { id: "perform",  label: "Performance",         agents: [] },
+  { id: "activate", label: "Activation",          agents: [] as string[] },
+  { id: "perform",  label: "Performance",         agents: [] as string[] },
 ];
 
 function StepsPanel({ campaignName, activeStageId, agentStatus, onEditName }: {
@@ -2215,31 +2216,57 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, onEditName }: {
                 </span>
               </div>
 
-              {/* Active agents sub-list */}
-              {isActive && stageAgents.length > 0 && (
-                <div style={{ paddingLeft: 50, paddingRight: 18, paddingBottom: 6 }}>
+              {/* Agent sub-list — always shown when stage has agents */}
+              {stageAgents.length > 0 && (isDone || isActive) && (
+                <div style={{ paddingLeft: 50, paddingRight: 18, paddingBottom: 8 }}>
                   {stageAgents.map(s => {
-                    const st = agentStatus[s.key] ?? "idle";
-                    if (st === "idle") return null;
-                    const isRun  = st === "running";
+                    const st      = agentStatus[s.key];
+                    const isRun   = st === "running";
                     const isDoneA = st === "done";
+                    const isPend  = !st || st === "pending";
                     return (
-                      <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 0" }}>
-                        <span style={{ fontSize: 11, color: "#7c3aed" }}>✦</span>
-                        <span style={{ fontSize: 12, fontWeight: isRun ? 600 : 400,
-                          color: isDoneA ? "#6b7280" : "#111827" }}>{s.label}</span>
-                        {isDoneA && <span style={{ fontSize: 11, color: "#10b981", marginLeft: "auto" }}>✓</span>}
+                      <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 7,
+                        padding: "5px 0", borderBottom: "none" }}>
+                        {/* Agent icon */}
+                        <span style={{ fontSize: 13, width: 18, textAlign: "center" as const,
+                          filter: isPend && !isActive ? "grayscale(1) opacity(0.4)" : "none" }}>
+                          {s.icon}
+                        </span>
+                        <span style={{ fontSize: 12, flex: 1,
+                          fontWeight: isRun ? 700 : 400,
+                          color: isDoneA ? "#6b7280" : isRun ? "#111827" : isPend ? "#9ca3af" : "#374151" }}>
+                          {s.label}
+                        </span>
+                        {/* Status indicator */}
+                        {isDoneA && (
+                          <span style={{ fontSize: 11, color: "#10b981", fontWeight: 700 }}>✓</span>
+                        )}
                         {isRun && (
-                          <div style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
+                          <div style={{ display: "flex", gap: 2 }}>
                             {[0,1,2].map(d => (
-                              <div key={d} style={{ width: 3, height: 3, borderRadius: "50%", background: "#7c3aed",
+                              <div key={d} style={{ width: 3, height: 3, borderRadius: "50%",
+                                background: "#7c3aed",
                                 animation: `wave-dot 1.2s ${d * 0.2}s ease-in-out infinite` }} />
                             ))}
                           </div>
                         )}
+                        {isPend && isActive && (
+                          <span style={{ fontSize: 10, color: "#d1d5db" }}>—</span>
+                        )}
                       </div>
                     );
                   })}
+                </div>
+              )}
+              {/* Show pending agents dimmed when stage not yet reached */}
+              {stageAgents.length > 0 && !isDone && !isActive && (
+                <div style={{ paddingLeft: 50, paddingRight: 18, paddingBottom: 6 }}>
+                  {stageAgents.map(s => (
+                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 0" }}>
+                      <span style={{ fontSize: 13, width: 18, textAlign: "center" as const, opacity: 0.3 }}>{s.icon}</span>
+                      <span style={{ fontSize: 12, color: "#d1d5db" }}>{s.label}</span>
+                    </div>
+                  ))}
                 </div>
               )}
 
