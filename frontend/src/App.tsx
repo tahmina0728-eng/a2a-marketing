@@ -2605,6 +2605,80 @@ function CultureIntakeView({ milestone, liveMsg }: {
   );
 }
 
+// ── KV Generator intake view ─────────────────────────────────
+function KVIntakeView({ milestone, liveMsg, reelMilestone }: {
+  milestone: Record<string,unknown> | undefined;
+  liveMsg: string | null;
+  reelMilestone: Record<string,unknown> | undefined;
+}) {
+  if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
+      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
+      <div style={{ maxWidth: 800, margin: "0 auto" }}>
+        <AgentIntakeHeader label="KV GENERATOR" title="Key Visual" done={true} />
+        <KVPanel m={milestone} liveMsg={liveMsg} reelMilestone={reelMilestone} />
+      </div>
+    </div>
+  );
+}
+
+// ── Reel Generator intake view ────────────────────────────────
+function ReelIntakeView({ milestone, liveMsg }: {
+  milestone: Record<string,unknown> | undefined;
+  liveMsg: string | null;
+}) {
+  if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
+
+  const videoB64 = milestone.video_b64 ? String(milestone.video_b64) : "";
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
+      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
+      <div style={{ maxWidth: 720, margin: "0 auto" }}>
+        <AgentIntakeHeader label="REEL GENERATOR" title="Campaign Reel" done={true} />
+        {videoB64 ? (
+          <div style={{ background: "#0f172a", borderRadius: 16, padding: "20px 24px" }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#f59e0b",
+              letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 12 }}>
+              🎬 Campaign Reel · 6s
+            </div>
+            <video controls autoPlay loop muted playsInline
+              style={{ width: "100%", borderRadius: 10, display: "block" }}
+              src={`data:video/mp4;base64,${videoB64}`} />
+            <a href={`data:video/mp4;base64,${videoB64}`} download="campaign-reel.mp4"
+              style={{ display: "inline-block", marginTop: 12, fontSize: 12, fontWeight: 700,
+                color: "#f59e0b", textDecoration: "none" }}>
+              ⬇ Download Reel
+            </a>
+          </div>
+        ) : (
+          <AgentGeneratingView liveMsg={liveMsg} />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Channel Adapter intake view ───────────────────────────────
+function ChannelAdapterIntakeView({ milestone, liveMsg }: {
+  milestone: Record<string,unknown> | undefined;
+  liveMsg: string | null;
+}) {
+  if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
+      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
+      <div style={{ maxWidth: 860, margin: "0 auto" }}>
+        <AgentIntakeHeader label="CHANNEL ADAPTER" title="Publishing to Channels" done={true} />
+        <ChannelPanel m={milestone} liveMsg={liveMsg} />
+      </div>
+    </div>
+  );
+}
+
 // ── Gradient Orb (A2A logo style) ────────────────────────────
 function GradientOrb({ size = 40 }: { size?: number }) {
   const u = `orb${size}`;
@@ -3158,7 +3232,26 @@ export default function App() {
                   liveMsg={liveMsg("culture")}
                 />
               );
-              // kv, reel, channel → existing RunningView
+              if (focusKey === "kv") return (
+                <KVIntakeView
+                  milestone={state.milestones["kv"]}
+                  liveMsg={liveMsg("kv")}
+                  reelMilestone={state.milestones["reel"]}
+                />
+              );
+              if (focusKey === "reel") return (
+                <ReelIntakeView
+                  milestone={state.milestones["reel"]}
+                  liveMsg={liveMsg("reel")}
+                />
+              );
+              if (focusKey === "channel") return (
+                <ChannelAdapterIntakeView
+                  milestone={state.milestones["channel"]}
+                  liveMsg={liveMsg("channel")}
+                />
+              );
+              // fallback (focusKey null)
               return (
                 <RunningView
                   agentStatus={state.agentStatus}
