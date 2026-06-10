@@ -443,7 +443,7 @@ For Sunglow: ROTATE ethnicity each campaign — South Asian with long glossy wav
 East Asian with straight silky hair, Latina with loose voluminous curls, mixed-race
 with a sleek blowout, or European with wavy highlighted hair. NEVER always choose
 a dark-skinned Black woman with 4C/Afro curls — vary every time.
-For Boozt: woman of ANY ethnicity with dramatic volume/bounce, NOT Afro hair.
+For Boozt: person of ANY ethnicity holding or drinking a Boozt can, high-energy urban, gym or sport context.
 
 ════════════════════════════════════════════════════════════
 YOUR BRIEF — ALL IN CONTEXT

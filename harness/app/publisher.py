@@ -51,19 +51,19 @@ BRAND_CONFIG: dict[str, dict] = {
     },
     # Boozt: #0E105E Midnight | #0086FE Boozt Blue | #00BFFE Sky | #FFFFFF White | Rubik italic
     "Boozt": {
-        "primary":    "#0E105E",   # Midnight (master Tag colour)
+        "primary":    "#0E105E",   # Midnight (master brand colour)
         "secondary":  "#080a45",   # deeper midnight for overlays
         "accent":     "#0086FE",   # Boozt Blue (Energy Stroke / CTA)
         "accent2":    "#00BFFE",   # Sky (lighter stroke / gradient)
         "text":       "#ffffff",
-        "body_bg":    "#ffffff",   # White (breathing-room base)
+        "body_bg":    "#ffffff",
         "section_bg": "#f4f5ff",   # soft midnight tint
         "font":       "'Rubik', sans-serif",
         "font_url":   "https://fonts.googleapis.com/css2?family=Rubik:ital,wght@0,400;0,700;0,900;1,700;1,900&display=swap",
         "tagline":    "Get a Boozt.",
-        "hero_tag":   "💥 Instant Volume",
-        "copy":       "Boozt Thickening Shampoo delivers instant volume and lasting thickness for hair that commands attention.",
-        "features":   ["Instant Volume", "Thickening Formula", "Long-Lasting Hold", "No Residue"],
+        "hero_tag":   "⚡ Pure Energy",
+        "copy":       "Boozt Energy Drink delivers instant focus, sustained energy and electrolyte hydration — engineered for people who don't stop.",
+        "features":   ["Zero Sugar", "Natural Caffeine", "Electrolyte Blend", "B-Vitamin Complex"],
     },
 }
 DEFAULT_BRAND = {"primary": "#0055A4", "secondary": "#003d7a", "accent": "#f59e0b",
@@ -617,7 +617,7 @@ def generate_rnorr_website(campaign_image_b64: str = "", campaign_id: str = "",
 def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
                             hero_message: str = "", body_copy: str = "", cta: str = "",
                             hero_image_b64: str = "", video_b64: str = "") -> str:
-    """Boots-inspired brand website for Boozt hair care."""
+    """Boozt energy drink brand website."""
     from app.brand_assets import get_asset_loader
     loader   = get_asset_loader()
     logos    = loader.list_logos("Boozt")
@@ -634,17 +634,17 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
     logo_html = (f'<img src="{logo_src}" alt="Boozt" style="height:38px;object-fit:contain;">'
                 if logo_src else '<span style="font-size:26px;font-weight:900;color:white;letter-spacing:-0.02em;">BOOZT</span>')
 
-    categories = ["Shampoo & Conditioner","Styling","Treatment","Scalp Care","Hair Colour","Tools"]
+    categories = ["Energy","Zero Sugar","Sport Hydration","Tropical","Arctic Mint","Classic"]
     cat_pills  = "".join([f'<a href="#" class="cat-pill">{c}</a>' for c in categories])
 
     prod_cards = "".join([f"""
     <div class="prod-card">
       <div class="prod-badge">NEW</div>
-      <div class="prod-img">{f'<img src="{src}" alt="Boozt">' if src else '💁'}</div>
+      <div class="prod-img">{f'<img src="{src}" alt="Boozt">' if src else '⚡'}</div>
       <div class="prod-info">
-        <div class="prod-name">Boozt {['Thickening Shampoo','Volume Conditioner','Root Lift Spray','Scalp Serum','Frizz Control','Heat Protector'][i] if i<6 else 'Product'}</div>
+        <div class="prod-name">Boozt {['Original Energy','Zero Sugar','Sport Hydration','Tropical Blast','Arctic Mint','Classic'][i] if i<6 else 'Energy Drink'}</div>
         <div class="prod-rating">★★★★★ <span style="color:#64748b;font-size:11px">(2,{140+i*37})</span></div>
-        <div class="prod-price">£{[8.99,9.49,12.99,18.99,10.49,11.99][i] if i<6 else 9.99}</div>
+        <div class="prod-price">£{[1.99,1.99,2.49,1.99,1.99,1.79][i] if i<6 else 1.99}</div>
         <a href="#" class="prod-cta">Add to Basket</a>
       </div>
     </div>""" for i, src in enumerate(prod_srcs)])
@@ -659,7 +659,7 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
 
     return f"""<!DOCTYPE html><html lang="en"><head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <title>Boozt — Volume Hair Care</title>
+  <title>Boozt — Energy Drinks</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <style>
     *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
@@ -754,10 +754,10 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
 </head>
 <body>
 
-<div class="promo-bar">💥 NEW LAUNCH: {hero_message[:45] if hero_message else 'Boozt Thickening Collection'} · <span>Free delivery over £25</span></div>
+<div class="promo-bar">⚡ NEW LAUNCH: {hero_message[:45] if hero_message else 'Boozt Original Energy — New Formula'} · <span>Free delivery over £25</span></div>
 
 <div class="nav-top">
-  <div style="color:rgba(255,255,255,0.6);font-size:12px">Your Hair, Amplified.</div>
+  <div style="color:rgba(255,255,255,0.6);font-size:12px">Pure Energy. Zero Limits.</div>
   <div class="nav-top-right">
     <a href="#" class="nav-top-link">My Account</a>
     <a href="#" class="nav-top-link">Track Order</a>
@@ -768,7 +768,7 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
 <nav>
   <div class="nav-logo">{logo_html}</div>
   <div class="nav-search-wrap">
-    <input class="nav-search" placeholder="Search shampoos, treatments, styling…">
+    <input class="nav-search" placeholder="Search energy drinks, hydration, zero sugar…">
   </div>
   <div class="nav-actions">
     <div class="nav-action">👤<span>Account</span></div>
@@ -783,9 +783,9 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
   <div class="hero-bg"></div>
   <div class="hero-overlay"></div>
   <div class="hero-content">
-    <div class="hero-tag">💥 Volume & Thickness</div>
-    <h1 class="hero-title">{hero_message or "Volume That Moves With You"}</h1>
-    <p class="hero-sub">{body_copy or "Boozt Thickening Shampoo delivers instant volume and lasting thickness for hair that commands attention."}</p>
+    <div class="hero-tag">⚡ Pure Energy. Zero Limits.</div>
+    <h1 class="hero-title">{hero_message or "Energy That Moves With You"}</h1>
+    <p class="hero-sub">{body_copy or "Boozt Energy Drink delivers instant focus, sustained energy and electrolyte hydration — engineered for people who don't stop."}</p>
     <div class="hero-btns">
       <a href="#products" class="btn-red">{cta or "Shop Now"}</a>
       <a href="#campaign" class="btn-wh">Learn More</a>
@@ -797,13 +797,13 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
 
 <section class="section grey" id="products">
   <div class="section-head">
-    <div class="section-title">New In — Boozt Collection</div>
+    <div class="section-title">New In — Boozt Range</div>
     <a href="#" class="section-more">View all →</a>
   </div>
   <div class="prod-grid">{prod_cards or '<div style="text-align:center;color:#94a3b8;padding:40px;width:100%">Products loading…</div>'}</div>
 </section>
 
-{'<section class="campaign" id="campaign"><div class="camp-img"><img src="' + camp_src + '" alt="Campaign"></div><div class="camp-text"><div class="camp-label">AI Campaign · ' + campaign_id[:16] + '</div><h2 class="camp-title">' + (hero_message or "Volume That Commands Attention") + '</h2><p class="camp-body">' + (body_copy or "Science-backed formulas that deliver real volume from the first wash.") + '</p><a href="#cta" class="btn-red">' + (cta or "Shop Now") + '</a></div></section>' if camp_src else ""}
+{'<section class="campaign" id="campaign"><div class="camp-img"><img src="' + camp_src + '" alt="Campaign"></div><div class="camp-text"><div class="camp-label">AI Campaign · ' + campaign_id[:16] + '</div><h2 class="camp-title">' + (hero_message or "Energy That Commands Attention") + '</h2><p class="camp-body">' + (body_copy or "Natural caffeine, B-vitamins and electrolytes — every can engineered to unlock your peak performance.") + '</p><a href="#cta" class="btn-red">' + (cta or "Shop Now") + '</a></div></section>' if camp_src else ""}
 
 <section class="loyalty" id="cta">
   <h2>Join the Boozt Community</h2>
@@ -815,13 +815,13 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
   <div class="footer-grid">
     <div>
       <div class="footer-brand">BOOZT</div>
-      <div class="footer-desc">Science-backed hair care for volume and thickness. Your best hair day, every day.</div>
+      <div class="footer-desc">Natural caffeine, B-vitamins and electrolytes — engineered for people who don't stop.</div>
     </div>
-    <div class="footer-col"><h4>Products</h4><a href="#">Shampoo</a><a href="#">Conditioner</a><a href="#">Styling</a><a href="#">Treatment</a></div>
+    <div class="footer-col"><h4>Products</h4><a href="#">Original Energy</a><a href="#">Zero Sugar</a><a href="#">Sport Hydration</a><a href="#">Tropical Blast</a></div>
     <div class="footer-col"><h4>Help</h4><a href="#">Delivery</a><a href="#">Returns</a><a href="#">FAQs</a><a href="#">Contact</a></div>
     <div class="footer-col"><h4>Company</h4><a href="#">About</a><a href="#">Careers</a><a href="#">Press</a><a href="#">Sustainability</a></div>
   </div>
-  <div class="footer-bottom">© 2026 Boozt Hair Care · AI campaign by CampaignOS · {campaign_id}</div>
+  <div class="footer-bottom">© 2026 Boozt Energy Drinks · AI campaign by CampaignOS · {campaign_id}</div>
 </footer>
 </body></html>"""
 

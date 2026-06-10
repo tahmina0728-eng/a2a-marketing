@@ -825,19 +825,19 @@ async def generate_campaign_reel(
             )
 
     def _boozt_scene(p: str) -> str:
-        if any(x in p.lower() for x in ["mousse", "spray", "lift", "root"]):
+        if any(x in p.lower() for x in ["sport", "hydration", "zero", "sugar"]):
             return (
-                f"A woman applying {p} to her roots, then running fingers through as her hair "
-                f"instantly lifts to dramatic cloud-like volume. Wind machine makes it explode. "
-                f"The {p} bottle displayed in electric blue studio light. "
-                f"Deep midnight navy and electric cobalt blue brand colours, neon energy trails."
+                f"An athlete in peak condition opening a can of {p} post-workout, electrolyte "
+                f"droplets catching electric blue studio light in slow motion. "
+                f"The {p} can gleams in the foreground against a high-contrast navy background. "
+                f"Deep midnight navy and electric cobalt blue brand colours, energy arcs and neon trails."
             )
-        else:  # shampoo, thickening, default
+        else:  # Original Energy, default
             return (
-                f"A confident woman washing and then revealing incredible volume after using {p}. "
-                f"Gravity-defying full hair in slow motion, neon light trails and energy arcs. "
-                f"The {p} bottle dramatically lit in foreground. "
-                f"Deep midnight navy and electric cobalt blue brand colours."
+                f"A confident person cracking open a can of {p} in a charged urban environment, "
+                f"electric blue light spilling out as the can opens, energy radiating outward. "
+                f"The {p} can displayed dramatically in foreground catching cobalt studio light. "
+                f"Deep midnight navy and electric cobalt blue brand colours, high-voltage energy arcs."
             )
 
     _BRAND_SCENE_FN = {
@@ -1033,7 +1033,7 @@ Be specific, avoid generic boilerplate.""")
     _BRAND_PALETTE_LOCK = {
         "Sunglow": "primary #B00064 Magenta, accent #FFC72C Sunshine Yellow, base #F9F9F9 Off-White, font Alatsi",
         "Rnorr":   "primary #008641 Rnorr Green, accent #FFDE00 Yellow, base #FFFFFF White, fonts Antonio + Rubik",
-        "Boozt":   "primary #0E105E Midnight, accent #0086FE Boozt Blue, highlight #00BFFE Sky, base #FFFFFF White, font Rubik",
+        "Boozt":   "primary #0E105E Midnight, accent #0086FE Boozt Blue, highlight #00BFFE Sky, base #FFFFFF White, font Rubik — energy drink brand",
     }
     _palette_lock = _BRAND_PALETTE_LOCK.get(brand, "use brand primary colours")
 
@@ -1080,7 +1080,7 @@ Create a Big Idea for this campaign. Output:
     _BRAND_PALETTE = {
         "Sunglow": "hot magenta pink, sunshine yellow, off-white cream",
         "Rnorr":   "deep forest green, bright sunshine yellow, white",
-        "Boozt":   "deep midnight navy, electric cobalt blue, sky blue, white",
+        "Boozt":   "deep midnight navy, electric cobalt blue, sky blue, white — energy drink can with condensation",
     }
     _brand_palette_str = _BRAND_PALETTE.get(brand, "brand primary colour, accent colour, white")
 
@@ -1110,12 +1110,12 @@ Create a Big Idea for this campaign. Output:
             "energy":   "joy, pride, the magic of effortless delicious cooking",
         },
         "Boozt": {
-            "effects":  "electric cobalt blue light trails, neon energy arcs, dramatic wind-blown hair particles, studio strobe sparks, high-voltage energy",
-            "model":    "confident woman, age 20-35, POWERFUL pose — chin up, hand in voluminous hair, or dramatic over-shoulder look — ethnicity matches the selected market",
-            "hair":     "MAXIMUM VOLUME — gravity-defying fullness, incredible bounce and body, lit with electric rim light creating a halo, fine hair lifted to cloud-like perfection",
+            "effects":  "electric cobalt blue light trails, neon energy arcs, fizzing bubbles and condensation droplets catching studio strobes, high-voltage energy sparks",
+            "model":    "confident person age 18-35, POWERFUL pose — can in hand raised to lips, or mid-action in urban or sport context — ethnicity matches the selected market",
+            "product":  "Boozt drink can PROMINENTLY featured — glistening with condensation, electric blue label under dramatic rim light",
             "bg":       "deep midnight navy to electric cobalt blue gradient, dramatic studio lighting, high-contrast",
             "wardrobe": "electric blue, cobalt, or sharp white outfit — bold and graphic",
-            "energy":   "power, transformation, unstoppable confidence",
+            "energy":   "power, unstoppable momentum, pure charged confidence",
         },
     }
     _magic = _BRAND_MAGIC.get(brand, {
@@ -1131,7 +1131,7 @@ Create a Big Idea for this campaign. Output:
     # Keys match EXACT UI interest strings (lowercase) per brand.
     # Rnorr:   Home cooks | Families | Students | Budget shoppers | Food lovers | Meal preppers | Time-poor professionals
     # Sunglow: Natural hair community | Protective styles | Wash day routines | Scalp health | Curl definition | Black hair care | Beauty enthusiasts
-    # Boozt:   Fine hair | Volume seekers | On-the-go styling | Beauty enthusiasts | Festival-goers | Bridal & occasion
+    # Boozt:   Athletes & gym-goers | Students | Festival-goers | Gamers | Young professionals | Outdoor adventurers
     _AUDIENCE_PERSONAS = {
         # ── Rnorr ─────────────────────────────────────────────────────────────
         "home cooks": {
@@ -1220,35 +1220,41 @@ Create a Big Idea for this campaign. Output:
             "wardrobe": "on-trend fashion-forward outfit, beauty-influencer aesthetic",
         },
         # ── Boozt ─────────────────────────────────────────────────────────────
-        "fine hair": {
-            "person":   "woman (20-40) with fine hair utterly transformed — hair suddenly has gravity-defying body and lift, looking astonished and thrilled",
-            "setting":  "dramatic studio, electric lighting revealing every single lifted strand in stunning detail",
-            "energy":   "transformation revelation — fine hair is now impossibly full and powerful",
-            "wardrobe": "clean minimal outfit — white or black — so all focus goes to the incredible hair volume",
+        "athletes & gym-goers": {
+            "person":   "athletic person (18-35, any gender) in peak condition — mid-workout or immediately post-workout, holding a Boozt can with fierce determination",
+            "setting":  "premium gym or outdoor track, dramatic electric blue rim lighting, power and performance atmosphere",
+            "energy":   "relentless drive, peak performance — this is what being at your best feels like",
+            "wardrobe": "performance sportswear — bold electric blue or sharp white, athletic and powerful",
         },
-        "volume seekers": {
-            "person":   "woman (18-40) in the middle of a hair-volume explosion — hair defying gravity, cloud-like fullness all around her",
-            "setting":  "high-energy studio, electric lighting, wind machine creating maximum hair drama",
-            "energy":   "euphoric, unstoppable — more volume than she ever thought her hair could achieve",
-            "wardrobe": "bold graphic outfit, electric blue or sharp white — all attention on the volume",
-        },
-        "on-the-go styling": {
-            "person":   "busy woman (22-38) looking effortlessly polished — great volume, styled in seconds, confidently on-the-move",
-            "setting":  "dynamic urban setting — city street, rushing out the door, morning energy and movement",
-            "energy":   "efficient, confident — looks incredible without trying, busy life but perfect hair every day",
-            "wardrobe": "smart casual chic, modern and professional with attitude",
+        "students": {
+            "person":   "university student (18-24, any ethnicity) buzzing with late-night energy — laptop open, Boozt can in hand, fully in the zone",
+            "setting":  "campus study space or urban apartment at night, electric blue accent lighting, productive and alive",
+            "energy":   "focused, switched-on — deadlines don't stand a chance when you have this energy",
+            "wardrobe": "casual student streetwear — hoodie, jeans, relaxed but sharp",
         },
         "festival-goers": {
-            "person":   "woman (18-30) with wild, free, festival-ready voluminous hair — glitter, accessories, full of life and movement",
-            "setting":  "festival atmosphere — coloured lights, outdoor energy, golden hour, crowd in the background",
-            "energy":   "free-spirited, bold, dancing — hair flying, the ultimate festival look",
-            "wardrobe": "festival fashion — bold, expressive, colourful, glitter and accessories",
+            "person":   "person (18-30, any gender) in full festival mode — Boozt can raised high, electric with energy, crowd behind them",
+            "setting":  "festival at night — LED lights, smoke machines, stage glow, pulsing crowd energy",
+            "energy":   "euphoric, unstoppable, living in the moment — Boozt is the fuel of the night",
+            "wardrobe": "bold festival fashion — electric colours, glitter, expressive and loud",
         },
-        "bridal & occasion": {
-            "person":   "woman (22-40) with breathtaking volumised bridal or occasion-ready hair — flawlessly elegant and radiant",
-            "setting":  "luxury setting — hotel suite, garden venue, golden soft romantic lighting",
-            "energy":   "radiant, emotional, luminous — the most beautiful version of herself on the most important day",
-            "wardrobe": "elegant bridal or occasion dress, sophisticated and timeless",
+        "gamers": {
+            "person":   "confident gamer (18-30, any gender) lit by monitor glow — Boozt can beside the keyboard, fully locked in",
+            "setting":  "high-end gaming setup, RGB lighting, electric blue glow, late night immersive atmosphere",
+            "energy":   "hyper-focused, unbeatable reaction time — Boozt is the ultimate gaming fuel",
+            "wardrobe": "gaming hoodie or casual streetwear, bold and graphic",
+        },
+        "young professionals": {
+            "person":   "young professional (22-35) moving fast through an urban environment — Boozt can in hand, sharp and purposeful",
+            "setting":  "city streets or modern office lobby, electric blue neon reflections, fast-paced urban energy",
+            "energy":   "driven, ambitious — Boozt keeps you sharp when the world demands your best",
+            "wardrobe": "smart-casual urban style — bold blazer or clean streetwear, confident and polished",
+        },
+        "outdoor adventurers": {
+            "person":   "adventurous person (20-40, any gender) in a stunning outdoor setting — Boozt can in hand, conquering the landscape",
+            "setting":  "dramatic outdoor vista — mountain peak, cliffside, or urban rooftop at golden hour",
+            "energy":   "free, powerful, fearless — Boozt fuels the people who push further",
+            "wardrobe": "outdoor/adventure gear — technical, bold, built for performance",
         },
     }
     _AGE_OVERRIDES = {
@@ -1284,7 +1290,7 @@ Create a Big Idea for this campaign. Output:
     _BRAND_EXPRESSION = {
         "Sunglow": "ECSTATIC expression, dramatic hair-flip or head thrown back mid-laugh, hair FLYING and catching golden light — hair is always the ABSOLUTE HERO",
         "Rnorr":   "genuinely delighted expression, caught mid-moment of cooking — tasting, stirring, or reacting to the aroma with pure joy",
-        "Boozt":   "POWERFUL pose — chin up, hand in voluminous hair, or dramatic over-shoulder look, radiating unstoppable electric energy",
+        "Boozt":   "POWERFUL pose — Boozt can raised, mid-drink or thrust forward toward camera, radiating unstoppable electric charged energy",
     }
     # Brand-specific settings anchored to product world — keyed to exact UI interest strings
     _BRAND_SETTING = {
@@ -1311,14 +1317,13 @@ Create a Big Idea for this campaign. Output:
             "default":                 "warm home kitchen, aromatic cooking atmosphere",
         },
         "Boozt": {
-            "fine hair":          "dramatic studio, electric lighting revealing every strand of lifted hair",
-            "volume seekers":     "high-energy studio, wind machine, electric cobalt lighting — maximum drama",
-            "on-the-go styling":  "dynamic urban street or modern apartment hallway, morning rush energy",
-            "festival-goers":     "festival outdoor setting, coloured lights, golden hour, crowd energy",
-            "bridal & occasion":  "luxury venue or hotel suite, soft romantic golden lighting",
-            "beauty enthusiasts": "chic studio with electric blue accent lighting",
-            "students":           "urban campus or lively social space with electric lighting",
-            "default":            "dramatic studio with electric cobalt lighting, high-contrast",
+            "athletes & gym-goers": "premium gym or outdoor track, electric blue rim lighting, power and performance",
+            "students":             "campus or urban apartment at night, electric blue accent lighting",
+            "festival-goers":       "festival at night, LED lights, smoke machines, pulsing crowd energy",
+            "gamers":               "high-end gaming setup, RGB lighting, electric blue glow, late night",
+            "young professionals":  "city streets or modern office lobby, electric blue neon reflections",
+            "outdoor adventurers":  "dramatic outdoor vista — mountain, cliffside, or urban rooftop at golden hour",
+            "default":              "dramatic studio with electric cobalt lighting, high-contrast, can centre-stage",
         },
     }
 
@@ -1488,7 +1493,7 @@ Output EXACTLY this format (nothing else):
         _REAL_BRAND_WARNINGS = {
             "rnorr":   "NOT 'Knorr', NOT 'Unilever', NOT any real food brand",
             "sunglow": "NOT 'Sunsilk', NOT 'Pantene', NOT any real haircare brand",
-            "boozt":   "NOT 'Monster', NOT 'Red Bull', NOT any real energy/haircare brand",
+            "boozt":   "NOT 'Monster', NOT 'Red Bull', NOT 'Lucozade', NOT any real energy drink brand",
         }
         _real_brand_warn = _REAL_BRAND_WARNINGS.get(brand.lower(), "NOT any real-world brand")
         _no_text_rule = (
