@@ -986,7 +986,7 @@ function KVPanel({ m, liveMsg, reelMilestone }: { m?: Record<string,unknown>; li
 
   return (
     <div style={{ width: "100%" }}>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "#be123c", letterSpacing: "0.09em",
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.09em",
         textTransform: "uppercase" as const, marginBottom: 12 }}>Image Generation Pipeline</div>
 
       {/* 2×2 card grid */}
@@ -999,8 +999,8 @@ function KVPanel({ m, liveMsg, reelMilestone }: { m?: Record<string,unknown>; li
           return (
             <div key={i} className={isDone || isActive ? "msg-fade" : ""} style={{
               borderRadius: 12,
-              background: isDone ? "#f0fdf4" : isActive ? "#fff1f2" : "#f8fafc",
-              border: `1.5px solid ${isDone ? "#86efac" : isActive ? "#fecdd3" : "#e2e8f0"}`,
+              background: isDone ? "white" : isActive ? "#faf5ff" : "#f8fafc",
+              border: `1.5px solid ${isDone ? "#ede9fe" : isActive ? "#ddd6fe" : "#e2e8f0"}`,
               padding: "14px 14px",
               display: "flex", flexDirection: "column" as const, gap: 8,
             }}>
@@ -1008,17 +1008,17 @@ function KVPanel({ m, liveMsg, reelMilestone }: { m?: Record<string,unknown>; li
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{step.icon}</span>
                 <span style={{ fontSize: 12, fontWeight: isDone || isActive ? 700 : 500, flex: 1,
-                  color: isDone ? "#065f46" : isActive ? "#be123c" : "#94a3b8", lineHeight: 1.3 }}>
+                  color: isDone ? "#7c3aed" : isActive ? "#7c3aed" : "#94a3b8", lineHeight: 1.3 }}>
                   {label}
                 </span>
                 {isDone && (
-                  <span style={{ color: "#10b981", fontWeight: 800, fontSize: 14, flexShrink: 0 }}>✓</span>
+                  <span style={{ color: "#7c3aed", fontWeight: 800, fontSize: 14, flexShrink: 0 }}>✓</span>
                 )}
                 {isActive && (
                   <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
                     {[0,1,2].map(d => (
                       <span key={d} className="source-dot"
-                        style={{ animationDelay: `${d * 0.2}s`, background: "#be123c" }} />
+                        style={{ animationDelay: `${d * 0.2}s`, background: "#7c3aed" }} />
                     ))}
                   </div>
                 )}
@@ -1038,14 +1038,14 @@ function KVPanel({ m, liveMsg, reelMilestone }: { m?: Record<string,unknown>; li
                             {imagesB64.map((img, idx) => (
                               <div key={idx} onClick={() => setSelectedImg(idx)}
                                 style={{ flex: 1, cursor: "pointer", borderRadius: 4, overflow: "hidden",
-                                  border: `2px solid ${idx === selectedImg ? "#be123c" : "transparent"}`,
+                                  border: `2px solid ${idx === selectedImg ? "#7c3aed" : "transparent"}`,
                                   opacity: idx === selectedImg ? 1 : 0.55, transition: "all 0.2s" }}>
                                 <img src={`data:image/jpeg;base64,${img}`} alt={`v${idx + 1}`}
                                   style={{ width: "100%", display: "block" }} />
                               </div>
                             ))}
                           </div>
-                          <div style={{ fontSize: 10, color: "#be123c", fontWeight: 600, marginTop: 4,
+                          <div style={{ fontSize: 10, color: "#7c3aed", fontWeight: 600, marginTop: 4,
                             textAlign: "center" as const }}>
                             Variation {selectedImg + 1} / {imagesB64.length} · click to select
                           </div>
@@ -1835,10 +1835,10 @@ function ResultsView({ output, campaignId }: {
 
         {/* Step 2: Creative Strategy */}
         {strategy?.hero_message && (
-          <TL step={2} icon="💡" color="#d97706" label="Creative Strategy">
-            <div style={{ background: "white", borderRadius: 16, border: "1px solid #fde68a",
-              overflow: "hidden", boxShadow: "0 2px 12px rgba(217,119,6,0.1)" }}>
-              <div style={{ background: "linear-gradient(135deg, #d97706, #ea580c)", padding: "20px 24px" }}>
+          <TL step={2} icon="💡" color="#7c3aed" label="Creative Strategy">
+            <div style={{ background: "white", borderRadius: 16, border: "1px solid #ede9fe",
+              overflow: "hidden", boxShadow: "0 2px 12px rgba(124,58,237,0.08)" }}>
+              <div style={{ background: "linear-gradient(135deg, #7c3aed, #6d28d9)", padding: "20px 24px" }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
                   {strategy.big_idea || "Campaign Concept"}
                 </div>
@@ -1848,14 +1848,14 @@ function ResultsView({ output, campaignId }: {
                 {strategy.tagline && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 6 }}>{strategy.tagline}</div>}
               </div>
               {strategy.strategic_framework && (
-                <div style={{ padding: "14px 20px", fontSize: 13, color: "#78350f", lineHeight: 1.6, background: "#fffbeb" }}>
+                <div style={{ padding: "14px 20px", fontSize: 13, color: "#374151", lineHeight: 1.6, background: "#faf5ff" }}>
                   {strategy.strategic_framework.slice(0, 280)}{strategy.strategic_framework.length > 280 ? "…" : ""}
                 </div>
               )}
               {strategy.messaging_pillars?.length > 0 && (
-                <div style={{ padding: "10px 20px", borderTop: "1px solid #fef3c7", display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <div style={{ padding: "10px 20px", borderTop: "1px solid #ede9fe", display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {strategy.messaging_pillars.slice(0, 3).map((p: string, i: number) => (
-                    <span key={i} style={{ fontSize: 11, padding: "3px 12px", borderRadius: 99, background: "#fef3c7", border: "1px solid #fde68a", color: "#92400e", fontWeight: 600 }}>
+                    <span key={i} style={{ fontSize: 11, padding: "3px 12px", borderRadius: 99, background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed", fontWeight: 600 }}>
                       {String(p).slice(0, 40)}
                     </span>
                   ))}
@@ -1867,7 +1867,7 @@ function ResultsView({ output, campaignId }: {
 
         {/* Step 3: Campaign Copy */}
         {copy?.short?.headline && (
-          <TL step={3} icon="✍️" color="#6366f1" label="Campaign Copy">
+          <TL step={3} icon="✍️" color="#7c3aed" label="Campaign Copy">
             <div style={{ background: "white", borderRadius: 16, border: "1px solid #e0e7ff",
               overflow: "hidden", boxShadow: "0 2px 12px rgba(99,102,241,0.08)" }}>
               <div style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)", padding: "16px 24px", textAlign: "center" }}>
@@ -1923,7 +1923,7 @@ function ResultsView({ output, campaignId }: {
 
         {/* Step 4: Cultural Intelligence */}
         {cp?.culture_brief && (
-          <TL step={4} icon="🌍" color="#0d9488" label="Cultural Intelligence">
+          <TL step={4} icon="🌍" color="#7c3aed" label="Cultural Intelligence">
             <div style={{ background: "white", borderRadius: 16, border: "1px solid #99f6e4",
               padding: "16px 20px", boxShadow: "0 2px 12px rgba(13,148,136,0.08)" }}>
               {cp.culture_brief.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/^#+\s*/gm, "").split(/(?<=[.!?])\s+/).filter((s: string) => s.length > 25).slice(0, 4).map((s: string, i: number) => (
@@ -1938,7 +1938,7 @@ function ResultsView({ output, campaignId }: {
 
         {/* Step 5: Key Visual */}
         {imagesB64.length > 0 && (
-          <TL step={5} icon="🎨" color="#be123c" label={`Key Visual${imagesB64.length > 1 ? ` — ${imagesB64.length} Variations` : ""}`}>
+          <TL step={5} icon="🎨" color="#7c3aed" label={`Key Visual${imagesB64.length > 1 ? ` — ${imagesB64.length} Variations` : ""}`}>
             <div style={{ background: "white", borderRadius: 16, border: "1px solid #fecdd3",
               overflow: "hidden", boxShadow: "0 2px 12px rgba(190,18,60,0.1)" }}>
               <img src={`data:image/jpeg;base64,${imagesB64[selectedKV]}`} alt="Key visual"
@@ -1973,7 +1973,7 @@ function ResultsView({ output, campaignId }: {
 
         {/* Step 6: Campaign Reel */}
         {videoB64 && (
-          <TL step={6} icon="🎬" color="#b45309" label="Campaign Reel — 6s Veo">
+          <TL step={6} icon="🎬" color="#7c3aed" label="Campaign Reel — 6s Veo">
             <div style={{ background: "#0f172a", borderRadius: 12, overflow: "hidden" }}>
               <video controls autoPlay loop muted playsInline
                 style={{ width: "100%", display: "block" }}
@@ -1991,7 +1991,7 @@ function ResultsView({ output, campaignId }: {
 
         {/* Step 7: Channel Adaptations */}
         {adaptations && Object.keys(adaptations).length > 0 && (
-          <TL step={6} icon="📐" color="#4338ca" label={`Channel Adaptations — ${Object.keys(adaptations).length} formats`}>
+          <TL step={6} icon="📐" color="#7c3aed" label={`Channel Adaptations — ${Object.keys(adaptations).length} formats`}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
               {Object.entries(adaptations).map(([key, val]) => (
                 <div key={key} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(67,56,202,0.08)" }}>
@@ -2008,7 +2008,7 @@ function ResultsView({ output, campaignId }: {
         )}
 
         {/* Step 7: Launch */}
-        <TL step={7} icon="🚀" color="#6366f1" label="Launch Campaign">
+        <TL step={7} icon="🚀" color="#7c3aed" label="Launch Campaign">
           <DistributePanel output={output} campaignId={campaignId}
             selectedImageB64={imagesB64[selectedKV] ?? undefined} />
         </TL>
@@ -2474,7 +2474,7 @@ function CopyIntakeView({ milestone, liveMsg }: {
   milestone: Record<string,unknown> | undefined;
   liveMsg: string | null;
 }) {
-  const g1 = "#2563eb", g2 = "#0369a1";
+  const g1 = "#7c3aed", g2 = "#6d28d9";
   const m = (milestone ?? {}) as any;
 
   if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
