@@ -177,6 +177,19 @@ interface WizardData {
   budgetCustom: string;
 }
 
+// ── A2A orb gradient — matches the brand logo PNG ─────────────
+// White glass highlight top-right, hot pink/magenta centre, lavender-purple edges
+const ORB_BG = [
+  "radial-gradient(circle at 71% 26%, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0) 42%)",
+  "radial-gradient(circle at 36% 54%, #f028cc 0%, #cc3cf2 26%, #8840e0 52%, #b898f8 80%, #ddd6fe 100%)",
+].join(", ");
+
+// Translucent version for agent node circles
+const ORB_BG_FAINT = [
+  "radial-gradient(circle at 71% 26%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 42%)",
+  "radial-gradient(circle at 36% 54%, #f028cc44 0%, #cc3cf222 26%, #8840e011 52%, #ede9fe 100%)",
+].join(", ");
+
 // ── Harness pipeline agents (for loading display) ────────────
 // Order matches actual backend execution
 const HARNESS_STAGES = [
@@ -1223,8 +1236,8 @@ function RunningView({
             }}>
               <div style={{
                 width: 90, height: 90, borderRadius: "50%",
-                background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
-                boxShadow: "0 8px 32px rgba(139,92,246,0.4)",
+                background: ORB_BG,
+                boxShadow: "0 8px 32px rgba(200,40,200,0.32)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 animation: "icon-breathe 2.5s ease-in-out infinite",
               }}>
@@ -1660,7 +1673,7 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
               cursor: selected.size === 0 ? "not-allowed" : "pointer",
               background: selected.size === 0
                 ? "#f5f3ff"
-                : "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+                : ORB_BG,
               color: selected.size === 0 ? "#9ca3af" : "white",
               fontSize: 13, fontWeight: 800, letterSpacing: "0.02em", transition: "all 0.2s",
               boxShadow: selected.size > 0 ? "0 4px 20px rgba(124,58,237,0.35)" : "none" }}>
@@ -1744,7 +1757,7 @@ function ResultsView({ output, campaignId }: {
       {/* Left: A2A orb + connector */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
         <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
-          background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+          background: ORB_BG,
           boxShadow: "0 4px 14px rgba(124,58,237,0.35), 0 0 0 4px rgba(124,58,237,0.1)",
           display: "flex", alignItems: "center", justifyContent: "center" }}>
           <svg width={18} height={18} viewBox="0 0 24 24" fill="none">
@@ -2084,7 +2097,7 @@ function AgentNetworkWakeUp() {
           position: "absolute" as const, left: "50%", top: "50%",
           transform: "translate(-50%,-50%)",
           width: 72, height: 72, borderRadius: "50%", zIndex: 3,
-          background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+          background: ORB_BG,
           display: "flex", alignItems: "center", justifyContent: "center",
           boxShadow: "0 0 0 10px rgba(124,58,237,0.1), 0 0 40px rgba(124,58,237,0.35)",
           animation: "hub-beat 2s ease-in-out infinite",
@@ -2109,7 +2122,7 @@ function AgentNetworkWakeUp() {
             }}>
               <div style={{
                 width: 46, height: 46, borderRadius: "50%",
-                background: "radial-gradient(circle at 35% 35%, #a78bfa44 0%, #c084fc22 60%, #ede9fe 100%)",
+                background: ORB_BG_FAINT,
                 border: "2px solid rgba(124,58,237,0.3)",
                 display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
                 boxShadow: "0 0 16px rgba(124,58,237,0.18)",
@@ -2156,8 +2169,8 @@ function OrbHeader({ done }: { done: boolean }) {
     <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
       <div style={{
         width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
-        background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
-        boxShadow: "0 4px 20px rgba(139,92,246,0.4)",
+        background: ORB_BG,
+        boxShadow: "0 4px 20px rgba(200,40,200,0.3)",
         display: "flex", alignItems: "center", justifyContent: "center",
         animation: done ? "none" : "icon-breathe 2.5s ease-in-out infinite",
       }}>
@@ -2214,8 +2227,8 @@ function BriefIntakeView({
         alignItems: "center", justifyContent: "center", gap: 28 }}>
         <div style={{
           width: 90, height: 90, borderRadius: "50%",
-          background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
-          boxShadow: "0 8px 32px rgba(139,92,246,0.4)",
+          background: ORB_BG,
+          boxShadow: "0 8px 32px rgba(200,40,200,0.32)",
           display: "flex", alignItems: "center", justifyContent: "center",
           animation: "icon-breathe 2.5s ease-in-out infinite",
         }}>
@@ -2273,7 +2286,7 @@ function BriefIntakeView({
                     : <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
                         {[0,1,2].map(d => (
                           <div key={d} style={{ width: 5, height: 5, borderRadius: "50%",
-                            background: "#c084fc",
+                            background: "#cc3cf2",
                             animation: `wave-dot 1.2s ${idx * 0.15 + d * 0.2}s ease-in-out infinite` }} />
                         ))}
                       </div>}
@@ -2473,8 +2486,8 @@ function AgentIntakeHeader({ label, title, done }: {
       {/* Always the same A2A purple orb */}
       <div style={{
         width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
-        background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
-        boxShadow: "0 4px 20px rgba(139,92,246,0.4)",
+        background: ORB_BG,
+        boxShadow: "0 4px 20px rgba(200,40,200,0.3)",
         display: "flex", alignItems: "center", justifyContent: "center",
         animation: done ? "none" : "icon-breathe 2.5s ease-in-out infinite",
       }}>
@@ -2499,8 +2512,8 @@ function AgentGeneratingView({ liveMsg }: { liveMsg?: string | null }) {
       alignItems: "center", justifyContent: "center", gap: 24 }}>
       <div style={{
         width: 90, height: 90, borderRadius: "50%",
-        background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
-        boxShadow: "0 8px 32px rgba(139,92,246,0.4)",
+        background: ORB_BG,
+        boxShadow: "0 8px 32px rgba(200,40,200,0.32)",
         display: "flex", alignItems: "center", justifyContent: "center",
         animation: "icon-breathe 2.5s ease-in-out infinite",
       }}>
@@ -2809,30 +2822,32 @@ function GradientOrb({ size = 40 }: { size?: number }) {
   const u = `orb${size}`;
   return (
     <svg width={size} height={size} viewBox="0 0 100 100"
-      style={{ display: "block", flexShrink: 0, filter: `drop-shadow(0 ${size*0.06}px ${size*0.22}px rgba(190,50,210,0.38))` }}>
+      style={{ display: "block", flexShrink: 0,
+        filter: `drop-shadow(0 ${size*0.07}px ${size*0.28}px rgba(200,40,200,0.38)) drop-shadow(0 0 ${size*0.08}px rgba(255,255,255,0.5))` }}>
       <defs>
-        {/* Base sphere — deep purple left → hot pink center → peach right */}
-        <radialGradient id={`${u}a`} cx="32%" cy="32%" r="78%">
-          <stop offset="0%"   stopColor="#fce8f8"/>
-          <stop offset="18%"  stopColor="#f050c8"/>
-          <stop offset="48%"  stopColor="#b82ee8"/>
-          <stop offset="78%"  stopColor="#7018cc"/>
-          <stop offset="100%" stopColor="#4a0caa"/>
+        {/* Base: hot magenta-pink centre → deep purple-lavender edge */}
+        <radialGradient id={`${u}a`} cx="36%" cy="54%" r="80%">
+          <stop offset="0%"   stopColor="#f028cc"/>
+          <stop offset="22%"  stopColor="#cc3cf2"/>
+          <stop offset="50%"  stopColor="#8840e0"/>
+          <stop offset="78%"  stopColor="#b898f8"/>
+          <stop offset="100%" stopColor="#ddd6fe"/>
         </radialGradient>
-        {/* Warm peach bloom on right */}
-        <radialGradient id={`${u}b`} cx="74%" cy="48%" r="44%">
-          <stop offset="0%"   stopColor="#ffaa88" stopOpacity="0.82"/>
-          <stop offset="100%" stopColor="#ffaa88" stopOpacity="0"/>
+        {/* Warm coral-peach bloom on right — matches logo warmth */}
+        <radialGradient id={`${u}b`} cx="76%" cy="54%" r="42%">
+          <stop offset="0%"   stopColor="#ffaacc" stopOpacity="0.75"/>
+          <stop offset="100%" stopColor="#ffaacc" stopOpacity="0"/>
         </radialGradient>
-        {/* Bright specular highlight top-left */}
-        <radialGradient id={`${u}c`} cx="38%" cy="24%" r="28%">
-          <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.68"/>
+        {/* Bright glass specular highlight — top-RIGHT (as in logo) */}
+        <radialGradient id={`${u}c`} cx="70%" cy="24%" r="32%">
+          <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.9"/>
+          <stop offset="60%"  stopColor="#ffffff" stopOpacity="0.25"/>
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0"/>
         </radialGradient>
-        {/* Bottom shadow depth */}
-        <radialGradient id={`${u}d`} cx="50%" cy="88%" r="38%">
-          <stop offset="0%"   stopColor="#2a0060" stopOpacity="0.46"/>
-          <stop offset="100%" stopColor="#2a0060" stopOpacity="0"/>
+        {/* Soft bottom depth shadow */}
+        <radialGradient id={`${u}d`} cx="50%" cy="90%" r="36%">
+          <stop offset="0%"   stopColor="#300060" stopOpacity="0.4"/>
+          <stop offset="100%" stopColor="#300060" stopOpacity="0"/>
         </radialGradient>
         <clipPath id={`${u}clip`}><circle cx="50" cy="50" r="49"/></clipPath>
       </defs>
@@ -2843,14 +2858,14 @@ function GradientOrb({ size = 40 }: { size?: number }) {
       <circle cx="50" cy="50" r="49" fill={`url(#${u}c)`}/>
       <circle cx="50" cy="50" r="49" fill={`url(#${u}d)`}/>
 
-      {/* 4-point sparkle star */}
+      {/* 4-point sparkle star — large and luminous */}
       <path clipPath={`url(#${u}clip)`}
-        d="M50 20 Q51.5 36 58 43 Q74 48.5 78 50 Q74 51.5 58 57 Q51.5 64 50 80 Q48.5 64 42 57 Q26 51.5 22 50 Q26 48.5 42 43 Q48.5 36 50 20 Z"
+        d="M50 18 Q51.8 35 59 42 Q76 48 80 50 Q76 52 59 58 Q51.8 65 50 82 Q48.2 65 41 58 Q24 52 20 50 Q24 48 41 42 Q48.2 35 50 18 Z"
         fill="white"/>
 
-      {/* Subtle rim */}
+      {/* Soft white rim */}
       <circle cx="50" cy="50" r="48.5" fill="none"
-        stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
+        stroke="rgba(255,255,255,0.3)" strokeWidth="1.5"/>
     </svg>
   );
 }
@@ -2868,7 +2883,7 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
           marginBottom: 20, letterSpacing: "-0.03em", fontFamily: "inherit" }}>
           Campaign Intelligence,{" "}
           <span style={{
-            background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+            background: ORB_BG,
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
           }}>Creative Excellence</span>
         </h1>
@@ -2896,7 +2911,7 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
             <div style={{ fontSize: 12, color: "#9ca3af" }}>Press → or Enter to start</div>
             <button onClick={onStart} style={{
               width: 42, height: 42, borderRadius: "50%",
-              background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+              background: ORB_BG,
               border: "none", cursor: "pointer", color: "white", fontSize: 18,
               display: "flex", alignItems: "center", justifyContent: "center",
               boxShadow: "0 4px 12px rgba(124,58,237,0.4)",
@@ -3079,7 +3094,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 10, fontWeight: 700,
                   background: (isDone || isActive)
-                    ? "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 40%, #f472b6 70%, #fb923c 100%)"
+                    ? ORB_BG
                     : "white",
                   color: (isDone || isActive) ? "white" : "#9ca3af",
                   border: (isDone || isActive) ? "none" : "1.5px solid #d1d5db",
