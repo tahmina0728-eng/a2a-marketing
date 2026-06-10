@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, Component, type ReactNode, type ErrorInfo } from "react";
+import { useState, useMemo, useCallback, useEffect, Component, type ReactNode, type ErrorInfo } from "react";
 
 // ── Error boundary — shows error instead of blank page ────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -525,19 +525,20 @@ function BriefForm({ onFullCampaign }: {
   };
 
   return (
-    <div className="wizard-page">
-      {/* Infosys Aster Header */}
-      <div className="aster-header">
-        <AsterLogo />
-        <span className="aster-tagline">The AI-Amplified Marketing Suite</span>
-      </div>
-      <div className="wizard-container">
-        <div className="wizard-progress">
-          <div className="wizard-progress-fill" style={{ width: `${(step / TOTAL_STEPS) * 100}%` }} />
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "40px 48px" }}>
+      <div style={{ maxWidth: 560, margin: "0 auto" }}>
+        {/* Purple step progress bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.12em",
+            textTransform: "uppercase" as const, whiteSpace: "nowrap" as const }}>
+            Step {step + 1} of {TOTAL_STEPS}
+          </span>
+          <div style={{ flex: 1, height: 3, background: "#e5e7eb", borderRadius: 2 }}>
+            <div style={{ height: "100%", width: `${((step + 1) / TOTAL_STEPS) * 100}%`,
+              background: "#7c3aed", borderRadius: 2, transition: "width 0.3s ease" }} />
+          </div>
         </div>
-        <div className="step-content" key={step}>
-          {stepContent()}
-        </div>
+        <div key={step} className="step-content">{stepContent()}</div>
         <div className="wizard-nav">
           {step > 0
             ? <button className="wizard-back-btn" onClick={() => setStep((s) => s - 1)}>← Back</button>
@@ -2000,48 +2001,425 @@ function ResultsView({ output, campaignId, onReset }: {
     </div>
   );
 }
+// ── Gradient Orb (A2A logo style) ────────────────────────────
+function GradientOrb({ size = 40 }: { size?: number }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: "50%", flexShrink: 0,
+      background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+      boxShadow: "0 4px 16px rgba(139,92,246,0.35)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <svg width={size * 0.38} height={size * 0.38} viewBox="0 0 24 24" fill="none">
+        <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
+      </svg>
+    </div>
+  );
+}
+
+// ── Home screen ───────────────────────────────────────────────
+function HomeScreen({ onStart }: { onStart: () => void }) {
+  const [input, setInput] = useState("");
+  return (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 32px" }}>
+      <div style={{ maxWidth: 680, width: "100%", textAlign: "center" as const }}>
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+          <GradientOrb size={80} />
+        </div>
+        <h1 style={{ fontSize: 44, fontWeight: 800, color: "#111827", lineHeight: 1.15,
+          marginBottom: 16, letterSpacing: "-0.03em", fontFamily: "inherit" }}>
+          What do you want to create?
+        </h1>
+        <p style={{ fontSize: 16, color: "#6b7280", lineHeight: 1.7, marginBottom: 40, maxWidth: 520, margin: "0 auto 40px" }}>
+          A Multi-agent AI Pipeline — brief intake through creative ideation, key visual generation, channel adaptation and activation planning
+        </p>
+        <div style={{ background: "white", border: "1.5px solid #e5e7eb", borderRadius: 16,
+          padding: "20px 24px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", textAlign: "left" as const }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+            <span style={{ fontSize: 15, marginTop: 3, color: "#9ca3af" }}>✦</span>
+            <textarea
+              style={{ flex: 1, border: "none", outline: "none", fontSize: 15, color: "#111827",
+                resize: "none" as const, background: "transparent", minHeight: 56,
+                fontFamily: "inherit", lineHeight: 1.6 }}
+              placeholder="Describe your brief"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onStart(); }}}
+            />
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+            <div style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e5e7eb",
+              background: "white", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 18, color: "#9ca3af", cursor: "pointer" }}>+</div>
+            <button onClick={onStart} style={{
+              width: 42, height: 42, borderRadius: "50%",
+              background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+              border: "none", cursor: "pointer", color: "white", fontSize: 18,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 4px 12px rgba(124,58,237,0.4)", transition: "opacity 0.2s",
+            }}>→</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Sidebar ───────────────────────────────────────────────────
+function Sidebar({ history, onNew }: {
+  history: Array<{ id: string; name: string }>;
+  onNew: () => void;
+}) {
+  return (
+    <div style={{ width: 220, flexShrink: 0, height: "100vh", background: "#fafafa",
+      borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column" as const,
+      overflowY: "auto" as const }}>
+      {/* Logo */}
+      <div style={{ padding: "20px 18px 14px", display: "flex", alignItems: "center", gap: 10 }}>
+        <GradientOrb size={32} />
+        <span style={{ fontSize: 15, fontWeight: 800, color: "#111827", letterSpacing: "-0.01em" }}>CampaignOS</span>
+      </div>
+
+      {/* Actions */}
+      <div style={{ padding: "2px 10px 10px" }}>
+        {[
+          { icon: "＋", label: "Create New", action: onNew },
+          { icon: "⌕",  label: "Search",    action: () => {} },
+        ].map(item => (
+          <button key={item.label} onClick={item.action}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
+              borderRadius: 8, border: "none", background: "none", cursor: "pointer",
+              fontSize: 13, color: "#374151", fontFamily: "inherit", textAlign: "left" as const }}
+            onMouseEnter={e => (e.currentTarget.style.background = "#f3f4f6")}
+            onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+            <span style={{ fontSize: 14, width: 18, textAlign: "center" as const }}>{item.icon}</span>
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Brands */}
+      <div style={{ padding: "8px 18px 8px" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", letterSpacing: "0.1em",
+          textTransform: "uppercase" as const, marginBottom: 8 }}>Brands</div>
+        {BRANDS.map(b => (
+          <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px",
+            borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#374151" }}>
+            <span style={{ fontSize: 15, width: 20, textAlign: "center" as const }}>{b.emoji}</span>
+            {b.label}
+          </div>
+        ))}
+      </div>
+
+      {/* History */}
+      {history.length > 0 && (
+        <div style={{ padding: "12px 18px 8px", borderTop: "1px solid #f3f4f6", marginTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", letterSpacing: "0.1em",
+            textTransform: "uppercase" as const, marginBottom: 8 }}>History</div>
+          {history.slice(0, 6).map(h => (
+            <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px",
+              borderRadius: 6, cursor: "pointer", fontSize: 12, color: "#6b7280" }}
+              onMouseEnter={e => (e.currentTarget.style.background = "#f3f4f6")}
+              onMouseLeave={e => (e.currentTarget.style.background = "none")}>
+              <span style={{ fontSize: 12, color: "#d1d5db" }}>⏱</span>
+              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                {h.name}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Footer: Powered by */}
+      <div style={{ marginTop: "auto", padding: "14px 18px", borderTop: "1px solid #f3f4f6" }}>
+        <AsterLogo size={0.7} />
+      </div>
+    </div>
+  );
+}
+
+// ── Steps panel ───────────────────────────────────────────────
+const WORKFLOW_STAGES = [
+  { id: "brief",    label: "Brief Intake",        agents: ["briefing"] },
+  { id: "creative", label: "Creative Direction",  agents: ["culture", "strategy", "copy", "kv", "reel"] },
+  { id: "channel",  label: "Channel Adoption",    agents: ["channel"] },
+  { id: "activate", label: "Activation",          agents: [] },
+  { id: "perform",  label: "Performance",         agents: [] },
+];
+
+function StepsPanel({ campaignName, activeStageId, agentStatus, onEditName }: {
+  campaignName: string;
+  activeStageId: string | null;
+  agentStatus: Record<string, string>;
+  onEditName: () => void;
+}) {
+  const [editing, setEditing]   = useState(false);
+  const [nameVal, setNameVal]   = useState(campaignName);
+  const [request, setRequest]   = useState("");
+  const activeIdx = WORKFLOW_STAGES.findIndex(s => s.id === activeStageId);
+
+  // Keep nameVal in sync when campaignName changes externally
+  useEffect(() => { setNameVal(campaignName); }, [campaignName]);
+
+  return (
+    <div style={{ width: 270, flexShrink: 0, height: "100vh", background: "white",
+      borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column" as const }}>
+      {/* Campaign name header */}
+      <div style={{ padding: "18px 18px 14px", borderBottom: "1px solid #f3f4f6",
+        display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ width: 26, height: 26, borderRadius: 6, background: "#f3f4f6", flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>□</div>
+        {editing ? (
+          <input autoFocus value={nameVal} onChange={e => setNameVal(e.target.value)}
+            onBlur={() => { onEditName(); setEditing(false); }}
+            onKeyDown={e => { if (e.key === "Enter") { onEditName(); setEditing(false); }}}
+            style={{ flex: 1, fontSize: 13, fontWeight: 600, border: "none",
+              outline: "1.5px solid #7c3aed", borderRadius: 6, padding: "2px 6px", fontFamily: "inherit" }} />
+        ) : (
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#111827",
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+            {campaignName}
+          </span>
+        )}
+        <button onClick={() => setEditing(true)}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 13, padding: 2, flexShrink: 0 }}>
+          ✎
+        </button>
+      </div>
+
+      {/* Workflow stages */}
+      <div style={{ flex: 1, overflowY: "auto" as const, padding: "16px 0" }}>
+        {WORKFLOW_STAGES.map((stage, idx) => {
+          const isActive  = stage.id === activeStageId;
+          const isDone    = activeIdx > idx;
+          const stageAgents = HARNESS_STAGES.filter(s => stage.agents.includes(s.key));
+
+          return (
+            <div key={stage.id}>
+              {/* Stage row */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 18px", cursor: "default" }}>
+                <div style={{
+                  width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: isDone ? 12 : 11, fontWeight: 700,
+                  background: isDone ? "#7c3aed" : isActive ? "#7c3aed" : "#f3f4f6",
+                  color: isDone || isActive ? "white" : "#9ca3af",
+                  boxShadow: isActive ? "0 0 0 4px rgba(124,58,237,0.15)" : "none",
+                  transition: "all 0.3s",
+                }}>
+                  {isDone ? "✓" : idx + 1}
+                </div>
+                <span style={{ fontSize: 13, fontWeight: isActive ? 700 : 500,
+                  color: isActive ? "#111827" : isDone ? "#374151" : "#9ca3af" }}>
+                  {stage.label}
+                </span>
+              </div>
+
+              {/* Active agents sub-list */}
+              {isActive && stageAgents.length > 0 && (
+                <div style={{ paddingLeft: 50, paddingRight: 18, paddingBottom: 6 }}>
+                  {stageAgents.map(s => {
+                    const st = agentStatus[s.key] ?? "idle";
+                    if (st === "idle") return null;
+                    const isRun  = st === "running";
+                    const isDoneA = st === "done";
+                    return (
+                      <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 0" }}>
+                        <span style={{ fontSize: 11, color: "#7c3aed" }}>✦</span>
+                        <span style={{ fontSize: 12, fontWeight: isRun ? 600 : 400,
+                          color: isDoneA ? "#6b7280" : "#111827" }}>{s.label}</span>
+                        {isDoneA && <span style={{ fontSize: 11, color: "#10b981", marginLeft: "auto" }}>✓</span>}
+                        {isRun && (
+                          <div style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
+                            {[0,1,2].map(d => (
+                              <div key={d} style={{ width: 3, height: 3, borderRadius: "50%", background: "#7c3aed",
+                                animation: `wave-dot 1.2s ${d * 0.2}s ease-in-out infinite` }} />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Connector */}
+              {idx < WORKFLOW_STAGES.length - 1 && (
+                <div style={{ marginLeft: 30, width: 1.5, height: 8,
+                  background: isDone ? "#7c3aed" : "#e5e7eb", marginTop: -2 }} />
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Request input */}
+      <div style={{ padding: "12px 14px", borderTop: "1px solid #f3f4f6" }}>
+        <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: "10px 12px" }}>
+          <textarea placeholder="Describe your request..." value={request}
+            onChange={e => setRequest(e.target.value)}
+            style={{ width: "100%", border: "none", outline: "none", background: "transparent",
+              fontSize: 12, color: "#374151", resize: "none" as const,
+              fontFamily: "inherit", lineHeight: 1.5, minHeight: 36, maxHeight: 72 }} />
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
+            <div style={{ width: 24, height: 24, borderRadius: "50%", border: "1.5px solid #e5e7eb",
+              background: "white", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 13, cursor: "pointer", color: "#9ca3af" }}>+</div>
+            <button style={{
+              width: 30, height: 30, borderRadius: "50%",
+              background: request.trim() ? "#7c3aed" : "#e5e7eb",
+              border: "none", cursor: request.trim() ? "pointer" : "default",
+              color: "white", fontSize: 14,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transition: "background 0.2s",
+            }}>→</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main App ──────────────────────────────────────────────────
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
 
-  if (state.status === "idle") {
-    return <BriefForm onFullCampaign={startFullCampaign} />;
-  }
+  const [wizardStarted, setWizardStarted]   = useState(false);
+  const [campaignName,  setCampaignName]    = useState("New Campaign");
+  const [history,       setHistory]         = useState<Array<{ id: string; name: string }>>([]);
 
-  if (state.status === "running") {
-    return <RunningView agentStatus={state.agentStatus} liveLog={state.liveLog} milestones={state.milestones} />;
-  }
+  // Add to history when pipeline completes
+  useEffect(() => {
+    if (state.status === "done" && state.campaign_id) {
+      setHistory(h => [
+        { id: state.campaign_id!, name: campaignName },
+        ...h.filter(x => x.id !== state.campaign_id).slice(0, 5),
+      ]);
+    }
+  }, [state.status, state.campaign_id]);
 
-  if (state.status === "error") {
-    const isAuthError = state.error?.includes("credentials") || state.error?.includes("auth");
-    return (
-      <>
-        <div style={styles.errorPage}>
-          <div style={styles.errorCard}>
-            <div style={styles.errorTitle}>⚠️ Pipeline Error</div>
-            <div style={styles.errorMsg}>{state.error}</div>
-            {isAuthError && (
-              <div style={styles.authHint}>
-                <strong>Fix:</strong> Run this in your terminal, then restart the harness:
-                <pre style={styles.authCmd}>gcloud auth application-default login</pre>
-              </div>
-            )}
-            <button className="reset-btn" onClick={reset} style={{ marginTop: 20 }}>
-              Try Again
-            </button>
-          </div>
-        </div>
-      </>
-    );
-  }
+  const handleReset = () => {
+    reset();
+    setWizardStarted(false);
+    setCampaignName("New Campaign");
+  };
 
-  // done
+  const handleLaunch = (brief: import("./types/pipeline").HarnessBriefRequest) => {
+    if (brief.campaign_name?.trim()) setCampaignName(brief.campaign_name.trim());
+    startFullCampaign(brief);
+  };
+
+  // Derive which workflow stage is currently active
+  const activeStageId = (() => {
+    if (state.status === "idle") return wizardStarted ? "brief" : null;
+    if (state.status === "running") {
+      const as = state.agentStatus;
+      if (["channel"].some(k => as[k] === "running" || as[k] === "done")) return "channel";
+      if (["culture","strategy","copy","kv","reel"].some(k => as[k] === "running" || as[k] === "done")) return "creative";
+      return "brief";
+    }
+    if (state.status === "done") return "activate";
+    return null;
+  })();
+
   return (
     <ErrorBoundary>
-      <ResultsView
-        output={state.pipeline_output}
-        campaignId={state.campaign_id}
-        onReset={reset}
-      />
+      <div style={{ display: "flex", height: "100vh", overflow: "hidden",
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
+
+        {/* Left: Sidebar */}
+        <Sidebar history={history} onNew={handleReset} />
+
+        {/* Middle: Steps panel */}
+        <StepsPanel
+          campaignName={campaignName}
+          activeStageId={activeStageId}
+          agentStatus={state.agentStatus}
+          onEditName={() => {}}
+        />
+
+        {/* Right: Content area */}
+        <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
+          overflow: "hidden", background: "#ffffff" }}>
+
+          {/* Content area top bar — Accept / Cancel when pipeline active */}
+          {(state.status === "running" || state.status === "done" || wizardStarted) && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "14px 28px", borderBottom: "1px solid #f3f4f6", flexShrink: 0 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0 }}>
+                {state.status === "idle" ? "Brief Intake"
+                  : state.status === "running" ? "Creative Direction"
+                  : state.status === "done"    ? "Campaign Ready ✅"
+                  : "Brief Intake"}
+              </h2>
+              {state.status !== "idle" && (
+                <div style={{ display: "flex", gap: 10 }}>
+                  {state.status === "done" && (
+                    <button style={{ display: "flex", alignItems: "center", gap: 6,
+                      padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer",
+                      background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+                      color: "white", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
+                      ✓ Accept
+                    </button>
+                  )}
+                  <button onClick={handleReset}
+                    style={{ padding: "8px 18px", borderRadius: 8, border: "1.5px solid #e5e7eb",
+                      cursor: "pointer", background: "white", color: "#374151",
+                      fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Content */}
+          <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" as const }}>
+            {state.status === "idle" && !wizardStarted && (
+              <HomeScreen onStart={() => setWizardStarted(true)} />
+            )}
+
+            {state.status === "idle" && wizardStarted && (
+              <BriefForm onFullCampaign={handleLaunch} />
+            )}
+
+            {state.status === "running" && (
+              <RunningView
+                agentStatus={state.agentStatus}
+                liveLog={state.liveLog}
+                milestones={state.milestones}
+              />
+            )}
+
+            {state.status === "error" && (() => {
+              const isAuth = state.error?.includes("credentials") || state.error?.includes("auth");
+              return (
+                <div style={styles.errorPage}>
+                  <div style={styles.errorCard}>
+                    <div style={styles.errorTitle}>⚠️ Pipeline Error</div>
+                    <div style={styles.errorMsg}>{state.error}</div>
+                    {isAuth && (
+                      <div style={styles.authHint}>
+                        <strong>Fix:</strong> Run this in your terminal, then restart the harness:
+                        <pre style={styles.authCmd}>gcloud auth application-default login</pre>
+                      </div>
+                    )}
+                    <button className="reset-btn" onClick={handleReset} style={{ marginTop: 20 }}>Try Again</button>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {state.status === "done" && (
+              <ResultsView
+                output={state.pipeline_output}
+                campaignId={state.campaign_id}
+                onReset={handleReset}
+              />
+            )}
+          </div>
+        </div>
+      </div>
     </ErrorBoundary>
   );
 }
