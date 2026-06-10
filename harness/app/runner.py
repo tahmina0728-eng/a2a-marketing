@@ -791,9 +791,9 @@ async def generate_campaign_reel(
             )
         elif any(x in p.lower() for x in ["conditioner", "mask", "repair"]):
             return (
-                f"A woman in a steamy bathroom smoothing {p} through her hair, eyes closed in bliss. "
-                f"Rich creamy product trails through shiny hair in slow motion. "
-                f"The {p} tube displayed prominently. Sunglow magenta-pink and yellow palette."
+                f"A woman applying {p} through her hair in a bright studio, smiling confidently "
+                f"as her hair transforms into glossy, flowing locks in slow motion. "
+                f"The {p} tube displayed on a clean white surface. Sunglow magenta-pink and sunshine yellow palette."
             )
         else:  # shampoo, default
             return (
