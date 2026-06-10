@@ -2984,7 +2984,7 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 
 function Sidebar() {
   return (
-    <div style={{ width: 220, flexShrink: 0, height: "100vh",
+    <div style={{ width: 260, flexShrink: 0, height: "100vh",
       background: "#fafafa",
       borderRight: "1px solid #e5e7eb",
       display: "flex", flexDirection: "column" as const,
