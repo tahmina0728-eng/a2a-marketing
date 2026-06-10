@@ -2179,22 +2179,23 @@ const AGENT_AVATAR_IMGS = [12, 5, 32, 47, 23, 68, 17];
 const avatarUrl = (_label: string, idx: number) =>
   `https://i.pravatar.cc/150?img=${AGENT_AVATAR_IMGS[idx]}`;
 
-// [left, top] offset of info card relative to node centre
-// Outer node div is 54px wide; transform:translate(-50%,-50%) shifts it left 27px.
-// Right gap = co[0] - 54 = 40-54 = -14 (14px overlap). Left gap = -(co[0]+170) = -(-184+170) = 14px overlap. Symmetric.
-const RIGHT_X = 40;
-const LEFT_X  = -184;
+// Card left is relative to outer div layout pos (n.x), transform shifts visual by -27.
+// Right gap = RIGHT_X - 54; Left gap = -170 - LEFT_X. Set both to 6px for clean spacing.
+const RIGHT_X = 60;
+const LEFT_X  = -176;
+
 const CARD_OFF: [number, number][] = [
-  [RIGHT_X, -22],  // Logos
-  [RIGHT_X, -22],  // Helia
-  [RIGHT_X, -22],  // Ideon
-  [RIGHT_X, -22],  // Aether
-  [LEFT_X,  -22],  // Morphis
-  [LEFT_X,  -22],  // Kinetik
-  [LEFT_X,  -22],  // Poly
+  [RIGHT_X, -36],  // 0 Logos
+  [RIGHT_X, -10],  // 1 Helia
+  [RIGHT_X, -12],  // 2 Ideon
+  [RIGHT_X,   6],  // 3 Aether
+
+  [LEFT_X,    6],  // 4 Morphis
+  [LEFT_X,  -12],  // 5 Kinetik
+  [LEFT_X,  -36],  // 6 Poly
 ];
 function AgentNetworkWakeUp() {
-  const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 152;
+  const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 160;
 
   const nodes = HARNESS_STAGES.map((s, i) => {
     const a = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
