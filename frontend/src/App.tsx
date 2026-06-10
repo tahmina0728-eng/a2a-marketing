@@ -2120,7 +2120,7 @@ function AgentNetworkWakeUp() {
       <div style={{ textAlign: "center" as const, marginTop: 8 }}>
         <div style={{ fontSize: 22, fontWeight: 800, color: "#3b0764",
           letterSpacing: "-0.02em", marginBottom: 10 }}>
-          Your Campaign AI is Waking Up
+          Agents Activating...
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
           {[0,1,2].map(d => (
@@ -3237,8 +3237,9 @@ export default function App() {
         {/* Left: Sidebar */}
         <Sidebar history={history} onNew={handleReset} />
 
-        {/* Middle: Steps panel — only visible while pipeline is running or done */}
-        {(state.status === "running" || state.status === "done") && (
+        {/* Middle: Steps panel — hidden during wakeup (before any agent starts) */}
+        {(state.status === "running" || state.status === "done") &&
+          !(state.status === "running" && !state.agentStatus["briefing"]) && (
           <StepsPanel
             campaignName={campaignName}
             activeStageId={activeStageId}
