@@ -2864,15 +2864,21 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
           <GradientOrb size={80} />
         </div>
-        <h1 style={{ fontSize: 44, fontWeight: 800, color: "#111827", lineHeight: 1.15,
-          marginBottom: 16, letterSpacing: "-0.03em", fontFamily: "inherit" }}>
-          What do you want to create?
+        <h1 style={{ fontSize: 40, fontWeight: 800, color: "#111827", lineHeight: 1.2,
+          marginBottom: 20, letterSpacing: "-0.03em", fontFamily: "inherit" }}>
+          Campaign Intelligence,{" "}
+          <span style={{
+            background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+          }}>Creative Excellence</span>
         </h1>
-        <p style={{ fontSize: 16, color: "#6b7280", lineHeight: 1.7, marginBottom: 40, maxWidth: 520, margin: "0 auto 40px" }}>
-          A Multi-agent AI Pipeline — brief intake through creative ideation, key visual generation, channel adaptation and activation planning
+        <p style={{ fontSize: 15, color: "#6b7280", lineHeight: 1.8, marginBottom: 40,
+          maxWidth: 560, margin: "0 auto 40px" }}>
+          Deploy a coordinated team of AI agents that analyze culture, develop strategy, generate creative assets,
+          and prepare content for every marketing channel — all from a single campaign brief.
         </p>
 
-<div style={{ background: "white", border: "1.5px solid #e5e7eb", borderRadius: 16,
+        <div style={{ background: "white", border: "1.5px solid #e5e7eb", borderRadius: 16,
           padding: "20px 24px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", textAlign: "left" as const }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
             <span style={{ fontSize: 15, marginTop: 3, color: "#9ca3af" }}>✦</span>
@@ -2880,22 +2886,20 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
               style={{ flex: 1, border: "none", outline: "none", fontSize: 15, color: "#111827",
                 resize: "none" as const, background: "transparent", minHeight: 56,
                 fontFamily: "inherit", lineHeight: 1.6 }}
-              placeholder="Describe your brief"
+              placeholder="e.g. Summer hair care campaign for Gen Z UK audience..."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onStart(); }}}
             />
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-            <div style={{ width: 32, height: 32, borderRadius: "50%", border: "1.5px solid #e5e7eb",
-              background: "white", display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 18, color: "#9ca3af", cursor: "pointer" }}>+</div>
+            <div style={{ fontSize: 12, color: "#9ca3af" }}>Press → or Enter to start</div>
             <button onClick={onStart} style={{
               width: 42, height: 42, borderRadius: "50%",
-              background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+              background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
               border: "none", cursor: "pointer", color: "white", fontSize: 18,
               display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(124,58,237,0.4)", transition: "opacity 0.2s",
+              boxShadow: "0 4px 12px rgba(124,58,237,0.4)",
             }}>→</button>
           </div>
         </div>
@@ -3290,12 +3294,12 @@ export default function App() {
             {(state.status === "running" || state.status === "done") &&
               !(state.status === "running" && !state.agentStatus["briefing"]) && (
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <h2 style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: 0 }}>
+                {/* <h2 style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: 0 }}>
                   {state.status === "running"
                     ? (WORKFLOW_STAGES.find(s => s.id === activeStageId)?.label ?? "Running")
                     : "Campaign Ready ✅"}
-                </h2>
-                <div style={{ display: "flex", gap: 10 }}>
+                </h2> */}
+                {/* <div style={{ display: "flex", gap: 10 }}>
                     {state.status === "done" && (
                       <button style={{ display: "flex", alignItems: "center", gap: 6,
                         padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer",
@@ -3310,7 +3314,7 @@ export default function App() {
                         fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>
                       Cancel
                     </button>
-                  </div>
+                  </div> */}
               </div>
             )}
           </div>
