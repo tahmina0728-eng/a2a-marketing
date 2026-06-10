@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, Component, type ReactNode, type ErrorInfo } from "react";
+import { useState, useMemo, useCallback, useEffect, Component, Fragment, type ReactNode, type ErrorInfo } from "react";
 
 // ── Error boundary — shows error instead of blank page ────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -184,11 +184,6 @@ const ORB_BG = [
   "radial-gradient(circle at 36% 54%, #f028cc 0%, #cc3cf2 26%, #8840e0 52%, #b898f8 80%, #ddd6fe 100%)",
 ].join(", ");
 
-// Translucent version for agent node circles
-const ORB_BG_FAINT = [
-  "radial-gradient(circle at 71% 26%, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0) 42%)",
-  "radial-gradient(circle at 36% 54%, #f028cc44 0%, #cc3cf222 26%, #8840e011 52%, #ede9fe 100%)",
-].join(", ");
 
 // ── Harness pipeline agents (for loading display) ────────────
 // Order matches actual backend execution
@@ -2056,108 +2051,165 @@ function ResultsView({ output, campaignId }: {
   );
 }
 // ── Agent network wakeup screen (shown before Logos starts) ───
+const AGENT_COLORS = ["#7c3aed","#06b6d4","#10b981","#f59e0b","#ec4899","#6366f1","#14b8a6"];
+const AGENT_DESCS  = [
+  "Understands your goals, audience, product and campaign objectives",
+  "Crafts big ideas and messaging territories that inspire",
+  "Writes compelling headlines, copy, scripts and captions",
+  "Analyzes cultural trends, insights and audience behaviors",
+  "Creates striking key visuals, ad designs and imagery",
+  "Produces engaging short videos and reels visually",
+  "Adapts content for every platform and channel",
+];
+// [left, top] offset of info card relative to node centre
+const CARD_OFF: [number, number][] = [
+  [ 32, -40],  // 0 top
+  [ 32, -40],  // 1 top-right
+  [ 32, -22],  // 2 right
+  [ 32,  10],  // 3 bottom-right
+  [-158,  10], // 4 bottom-left
+  [-158, -22], // 5 left
+  [-158, -40], // 6 top-left
+];
+
 function AgentNetworkWakeUp() {
+  const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 152;
+
+  const nodes = HARNESS_STAGES.map((s, i) => {
+    const a = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
+    return { ...s, x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R,
+      num: String(i + 1).padStart(2, "0"), color: AGENT_COLORS[i], desc: AGENT_DESCS[i],
+      co: CARD_OFF[i] };
+  });
+
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
-      alignItems: "center", justifyContent: "center",
       background: "linear-gradient(145deg, #faf5ff 0%, #f5f3ff 40%, #ede9fe 100%)",
       overflow: "hidden", position: "relative" as const }}>
 
-      {/* Subtle grid overlay */}
+      {/* Subtle grid */}
       <div style={{ position: "absolute" as const, inset: 0, opacity: 0.03,
-        backgroundImage: "linear-gradient(#7c3aed 1px, transparent 1px), linear-gradient(90deg, #7c3aed 1px, transparent 1px)",
-        backgroundSize: "40px 40px", pointerEvents: "none" as const }} />
+        backgroundImage: "linear-gradient(#7c3aed 1px,transparent 1px),linear-gradient(90deg,#7c3aed 1px,transparent 1px)",
+        backgroundSize: "44px 44px", pointerEvents: "none" as const }} />
 
-      {/* Network diagram */}
-      <div style={{ position: "relative" as const, width: 400, height: 400, flexShrink: 0 }}>
-
-        {/* SVG: pulsing rings + connecting lines */}
-        <svg viewBox="0 0 400 400" style={{ position: "absolute" as const, inset: 0,
-          width: "100%", height: "100%", overflow: "visible" }}>
-          {[55, 90, 135].map((r, ri) => (
-            <circle key={ri} cx="200" cy="200" r={r} fill="none"
-              stroke="rgba(124,58,237,0.15)" strokeWidth="1.2"
-              style={{ animation: `ring-out ${2.5 + ri * 0.8}s ${ri * 0.4}s ease-out infinite` }} />
-          ))}
-          {HARNESS_STAGES.map((s, i) => {
-            const a  = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
-            const x2 = 200 + Math.cos(a) * 155;
-            const y2 = 200 + Math.sin(a) * 155;
-            return (
-              <line key={s.key} x1="200" y1="200" x2={x2} y2={y2}
-                stroke="#7c3aed" strokeOpacity="0.2" strokeWidth="1.5"
-                strokeDasharray="6 5"
-                style={{ animation: `dash-move 2s ${i * 0.22}s linear infinite` }} />
-            );
-          })}
-        </svg>
-
-        {/* Central hub — A2A purple orb */}
-        <div style={{
-          position: "absolute" as const, left: "50%", top: "50%",
-          transform: "translate(-50%,-50%)",
-          width: 72, height: 72, borderRadius: "50%", zIndex: 3,
-          background: ORB_BG,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 0 0 10px rgba(124,58,237,0.1), 0 0 40px rgba(124,58,237,0.35)",
-          animation: "hub-beat 2s ease-in-out infinite",
-        }}>
-          <svg width={28} height={28} viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
-          </svg>
-        </div>
-
-        {/* Agent nodes */}
-        {HARNESS_STAGES.map((s, i) => {
-          const a  = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
-          const cx = 200 + Math.cos(a) * 155;
-          const cy = 200 + Math.sin(a) * 155;
-          const lx = Math.cos(a) * 34;
-          const ly = Math.sin(a) * 34;
-          return (
-            <div key={s.key} style={{
-              position: "absolute" as const, left: cx, top: cy,
-              transform: "translate(-50%,-50%)", zIndex: 2,
-              animation: `node-in 0.5s ${0.15 + i * 0.12}s cubic-bezier(0.22,1,0.36,1) both`,
-            }}>
-              <div style={{
-                width: 46, height: 46, borderRadius: "50%",
-                background: ORB_BG_FAINT,
-                border: "2px solid rgba(124,58,237,0.3)",
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
-                boxShadow: "0 0 16px rgba(124,58,237,0.18)",
-                animation: `node-glow 2.4s ${i * 0.35}s ease-in-out infinite`,
-              }}>{s.icon}</div>
-              <div style={{
-                position: "absolute" as const,
-                left: `calc(50% + ${lx}px)`, top: `calc(50% + ${ly}px)`,
-                transform: "translate(-50%,-50%)",
-                fontSize: 9, fontWeight: 700, color: "#7c3aed",
-                whiteSpace: "nowrap" as const,
-                background: "rgba(255,255,255,0.92)",
-                padding: "2px 7px", borderRadius: 6,
-                border: "1px solid rgba(124,58,237,0.2)",
-              }}>{s.label}</div>
-            </div>
-          );
-        })}
+      {/* Title */}
+      <div style={{ textAlign: "center" as const, padding: "24px 24px 0", position: "relative", zIndex: 10 }}>
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: "#1a0040",
+          letterSpacing: "-0.02em", marginBottom: 6, lineHeight: 1.3 }}>
+          Seven AI Agents.{" "}
+          <span style={{ background: ORB_BG, WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+            One Powerful Campaign.
+          </span>
+        </h2>
+        <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, maxWidth: 460, margin: "0 auto" }}>
+          From strategy to content, visuals to videos, and channel-optimised publishing —
+          our AI agents collaborate to launch campaigns that perform.
+        </p>
       </div>
 
-      {/* Title + dots */}
-      <div style={{ textAlign: "center" as const, marginTop: 8 }}>
-        <div style={{ fontSize: 22, fontWeight: 800, color: "#3b0764",
-          letterSpacing: "-0.02em", marginBottom: 10 }}>
-          Agents Activating...
-        </div>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
-          {[0,1,2].map(d => (
-            <div key={d} style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c3aed",
-              opacity: 0.6, animation: `wave-dot 1.4s ${d * 0.2}s ease-in-out infinite` }} />
+      {/* Network diagram */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ position: "relative" as const, width: W, height: H, overflow: "visible" }}>
+
+          {/* SVG: rings + connecting lines + travelling dots */}
+          <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}
+            style={{ position: "absolute" as const, inset: 0, overflow: "visible" }}>
+            {[42, 72, 108].map((r, ri) => (
+              <circle key={ri} cx={cx} cy={cy} r={r} fill="none"
+                stroke="rgba(124,58,237,0.12)" strokeWidth="1.2"
+                style={{ animation: `ring-out ${2.5 + ri * 0.8}s ${ri * 0.4}s ease-out infinite` }} />
+            ))}
+            {nodes.map((n, i) => (
+              <line key={n.key} x1={cx} y1={cy} x2={n.x} y2={n.y}
+                stroke={n.color} strokeOpacity="0.25" strokeWidth="1.5"
+                strokeDasharray="6 5"
+                style={{ animation: `dash-move 2s ${i * 0.22}s linear infinite` }} />
+            ))}
+            {/* Travelling dot on each line */}
+            {nodes.map((n, i) => {
+              const t = 0.52;
+              return <circle key={`d${i}`}
+                cx={cx + (n.x - cx) * t} cy={cy + (n.y - cy) * t} r={3}
+                fill={n.color}
+                style={{ animation: `wave-dot 1.8s ${i * 0.25}s ease-in-out infinite` }} />;
+            })}
+          </svg>
+
+          {/* Central hub */}
+          <div style={{ position: "absolute" as const, left: cx, top: cy,
+            transform: "translate(-50%,-50%)", zIndex: 4,
+            animation: "hub-beat 2s ease-in-out infinite" }}>
+            <GradientOrb size={78} />
+          </div>
+
+          {/* Agent nodes + badges + info cards */}
+          {nodes.map((n, i) => (
+            <div key={n.key} style={{ position: "absolute" as const, left: n.x, top: n.y,
+              transform: "translate(-50%,-50%)", zIndex: 3,
+              animation: `node-in 0.5s ${0.15 + i * 0.12}s cubic-bezier(0.22,1,0.36,1) both` }}>
+
+              {/* Node circle */}
+              <div style={{ width: 48, height: 48, borderRadius: "50%", position: "relative" as const,
+                background: `radial-gradient(circle at 40% 35%, ${n.color}22, ${n.color}08)`,
+                border: `2px solid ${n.color}55`,
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
+                boxShadow: `0 0 18px ${n.color}30`,
+                animation: `node-glow 2.4s ${i * 0.35}s ease-in-out infinite` }}>
+                {n.icon}
+                {/* Number badge */}
+                <div style={{ position: "absolute" as const, top: -7, right: n.co[0] < 0 ? undefined : -7,
+                  left: n.co[0] < 0 ? -7 : undefined,
+                  width: 18, height: 18, borderRadius: "50%",
+                  background: n.color, border: "2px solid white",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 8, fontWeight: 800, color: "white",
+                  boxShadow: `0 0 6px ${n.color}80` }}>{n.num}</div>
+              </div>
+
+              {/* Info card */}
+              <div style={{ position: "absolute" as const,
+                left: n.co[0], top: n.co[1],
+                width: 140, padding: "9px 11px",
+                background: "rgba(255,255,255,0.88)",
+                backdropFilter: "blur(10px)",
+                border: `1px solid ${n.color}30`,
+                borderRadius: 10,
+                boxShadow: `0 2px 16px rgba(0,0,0,0.06), 0 0 10px ${n.color}15`,
+                textAlign: n.co[0] < 0 ? "right" as const : "left" as const }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: n.color, marginBottom: 3 }}>
+                  {n.label}
+                </div>
+                <div style={{ fontSize: 9.5, color: "#6b7280", lineHeight: 1.5 }}>{n.desc}</div>
+              </div>
+            </div>
           ))}
-          <span style={{ fontSize: 13, color: "#7c3aed", marginLeft: 4, fontWeight: 500 }}>
-            {HARNESS_STAGES.length} agents connecting
-          </span>
         </div>
+      </div>
+
+      {/* Working Together strip */}
+      <div style={{ padding: "8px 24px 12px",
+        borderTop: "1px solid rgba(124,58,237,0.12)",
+        display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
+        background: "rgba(255,255,255,0.5)" }}>
+        <div style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed",
+          letterSpacing: "0.04em", marginRight: 8, lineHeight: 1.4,
+          whiteSpace: "nowrap" as const }}>Working<br/>Together</div>
+        {HARNESS_STAGES.map((s, i) => (
+          <Fragment key={s.key}>
+            <div style={{ display: "flex", alignItems: "center", gap: 4,
+              padding: "3px 9px", borderRadius: 6,
+              background: "rgba(124,58,237,0.07)",
+              border: "1px solid rgba(124,58,237,0.15)" }}>
+              <span style={{ fontSize: 10 }}>{s.icon}</span>
+              <span style={{ fontSize: 9.5, color: "#6d28d9", fontWeight: 600,
+                whiteSpace: "nowrap" as const }}>{s.label}</span>
+            </div>
+            {i < HARNESS_STAGES.length - 1 && (
+              <span style={{ color: "#a78bfa", fontSize: 10, flexShrink: 0 }}>→</span>
+            )}
+          </Fragment>
+        ))}
       </div>
     </div>
   );
