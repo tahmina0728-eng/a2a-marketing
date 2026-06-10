@@ -695,6 +695,18 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
             video_b64          = _reel_b64,
         )
         _landing_pages[campaign_id] = html
+        # Persist to GCS so it survives harness restarts
+        try:
+            from google.cloud import storage as _gcs_lp
+            from app.config import get_settings as _gs_lp
+            _cfg_lp = _gs_lp()
+            _bucket_lp = _gcs_lp.Client().bucket(_cfg_lp.gcs_bucket)
+            _bucket_lp.blob(f"outputs/{campaign_id}/landing.html").upload_from_string(
+                html, content_type="text/html"
+            )
+            logger.info("landing_page_gcs_saved", campaign_id=campaign_id)
+        except Exception as _e:
+            logger.warning("landing_page_gcs_save_failed", error=str(_e))
         landing_url = f"{_harness_base}/landing/{campaign_id}"
         results["landing_page"] = {"status": "live", "url": f"/landing/{campaign_id}",
                                    "public_url": landing_url}
@@ -754,8 +766,22 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
 
 @app.get("/landing/{campaign_id}", response_class=HTMLResponse)
 async def serve_landing_page(campaign_id: str):
-    """Serve the generated brand campaign landing page."""
+    """Serve the generated brand campaign landing page (in-memory → GCS fallback)."""
     html = _landing_pages.get(campaign_id)
+    if not html:
+        # Fallback: load from GCS (survives harness restarts)
+        try:
+            from google.cloud import storage as _gcs_serve
+            from app.config import get_settings as _gs_serve
+            _cfg_serve = _gs_serve()
+            _blob = _gcs_serve.Client().bucket(_cfg_serve.gcs_bucket).blob(
+                f"outputs/{campaign_id}/landing.html"
+            )
+            if _blob.exists():
+                html = _blob.download_as_text()
+                _landing_pages[campaign_id] = html  # warm the in-memory cache
+        except Exception:
+            pass
     if not html:
         raise HTTPException(status_code=404, detail="Landing page not found — publish first")
     return HTMLResponse(content=html)

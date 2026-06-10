@@ -2736,11 +2736,14 @@ function KVIntakeView({ milestone, liveMsg, reelMilestone }: {
   if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
 
   return (
-    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
+    <div style={{ flex: 1, overflowY: "auto" as const,
       background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
-      <div style={{ maxWidth: 800, margin: "0 auto" }}>
-        <AgentIntakeHeader label="MORPHIS" title="Key Visual" done={true} />
-        <KVPanel m={milestone} liveMsg={liveMsg} reelMilestone={reelMilestone} />
+      <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" as const,
+        justifyContent: "center", padding: "32px 36px" }}>
+        <div style={{ maxWidth: 800, margin: "0 auto", width: "100%" }}>
+          <AgentIntakeHeader label="MORPHIS" title="Key Visual" done={true} />
+          <KVPanel m={milestone} liveMsg={liveMsg} reelMilestone={reelMilestone} />
+        </div>
       </div>
     </div>
   );
@@ -3283,8 +3286,9 @@ export default function App() {
               </svg>
             </button>
 
-            {/* Right: pipeline title + action buttons — hidden on pure home screen */}
-            {(state.status === "running" || state.status === "done") && (
+            {/* Right: pipeline title + action buttons — hidden on wakeup screen */}
+            {(state.status === "running" || state.status === "done") &&
+              !(state.status === "running" && !state.agentStatus["briefing"]) && (
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <h2 style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: 0 }}>
                   {state.status === "running"
