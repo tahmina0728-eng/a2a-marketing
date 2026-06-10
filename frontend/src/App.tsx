@@ -950,94 +950,122 @@ function KVPanel({ m, liveMsg, reelMilestone }: { m?: Record<string,unknown>; li
   const imagesB64   = m?.images_b64   ? (m.images_b64 as string[]) : imageB64 ? [imageB64] : [];
   const videoB64    = reelMilestone?.video_b64 ? String(reelMilestone.video_b64) : "";
 
-  // Derive active step from what data has arrived
-  const activeStep = imagesB64.length > 0 ? 3 : imagePrompt ? 3 : bigIdea ? 2 : brandLocks ? 1 : 0;
-  const isGenerating = imagesB64.length === 0 && (liveMsg?.toLowerCase().includes("imagen") || !!imagePrompt);
+  const activeStep = imagesB64.length > 0 ? 4 : imagePrompt ? 3 : bigIdea ? 2 : brandLocks ? 1 : 0;
+  const isGeneratingImg = imagesB64.length === 0 && (liveMsg?.toLowerCase().includes("imagen") || !!imagePrompt);
 
-  const kvImageContent = imagesB64.length > 0 ? imagesB64[0] : "";
   const KV_STEPS = [
-    { icon: "🔒", label: "Brand locks extracted",  dataKey: "brand_locks",  content: brandLocks },
-    { icon: "💡", label: "Big Idea developed",      dataKey: "big_idea",     content: bigIdea },
-    { icon: "🖼️", label: "Image prompt crafted",   dataKey: "image_prompt", content: imagePrompt },
-    { icon: "✨", label: `${imagesB64.length > 1 ? imagesB64.length + " variations" : "Key visual"} generated`,
-      dataKey: "image_b64", content: kvImageContent },
+    {
+      icon: "🔒",
+      labelWaiting:  "Brand Locks",
+      labelActive:   "Brand Locks Extracting...",
+      labelDone:     "Brand Locks Extracted",
+      content: brandLocks,
+    },
+    {
+      icon: "💡",
+      labelWaiting:  "Big Idea",
+      labelActive:   "Big Idea Developing...",
+      labelDone:     "Big Idea Developed",
+      content: bigIdea,
+    },
+    {
+      icon: "🖼️",
+      labelWaiting:  "Image Prompt",
+      labelActive:   "Image Prompt Crafting...",
+      labelDone:     "Image Prompt Crafted",
+      content: imagePrompt,
+    },
+    {
+      icon: "✨",
+      labelWaiting:  "Key Visual",
+      labelActive:   "Key Visual Generating...",
+      labelDone:     imagesB64.length > 1 ? `${imagesB64.length} Variations Generated` : "Key Visual Generated",
+      content: imagesB64.length > 0 ? imagesB64[0] : "",
+    },
   ];
 
   return (
     <div style={{ width: "100%" }}>
       <div style={{ fontSize: 10, fontWeight: 700, color: "#be123c", letterSpacing: "0.09em",
-        textTransform: "uppercase" as const, marginBottom: 10 }}>Image Generation Pipeline</div>
+        textTransform: "uppercase" as const, marginBottom: 12 }}>Image Generation Pipeline</div>
 
-      {KV_STEPS.map((step, i) => {
-        const isDone   = i < activeStep || (i === 3 && imagesB64.length > 0);
-        const isActive = !isDone && (i === activeStep || (i === 3 && isGenerating));
-        const showContent = !!step.content;
+      {/* 2×2 card grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {KV_STEPS.map((step, i) => {
+          const isDone   = i < activeStep || (i === 3 && imagesB64.length > 0);
+          const isActive = !isDone && (i === activeStep || (i === 3 && isGeneratingImg));
+          const label    = isDone ? step.labelDone : isActive ? step.labelActive : step.labelWaiting;
 
-        return (
-          <div key={i} style={{ marginBottom: 8 }}>
-            {/* Step header row */}
-            <div style={{ display: "flex", alignItems: "center", gap: 10,
-              padding: "9px 12px", borderRadius: showContent ? "10px 10px 0 0" : 10,
+          return (
+            <div key={i} className={isDone || isActive ? "msg-fade" : ""} style={{
+              borderRadius: 12,
               background: isDone ? "#f0fdf4" : isActive ? "#fff1f2" : "#f8fafc",
-              border: `1px solid ${isDone ? "#86efac" : isActive ? "#fecdd3" : "#e2e8f0"}`,
-              borderBottom: showContent ? "none" : undefined }}>
-              <span style={{ fontSize: 16 }}>{step.icon}</span>
-              <span style={{ fontSize: 12, fontWeight: isDone || isActive ? 700 : 400,
-                color: isDone ? "#065f46" : isActive ? "#be123c" : "#94a3b8" }}>{step.label}</span>
-              {isDone && <span style={{ marginLeft: "auto", color: "#10b981", fontWeight: 700, fontSize: 13 }}>✓</span>}
-              {isActive && !showContent && (
-                <div style={{ marginLeft: "auto", display: "flex", gap: 3 }}>
-                  {[0,1,2].map(d => <span key={d} className="source-dot" style={{ animationDelay: `${d * 0.2}s`, background: "#be123c" }} />)}
-                </div>
-              )}
-            </div>
-
-            {/* Step content reveal */}
-            {showContent && (
-              <div className="msg-fade" style={{
-                padding: "10px 12px", borderRadius: "0 0 10px 10px",
-                background: isDone ? "#f0fdf4" : "#fff8f8",
-                border: `1px solid ${isDone ? "#86efac" : "#fecdd3"}`,
-                borderTop: "none",
-              }}>
-                {i === 3 && imagesB64.length > 0 ? (
-                  /* Image gallery — show all variations with selection */
-                  <div>
-                    <img src={`data:image/jpeg;base64,${imagesB64[selectedImg]}`} alt="Key visual"
-                      style={{ width: "100%", borderRadius: 8, display: "block", marginBottom: imagesB64.length > 1 ? 8 : 0 }} />
-                    {imagesB64.length > 1 && (
-                      <div style={{ display: "flex", gap: 6 }}>
-                        {imagesB64.map((img, idx) => (
-                          <div key={idx} onClick={() => setSelectedImg(idx)}
-                            style={{ flex: 1, cursor: "pointer", borderRadius: 6, overflow: "hidden",
-                              border: `2px solid ${idx === selectedImg ? "#be123c" : "transparent"}`,
-                              opacity: idx === selectedImg ? 1 : 0.6, transition: "all 0.2s" }}>
-                            <img src={`data:image/jpeg;base64,${img}`} alt={`Variation ${idx + 1}`}
-                              style={{ width: "100%", display: "block" }} />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {imagesB64.length > 1 && (
-                      <div style={{ fontSize: 10, color: "#be123c", fontWeight: 600, marginTop: 5, textAlign: "center" as const }}>
-                        Variation {selectedImg + 1} of {imagesB64.length} — click to select
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  /* Text content — show first few lines */
-                  <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6,
-                    maxHeight: 90, overflow: "hidden", position: "relative" as const }}>
-                    {step.content.slice(0, 220)}{step.content.length > 220 ? "…" : ""}
-                    <div style={{ position: "absolute" as const, bottom: 0, left: 0, right: 0, height: 24,
-                      background: `linear-gradient(transparent, ${isDone ? "#f0fdf4" : "#fff8f8"})` }} />
+              border: `1.5px solid ${isDone ? "#86efac" : isActive ? "#fecdd3" : "#e2e8f0"}`,
+              padding: "14px 14px",
+              display: "flex", flexDirection: "column" as const, gap: 8,
+            }}>
+              {/* Card header */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>{step.icon}</span>
+                <span style={{ fontSize: 12, fontWeight: isDone || isActive ? 700 : 500, flex: 1,
+                  color: isDone ? "#065f46" : isActive ? "#be123c" : "#94a3b8", lineHeight: 1.3 }}>
+                  {label}
+                </span>
+                {isDone && (
+                  <span style={{ color: "#10b981", fontWeight: 800, fontSize: 14, flexShrink: 0 }}>✓</span>
+                )}
+                {isActive && (
+                  <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+                    {[0,1,2].map(d => (
+                      <span key={d} className="source-dot"
+                        style={{ animationDelay: `${d * 0.2}s`, background: "#be123c" }} />
+                    ))}
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        );
-      })}
+
+              {/* Card content — only shown when done */}
+              {isDone && step.content && (
+                <div style={{ marginTop: 2 }}>
+                  {i === 3 && imagesB64.length > 0 ? (
+                    <div>
+                      <img src={`data:image/jpeg;base64,${imagesB64[selectedImg]}`} alt="Key visual"
+                        style={{ width: "100%", borderRadius: 8, display: "block",
+                          marginBottom: imagesB64.length > 1 ? 6 : 0 }} />
+                      {imagesB64.length > 1 && (
+                        <>
+                          <div style={{ display: "flex", gap: 4 }}>
+                            {imagesB64.map((img, idx) => (
+                              <div key={idx} onClick={() => setSelectedImg(idx)}
+                                style={{ flex: 1, cursor: "pointer", borderRadius: 4, overflow: "hidden",
+                                  border: `2px solid ${idx === selectedImg ? "#be123c" : "transparent"}`,
+                                  opacity: idx === selectedImg ? 1 : 0.55, transition: "all 0.2s" }}>
+                                <img src={`data:image/jpeg;base64,${img}`} alt={`v${idx + 1}`}
+                                  style={{ width: "100%", display: "block" }} />
+                              </div>
+                            ))}
+                          </div>
+                          <div style={{ fontSize: 10, color: "#be123c", fontWeight: 600, marginTop: 4,
+                            textAlign: "center" as const }}>
+                            Variation {selectedImg + 1} / {imagesB64.length} · click to select
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 11, color: "#374151", lineHeight: 1.6,
+                      display: "-webkit-box", WebkitLineClamp: 3,
+                      WebkitBoxOrient: "vertical" as any, overflow: "hidden" }}>
+                      {step.content.replace(/\*\*/g, "").replace(/^#+\s*/gm, "").slice(0, 160)}
+                      {step.content.length > 160 ? "…" : ""}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
     {/* Campaign Reel video player */}
     {videoB64 && (
@@ -1222,7 +1250,8 @@ function RunningView({
             backdropFilter: "blur(28px)", WebkitBackdropFilter: "blur(28px)",
             border: `1.5px solid ${v.g1}28`,
             borderRadius: 24, padding: "28px 30px",
-            width: "min(580px, 92%)", maxHeight: "80vh", overflowY: "auto" as const,
+            width: displayKey === "kv" ? "min(680px, 92%)" : "min(580px, 92%)",
+            maxHeight: "80vh", overflowY: "auto" as const,
             boxShadow: `0 20px 72px ${v.g1}18, 0 4px 20px rgba(0,0,0,0.07)`,
           }}>
             {/* Header row */}
