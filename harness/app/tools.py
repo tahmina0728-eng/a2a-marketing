@@ -236,7 +236,11 @@ def _composite_brand_assets(
         loader = get_asset_loader()
 
         # ── Base image ─────────────────────────────────────────────────────
+        Image.MAX_IMAGE_PIXELS = None  # AI-generated images can exceed PIL's default bomb limit
         img = Image.open(io.BytesIO(image_data)).convert("RGBA")
+        if max(img.size) > 2048:
+            scale = 2048 / max(img.size)
+            img = img.resize((int(img.width * scale), int(img.height * scale)), Image.LANCZOS)
         w, h = img.size
         margin = max(16, int(w * 0.025))
 

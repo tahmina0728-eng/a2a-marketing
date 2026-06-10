@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, Component, Fragment, type ReactNode, type ErrorInfo } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef, Component, Fragment, type ReactNode, type ErrorInfo } from "react";
 
 // ── Error boundary — shows error instead of blank page ────────
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: string | null }> {
@@ -83,14 +83,14 @@ const BRAND_PRODUCTS: Record<string, string[]> = {
   Sunglow:   ["Moisture Shampoo", "Moisture Conditioner", "Deep Repair Treatment",
               "Scalp Nourish Oil", "Define & Glow Serum", "Leave-In Conditioner",
               "Curl Refresh Spray", "Edge Control", "Protective Style Serum"],
-  Boozt:     ["Root Lift Spray", "Volumising Mousse", "Thickening Shampoo",
-              "Thickening Conditioner", "Texturising Powder", "Volume Setting Spray"],
+  Boozt:     ["Original Energy", "Zero Sugar", "Sport Hydration",
+              "Tropical Blast", "Arctic Mint", "Classic"],
 };
 
 const BRAND_CATEGORY: Record<string, string> = {
   Rnorr:     "Dry Cook-In Sauces",
   Sunglow:   "Hair Care",
-  Boozt:     "Hair Styling & Volume",
+  Boozt:     "Energy Drinks",
 };
 
 const BRAND_FAN_TRUTHS: Record<string, string[]> = {
@@ -109,11 +109,11 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
     "When your hair does exactly what it wants to — and you let it",
   ],
   Boozt: [
-    "Flat hair is a choice. So is not having it.",
-    "Volume isn't vanity — it's the energy you walk in with",
-    "The five seconds that change your whole morning",
-    "Your roots called. They want their lift back.",
-    "When your hair has more energy than you do",
+    "That first sip when you need to switch on — that's a Boozt moment",
+    "Energy that moves with you, not against you",
+    "The can that turns 'I can't' into 'watch me'",
+    "Peak performance isn't a personality — it's a decision you make every day",
+    "Zero limits. Pure energy. One can.",
   ],
 };
 
@@ -121,7 +121,7 @@ const AGE_GROUPS  = ["13–17", "18–24", "25–34", "35–44", "45–54", "55+
 const INTERESTS: Record<string, string[]> = {
   Rnorr:     ["Home cooks", "Families", "Students", "Budget shoppers", "Food lovers", "Meal preppers", "Time-poor professionals"],
   Sunglow:   ["Natural hair community", "Protective styles", "Wash day routines", "Scalp health", "Curl definition", "Black hair care", "Beauty enthusiasts"],
-  Boozt:     ["Fine hair", "Volume seekers", "On-the-go styling", "Beauty enthusiasts", "Festival-goers", "Bridal & occasion"],
+  Boozt:     ["Athletes & gym-goers", "Students", "Festival-goers", "Gamers", "Young professionals", "Outdoor adventurers"],
   default:   ["Families", "Students", "Young professionals", "Beauty lovers", "Lifestyle"],
 };
 const REGIONS     = ["United Kingdom", "Australia", "United States", "New Zealand", "SEA", "Global"];
@@ -571,14 +571,22 @@ const AGENT_VISUALS: Record<string, { g1: string; g2: string; blob1: string; blo
 const DEFAULT_VISUAL = { g1: "#1e293b", g2: "#334155", blob1: "#475569", blob2: "#64748b", title: "Starting…" };
 
 // ── Agent content panels ──────────────────────────────────────
-const DATA_SOURCES = [
-  { id: "brand",    icon: "📚", label: "Brand Guidelines", from: "GCS Bucket",           delay: 0   },
-  { id: "fantruth", icon: "💡", label: "Fan Truth Library", from: "Vertex AI Search",    delay: 800 },
-  { id: "history",  icon: "📈", label: "Historical Campaigns", from: "BigQuery",         delay: 1600 },
-  { id: "cdp",      icon: "👥", label: "CDP / Sephora",    from: "Kaggle · BigQuery",    delay: 2400 },
-];
+const CDP_SOURCE: Record<string, { label: string; from: string }> = {
+  Rnorr:   { label: "CDP / Sephora",    from: "Kaggle · BigQuery" },
+  Sunglow: { label: "CDP / Sephora",    from: "Kaggle · BigQuery" },
+  Boozt:   { label: "CDP Profiles",     from: "Synthetic Segments" },
+};
+function getDataSources(brand?: string) {
+  const cdp = CDP_SOURCE[brand ?? ""] ?? { label: "CDP Profiles", from: "Synthetic Segments" };
+  return [
+    { id: "brand",    icon: "📚", label: "Brand Guidelines",      from: "GCS Bucket",         delay: 0    },
+    { id: "fantruth", icon: "💡", label: "Fan Truth Library",      from: "Vertex AI Search",   delay: 800  },
+    { id: "history",  icon: "📈", label: "Historical Campaigns",   from: "BigQuery",           delay: 1600 },
+    { id: "cdp",      icon: "👥", label: cdp.label,                from: cdp.from,             delay: 2400 },
+  ];
+}
 
-function BriefingPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
+function BriefingPanel({ m, liveMsg, brand }: { m?: Record<string,unknown>; liveMsg: string|null; brand?: string }) {
   const ft      = (m?.fan_truth ?? {}) as any;
   const aud     = (m?.audience  ?? {}) as any;
   const kpis    = (m?.kpis      ?? []) as any[];
@@ -598,7 +606,7 @@ function BriefingPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: st
         {hasData ? "Data Sources ✓" : "Querying Data Sources"}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
-        {DATA_SOURCES.map((src, idx) => (
+        {getDataSources(brand).map((src, idx) => (
           <div key={src.id} className="source-card" style={{ animationDelay: `${src.delay}ms`, padding: "8px 10px" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 30, height: 30, borderRadius: 8, flexShrink: 0,
@@ -718,7 +726,18 @@ function StrategyPanel({ m }: { m?: Record<string,unknown> }) {
   const fw       = String(m?.strategic_framework ?? "");
   const pillars  = (m?.messaging_pillars ?? []) as string[];
   const imgB64   = m?.hero_image_b64 ? String(m.hero_image_b64) : "";
-  if (!hero) return null;
+  if (!hero) return (
+    <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+      {["Building big idea", "Defining messaging pillars", "Crafting strategy"].map((step, i) => (
+        <div key={i} className="source-card" style={{ animationDelay: `${i * 350}ms`, padding: "10px 14px" }}>
+          <div style={{ fontSize: 12, color: "#374151" }}>{step}</div>
+          <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+            {[0,1,2].map(d => <span key={d} className="source-dot" style={{ animationDelay: `${d * 0.2}s` }} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div style={{ width: "100%", borderRadius: 18, overflow: "hidden", border: "1px solid #fde68a",
@@ -780,7 +799,18 @@ function StrategyPanel({ m }: { m?: Record<string,unknown> }) {
 }
 
 function CopyPanel({ m }: { m?: Record<string,unknown> }) {
-  if (!m?.short_headline) return null;
+  if (!m?.short_headline) return (
+    <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+      {["Writing headlines", "Crafting body copy", "Generating captions"].map((step, i) => (
+        <div key={i} className="source-card" style={{ animationDelay: `${i * 350}ms`, padding: "10px 14px" }}>
+          <div style={{ fontSize: 12, color: "#374151" }}>{step}</div>
+          <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+            {[0,1,2].map(d => <span key={d} className="source-dot" style={{ animationDelay: `${d * 0.2}s` }} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
   return (
     <div style={{ width: "100%" }}>
       {/* Billboard mock */}
@@ -917,7 +947,18 @@ function ChannelPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: str
 
 function CulturePanel({ m }: { m?: Record<string,unknown> }) {
   const raw = String(m?.brief ?? "");
-  if (!raw) return null;
+  if (!raw) return (
+    <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+      {["Scanning cultural signals", "Analysing audience trends", "Mapping brand moments"].map((step, i) => (
+        <div key={i} className="source-card" style={{ animationDelay: `${i * 350}ms`, padding: "10px 14px" }}>
+          <div style={{ fontSize: 12, color: "#374151" }}>{step}</div>
+          <div style={{ display: "flex", gap: 4, marginTop: 6 }}>
+            {[0,1,2].map(d => <span key={d} className="source-dot" style={{ animationDelay: `${d * 0.2}s` }} />)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
   // Strip markdown: **bold**, ## headers, leading bullets
   const clean = raw
     .replace(/\*\*([^*]+)\*\*/g, "$1")
@@ -1094,17 +1135,56 @@ function KVPanel({ m, liveMsg, reelMilestone }: { m?: Record<string,unknown>; li
   );
 }
 
+// ── Reel spotlight panel (used inside RunningView spotlight card) ─
+function ReelSpotlightPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
+  const videoB64 = m?.video_b64 ? String(m.video_b64) : "";
+  if (videoB64) {
+    return (
+      <div style={{ width: "100%" }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "#ec4899", letterSpacing: "0.1em",
+          textTransform: "uppercase" as const, marginBottom: 10 }}>🎬 Campaign Reel · 6s</div>
+        <video controls autoPlay loop muted playsInline
+          style={{ width: "100%", borderRadius: 12, display: "block",
+            boxShadow: "0 4px 24px rgba(0,0,0,0.15)" }}
+          src={`data:video/mp4;base64,${videoB64}`} />
+        <a href={`data:video/mp4;base64,${videoB64}`} download="campaign-reel.mp4"
+          style={{ display: "inline-block", marginTop: 10, fontSize: 12, fontWeight: 700,
+            color: "#ec4899", textDecoration: "none" }}>
+          ⬇ Download Reel
+        </a>
+      </div>
+    );
+  }
+  return (
+    <div style={{ width: "100%", display: "flex", flexDirection: "column" as const, gap: 8 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: "#ec4899", letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 4 }}>Generating Reel</div>
+      {["Composing scene", "Rendering frames", "Encoding video"].map((step, i) => (
+        <div key={i} className="source-card" style={{ animationDelay: `${i * 400}ms`, padding: "10px 14px" }}>
+          <div style={{ fontSize: 12, color: "#374151", marginBottom: 4 }}>{step}</div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {[0,1,2].map(d => <span key={d} className="source-dot" style={{ animationDelay: `${d * 0.2}s` }} />)}
+          </div>
+        </div>
+      ))}
+      {liveMsg && <div style={{ fontSize: 11, color: "#ec4899", fontStyle: "italic", marginTop: 4 }}>{liveMsg}</div>}
+    </div>
+  );
+}
+
 // ── Running view (pipeline in progress) ─────────────────────
 function RunningView({
   agentStatus,
   liveLog,
   milestones,
   compact = false,
+  brand,
 }: {
   agentStatus: Record<string, string>;
   liveLog: AgentEvent[];
   milestones: Record<string, Record<string, unknown>>;
   compact?: boolean;
+  brand?: string;
 }) {
   // Most recent running agent
   const activeKey = useMemo(() =>
@@ -1116,9 +1196,42 @@ function RunningView({
     [...liveLog].reverse().find(e => e.status === "done"),
   [liveLog]);
 
-  // What to display on right: running agent takes priority, else last completed
-  const displayKey  = activeKey ?? lastDoneEvent?.agent ?? null;
-  const displayMode = activeKey ? "running" : lastDoneEvent ? "done" : "idle";
+  // Displayed key/mode — stays on "done" result for 10s before switching to next running agent
+  const [displayKey,  setDisplayKey]  = useState<string | null>(null);
+  const [displayMode, setDisplayMode] = useState<"running" | "done" | "idle">("idle");
+  const dwellTimer    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref mirrors displayMode so the effect always reads the current value (avoids stale closure)
+  const displayModeRef = useRef<"running" | "done" | "idle">("idle");
+
+  const setMode = useCallback((m: "running" | "done" | "idle") => {
+    displayModeRef.current = m;
+    setDisplayMode(m);
+  }, []);
+
+  useEffect(() => {
+    if (activeKey) {
+      if (displayModeRef.current === "done") {
+        // Hold the current done result for 10s before switching to next running agent
+        if (dwellTimer.current) clearTimeout(dwellTimer.current);
+        dwellTimer.current = setTimeout(() => {
+          setDisplayKey(activeKey);
+          setMode("running");
+        }, 10000);
+      } else {
+        if (dwellTimer.current) clearTimeout(dwellTimer.current);
+        setDisplayKey(activeKey);
+        setMode("running");
+      }
+    } else if (lastDoneEvent) {
+      if (dwellTimer.current) clearTimeout(dwellTimer.current);
+      setDisplayKey(lastDoneEvent.agent ?? null);
+      setMode("done");
+    } else {
+      setDisplayKey(null);
+      setMode("idle");
+    }
+    return () => { if (dwellTimer.current) clearTimeout(dwellTimer.current); };
+  }, [activeKey, lastDoneEvent?.agent, setMode]);
 
   const liveMsg = useMemo(() => {
     if (!displayKey) return null;
@@ -1202,9 +1315,10 @@ function RunningView({
       </div>
 
       {/* ── RIGHT: spotlight panel ────────────────────────────── */}
-      <div style={{ flex: 1, position: "relative" as const, overflow: "hidden",
+      <div style={{ flex: 1, position: "relative" as const, overflow: "auto",
         background: `linear-gradient(145deg, ${v.g1}12 0%, ${v.g2}08 50%, #f4f6f9 100%)`,
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex", alignItems: "flex-start", justifyContent: "center",
+        paddingTop: 48,
         transition: "background 1s ease" }}>
 
         {/* Animated blobs */}
@@ -1284,18 +1398,16 @@ function RunningView({
                 }}>{stage?.icon ?? "🤖"}</div>
               </div>
               <div>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 4,
-                  padding: "3px 10px", borderRadius: 99,
-                  background: displayMode === "done" ? "#dcfce7" : `${v.g1}14`,
-                  border: `1px solid ${displayMode === "done" ? "#86efac" : v.g1 + "28"}` }}>
-                  {displayMode === "running" && <span style={{ width: 5, height: 5, borderRadius: "50%",
-                    background: v.g1, animation: "wave-dot 1.2s ease-in-out infinite", display: "inline-block" }} />}
-                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em",
-                    textTransform: "uppercase" as const,
-                    color: displayMode === "done" ? "#15803d" : v.g1 }}>
-                    {stage?.label ?? "Agent"} · {displayMode === "done" ? "Complete" : "Running"}
-                  </span>
-                </div>
+                {displayMode === "done" && (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 5, marginBottom: 4,
+                    padding: "3px 10px", borderRadius: 99,
+                    background: "#dcfce7", border: "1px solid #86efac" }}>
+                    <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em",
+                      textTransform: "uppercase" as const, color: "#15803d" }}>
+                      {stage?.label ?? "Agent"} · Complete ✓
+                    </span>
+                  </div>
+                )}
                 <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", lineHeight: 1.2 }}>
                   {v.title}{displayMode === "done" ? " ✓" : ""}
                 </div>
@@ -1304,12 +1416,13 @@ function RunningView({
 
             {/* Agent-specific content panel */}
             <div key={displayKey ?? "idle"} className="msg-fade">
-              {displayKey === "briefing" && <BriefingPanel m={milestones.briefing} liveMsg={liveMsg} />}
-              {displayKey === "strategy" && <StrategyPanel m={milestones.strategy} />}
-              {displayKey === "copy" && <CopyPanel m={milestones.copy} />}
-              {displayKey === "culture" && <CulturePanel m={milestones.culture} />}
-              {displayKey === "kv" && <KVPanel m={milestones.kv} liveMsg={liveMsg} reelMilestone={milestones.reel as Record<string,unknown> | undefined} />}
-              {displayKey === "channel" && <ChannelPanel m={milestones.channel} liveMsg={liveMsg} />}
+              {displayKey === "briefing"  && <BriefingPanel m={milestones.briefing} liveMsg={liveMsg} brand={brand} />}
+              {displayKey === "strategy"  && <StrategyPanel m={milestones.strategy} />}
+              {displayKey === "copy"      && <CopyPanel m={milestones.copy} />}
+              {displayKey === "culture"   && <CulturePanel m={milestones.culture} />}
+              {displayKey === "kv"        && <KVPanel m={milestones.kv} liveMsg={liveMsg} reelMilestone={milestones.reel as Record<string,unknown> | undefined} />}
+              {displayKey === "reel"      && <ReelSpotlightPanel m={milestones.reel} liveMsg={liveMsg} />}
+              {displayKey === "channel"   && <ChannelPanel m={milestones.channel} liveMsg={liveMsg} />}
             </div>
           </div>
           )
@@ -2067,16 +2180,17 @@ const avatarUrl = (_label: string, idx: number) =>
   `https://i.pravatar.cc/150?img=${AGENT_AVATAR_IMGS[idx]}`;
 
 // [left, top] offset of info card relative to node centre
+const RIGHT_X = 40;
+const LEFT_X  = -210;  // LEFT_X + card width (170) = -40, matching RIGHT_X gap
 const CARD_OFF: [number, number][] = [
-  [ 32, -40],  // 0 top
-  [ 32, -40],  // 1 top-right
-  [ 32, -22],  // 2 right
-  [ 32,  10],  // 3 bottom-right
-  [-158,  10], // 4 bottom-left
-  [-158, -22], // 5 left
-  [-158, -40], // 6 top-left
+  [RIGHT_X, -40],
+  [RIGHT_X, -40],
+  [RIGHT_X, -22],
+  [RIGHT_X,  10],
+  [LEFT_X,   10],
+  [LEFT_X,  -22],
+  [LEFT_X,  -40],
 ];
-
 function AgentNetworkWakeUp() {
   const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 152;
 
@@ -2175,7 +2289,7 @@ function AgentNetworkWakeUp() {
               {/* Info card */}
               <div style={{ position: "absolute" as const,
                 left: n.co[0], top: n.co[1],
-                width: 140, padding: "9px 11px",
+                width: 170, padding: "9px 12px",
                 background: "rgba(255,255,255,0.88)",
                 backdropFilter: "blur(10px)",
                 border: `1px solid ${n.color}30`,
@@ -3447,6 +3561,7 @@ export default function App() {
                   liveLog={state.liveLog}
                   milestones={state.milestones}
                   compact={true}
+                  brand={briefData?.brand}
                 />
               );
             })()}

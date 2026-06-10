@@ -827,17 +827,17 @@ async def generate_campaign_reel(
     def _boozt_scene(p: str) -> str:
         if any(x in p.lower() for x in ["sport", "hydration", "zero", "sugar"]):
             return (
-                f"An athlete in peak condition opening a can of {p} post-workout, electrolyte "
-                f"droplets catching electric blue studio light in slow motion. "
-                f"The {p} can gleams in the foreground against a high-contrast navy background. "
-                f"Deep midnight navy and electric cobalt blue brand colours, energy arcs and neon trails."
+                f"An athlete refreshing with a cold can of {p} after a workout, "
+                f"condensation droplets rolling down the can in slow motion under cool blue studio light. "
+                f"The {p} can gleams in the foreground against a deep navy background. "
+                f"Deep midnight navy and electric cobalt blue brand colours, clean reflective light."
             )
         else:  # Original Energy, default
             return (
-                f"A confident person cracking open a can of {p} in a charged urban environment, "
-                f"electric blue light spilling out as the can opens, energy radiating outward. "
-                f"The {p} can displayed dramatically in foreground catching cobalt studio light. "
-                f"Deep midnight navy and electric cobalt blue brand colours, high-voltage energy arcs."
+                f"A confident young professional opening a can of {p} in a modern urban setting, "
+                f"cobalt blue light reflecting off the condensation-covered can as they take a refreshing sip. "
+                f"The {p} can displayed prominently in foreground under dramatic studio lighting. "
+                f"Deep midnight navy and cobalt blue brand colours, energetic and clean atmosphere."
             )
 
     _BRAND_SCENE_FN = {
@@ -904,8 +904,50 @@ Output the prompt only.""",
             operation = await loop.run_in_executor(None, lambda: _gc.operations.get(operation))
 
         if not operation.result or not operation.result.generated_videos:
-            log.warning("veo_no_videos_returned")
-            return "", ""
+            log.warning("veo_no_videos_returned", prompt_preview=final_prompt[:200])
+            # Retry once with a minimal safe fallback prompt
+            fallback_prompt = (
+                f"A premium advertising video for {brand} {product_name or 'product'}. "
+                f"A person enjoying a refreshing {product_name or brand} beverage in a bright modern setting. "
+                f"The product is prominently featured with brand colours. "
+                f"Upbeat music. Warm confident voiceover: '{copy_headline or big_idea}'."
+            ) if brand == "Boozt" else (
+                f"A premium advertising video for {brand}. "
+                f"Professional lifestyle footage with brand colours prominent. "
+                f"Upbeat background music with confident voiceover."
+            )
+            log.info("veo_retrying_fallback_prompt", prompt=fallback_prompt[:120])
+            operation2 = await loop.run_in_executor(None, lambda: _gc.models.generate_videos(
+                model=veo_model,
+                prompt=fallback_prompt,
+                config=GenerateVideosConfig(
+                    aspect_ratio="16:9",
+                    duration_seconds=6,
+                    output_gcs_uri=output_uri.replace(".mp4", "_retry.mp4"),
+                    number_of_videos=1,
+                    generate_audio=True,
+                ),
+            ))
+            deadline2 = time.time() + 480
+            while not operation2.done:
+                if time.time() > deadline2:
+                    log.warning("veo_retry_timeout")
+                    return "", ""
+                await asyncio.sleep(20)
+                operation2 = await loop.run_in_executor(None, lambda: _gc.operations.get(operation2))
+            if not operation2.result or not operation2.result.generated_videos:
+                log.warning("veo_retry_no_videos_returned")
+                return "", ""
+            video_gcs = operation2.result.generated_videos[0].video.uri
+            log.info("veo_retry_done", uri=video_gcs)
+            from google.cloud import storage as _gcs2
+            without2 = video_gcs[5:]
+            bucket_name2, _, blob_path2 = without2.partition("/")
+            video_bytes2 = await loop.run_in_executor(
+                None,
+                lambda: _gcs2.Client().bucket(bucket_name2).blob(blob_path2).download_as_bytes()
+            )
+            return base64.b64encode(video_bytes2).decode("utf-8"), video_gcs
 
         video_gcs = operation.result.generated_videos[0].video.uri
         log.info("veo_done", uri=video_gcs)
@@ -1126,6 +1168,26 @@ Create a Big Idea for this campaign. Output:
         "wardrobe": f"colours matching {_brand_palette_str}",
         "energy":   "aspiration and confidence",
     })
+
+    # ── Brand-specific concept directions for image generation ───────────────
+    _BRAND_CONCEPT_DIRS = {
+        "Boozt": (
+            "Concept 1 — DYNAMIC ENERGY: Model mid-sprint, jumping, or thrusting the can forward — explosive athletic motion, electric arcs, zero hair focus. Can PROMINENT, glistening with condensation.",
+            "Concept 2 — FOCUSED POWER: Model close to camera, intense direct eye contact, can raised to lips or gripped at chest. Urban or gym backdrop, cool controlled power. No flowing hair — face and can are the heroes.",
+        ),
+        "Sunglow": (
+            "Concept 1 — DYNAMIC ENERGY: Model in full motion (hair flip, dramatic spin), hair FLYING and catching golden light. Background has maximum warm magical effects. Products displayed dramatically.",
+            "Concept 2 — INTIMATE GLOW: Model closer to camera, intense eye contact, hair softly draped. Background glows warmly. Products at her side, intimately placed.",
+        ),
+        "Rnorr": (
+            "Concept 1 — DYNAMIC ENERGY: Model caught mid-stir or mid-taste, steam rising dramatically, genuine delight. Bold food energy. Products prominent in scene.",
+            "Concept 2 — INTIMATE GLOW: Model closer to camera, warm proud smile, holding a steaming bowl or pan. Cosy kitchen atmosphere. Products naturally integrated.",
+        ),
+    }
+    _c1_dir, _c2_dir = _BRAND_CONCEPT_DIRS.get(brand, (
+        "Concept 1 — DYNAMIC ENERGY: Model is in full motion (jump, spin, or dramatic reach). Background has maximum magical effects. Products displayed dramatically.",
+        "Concept 2 — INTIMATE GLOW: Model is closer to camera, intense eye contact, softer but deeply saturated. Background glows behind them. Products at their side.",
+    ))
 
     # ── Audience-driven persona override ─────────────────────────────────────
     # Keys match EXACT UI interest strings (lowercase) per brand.
@@ -1381,7 +1443,7 @@ Market: {_market_ctx} — reflect in model authenticity
 ═══ BRAND VISUAL DNA ═══
 Background: {_magic['bg']}
 Model: {_magic['model']}
-Hair/Focus: {_magic['hair']}
+Hair/Focus: {_magic.get('hair', _magic.get('product', 'natural and minimal'))}
 Magic Effects: {_magic['effects']}
 Wardrobe: {_magic['wardrobe']}
 Emotional Energy: {_magic['energy']}
@@ -1395,8 +1457,8 @@ Every product in the image MUST show '{brand}' and '{_product_ctx}' on the label
 Show 2-3 of these products prominently in the RIGHT zone.
 
 ═══ TWO DIFFERENT CONCEPTS ═══
-Concept 1 — DYNAMIC ENERGY: Model is in full motion (hair flip, jump, spin, or dramatic reach). Background has maximum magical effects. Products displayed dramatically.
-Concept 2 — INTIMATE GLOW: Model is closer to camera, intense eye contact, softer but deeply saturated. Background glows behind her. Products at her side, intimately placed.
+{_c1_dir}
+{_c2_dir}
 
 Output EXACTLY this format (nothing else):
 [CONCEPT 1 - DYNAMIC]: <170-200 word detailed image generation prompt>

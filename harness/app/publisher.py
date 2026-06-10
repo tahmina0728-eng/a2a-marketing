@@ -198,6 +198,12 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
 
     bg_section = f'background-image: url("{hero_src_final}"); background-size: cover; background-position: center;' if hero_src_final else f"background: linear-gradient(135deg, {cfg['primary']}, {cfg['secondary']});"
 
+    reel_section = f"""
+<section class="section" id="reel" style="background:{cfg['primary']};padding:0 48px 64px">
+  <div class="section-title" style="color:white;padding-top:56px;margin-bottom:24px">Campaign Reel</div>
+  <video controls autoplay loop muted playsinline style="width:100%;display:block;border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,0.3);" src="data:video/mp4;base64,{video_b64}"></video>
+</section>""" if video_b64 else ""
+
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -326,6 +332,8 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
     <a href="#cta" class="btn-primary">{cta or 'Discover More'}</a>
   </div>
 </section>
+
+{reel_section}
 
 <!-- CTA -->
 <section class="cta-band" id="cta">
@@ -657,6 +665,12 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
     ]
     offer_cards = "".join([f'<div class="offer-card"><div class="offer-icon">{o[0]}</div><div class="offer-name">{o[1]}</div><div class="offer-desc">{o[2]}</div></div>' for o in offers])
 
+    reel_section = f"""
+<section class="section" id="reel" style="background:#0E105E;padding:0 48px 64px">
+  <div class="section-head" style="padding-top:56px"><div class="section-title" style="color:white">Campaign Reel</div></div>
+  <video controls autoplay loop muted playsinline style="width:100%;display:block;border-radius:16px;box-shadow:0 12px 40px rgba(0,134,254,0.3);" src="data:video/mp4;base64,{video_b64}"></video>
+</section>""" if video_b64 else ""
+
     return f"""<!DOCTYPE html><html lang="en"><head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
   <title>Boozt — Energy Drinks</title>
@@ -804,6 +818,8 @@ def generate_boozt_website(campaign_image_b64: str = "", campaign_id: str = "",
 </section>
 
 {'<section class="campaign" id="campaign"><div class="camp-img"><img src="' + camp_src + '" alt="Campaign"></div><div class="camp-text"><div class="camp-label">AI Campaign · ' + campaign_id[:16] + '</div><h2 class="camp-title">' + (hero_message or "Energy That Commands Attention") + '</h2><p class="camp-body">' + (body_copy or "Natural caffeine, B-vitamins and electrolytes — every can engineered to unlock your peak performance.") + '</p><a href="#cta" class="btn-red">' + (cta or "Shop Now") + '</a></div></section>' if camp_src else ""}
+
+{reel_section}
 
 <section class="loyalty" id="cta">
   <h2>Join the Boozt Community</h2>
