@@ -180,13 +180,13 @@ interface WizardData {
 // ── Harness pipeline agents (for loading display) ────────────
 // Order matches actual backend execution
 const HARNESS_STAGES = [
-  { key: "briefing", icon: "📋", label: "Briefing Agent",    desc: "Validating brief & Fan Truth score" },
-  { key: "strategy", icon: "💡", label: "Creative Director", desc: "Building big idea & strategy" },
-  { key: "copy",     icon: "✍️", label: "Copy Agent",        desc: "Writing campaign copy variants" },
-  { key: "culture",  icon: "🌍", label: "Culture Analyst",   desc: "Researching cultural intelligence" },
-  { key: "kv",       icon: "🎨", label: "KV Generator",      desc: "Generating key visual with Gemini 3 Pro Image" },
-  { key: "reel",     icon: "🎬", label: "Reel Generator",    desc: "Generating 6s campaign reel with Veo" },
-  { key: "channel",  icon: "📡", label: "Channel Adapter",   desc: "Publishing to Instagram, TikTok & more" },
+  { key: "briefing", icon: "📋", label: "Logos",    desc: "Validating brief & Fan Truth score" },
+  { key: "strategy", icon: "💡", label: "Helia",    desc: "Building big idea & strategy" },
+  { key: "copy",     icon: "✍️", label: "Ideon",    desc: "Writing campaign copy variants" },
+  { key: "culture",  icon: "🌍", label: "Aether",   desc: "Researching cultural intelligence" },
+  { key: "kv",       icon: "🎨", label: "Morphis",  desc: "Generating key visual with Gemini 3 Pro Image" },
+  { key: "reel",     icon: "🎬", label: "Kinetik",  desc: "Generating 6s campaign reel with Veo" },
+  { key: "channel",  icon: "📡", label: "Poly",     desc: "Publishing to Instagram, TikTok & more" },
 ];
 
 // ── Brief Form (6-step wizard) ───────────────────────────────
@@ -2046,7 +2046,7 @@ function OrbHeader({ done }: { done: boolean }) {
       <div>
         <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
           color: "#7c3aed", textTransform: "uppercase" as const, marginBottom: 3 }}>
-          BRIEFING AGENT · {done ? "COMPLETE ✓" : "RUNNING"}
+          LOGOS · {done ? "COMPLETE ✓" : "RUNNING"}
         </div>
         <div style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>Validating Brief</div>
       </div>
@@ -2423,7 +2423,7 @@ function StrategyIntakeView({ milestone, liveMsg }: {
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
       background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <AgentIntakeHeader label="CONTENT CREATOR" title="Creative Strategy" done={true} />
+        <AgentIntakeHeader label="HELIA" title="Creative Strategy" done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {m.big_idea && (
             <SCard title="Big Idea" full>
@@ -2505,7 +2505,7 @@ function CopyIntakeView({ milestone, liveMsg }: {
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
       background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <AgentIntakeHeader label="COPY AGENT" title="Campaign Copy" done={true} />
+        <AgentIntakeHeader label="IDEON" title="Campaign Copy" done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {/* Billboard hero */}
           {m.short_headline && (
@@ -2584,7 +2584,7 @@ function CultureIntakeView({ milestone, liveMsg }: {
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
       background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <AgentIntakeHeader label="CULTURAL RESEARCH" title="Cultural Intelligence" done={true} />
+        <AgentIntakeHeader label="AETHER" title="Cultural Intelligence" done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           {sentences.map((s, i) => (
             <div key={i} style={{ display: "flex", gap: 14, padding: "18px 20px",
@@ -2617,7 +2617,7 @@ function KVIntakeView({ milestone, liveMsg, reelMilestone }: {
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
       background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
       <div style={{ maxWidth: 800, margin: "0 auto" }}>
-        <AgentIntakeHeader label="KV GENERATOR" title="Key Visual" done={true} />
+        <AgentIntakeHeader label="MORPHIS" title="Key Visual" done={true} />
         <KVPanel m={milestone} liveMsg={liveMsg} reelMilestone={reelMilestone} />
       </div>
     </div>
@@ -2637,7 +2637,7 @@ function ReelIntakeView({ milestone, liveMsg }: {
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
       background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
-        <AgentIntakeHeader label="REEL GENERATOR" title="Campaign Reel" done={true} />
+        <AgentIntakeHeader label="KINETIK" title="Campaign Reel" done={true} />
         {videoB64 ? (
           <div style={{ background: "#0f172a", borderRadius: 16, padding: "20px 24px" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#f59e0b",
@@ -2672,7 +2672,7 @@ function ChannelAdapterIntakeView({ milestone, liveMsg }: {
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
       background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
-        <AgentIntakeHeader label="CHANNEL ADAPTER" title="Publishing to Channels" done={true} />
+        <AgentIntakeHeader label="POLY" title="Publishing to Channels" done={true} />
         <ChannelPanel m={milestone} liveMsg={liveMsg} />
       </div>
     </div>
