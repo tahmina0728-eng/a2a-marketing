@@ -2371,11 +2371,10 @@ function AgentIntakeHeader({ label, title, done }: {
   );
 }
 
-function AgentGeneratingView() {
+function AgentGeneratingView({ liveMsg }: { liveMsg?: string | null }) {
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
-      alignItems: "center", justifyContent: "center", gap: 28 }}>
-      {/* Same A2A purple orb used by the briefing agent */}
+      alignItems: "center", justifyContent: "center", gap: 24 }}>
       <div style={{
         width: 90, height: 90, borderRadius: "50%",
         background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
@@ -2390,37 +2389,25 @@ function AgentGeneratingView() {
       <div style={{ fontSize: 20, fontWeight: 600, color: "#374151", letterSpacing: "-0.01em" }}>
         Generating ...
       </div>
+      {liveMsg && (
+        <div style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic", maxWidth: 340,
+          textAlign: "center" as const, lineHeight: 1.5, padding: "0 24px" }}>
+          {liveMsg}
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Strategy / Content Creator intake view ────────────────────
-function StrategyIntakeView({ milestone, liveMsg, agentDone }: {
+function StrategyIntakeView({ milestone, liveMsg }: {
   milestone: Record<string,unknown> | undefined;
   liveMsg: string | null;
-  agentDone: boolean;
 }) {
   const m = (milestone ?? {}) as any;
-  const hasData = !!milestone || !!liveMsg;
-  const phase: 1 | 2 | 3 = agentDone && milestone ? 3 : hasData ? 2 : 1;
 
-  if (phase === 1) return <AgentGeneratingView />;
-
-  if (phase === 2) return (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "40px 48px", background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #faf5ff 100%)" }}>
-      <div style={{ maxWidth: 680, width: "100%" }}>
-        <AgentIntakeHeader label="CONTENT CREATOR" title="Building Creative Strategy" done={false} />
-        {liveMsg && (
-          <div style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic",
-            padding: "12px 16px", borderRadius: 10,
-            background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
-            {liveMsg}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  // Stay on orb until real milestone data arrives
+  if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
 
   const SCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
     <div style={{ background: "white", border: "1px solid #ede9fe", borderRadius: 14,
@@ -2483,33 +2470,14 @@ function StrategyIntakeView({ milestone, liveMsg, agentDone }: {
 }
 
 // ── Copy Agent intake view ────────────────────────────────────
-function CopyIntakeView({ milestone, liveMsg, agentDone }: {
+function CopyIntakeView({ milestone, liveMsg }: {
   milestone: Record<string,unknown> | undefined;
   liveMsg: string | null;
-  agentDone: boolean;
 }) {
   const g1 = "#2563eb", g2 = "#0369a1";
   const m = (milestone ?? {}) as any;
-  const hasData = !!milestone || !!liveMsg;
-  const phase: 1 | 2 | 3 = agentDone && milestone ? 3 : hasData ? 2 : 1;
 
-  if (phase === 1) return <AgentGeneratingView />;
-
-  if (phase === 2) return (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "40px 48px", background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #faf5ff 100%)" }}>
-      <div style={{ maxWidth: 680, width: "100%" }}>
-        <AgentIntakeHeader label="COPY AGENT" title="Writing Campaign Copy" done={false} />
-        {liveMsg && (
-          <div style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic",
-            padding: "12px 16px", borderRadius: 10,
-            background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
-            {liveMsg}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
 
   const CCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
     <div style={{ background: "white", border: "1px solid #ede9fe", borderRadius: 14,
@@ -2598,32 +2566,13 @@ function CopyIntakeView({ milestone, liveMsg, agentDone }: {
 }
 
 // ── Culture / Cultural Research intake view ───────────────────
-function CultureIntakeView({ milestone, liveMsg, agentDone }: {
+function CultureIntakeView({ milestone, liveMsg }: {
   milestone: Record<string,unknown> | undefined;
   liveMsg: string | null;
-  agentDone: boolean;
 }) {
   const raw = milestone?.brief ? String(milestone.brief) : "";
-  const hasData = !!milestone || !!liveMsg;
-  const phase: 1 | 2 | 3 = agentDone && milestone ? 3 : hasData ? 2 : 1;
 
-  if (phase === 1) return <AgentGeneratingView />;
-
-  if (phase === 2) return (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "40px 48px", background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #faf5ff 100%)" }}>
-      <div style={{ maxWidth: 680, width: "100%" }}>
-        <AgentIntakeHeader label="CULTURAL RESEARCH" title="Analysing Cultural Context" done={false} />
-        {liveMsg && (
-          <div style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic",
-            padding: "12px 16px", borderRadius: 10,
-            background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
-            {liveMsg}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+  if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
 
   const sentences = raw
     .replace(/\*\*([^*]+)\*\*/g, "$1").replace(/^#+\s*/gm, "").replace(/^[-*]\s*/gm, "")
@@ -3195,21 +3144,18 @@ export default function App() {
                 <StrategyIntakeView
                   milestone={state.milestones["strategy"]}
                   liveMsg={liveMsg("strategy")}
-                  agentDone={state.agentStatus["strategy"] === "done"}
                 />
               );
               if (focusKey === "copy") return (
                 <CopyIntakeView
                   milestone={state.milestones["copy"]}
                   liveMsg={liveMsg("copy")}
-                  agentDone={state.agentStatus["copy"] === "done"}
                 />
               );
               if (focusKey === "culture") return (
                 <CultureIntakeView
                   milestone={state.milestones["culture"]}
                   liveMsg={liveMsg("culture")}
-                  agentDone={state.agentStatus["culture"] === "done"}
                 />
               );
               // kv, reel, channel → existing RunningView
