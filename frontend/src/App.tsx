@@ -2003,6 +2003,181 @@ function ResultsView({ output, campaignId, onReset }: {
     </div>
   );
 }
+// ── Brief Intake view (A2A style) ────────────────────────────
+// Shows "Generating..." orb while briefing agent runs, then reveals
+// structured brief summary cards once done.
+function BriefIntakeView({
+  brief,
+  milestone,
+  isGenerating,
+}: {
+  brief: import("./types/pipeline").HarnessBriefRequest | null;
+  milestone: Record<string, unknown> | undefined;
+  isGenerating: boolean;
+}) {
+  const ft  = (milestone?.fan_truth ?? {}) as any;
+  const aud = (milestone?.audience  ?? {}) as any;
+  const kpis = (milestone?.kpis     ?? []) as any[];
+
+  // ── Generating spinner ──────────────────────────────────────
+  if (isGenerating || !milestone) {
+    return (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
+        alignItems: "center", justifyContent: "center", gap: 28 }}>
+        <div style={{
+          width: 90, height: 90, borderRadius: "50%",
+          background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+          boxShadow: "0 8px 32px rgba(139,92,246,0.35)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          animation: "icon-breathe 2.5s ease-in-out infinite",
+        }}>
+          <svg width={34} height={34} viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
+          </svg>
+        </div>
+        <div style={{ fontSize: 20, fontWeight: 600, color: "#374151", letterSpacing: "-0.01em" }}>
+          Generating ...
+        </div>
+      </div>
+    );
+  }
+
+  // ── Brief summary cards ─────────────────────────────────────
+  const Card = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
+    <div style={{
+      background: "white", border: "1px solid #e5e7eb", borderRadius: 12,
+      padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
+    }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 10 }}>{title}</div>
+      {children}
+    </div>
+  );
+
+  const scoreColor = ft?.overall >= 70 ? "#10b981" : ft?.overall >= 50 ? "#f59e0b" : "#ef4444";
+  const interestTags = [
+    ...(brief?.audience?.age_range ? [brief.audience.age_range] : []),
+    ...(brief?.audience?.interests ? brief.audience.interests.split(", ").filter(Boolean) : []),
+  ];
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, maxWidth: 900, margin: "0 auto" }}>
+
+        {/* Brand */}
+        <Card title="Brand">
+          <div style={{ fontSize: 26, fontWeight: 800, color: "#111827", lineHeight: 1.1, marginBottom: 6 }}>
+            {brief?.brand ?? "—"}
+          </div>
+          <div style={{ fontSize: 14, color: "#6b7280" }}>{brief?.product ?? ""}</div>
+        </Card>
+
+        {/* Objective */}
+        <Card title="Objective">
+          <div style={{ fontSize: 15, color: "#111827", lineHeight: 1.6 }}>
+            {brief?.goal ?? "—"}
+          </div>
+        </Card>
+
+        {/* Target Audience */}
+        <Card title="Target Audience">
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#111827", marginBottom: 4 }}>
+            {brief?.audience?.segment || "General Audience"}
+          </div>
+          {brief?.audience?.age_range && (
+            <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 10 }}>
+              {brief.audience.age_range}
+            </div>
+          )}
+          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+            {interestTags.map((t, i) => (
+              <span key={i} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 99,
+                background: "#f9fafb", border: "1px solid #e5e7eb", color: "#374151" }}>
+                {t}
+              </span>
+            ))}
+            {brief?.market && (
+              <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 99,
+                background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed" }}>
+                {brief.market}
+              </span>
+            )}
+          </div>
+        </Card>
+
+        {/* Channels */}
+        <Card title="Channels">
+          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+            {(brief?.channels ?? []).map((ch, i) => (
+              <span key={i} style={{ fontSize: 13, padding: "5px 14px", borderRadius: 99,
+                background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed", fontWeight: 500 }}>
+                {ch}
+              </span>
+            ))}
+          </div>
+        </Card>
+
+        {/* KPIs */}
+        <Card title="KPIs">
+          {kpis.length > 0 ? (
+            kpis.slice(0, 4).map((k: any, i: number) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8,
+                marginBottom: 8, fontSize: 14, color: "#111827" }}>
+                <span style={{ color: "#7c3aed", fontWeight: 700 }}>→</span>
+                <span style={{ fontWeight: 600 }}>{k.metric}</span>
+                {k.target && <span style={{ color: "#6b7280" }}>— {k.target}</span>}
+              </div>
+            ))
+          ) : (brief?.kpis ? brief.kpis.split(", ").map((k, i) => (
+            <div key={i} style={{ display: "flex", alignItems: "center", gap: 8,
+              marginBottom: 8, fontSize: 14, color: "#111827" }}>
+              <span style={{ color: "#7c3aed", fontWeight: 700 }}>→</span> {k}
+            </div>
+          )) : null)}
+        </Card>
+
+        {/* Fan Truth */}
+        <Card title="Fan Truth Score">
+          {ft?.overall !== undefined ? (
+            <div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                <span style={{ fontSize: 28, fontWeight: 800, color: scoreColor }}>
+                  {ft.overall}/100
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
+                  background: ft.verdict === "PASS" ? "#dcfce7" : "#fee2e2",
+                  color: ft.verdict === "PASS" ? "#065f46" : "#991b1b" }}>
+                  {ft.verdict}
+                </span>
+              </div>
+              {ft.statement && (
+                <div style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic", lineHeight: 1.5 }}>
+                  "{String(ft.statement).slice(0, 100)}{String(ft.statement).length > 100 ? "…" : ""}"
+                </div>
+              )}
+              {aud?.count && (
+                <div style={{ marginTop: 8, fontSize: 12, color: "#7c3aed" }}>
+                  👥 {String(aud.count).replace(/\D.*/, "")} profiles matched
+                  {aud.income ? ` · ${aud.income}` : ""}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ fontSize: 14, color: "#9ca3af" }}>Awaiting score…</div>
+          )}
+        </Card>
+
+        {/* Tone of Voice — full width */}
+        <Card title="Tone of Voice" full>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#111827", fontStyle: "italic" }}>
+            "{brief?.tone || "Bold, warm, unapologetically confident"}"
+          </div>
+        </Card>
+
+      </div>
+    </div>
+  );
+}
+
 // ── Gradient Orb (A2A logo style) ────────────────────────────
 function GradientOrb({ size = 40 }: { size?: number }) {
   return (
@@ -2315,6 +2490,7 @@ export default function App() {
 
   const [wizardStarted, setWizardStarted]   = useState(false);
   const [campaignName,  setCampaignName]    = useState("New Campaign");
+  const [briefData,     setBriefData]       = useState<import("./types/pipeline").HarnessBriefRequest | null>(null);
   const [history,       setHistory]         = useState<Array<{ id: string; name: string }>>([]);
 
   // Add to history when pipeline completes
@@ -2335,6 +2511,7 @@ export default function App() {
 
   const handleLaunch = (brief: import("./types/pipeline").HarnessBriefRequest) => {
     if (brief.campaign_name?.trim()) setCampaignName(brief.campaign_name.trim());
+    setBriefData(brief);
     startFullCampaign(brief);
   };
 
@@ -2413,7 +2590,15 @@ export default function App() {
               <BriefForm onFullCampaign={handleLaunch} />
             )}
 
-            {state.status === "running" && (
+            {state.status === "running" && activeStageId === "brief" && (
+              <BriefIntakeView
+                brief={briefData}
+                milestone={state.milestones["briefing"]}
+                isGenerating={state.agentStatus["briefing"] === "running" || !state.milestones["briefing"]}
+              />
+            )}
+
+            {state.status === "running" && activeStageId !== "brief" && (
               <RunningView
                 agentStatus={state.agentStatus}
                 liveLog={state.liveLog}
