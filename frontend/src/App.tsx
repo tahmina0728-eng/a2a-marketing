@@ -2996,11 +2996,6 @@ function Sidebar() {
         background: "radial-gradient(circle, rgba(168,85,247,0.10) 0%, transparent 65%)",
         animation: "hub-beat 5s ease-in-out infinite" }} />
 
-      {/* Aurora blob — bottom */}
-      <div style={{ position: "absolute" as const, bottom: 40, right: -50,
-        width: 180, height: 180, borderRadius: "50%", pointerEvents: "none" as const,
-        background: "radial-gradient(circle, rgba(240,40,204,0.07) 0%, transparent 65%)",
-        animation: "hub-beat 6s 1.5s ease-in-out infinite" }} />
 
       {/* Subtle grid */}
       <div style={{ position: "absolute" as const, inset: 0, opacity: 0.025,
@@ -3040,23 +3035,21 @@ function Sidebar() {
         justifyContent: "center", position: "relative" as const, zIndex: 2 }}>
         {/* Outer ring */}
         <div style={{
-          width: 148, height: 148, borderRadius: "50%",
-          border: "1.5px solid rgba(124,58,237,0.14)",
+          width: 116, height: 116, borderRadius: "50%",
+          border: "1.5px solid rgba(124,58,237,0.13)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          boxShadow: "0 0 28px rgba(124,58,237,0.05) inset",
           background: "radial-gradient(circle, rgba(167,139,250,0.05) 0%, transparent 70%)",
           animation: "hub-beat 4s ease-in-out infinite",
         }}>
           {/* Inner ring */}
           <div style={{
-            width: 96, height: 96, borderRadius: "50%",
-            border: "1px solid rgba(240,40,204,0.12)",
+            width: 74, height: 74, borderRadius: "50%",
+            border: "1px solid rgba(240,40,204,0.11)",
             display: "flex", alignItems: "center", justifyContent: "center",
             background: "radial-gradient(circle, rgba(240,40,204,0.04) 0%, transparent 70%)",
             animation: "hub-beat 3s 0.8s ease-in-out infinite",
           }}>
-            {/* Small orb at centre */}
-            <GradientOrb size={38} />
+            <GradientOrb size={30} />
           </div>
         </div>
       </div>
