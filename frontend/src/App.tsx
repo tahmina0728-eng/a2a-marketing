@@ -3007,22 +3007,26 @@ function Sidebar() {
         backgroundImage: "linear-gradient(rgba(124,58,237,1) 1px, transparent 1px), linear-gradient(90deg, rgba(124,58,237,1) 1px, transparent 1px)",
         backgroundSize: "36px 36px", pointerEvents: "none" as const }} />
 
-      {/* Logo — orb + wordmark horizontal */}
-      <div style={{ padding: "28px 20px 24px", display: "flex", alignItems: "center",
-        gap: 14, position: "relative" as const, zIndex: 2 }}>
-        <GradientOrb size={48} />
-        <div style={{ display: "flex", flexDirection: "column" as const, gap: 5 }}>
+      {/* Logo — orb inline with A2A, tagline stacked below */}
+      <div style={{ padding: "28px 20px 24px", position: "relative" as const, zIndex: 2 }}>
+        {/* Row: orb + A2A on the same line */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+          <GradientOrb size={46} />
           <span style={{
-            fontSize: 28, fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1,
+            fontSize: 30, fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1,
             background: ORB_BG,
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-            filter: "drop-shadow(0 0 10px rgba(240,40,204,0.55))",
+            filter: "drop-shadow(0 0 10px rgba(240,40,204,0.5))",
           }}>A2A</span>
-          <span style={{
-            fontSize: 7.5, fontWeight: 700, letterSpacing: "0.13em", lineHeight: 1,
-            textTransform: "uppercase" as const,
-            color: "#9ca3af",
-          }}>Marketing<br/>Advertising · Media</span>
+        </div>
+        {/* Tagline — each word on its own line */}
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 4, paddingLeft: 4 }}>
+          {["Marketing", "Advertising", "Media"].map(word => (
+            <span key={word} style={{
+              fontSize: 9, fontWeight: 700, letterSpacing: "0.16em",
+              textTransform: "uppercase" as const, color: "#9ca3af", lineHeight: 1,
+            }}>{word}</span>
+          ))}
         </div>
       </div>
 
