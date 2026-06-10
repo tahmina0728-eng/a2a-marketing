@@ -2028,6 +2028,114 @@ function ResultsView({ output, campaignId }: {
     </div>
   );
 }
+// ── Agent network wakeup screen (shown before Logos starts) ───
+function AgentNetworkWakeUp() {
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
+      alignItems: "center", justifyContent: "center",
+      background: "linear-gradient(145deg, #faf5ff 0%, #f5f3ff 40%, #ede9fe 100%)",
+      overflow: "hidden", position: "relative" as const }}>
+
+      {/* Subtle grid overlay */}
+      <div style={{ position: "absolute" as const, inset: 0, opacity: 0.03,
+        backgroundImage: "linear-gradient(#7c3aed 1px, transparent 1px), linear-gradient(90deg, #7c3aed 1px, transparent 1px)",
+        backgroundSize: "40px 40px", pointerEvents: "none" as const }} />
+
+      {/* Network diagram */}
+      <div style={{ position: "relative" as const, width: 400, height: 400, flexShrink: 0 }}>
+
+        {/* SVG: pulsing rings + connecting lines */}
+        <svg viewBox="0 0 400 400" style={{ position: "absolute" as const, inset: 0,
+          width: "100%", height: "100%", overflow: "visible" }}>
+          {[55, 90, 135].map((r, ri) => (
+            <circle key={ri} cx="200" cy="200" r={r} fill="none"
+              stroke="rgba(124,58,237,0.15)" strokeWidth="1.2"
+              style={{ animation: `ring-out ${2.5 + ri * 0.8}s ${ri * 0.4}s ease-out infinite` }} />
+          ))}
+          {HARNESS_STAGES.map((s, i) => {
+            const a  = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
+            const x2 = 200 + Math.cos(a) * 155;
+            const y2 = 200 + Math.sin(a) * 155;
+            return (
+              <line key={s.key} x1="200" y1="200" x2={x2} y2={y2}
+                stroke="#7c3aed" strokeOpacity="0.2" strokeWidth="1.5"
+                strokeDasharray="6 5"
+                style={{ animation: `dash-move 2s ${i * 0.22}s linear infinite` }} />
+            );
+          })}
+        </svg>
+
+        {/* Central hub — A2A purple orb */}
+        <div style={{
+          position: "absolute" as const, left: "50%", top: "50%",
+          transform: "translate(-50%,-50%)",
+          width: 72, height: 72, borderRadius: "50%", zIndex: 3,
+          background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 0 0 10px rgba(124,58,237,0.1), 0 0 40px rgba(124,58,237,0.35)",
+          animation: "hub-beat 2s ease-in-out infinite",
+        }}>
+          <svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
+          </svg>
+        </div>
+
+        {/* Agent nodes */}
+        {HARNESS_STAGES.map((s, i) => {
+          const a  = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
+          const cx = 200 + Math.cos(a) * 155;
+          const cy = 200 + Math.sin(a) * 155;
+          const lx = Math.cos(a) * 34;
+          const ly = Math.sin(a) * 34;
+          return (
+            <div key={s.key} style={{
+              position: "absolute" as const, left: cx, top: cy,
+              transform: "translate(-50%,-50%)", zIndex: 2,
+              animation: `node-in 0.5s ${0.15 + i * 0.12}s cubic-bezier(0.22,1,0.36,1) both`,
+            }}>
+              <div style={{
+                width: 46, height: 46, borderRadius: "50%",
+                background: "radial-gradient(circle at 35% 35%, #a78bfa44 0%, #c084fc22 60%, #ede9fe 100%)",
+                border: "2px solid rgba(124,58,237,0.3)",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20,
+                boxShadow: "0 0 16px rgba(124,58,237,0.18)",
+                animation: `node-glow 2.4s ${i * 0.35}s ease-in-out infinite`,
+              }}>{s.icon}</div>
+              <div style={{
+                position: "absolute" as const,
+                left: `calc(50% + ${lx}px)`, top: `calc(50% + ${ly}px)`,
+                transform: "translate(-50%,-50%)",
+                fontSize: 9, fontWeight: 700, color: "#7c3aed",
+                whiteSpace: "nowrap" as const,
+                background: "rgba(255,255,255,0.92)",
+                padding: "2px 7px", borderRadius: 6,
+                border: "1px solid rgba(124,58,237,0.2)",
+              }}>{s.label}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Title + dots */}
+      <div style={{ textAlign: "center" as const, marginTop: 8 }}>
+        <div style={{ fontSize: 22, fontWeight: 800, color: "#3b0764",
+          letterSpacing: "-0.02em", marginBottom: 10 }}>
+          Your Campaign AI is Waking Up
+        </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
+          {[0,1,2].map(d => (
+            <div key={d} style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c3aed",
+              opacity: 0.6, animation: `wave-dot 1.4s ${d * 0.2}s ease-in-out infinite` }} />
+          ))}
+          <span style={{ fontSize: 13, color: "#7c3aed", marginLeft: 4, fontWeight: 500 }}>
+            {HARNESS_STAGES.length} agents connecting
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Briefing agent orb header ─────────────────────────────────
 function OrbHeader({ done }: { done: boolean }) {
   return (
@@ -3194,7 +3302,15 @@ export default function App() {
               <BriefForm onFullCampaign={handleLaunch} />
             )}
 
-            {state.status === "running" && activeStageId === "brief" && (
+            {/* Agent network wakeup — shown immediately after launch, before Logos starts */}
+            {state.status === "running" && activeStageId === "brief" &&
+              !state.agentStatus["briefing"] && (
+              <AgentNetworkWakeUp />
+            )}
+
+            {/* Logos (briefing agent) intake view */}
+            {state.status === "running" && activeStageId === "brief" &&
+              !!state.agentStatus["briefing"] && (
               <BriefIntakeView
                 brief={briefData}
                 milestone={state.milestones["briefing"]}
