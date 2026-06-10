@@ -2185,13 +2185,13 @@ const avatarUrl = (_label: string, idx: number) =>
 const RIGHT_X = 40;
 const LEFT_X  = -184;
 const CARD_OFF: [number, number][] = [
-  [RIGHT_X, -40],
-  [RIGHT_X, -40],
-  [RIGHT_X, -22],
-  [RIGHT_X,  10],
-  [LEFT_X,   10],
-  [LEFT_X,  -22],
-  [LEFT_X,  -40],
+  [RIGHT_X, -22],  // Logos
+  [RIGHT_X, -22],  // Helia
+  [RIGHT_X, -22],  // Ideon
+  [RIGHT_X, -22],  // Aether
+  [LEFT_X,  -22],  // Morphis
+  [LEFT_X,  -22],  // Kinetik
+  [LEFT_X,  -22],  // Poly
 ];
 function AgentNetworkWakeUp() {
   const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 152;
