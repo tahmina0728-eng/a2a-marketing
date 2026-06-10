@@ -1729,20 +1729,24 @@ function ResultsView({ output, campaignId }: {
   };
 
   // Timeline entry wrapper
-  const TL = ({ step, icon, color, label, children }: { step: number; icon: string; color: string; label: string; children: React.ReactNode }) => (
+  const TL = ({ step, label, children }: { step: number; icon?: string; color?: string; label: string; children: React.ReactNode }) => (
     <div style={{ display: "flex", gap: 20, marginBottom: 32 }}>
-      {/* Left: step indicator + connector */}
+      {/* Left: A2A orb + connector */}
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-        <div style={{ width: 44, height: 44, borderRadius: "50%", background: `linear-gradient(135deg, ${color}22, ${color}10)`,
-          border: `2px solid ${color}40`, display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 20, boxShadow: `0 0 0 4px ${color}10`, flexShrink: 0 }}>
-          {icon}
+        <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
+          background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+          boxShadow: "0 4px 14px rgba(124,58,237,0.35), 0 0 0 4px rgba(124,58,237,0.1)",
+          display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <svg width={18} height={18} viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
+          </svg>
         </div>
-        <div style={{ width: 2, flex: 1, minHeight: 24, background: `linear-gradient(${color}30, transparent)`, margin: "6px 0" }} />
+        <div style={{ width: 2, flex: 1, minHeight: 24,
+          background: "linear-gradient(rgba(124,58,237,0.25), transparent)", margin: "6px 0" }} />
       </div>
       {/* Right: content */}
       <div style={{ flex: 1, paddingBottom: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: color, letterSpacing: "0.12em",
+        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.12em",
           textTransform: "uppercase", marginBottom: 10 }}>Step {step} — {label}</div>
         {children}
       </div>
@@ -1805,23 +1809,23 @@ function ResultsView({ output, campaignId }: {
                 const crmIdx = cdpLines.findIndex((l: string) => l.includes("CRM notes"));
                 const crm = crmIdx >= 0 ? cdpLines.slice(crmIdx + 1).join(" ").slice(0, 160) : null;
                 return (
-                  <div style={{ padding: "14px 20px", background: "#eff6ff" }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#0055A4", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10, display: "flex", justifyContent: "space-between" }}>
+                  <div style={{ padding: "14px 20px", background: "#faf5ff" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10, display: "flex", justifyContent: "space-between" }}>
                       <span>👥 CDP Audience Intelligence</span>
-                      <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 99, background: "#dbeafe", color: "#1d4ed8" }}>KAGGLE CDP</span>
+                      <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 99, background: "#ede9fe", color: "#7c3aed" }}>KAGGLE CDP</span>
                     </div>
                     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: crm ? 10 : 0 }}>
-                      {cnt && <div style={{ padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #bfdbfe", textAlign: "center" }}>
-                        <div style={{ fontSize: 20, fontWeight: 900, color: "#0055A4" }}>{cnt}</div>
+                      {cnt && <div style={{ padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #ede9fe", textAlign: "center" }}>
+                        <div style={{ fontSize: 20, fontWeight: 900, color: "#7c3aed" }}>{cnt}</div>
                         <div style={{ fontSize: 9, color: "#64748b" }}>profiles matched</div>
                       </div>}
-                      {income && <div style={{ flex: 1, padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #bfdbfe" }}>
+                      {income && <div style={{ flex: 1, padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #ede9fe" }}>
                         <div style={{ fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase", marginBottom: 3 }}>Avg Income</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "#1e40af" }}>{income}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#7c3aed" }}>{income}</div>
                       </div>}
-                      {channels && <div style={{ flex: 2, padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #bfdbfe" }}>
+                      {channels && <div style={{ flex: 2, padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #ede9fe" }}>
                         <div style={{ fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase", marginBottom: 3 }}>Top Channels</div>
-                        <div style={{ fontSize: 12, color: "#3b82f6" }}>{channels}</div>
+                        <div style={{ fontSize: 12, color: "#7c3aed" }}>{channels}</div>
                       </div>}
                     </div>
                     {match && <div style={{ fontSize: 11, color: "#475569", marginBottom: crm ? 6 : 0 }}>{match}</div>}
@@ -1868,25 +1872,25 @@ function ResultsView({ output, campaignId }: {
         {/* Step 3: Campaign Copy */}
         {copy?.short?.headline && (
           <TL step={3} icon="✍️" color="#7c3aed" label="Campaign Copy">
-            <div style={{ background: "white", borderRadius: 16, border: "1px solid #e0e7ff",
-              overflow: "hidden", boxShadow: "0 2px 12px rgba(99,102,241,0.08)" }}>
-              <div style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)", padding: "16px 24px", textAlign: "center" }}>
+            <div style={{ background: "white", borderRadius: 16, border: "1px solid #ede9fe",
+              overflow: "hidden", boxShadow: "0 2px 12px rgba(124,58,237,0.08)" }}>
+              <div style={{ background: "linear-gradient(135deg, #7c3aed, #6d28d9)", padding: "16px 24px", textAlign: "center" }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.55)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 6 }}>Short Headline</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: "white" }}>"{copy.short.headline}"</div>
               </div>
               {copy.cta && (
-                <div style={{ background: "#0055A4", padding: "8px", textAlign: "center" }}>
-                  <span style={{ display: "inline-block", padding: "5px 20px", borderRadius: 99, background: "white", color: "#0055A4", fontSize: 12, fontWeight: 800 }}>{copy.cta}</span>
+                <div style={{ background: "#6d28d9", padding: "8px", textAlign: "center" }}>
+                  <span style={{ display: "inline-block", padding: "5px 20px", borderRadius: 99, background: "white", color: "#7c3aed", fontSize: 12, fontWeight: 800 }}>{copy.cta}</span>
                 </div>
               )}
               {copy.medium?.headline && (
-                <div style={{ padding: "12px 20px", borderBottom: "1px solid #e0f2fe" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#0369a1", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Medium</div>
+                <div style={{ padding: "12px 20px", borderBottom: "1px solid #ede9fe" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Medium</div>
                   <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>"{copy.medium.headline}"</div>
                 </div>
               )}
               {copy.long?.body && (
-                <div style={{ padding: "12px 20px", borderBottom: "1px solid #e0f2fe", fontSize: 13, color: "#475569", lineHeight: 1.6 }}>
+                <div style={{ padding: "12px 20px", borderBottom: "1px solid #ede9fe", fontSize: 13, color: "#475569", lineHeight: 1.6 }}>
                   {copy.long.body.slice(0, 150)}…
                 </div>
               )}
