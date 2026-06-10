@@ -2003,31 +2003,72 @@ function ResultsView({ output, campaignId, onReset }: {
     </div>
   );
 }
-// ── Brief Intake view (A2A style) ────────────────────────────
-// Shows "Generating..." orb while briefing agent runs, then reveals
-// structured brief summary cards once done.
+// ── Briefing agent orb header ─────────────────────────────────
+function OrbHeader({ done }: { done: boolean }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+      <div style={{
+        width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
+        background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+        boxShadow: "0 4px 20px rgba(139,92,246,0.4)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        animation: done ? "none" : "icon-breathe 2.5s ease-in-out infinite",
+      }}>
+        <svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
+        </svg>
+      </div>
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
+          color: "#7c3aed", textTransform: "uppercase" as const, marginBottom: 3 }}>
+          BRIEFING AGENT · {done ? "COMPLETE ✓" : "RUNNING"}
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>Validating Brief</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Brief Intake view — 3-phase A2A style ────────────────────
+// Phase 1: "Generating..." orb (agent not yet active)
+// Phase 2: Data sources streaming in (agent running, data flowing)
+// Phase 3: Brief summary cards (agent done)
+// All phases share the same purple/violet color identity.
+const BRIEF_DATA_SOURCES = [
+  { id: "brand",    icon: "📚", label: "Brand Guidelines",     from: "GCS Bucket",        delay: 0    },
+  { id: "fantruth", icon: "💡", label: "Fan Truth Library",    from: "Vertex AI Search",  delay: 600  },
+  { id: "history",  icon: "📈", label: "Historical Campaigns", from: "BigQuery",           delay: 1200 },
+  { id: "cdp",      icon: "👥", label: "CDP / Sephora",        from: "Kaggle · BigQuery", delay: 1800 },
+];
 function BriefIntakeView({
   brief,
   milestone,
-  isGenerating,
+  liveMsg,
+  agentDone,
 }: {
   brief: import("./types/pipeline").HarnessBriefRequest | null;
   milestone: Record<string, unknown> | undefined;
-  isGenerating: boolean;
+  liveMsg: string | null;
+  agentDone: boolean;
 }) {
-  const ft  = (milestone?.fan_truth ?? {}) as any;
-  const aud = (milestone?.audience  ?? {}) as any;
-  const kpis = (milestone?.kpis     ?? []) as any[];
+  const ft   = (milestone?.fan_truth ?? {}) as any;
+  const aud  = (milestone?.audience  ?? {}) as any;
+  const kpis = (milestone?.kpis      ?? []) as any[];
 
-  // ── Generating spinner ──────────────────────────────────────
-  if (isGenerating || !milestone) {
+  // Phase logic
+  const hasData = !!milestone || !!liveMsg;
+  // phase 1: nothing yet, phase 2: data flowing, phase 3: done
+  const phase: 1 | 2 | 3 = agentDone ? 3 : hasData ? 2 : 1;
+
+  // ── Phase 1: Generating spinner ─────────────────────────────
+  if (phase === 1) {
     return (
       <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
         alignItems: "center", justifyContent: "center", gap: 28 }}>
         <div style={{
           width: 90, height: 90, borderRadius: "50%",
           background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
-          boxShadow: "0 8px 32px rgba(139,92,246,0.35)",
+          boxShadow: "0 8px 32px rgba(139,92,246,0.4)",
           display: "flex", alignItems: "center", justifyContent: "center",
           animation: "icon-breathe 2.5s ease-in-out infinite",
         }}>
@@ -2042,13 +2083,107 @@ function BriefIntakeView({
     );
   }
 
-  // ── Brief summary cards ─────────────────────────────────────
+  // ── Phase 2: Data sources streaming ─────────────────────────
+  if (phase === 2) {
+    const hasAllSources = !!milestone?.fan_truth;
+    return (
+      <div style={{ flex: 1, overflowY: "auto" as const, padding: "36px 48px",
+        background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #faf5ff 100%)" }}>
+        <div style={{ maxWidth: 580, margin: "0 auto" }}>
+          <OrbHeader done={false} />
+
+          {/* Data sources */}
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#7c3aed", letterSpacing: "0.12em",
+            textTransform: "uppercase" as const, marginBottom: 14 }}>
+            Querying Data Sources
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+            {BRIEF_DATA_SOURCES.map((src, idx) => {
+              const done = hasAllSources || (milestone && idx === 0);
+              return (
+                <div key={src.id} style={{
+                  display: "flex", alignItems: "center", gap: 10,
+                  padding: "12px 14px", borderRadius: 12,
+                  background: done ? "rgba(124,58,237,0.06)" : "white",
+                  border: `1.5px solid ${done ? "rgba(124,58,237,0.25)" : "#e5e7eb"}`,
+                  transition: "all 0.4s ease",
+                  animationDelay: `${src.delay}ms`,
+                }}>
+                  <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                    background: done ? "rgba(124,58,237,0.1)" : "#f9fafb",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+                    {src.icon}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#111827",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                      {src.label}
+                    </div>
+                    <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>← {src.from}</div>
+                  </div>
+                  {done
+                    ? <span style={{ fontSize: 13, color: "#7c3aed", fontWeight: 800, flexShrink: 0 }}>✓</span>
+                    : <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                        {[0,1,2].map(d => (
+                          <div key={d} style={{ width: 4, height: 4, borderRadius: "50%",
+                            background: "#c084fc",
+                            animation: `wave-dot 1.2s ${idx * 0.15 + d * 0.2}s ease-in-out infinite` }} />
+                        ))}
+                      </div>}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Live message */}
+          {liveMsg && (
+            <div style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic",
+              padding: "10px 14px", borderRadius: 10,
+              background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
+              {liveMsg}
+            </div>
+          )}
+
+          {/* Fan Truth preview when it arrives */}
+          {ft?.overall !== undefined && (
+            <div style={{ marginTop: 16, padding: "16px 18px", borderRadius: 12,
+              background: "white", border: "1.5px solid rgba(124,58,237,0.2)" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed",
+                letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 10 }}>
+                Fan Truth Score
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <span style={{ fontSize: 32, fontWeight: 900,
+                  color: ft.overall >= 70 ? "#10b981" : ft.overall >= 50 ? "#f59e0b" : "#ef4444" }}>
+                  {ft.overall}/100
+                </span>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 12px", borderRadius: 99,
+                  background: ft.verdict === "PASS" ? "#dcfce7" : "#fee2e2",
+                  color: ft.verdict === "PASS" ? "#065f46" : "#991b1b" }}>
+                  {ft.verdict}
+                </span>
+              </div>
+              {ft.statement && (
+                <div style={{ marginTop: 8, fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>
+                  "{String(ft.statement).slice(0, 110)}…"
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Phase 3: Brief summary cards ────────────────────────────
   const Card = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
     <div style={{
-      background: "white", border: "1px solid #e5e7eb", borderRadius: 12,
+      background: "white", border: "1px solid #ede9fe", borderRadius: 14,
       padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
+      boxShadow: "0 1px 8px rgba(124,58,237,0.06)",
     }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: "#6b7280", marginBottom: 10 }}>{title}</div>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
   );
@@ -2060,8 +2195,11 @@ function BriefIntakeView({
   ];
 
   return (
-    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, maxWidth: 900, margin: "0 auto" }}>
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
+      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 200px)" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <OrbHeader done={true} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
         {/* Brand */}
         <Card title="Brand">
@@ -2173,6 +2311,7 @@ function BriefIntakeView({
           </div>
         </Card>
 
+        </div>{/* grid */}
       </div>
     </div>
   );
@@ -2594,7 +2733,8 @@ export default function App() {
               <BriefIntakeView
                 brief={briefData}
                 milestone={state.milestones["briefing"]}
-                isGenerating={state.agentStatus["briefing"] === "running" || !state.milestones["briefing"]}
+                liveMsg={[...state.liveLog].reverse().find(e => e.agent === "briefing" && e.status === "running")?.message ?? null}
+                agentDone={state.agentStatus["briefing"] === "done"}
               />
             )}
 
