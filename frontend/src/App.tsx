@@ -2314,22 +2314,26 @@ function BriefIntakeView({
 }
 
 // ── Shared agent intake helpers ──────────────────────────────
-function AgentIntakeHeader({ label, title, g1, g2, icon, done }: {
-  label: string; title: string; g1: string; g2: string; icon: string; done: boolean;
+function AgentIntakeHeader({ label, title, done }: {
+  label: string; title: string; done: boolean;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+      {/* Always the same A2A purple orb */}
       <div style={{
         width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
-        background: `radial-gradient(circle at 35% 35%, ${g1}99 0%, ${g1} 45%, ${g2} 100%)`,
-        boxShadow: `0 4px 20px ${g1}55`,
+        background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+        boxShadow: "0 4px 20px rgba(139,92,246,0.4)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: 24,
         animation: done ? "none" : "icon-breathe 2.5s ease-in-out infinite",
-      }}>{icon}</div>
+      }}>
+        <svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
+        </svg>
+      </div>
       <div>
         <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
-          color: g1, textTransform: "uppercase" as const, marginBottom: 3 }}>
+          color: "#7c3aed", textTransform: "uppercase" as const, marginBottom: 3 }}>
           {label} · {done ? "COMPLETE ✓" : "RUNNING"}
         </div>
         <div style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>{title}</div>
@@ -2367,7 +2371,6 @@ function StrategyIntakeView({ milestone, liveMsg, agentDone }: {
   liveMsg: string | null;
   agentDone: boolean;
 }) {
-  const g1 = "#d97706", g2 = "#ea580c";
   const m = (milestone ?? {}) as any;
   const hasData = !!milestone || !!liveMsg;
   const phase: 1 | 2 | 3 = agentDone && milestone ? 3 : hasData ? 2 : 1;
@@ -2376,14 +2379,13 @@ function StrategyIntakeView({ milestone, liveMsg, agentDone }: {
 
   if (phase === 2) return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "40px 48px", background: "linear-gradient(135deg, #fffbeb 0%, #fff7ed 50%, #fffbeb 100%)" }}>
+      padding: "40px 48px", background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #faf5ff 100%)" }}>
       <div style={{ maxWidth: 680, width: "100%" }}>
-        <AgentIntakeHeader label="CONTENT CREATOR" title="Building Creative Strategy"
-          g1={g1} g2={g2} icon="💡" done={false} />
+        <AgentIntakeHeader label="CONTENT CREATOR" title="Building Creative Strategy" done={false} />
         {liveMsg && (
-          <div style={{ fontSize: 13, color: g1, fontStyle: "italic",
+          <div style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic",
             padding: "12px 16px", borderRadius: 10,
-            background: `${g1}12`, border: `1px solid ${g1}25` }}>
+            background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
             {liveMsg}
           </div>
         )}
@@ -2392,10 +2394,10 @@ function StrategyIntakeView({ milestone, liveMsg, agentDone }: {
   );
 
   const SCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
-    <div style={{ background: "white", border: `1px solid ${g1}22`, borderRadius: 14,
+    <div style={{ background: "white", border: "1px solid #ede9fe", borderRadius: 14,
       padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
-      boxShadow: `0 1px 8px ${g1}10` }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: g1, letterSpacing: "0.1em",
+      boxShadow: "0 1px 8px rgba(124,58,237,0.06)" }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
         textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
@@ -2403,15 +2405,14 @@ function StrategyIntakeView({ milestone, liveMsg, agentDone }: {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "linear-gradient(180deg, #fffbeb 0%, #ffffff 180px)" }}>
+      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <AgentIntakeHeader label="CONTENT CREATOR" title="Creative Strategy"
-          g1={g1} g2={g2} icon="💡" done={true} />
+        <AgentIntakeHeader label="CONTENT CREATOR" title="Creative Strategy" done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {m.big_idea && (
             <SCard title="Big Idea" full>
               <div style={{ fontSize: 22, fontWeight: 800, fontStyle: "italic",
-                color: g1, lineHeight: 1.3 }}>"{m.big_idea}"</div>
+                color: "#7c3aed", lineHeight: 1.3 }}>"{m.big_idea}"</div>
             </SCard>
           )}
           {m.hero_message && (
@@ -2439,7 +2440,7 @@ function StrategyIntakeView({ milestone, liveMsg, agentDone }: {
               <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
                 {(m.messaging_pillars as string[]).slice(0, 4).map((p: string, i: number) => (
                   <span key={i} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 99,
-                    background: `${g1}12`, border: `1px solid ${g1}30`, color: g1, fontWeight: 600 }}>
+                    background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed", fontWeight: 600 }}>
                     {String(p).slice(0, 40)}
                   </span>
                 ))}
@@ -2467,14 +2468,13 @@ function CopyIntakeView({ milestone, liveMsg, agentDone }: {
 
   if (phase === 2) return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "40px 48px", background: "linear-gradient(135deg, #eff6ff 0%, #e0f2fe 50%, #eff6ff 100%)" }}>
+      padding: "40px 48px", background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #faf5ff 100%)" }}>
       <div style={{ maxWidth: 680, width: "100%" }}>
-        <AgentIntakeHeader label="COPY AGENT" title="Writing Campaign Copy"
-          g1={g1} g2={g2} icon="✍️" done={false} />
+        <AgentIntakeHeader label="COPY AGENT" title="Writing Campaign Copy" done={false} />
         {liveMsg && (
-          <div style={{ fontSize: 13, color: g1, fontStyle: "italic",
+          <div style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic",
             padding: "12px 16px", borderRadius: 10,
-            background: `${g1}10`, border: `1px solid ${g1}25` }}>
+            background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
             {liveMsg}
           </div>
         )}
@@ -2483,10 +2483,10 @@ function CopyIntakeView({ milestone, liveMsg, agentDone }: {
   );
 
   const CCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
-    <div style={{ background: "white", border: `1px solid ${g1}22`, borderRadius: 14,
+    <div style={{ background: "white", border: "1px solid #ede9fe", borderRadius: 14,
       padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
-      boxShadow: `0 1px 8px ${g1}10` }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: g1, letterSpacing: "0.1em",
+      boxShadow: "0 1px 8px rgba(124,58,237,0.06)" }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
         textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
@@ -2506,10 +2506,9 @@ function CopyIntakeView({ milestone, liveMsg, agentDone }: {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "linear-gradient(180deg, #eff6ff 0%, #ffffff 180px)" }}>
+      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <AgentIntakeHeader label="COPY AGENT" title="Campaign Copy"
-          g1={g1} g2={g2} icon="✍️" done={true} />
+        <AgentIntakeHeader label="COPY AGENT" title="Campaign Copy" done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {/* Billboard hero */}
           {m.short_headline && (
@@ -2575,7 +2574,6 @@ function CultureIntakeView({ milestone, liveMsg, agentDone }: {
   liveMsg: string | null;
   agentDone: boolean;
 }) {
-  const g1 = "#0d9488", g2 = "#0891b2";
   const raw = milestone?.brief ? String(milestone.brief) : "";
   const hasData = !!milestone || !!liveMsg;
   const phase: 1 | 2 | 3 = agentDone && milestone ? 3 : hasData ? 2 : 1;
@@ -2584,14 +2582,13 @@ function CultureIntakeView({ milestone, liveMsg, agentDone }: {
 
   if (phase === 2) return (
     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-      padding: "40px 48px", background: "linear-gradient(135deg, #f0fdfa 0%, #ecfeff 50%, #f0fdfa 100%)" }}>
+      padding: "40px 48px", background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #faf5ff 100%)" }}>
       <div style={{ maxWidth: 680, width: "100%" }}>
-        <AgentIntakeHeader label="CULTURAL RESEARCH" title="Analysing Cultural Context"
-          g1={g1} g2={g2} icon="🌍" done={false} />
+        <AgentIntakeHeader label="CULTURAL RESEARCH" title="Analysing Cultural Context" done={false} />
         {liveMsg && (
-          <div style={{ fontSize: 13, color: g1, fontStyle: "italic",
+          <div style={{ fontSize: 13, color: "#7c3aed", fontStyle: "italic",
             padding: "12px 16px", borderRadius: 10,
-            background: `${g1}10`, border: `1px solid ${g1}25` }}>
+            background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.15)" }}>
             {liveMsg}
           </div>
         )}
@@ -2607,16 +2604,15 @@ function CultureIntakeView({ milestone, liveMsg, agentDone }: {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "linear-gradient(180deg, #f0fdfa 0%, #ffffff 180px)" }}>
+      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
-        <AgentIntakeHeader label="CULTURAL RESEARCH" title="Cultural Intelligence"
-          g1={g1} g2={g2} icon="🌍" done={true} />
+        <AgentIntakeHeader label="CULTURAL RESEARCH" title="Cultural Intelligence" done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           {sentences.map((s, i) => (
             <div key={i} style={{ display: "flex", gap: 14, padding: "18px 20px",
               borderRadius: 14, background: "white",
-              border: `1px solid ${i === 0 ? g1 + "40" : "#e5e7eb"}`,
-              boxShadow: `0 1px 8px ${g1}${i === 0 ? "14" : "06"}`,
+              border: `1px solid ${i === 0 ? "rgba(124,58,237,0.25)" : "#e5e7eb"}`,
+              boxShadow: `0 1px 8px rgba(124,58,237,${i === 0 ? "0.08" : "0.03"})`,
               gridColumn: i === 0 ? "1 / -1" : undefined }}>
               <span style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>{ICONS[i]}</span>
               <span style={{ fontSize: i === 0 ? 15 : 13, color: "#1a2332", lineHeight: 1.6,
