@@ -2985,26 +2985,26 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 function Sidebar() {
   return (
     <div style={{ width: 220, flexShrink: 0, height: "100vh",
-      background: "linear-gradient(170deg, #0a0020 0%, #16003a 45%, #0c0028 100%)",
-      borderRight: "1px solid rgba(168,85,247,0.18)",
+      background: "#fafafa",
+      borderRight: "1px solid #e5e7eb",
       display: "flex", flexDirection: "column" as const,
       position: "relative" as const, overflow: "hidden" }}>
 
-      {/* Aurora blob — top */}
-      <div style={{ position: "absolute" as const, top: -70, left: -50,
-        width: 260, height: 260, borderRadius: "50%", pointerEvents: "none" as const,
-        background: "radial-gradient(circle, rgba(168,85,247,0.28) 0%, transparent 65%)",
+      {/* Subtle aurora blob — top (light purple on white) */}
+      <div style={{ position: "absolute" as const, top: -60, left: -50,
+        width: 240, height: 240, borderRadius: "50%", pointerEvents: "none" as const,
+        background: "radial-gradient(circle, rgba(168,85,247,0.10) 0%, transparent 65%)",
         animation: "hub-beat 5s ease-in-out infinite" }} />
 
       {/* Aurora blob — bottom */}
-      <div style={{ position: "absolute" as const, bottom: 40, right: -60,
-        width: 200, height: 200, borderRadius: "50%", pointerEvents: "none" as const,
-        background: "radial-gradient(circle, rgba(240,40,204,0.18) 0%, transparent 65%)",
+      <div style={{ position: "absolute" as const, bottom: 40, right: -50,
+        width: 180, height: 180, borderRadius: "50%", pointerEvents: "none" as const,
+        background: "radial-gradient(circle, rgba(240,40,204,0.07) 0%, transparent 65%)",
         animation: "hub-beat 6s 1.5s ease-in-out infinite" }} />
 
       {/* Subtle grid */}
-      <div style={{ position: "absolute" as const, inset: 0, opacity: 0.04,
-        backgroundImage: "linear-gradient(rgba(168,85,247,1) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,1) 1px, transparent 1px)",
+      <div style={{ position: "absolute" as const, inset: 0, opacity: 0.025,
+        backgroundImage: "linear-gradient(rgba(124,58,237,1) 1px, transparent 1px), linear-gradient(90deg, rgba(124,58,237,1) 1px, transparent 1px)",
         backgroundSize: "36px 36px", pointerEvents: "none" as const }} />
 
       {/* Logo — orb + wordmark horizontal */}
@@ -3021,23 +3021,22 @@ function Sidebar() {
           <span style={{
             fontSize: 7.5, fontWeight: 700, letterSpacing: "0.13em", lineHeight: 1,
             textTransform: "uppercase" as const,
-            color: "rgba(255,255,255,0.35)",
+            color: "#9ca3af",
           }}>Marketing<br/>Advertising · Media</span>
         </div>
       </div>
 
       {/* Divider */}
       <div style={{ height: 1, margin: "0 20px",
-        background: "linear-gradient(90deg, transparent, rgba(168,85,247,0.3), transparent)",
+        background: "linear-gradient(90deg, transparent, rgba(124,58,237,0.2), transparent)",
         position: "relative" as const, zIndex: 2 }} />
 
       {/* Spacer */}
       <div style={{ flex: 1 }} />
 
-      {/* Powered by Infosys Aster — inverted for dark bg */}
-      <div style={{ padding: "16px 20px", borderTop: "1px solid rgba(168,85,247,0.12)",
-        position: "relative" as const, zIndex: 2,
-        filter: "brightness(0) invert(1)", opacity: 0.45 }}>
+      {/* Powered by Infosys Aster */}
+      <div style={{ padding: "14px 20px", borderTop: "1px solid #f3f4f6",
+        position: "relative" as const, zIndex: 2 }}>
         <AsterLogo size={0.62} />
       </div>
     </div>
