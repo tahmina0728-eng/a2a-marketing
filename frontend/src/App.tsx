@@ -70,9 +70,9 @@ const GOALS = [
 ];
 
 const BRANDS = [
-  { id: "Rnorr",     label: "Rnorr",      emoji: "🥣" },
-  { id: "Sunglow",   label: "Sunglow",    emoji: "✨" },
-  { id: "Boozt",     label: "Boozt",      emoji: "💨" },
+  { id: "Rnorr",   label: "Rnorr",   emoji: "🥣", logo: "/brands/rnorr-logo.png"   },
+  { id: "Sunglow", label: "Sunglow", emoji: "✨", logo: "/brands/sunglow-logo.png" },
+  { id: "Boozt",   label: "Boozt",   emoji: "💨", logo: "/brands/boozt-logo.png"   },
 ];
 
 
@@ -268,7 +268,10 @@ function BriefForm({ onFullCampaign }: {
               {BRANDS.map((b) => (
                 <div key={b.id} className={`goal-tile${d.brand === b.id ? " selected" : ""}`}
                   onClick={() => setD((p) => ({ ...p, brand: b.id, product: "", productCustom: "" }))}>
-                  <span className="goal-tile-icon">{b.emoji}</span>
+                  <div className="goal-tile-icon">
+                    <img src={b.logo} alt={b.label}
+                      style={{ height: 40, maxWidth: "100%", objectFit: "contain", display: "block" }} />
+                  </div>
                   <div className="goal-tile-label">{b.label}</div>
                 </div>
               ))}
@@ -525,19 +528,10 @@ function BriefForm({ onFullCampaign }: {
   };
 
   return (
-    <div style={{ flex: 1, overflowY: "auto" as const, padding: "40px 48px" }}>
-      <div style={{ maxWidth: 560, margin: "0 auto" }}>
-        {/* Purple step progress bar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.12em",
-            textTransform: "uppercase" as const, whiteSpace: "nowrap" as const }}>
-            Step {step + 1} of {TOTAL_STEPS}
-          </span>
-          <div style={{ flex: 1, height: 3, background: "#e5e7eb", borderRadius: 2 }}>
-            <div style={{ height: "100%", width: `${((step + 1) / TOTAL_STEPS) * 100}%`,
-              background: "#7c3aed", borderRadius: 2, transition: "width 0.3s ease" }} />
-          </div>
-        </div>
+    <div style={{ flex: 1, overflowY: "auto" as const }}>
+    <div style={{ minHeight: "100%", display: "flex", alignItems: "center",
+      justifyContent: "center", padding: "48px" }}>
+      <div style={{ maxWidth: 640, width: "100%" }}>
         <div key={step} className="step-content">{stepContent()}</div>
         <div className="wizard-nav">
           {step > 0
@@ -552,6 +546,7 @@ function BriefForm({ onFullCampaign }: {
               </button>}
         </div>
       </div>
+    </div>
     </div>
   );
 }
@@ -1191,6 +1186,33 @@ function RunningView({
 
         {/* Spotlight card — re-animates on agent/mode change */}
         {displayMode !== "idle" ? (
+          // Phase 1: agent running, no milestone data yet → large pulsing orb
+          (displayMode === "running" && !milestones[displayKey ?? ""]) ? (
+            <div key={`orb-${displayKey}`} style={{
+              position: "relative" as const, zIndex: 2,
+              display: "flex", flexDirection: "column" as const,
+              alignItems: "center", justifyContent: "center", gap: 28,
+            }}>
+              <div style={{
+                width: 90, height: 90, borderRadius: "50%",
+                background: `radial-gradient(circle at 35% 35%, ${v.blob1} 0%, ${v.g1} 50%, ${v.g2} 100%)`,
+                boxShadow: `0 8px 32px ${v.g1}50`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 36,
+                animation: "icon-breathe 2.5s ease-in-out infinite",
+              }}>{stage?.icon ?? "🤖"}</div>
+              <div style={{ textAlign: "center" as const }}>
+                <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
+                  color: v.g1, textTransform: "uppercase" as const, marginBottom: 8 }}>
+                  {stage?.label ?? "Agent"} · Running
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 600, color: "#374151", letterSpacing: "-0.01em" }}>
+                  Generating ...
+                </div>
+              </div>
+            </div>
+          ) : (
+          // Phase 2/3: milestone present or agent done → spotlight card with results
           <div key={displayKey ?? "idle"} className="spotlight-card" style={{
             position: "relative" as const, zIndex: 2,
             background: "rgba(255,255,255,0.82)",
@@ -1243,27 +1265,14 @@ function RunningView({
             {/* Agent-specific content panel */}
             <div key={displayKey ?? "idle"} className="msg-fade">
               {displayKey === "briefing" && <BriefingPanel m={milestones.briefing} liveMsg={liveMsg} />}
-              {displayKey === "strategy" && milestones.strategy
-                ? <StrategyPanel m={milestones.strategy} />
-                : displayKey === "strategy" && <div style={{ fontSize: 14, color: "#64748b", fontStyle: "italic" }}>{liveMsg ?? "Building creative strategy…"}</div>}
-              {displayKey === "copy" && milestones.copy
-                ? <CopyPanel m={milestones.copy} />
-                : displayKey === "copy" && <div style={{ fontSize: 14, color: "#64748b", fontStyle: "italic" }}>{liveMsg ?? "Writing copy variants…"}</div>}
-              {displayKey === "culture" && milestones.culture
-                ? <CulturePanel m={milestones.culture} />
-                : displayKey === "culture" && <div style={{ fontSize: 14, color: "#64748b", fontStyle: "italic" }}>{liveMsg ?? "Researching cultural trends…"}</div>}
+              {displayKey === "strategy" && <StrategyPanel m={milestones.strategy} />}
+              {displayKey === "copy" && <CopyPanel m={milestones.copy} />}
+              {displayKey === "culture" && <CulturePanel m={milestones.culture} />}
               {displayKey === "kv" && <KVPanel m={milestones.kv} liveMsg={liveMsg} reelMilestone={milestones.reel as Record<string,unknown> | undefined} />}
               {displayKey === "channel" && <ChannelPanel m={milestones.channel} liveMsg={liveMsg} />}
             </div>
-
-            {/* Wave dots (running, no rich content yet) */}
-            {displayMode === "running" && !milestones[displayKey ?? ""] && displayKey !== "briefing" && displayKey !== "kv" && displayKey !== "channel" && (
-              <div style={{ display: "flex", gap: 7, marginTop: 20 }}>
-                {[0,1,2,3].map(i => <div key={i} style={{ width: 7, height: 7, borderRadius: "50%",
-                  background: v.g1, opacity: 0.7, animation: `wave-dot 1.4s ease-in-out ${i*0.18}s infinite` }} />)}
-              </div>
-            )}
           </div>
+          )
         ) : (
           /* ── Idle: animated agent network ── */
           <div style={{ position: "relative" as const, zIndex: 1, display: "flex",
@@ -2319,17 +2328,52 @@ function BriefIntakeView({
 
 // ── Gradient Orb (A2A logo style) ────────────────────────────
 function GradientOrb({ size = 40 }: { size?: number }) {
+  const u = `orb${size}`;
   return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%", flexShrink: 0,
-      background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
-      boxShadow: "0 4px 16px rgba(139,92,246,0.35)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <svg width={size * 0.38} height={size * 0.38} viewBox="0 0 24 24" fill="none">
-        <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
-      </svg>
-    </div>
+    <svg width={size} height={size} viewBox="0 0 100 100"
+      style={{ display: "block", flexShrink: 0, filter: `drop-shadow(0 ${size*0.06}px ${size*0.22}px rgba(190,50,210,0.38))` }}>
+      <defs>
+        {/* Base sphere — deep purple left → hot pink center → peach right */}
+        <radialGradient id={`${u}a`} cx="32%" cy="32%" r="78%">
+          <stop offset="0%"   stopColor="#fce8f8"/>
+          <stop offset="18%"  stopColor="#f050c8"/>
+          <stop offset="48%"  stopColor="#b82ee8"/>
+          <stop offset="78%"  stopColor="#7018cc"/>
+          <stop offset="100%" stopColor="#4a0caa"/>
+        </radialGradient>
+        {/* Warm peach bloom on right */}
+        <radialGradient id={`${u}b`} cx="74%" cy="48%" r="44%">
+          <stop offset="0%"   stopColor="#ffaa88" stopOpacity="0.82"/>
+          <stop offset="100%" stopColor="#ffaa88" stopOpacity="0"/>
+        </radialGradient>
+        {/* Bright specular highlight top-left */}
+        <radialGradient id={`${u}c`} cx="38%" cy="24%" r="28%">
+          <stop offset="0%"   stopColor="#ffffff" stopOpacity="0.68"/>
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0"/>
+        </radialGradient>
+        {/* Bottom shadow depth */}
+        <radialGradient id={`${u}d`} cx="50%" cy="88%" r="38%">
+          <stop offset="0%"   stopColor="#2a0060" stopOpacity="0.46"/>
+          <stop offset="100%" stopColor="#2a0060" stopOpacity="0"/>
+        </radialGradient>
+        <clipPath id={`${u}clip`}><circle cx="50" cy="50" r="49"/></clipPath>
+      </defs>
+
+      {/* Layered sphere */}
+      <circle cx="50" cy="50" r="49" fill={`url(#${u}a)`}/>
+      <circle cx="50" cy="50" r="49" fill={`url(#${u}b)`}/>
+      <circle cx="50" cy="50" r="49" fill={`url(#${u}c)`}/>
+      <circle cx="50" cy="50" r="49" fill={`url(#${u}d)`}/>
+
+      {/* 4-point sparkle star */}
+      <path clipPath={`url(#${u}clip)`}
+        d="M50 20 Q51.5 36 58 43 Q74 48.5 78 50 Q74 51.5 58 57 Q51.5 64 50 80 Q48.5 64 42 57 Q26 51.5 22 50 Q26 48.5 42 43 Q48.5 36 50 20 Z"
+        fill="white"/>
+
+      {/* Subtle rim */}
+      <circle cx="50" cy="50" r="48.5" fill="none"
+        stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
+    </svg>
   );
 }
 
@@ -2349,7 +2393,8 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
         <p style={{ fontSize: 16, color: "#6b7280", lineHeight: 1.7, marginBottom: 40, maxWidth: 520, margin: "0 auto 40px" }}>
           A Multi-agent AI Pipeline — brief intake through creative ideation, key visual generation, channel adaptation and activation planning
         </p>
-        <div style={{ background: "white", border: "1.5px solid #e5e7eb", borderRadius: 16,
+
+<div style={{ background: "white", border: "1.5px solid #e5e7eb", borderRadius: 16,
           padding: "20px 24px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", textAlign: "left" as const }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
             <span style={{ fontSize: 15, marginTop: 3, color: "#9ca3af" }}>✦</span>
@@ -2382,74 +2427,95 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 }
 
 // ── Sidebar ───────────────────────────────────────────────────
+
+function SidebarBtn({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <button onClick={onClick}
+      onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}
+      style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "7px 10px",
+        borderRadius: 8, border: "none", background: hov ? "#f3f4f6" : "none", cursor: "pointer",
+        fontSize: 13, color: "#374151", fontFamily: "inherit", textAlign: "left" as const,
+        transition: "background 0.15s" }}>
+      <span style={{ width: 16, display: "flex", alignItems: "center", justifyContent: "center",
+        color: "#6b7280", flexShrink: 0 }}>{icon}</span>
+      {label}
+    </button>
+  );
+}
+
 function Sidebar({ history, onNew }: {
   history: Array<{ id: string; name: string }>;
   onNew: () => void;
 }) {
   return (
-    <div style={{ width: 220, flexShrink: 0, height: "100vh", background: "#fafafa",
-      borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column" as const,
-      overflowY: "auto" as const }}>
+    <div style={{ width: 270, flexShrink: 0, height: "100vh", background: "#fafafa",
+      borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column" as const }}>
+
       {/* Logo */}
-      <div style={{ padding: "20px 18px 14px", display: "flex", alignItems: "center", gap: 10 }}>
-        <GradientOrb size={32} />
-        <span style={{ fontSize: 15, fontWeight: 800, color: "#111827", letterSpacing: "-0.01em" }}>CampaignOS</span>
+      <div style={{ padding: "18px 18px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+        <GradientOrb size={36} />
+        <div style={{ display: "flex", flexDirection: "column" as const, lineHeight: 1.25 }}>
+          {/* A2A — large gradient wordmark */}
+          <span style={{
+            fontSize: 20, fontWeight: 900, letterSpacing: "-0.04em",
+            fontFamily: "'Inter', system-ui, sans-serif",
+            background: "linear-gradient(110deg, #7c3aed 0%, #c026d3 45%, #f97316 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+          }}>A2A</span>
+          {/* Tagline — small caps, shimmer gradient */}
+          <span style={{
+            fontSize: 8.5, fontWeight: 700, letterSpacing: "0.12em",
+            textTransform: "uppercase" as const,
+            background: "linear-gradient(110deg, #9b59b6 0%, #e91e8c 50%, #f97316 100%)",
+            WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+          }}>Marketing · Advertising · Media</span>
+        </div>
       </div>
 
-      {/* Actions */}
-      <div style={{ padding: "2px 10px 10px" }}>
-        {[
-          { icon: "＋", label: "Create New", action: onNew },
-          { icon: "⌕",  label: "Search",    action: () => {} },
-        ].map(item => (
-          <button key={item.label} onClick={item.action}
-            style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 10px",
-              borderRadius: 8, border: "none", background: "none", cursor: "pointer",
-              fontSize: 13, color: "#374151", fontFamily: "inherit", textAlign: "left" as const }}
-            onMouseEnter={e => (e.currentTarget.style.background = "#f3f4f6")}
-            onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-            <span style={{ fontSize: 14, width: 18, textAlign: "center" as const }}>{item.icon}</span>
-            {item.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Brands */}
-      <div style={{ padding: "8px 18px 8px" }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", letterSpacing: "0.1em",
-          textTransform: "uppercase" as const, marginBottom: 8 }}>Brands</div>
-        {BRANDS.map(b => (
-          <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px",
-            borderRadius: 6, cursor: "pointer", fontSize: 13, color: "#374151" }}>
-            <span style={{ fontSize: 15, width: 20, textAlign: "center" as const }}>{b.emoji}</span>
-            {b.label}
-          </div>
-        ))}
+      {/* Nav actions */}
+      <div style={{ padding: "2px 8px 10px" }}>
+        <SidebarBtn onClick={onNew} icon={
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+        } label="Create New" />
+        <SidebarBtn icon={
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+            <circle cx={11} cy={11} r={8}/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+        } label="Search" />
       </div>
 
       {/* History */}
-      {history.length > 0 && (
-        <div style={{ padding: "12px 18px 8px", borderTop: "1px solid #f3f4f6", marginTop: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "#9ca3af", letterSpacing: "0.1em",
-            textTransform: "uppercase" as const, marginBottom: 8 }}>History</div>
-          {history.slice(0, 6).map(h => (
-            <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 4px",
-              borderRadius: 6, cursor: "pointer", fontSize: 12, color: "#6b7280" }}
+      <div style={{ flex: 1, overflowY: "auto" as const, padding: "4px 18px 8px",
+        borderTop: "1px solid #f3f4f6", marginTop: 4 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "#9ca3af", letterSpacing: "0.06em",
+          textTransform: "uppercase" as const, marginBottom: 4, paddingLeft: 2, paddingTop: 8 }}>
+          History
+        </div>
+        {history.length === 0 ? (
+          <div style={{ fontSize: 12, color: "#d1d5db", padding: "4px 10px" }}>No campaigns yet</div>
+        ) : (
+          history.slice(0, 8).map(h => (
+            <div key={h.id} style={{ display: "flex", alignItems: "center", gap: 9, padding: "6px 10px",
+              borderRadius: 8, cursor: "pointer" }}
               onMouseEnter={e => (e.currentTarget.style.background = "#f3f4f6")}
               onMouseLeave={e => (e.currentTarget.style.background = "none")}>
-              <span style={{ fontSize: 12, color: "#d1d5db" }}>⏱</span>
-              <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+              <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth={1.8}
+                style={{ flexShrink: 0 }}>
+                <circle cx={12} cy={12} r={10}/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              <span style={{ fontSize: 12, color: "#6b7280", overflow: "hidden",
+                textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
                 {h.name}
               </span>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* Footer: Powered by */}
-      <div style={{ marginTop: "auto", padding: "14px 18px", borderTop: "1px solid #f3f4f6" }}>
-        <AsterLogo size={0.7} />
+          ))
+        )}
       </div>
+
     </div>
   );
 }
@@ -2464,10 +2530,11 @@ const WORKFLOW_STAGES = [
   { id: "perform",  label: "Performance",         agents: [] as string[] },
 ];
 
-function StepsPanel({ campaignName, activeStageId, agentStatus, onEditName }: {
+function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditName }: {
   campaignName: string;
   activeStageId: string | null;
   agentStatus: Record<string, string>;
+  liveLog: AgentEvent[];
   onEditName: () => void;
 }) {
   const [editing, setEditing]   = useState(false);
@@ -2475,12 +2542,16 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, onEditName }: {
   const [request, setRequest]   = useState("");
   const activeIdx = WORKFLOW_STAGES.findIndex(s => s.id === activeStageId);
 
-  // Keep nameVal in sync when campaignName changes externally
   useEffect(() => { setNameVal(campaignName); }, [campaignName]);
 
+  // Latest message for a given agent key
+  const agentMsg = (key: string) =>
+    [...liveLog].reverse().find(e => e.agent === key && e.status === "running")?.message ?? null;
+
   return (
-    <div style={{ width: 270, flexShrink: 0, height: "100vh", background: "white",
+    <div style={{ width: 260, flexShrink: 0, height: "100vh", background: "white",
       borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column" as const }}>
+
       {/* Campaign name header */}
       <div style={{ padding: "18px 18px 14px", borderBottom: "1px solid #f3f4f6",
         display: "flex", alignItems: "center", gap: 8 }}>
@@ -2499,98 +2570,124 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, onEditName }: {
           </span>
         )}
         <button onClick={() => setEditing(true)}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", fontSize: 13, padding: 2, flexShrink: 0 }}>
-          ✎
-        </button>
+          style={{ background: "none", border: "none", cursor: "pointer",
+            color: "#9ca3af", fontSize: 13, padding: 2, flexShrink: 0 }}>✎</button>
       </div>
 
-      {/* Workflow stages */}
-      <div style={{ flex: 1, overflowY: "auto" as const, padding: "16px 0" }}>
+      {/* Workflow stages — timeline layout */}
+      <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 0 8px" }}>
         {WORKFLOW_STAGES.map((stage, idx) => {
-          const isActive  = stage.id === activeStageId;
-          const isDone    = activeIdx > idx;
+          const isActive    = stage.id === activeStageId;
+          const isDone      = activeIdx > idx;
+          const isLast      = idx === WORKFLOW_STAGES.length - 1;
           const stageAgents = HARNESS_STAGES.filter(s => stage.agents.includes(s.key));
 
           return (
-            <div key={stage.id}>
-              {/* Stage row */}
-              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "9px 18px", cursor: "default" }}>
+            <div key={stage.id} style={{ display: "flex", paddingLeft: 18 }}>
+              {/* Left rail: circle + connector line */}
+              <div style={{ display: "flex", flexDirection: "column" as const,
+                alignItems: "center", width: 26, flexShrink: 0 }}>
+                {/* Step circle */}
                 <div style={{
-                  width: 26, height: 26, borderRadius: "50%", flexShrink: 0,
+                  width: 24, height: 24, borderRadius: "50%", flexShrink: 0, zIndex: 1,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: isDone ? 12 : 11, fontWeight: 700,
-                  background: isDone ? "#7c3aed" : isActive ? "#7c3aed" : "#f3f4f6",
+                  fontSize: isDone ? 11 : 10, fontWeight: 700,
+                  background: isDone || isActive ? "#7c3aed" : "white",
                   color: isDone || isActive ? "white" : "#9ca3af",
-                  boxShadow: isActive ? "0 0 0 4px rgba(124,58,237,0.15)" : "none",
+                  border: isDone || isActive ? "none" : "1.5px solid #d1d5db",
+                  boxShadow: isActive ? "0 0 0 4px rgba(124,58,237,0.12)" : "none",
                   transition: "all 0.3s",
                 }}>
                   {isDone ? "✓" : idx + 1}
                 </div>
-                <span style={{ fontSize: 13, fontWeight: isActive ? 700 : 500,
-                  color: isActive ? "#111827" : isDone ? "#374151" : "#9ca3af" }}>
-                  {stage.label}
-                </span>
+                {/* Connector line — stretches to fill the stage's content height */}
+                {!isLast && (
+                  <div style={{
+                    width: 1.5, flex: 1, minHeight: 20, marginTop: 2,
+                    background: isDone ? "#7c3aed" : "#e5e7eb",
+                    transition: "background 0.4s",
+                  }} />
+                )}
               </div>
 
-              {/* Agent sub-list — always shown when stage has agents */}
-              {stageAgents.length > 0 && (isDone || isActive) && (
-                <div style={{ paddingLeft: 50, paddingRight: 18, paddingBottom: 8 }}>
-                  {stageAgents.map(s => {
-                    const st      = agentStatus[s.key];
-                    const isRun   = st === "running";
-                    const isDoneA = st === "done";
-                    const isPend  = !st || st === "pending";
-                    return (
-                      <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 7,
-                        padding: "5px 0", borderBottom: "none" }}>
-                        {/* Agent icon */}
-                        <span style={{ fontSize: 13, width: 18, textAlign: "center" as const,
-                          filter: isPend && !isActive ? "grayscale(1) opacity(0.4)" : "none" }}>
-                          {s.icon}
-                        </span>
-                        <span style={{ fontSize: 12, flex: 1,
-                          fontWeight: isRun ? 700 : 400,
-                          color: isDoneA ? "#6b7280" : isRun ? "#111827" : isPend ? "#9ca3af" : "#374151" }}>
-                          {s.label}
-                        </span>
-                        {/* Status indicator */}
-                        {isDoneA && (
-                          <span style={{ fontSize: 11, color: "#10b981", fontWeight: 700 }}>✓</span>
-                        )}
-                        {isRun && (
-                          <div style={{ display: "flex", gap: 2 }}>
-                            {[0,1,2].map(d => (
-                              <div key={d} style={{ width: 3, height: 3, borderRadius: "50%",
-                                background: "#7c3aed",
-                                animation: `wave-dot 1.2s ${d * 0.2}s ease-in-out infinite` }} />
-                            ))}
-                          </div>
-                        )}
-                        {isPend && isActive && (
-                          <span style={{ fontSize: 10, color: "#d1d5db" }}>—</span>
-                        )}
-                      </div>
-                    );
-                  })}
+              {/* Right content */}
+              <div style={{ flex: 1, paddingLeft: 12, paddingBottom: isLast ? 0 : 20, paddingRight: 18 }}>
+                {/* Stage label */}
+                <div style={{
+                  fontSize: 13, fontWeight: isActive ? 700 : 500, paddingTop: 3,
+                  color: isActive ? "#111827" : isDone ? "#374151" : "#9ca3af",
+                  marginBottom: (isDone || isActive) && stageAgents.length > 0 ? 10 : 0,
+                }}>
+                  {stage.label}
                 </div>
-              )}
-              {/* Show pending agents dimmed when stage not yet reached */}
-              {stageAgents.length > 0 && !isDone && !isActive && (
-                <div style={{ paddingLeft: 50, paddingRight: 18, paddingBottom: 6 }}>
-                  {stageAgents.map(s => (
-                    <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 7, padding: "4px 0" }}>
-                      <span style={{ fontSize: 13, width: 18, textAlign: "center" as const, opacity: 0.3 }}>{s.icon}</span>
-                      <span style={{ fontSize: 12, color: "#d1d5db" }}>{s.label}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
 
-              {/* Connector */}
-              {idx < WORKFLOW_STAGES.length - 1 && (
-                <div style={{ marginLeft: 30, width: 1.5, height: 8,
-                  background: isDone ? "#7c3aed" : "#e5e7eb", marginTop: -2 }} />
-              )}
+                {/* Agents — active/done stage */}
+                {stageAgents.length > 0 && (isDone || isActive) && (
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
+                    {stageAgents.map(s => {
+                      const st      = agentStatus[s.key];
+                      const isRun   = st === "running";
+                      const isDoneA = st === "done";
+                      const msg     = isRun ? agentMsg(s.key) : null;
+                      return (
+                        <div key={s.key} style={{ marginBottom: isRun && msg ? 6 : 2 }}>
+                          {/* Agent row */}
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0" }}>
+                            <span style={{
+                              fontSize: 11, width: 14, textAlign: "center" as const, flexShrink: 0,
+                              color: isDoneA ? "#7c3aed" : isRun ? "#7c3aed" : "#d1d5db",
+                              fontWeight: 700,
+                            }}>✦</span>
+                            <span style={{
+                              fontSize: 12, flex: 1, lineHeight: 1.3,
+                              fontWeight: isRun ? 600 : 400,
+                              color: isDoneA ? "#6b7280" : isRun ? "#7c3aed" : "#9ca3af",
+                            }}>
+                              {s.label}
+                            </span>
+                            {isDoneA && (
+                              <span style={{ fontSize: 11, color: "#10b981", fontWeight: 700, flexShrink: 0 }}>✓</span>
+                            )}
+                            {isRun && (
+                              <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                                {[0,1,2].map(d => (
+                                  <div key={d} style={{ width: 3, height: 3, borderRadius: "50%",
+                                    background: "#7c3aed",
+                                    animation: `wave-dot 1.2s ${d * 0.2}s ease-in-out infinite` }} />
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {/* Live message — shown below running agent */}
+                          {isRun && msg && (
+                            <div style={{
+                              marginTop: 4, marginLeft: 20, fontSize: 11,
+                              color: "#6b7280", lineHeight: 1.55,
+                              display: "-webkit-box", WebkitLineClamp: 3,
+                              WebkitBoxOrient: "vertical" as const, overflow: "hidden",
+                            }}>
+                              {msg}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Agents — future/inactive stage */}
+                {stageAgents.length > 0 && !isDone && !isActive && (
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 2 }}>
+                    {stageAgents.map(s => (
+                      <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0" }}>
+                        <span style={{ fontSize: 11, width: 14, textAlign: "center" as const,
+                          color: "#e5e7eb", fontWeight: 700, flexShrink: 0 }}>✦</span>
+                        <span style={{ fontSize: 12, color: "#d1d5db" }}>{s.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}
@@ -2675,49 +2772,60 @@ export default function App() {
         {/* Left: Sidebar */}
         <Sidebar history={history} onNew={handleReset} />
 
-        {/* Middle: Steps panel */}
-        <StepsPanel
-          campaignName={campaignName}
-          activeStageId={activeStageId}
-          agentStatus={state.agentStatus}
-          onEditName={() => {}}
-        />
+        {/* Middle: Steps panel — only visible while pipeline is running or done */}
+        {(state.status === "running" || state.status === "done") && (
+          <StepsPanel
+            campaignName={campaignName}
+            activeStageId={activeStageId}
+            agentStatus={state.agentStatus}
+            liveLog={state.liveLog}
+            onEditName={() => {}}
+          />
+        )}
 
         {/* Right: Content area */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
           overflow: "hidden", background: "#ffffff" }}>
 
-          {/* Content area top bar — Accept / Cancel when pipeline active */}
-          {(state.status === "running" || state.status === "done" || wizardStarted) && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "14px 28px", borderBottom: "1px solid #f3f4f6", flexShrink: 0 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0 }}>
-                {state.status === "idle"    ? "Brief Intake"
-                  : state.status === "running"
+          {/* Top bar — sidebar toggle on home, breadcrumb during pipeline */}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "12px 20px", borderBottom: "1px solid #f3f4f6", flexShrink: 0, minHeight: 52 }}>
+            {/* Left: sidebar toggle icon */}
+            <button style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e5e7eb",
+              background: "white", cursor: "pointer", display: "flex", alignItems: "center",
+              justifyContent: "center", color: "#6b7280", flexShrink: 0 }}>
+              <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <rect x={3} y={3} width={7} height={18} rx={1}/><rect x={14} y={3} width={7} height={18} rx={1}/>
+              </svg>
+            </button>
+
+            {/* Right: pipeline title + action buttons — hidden on pure home screen */}
+            {(state.status === "running" || state.status === "done") && (
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <h2 style={{ fontSize: 15, fontWeight: 600, color: "#111827", margin: 0 }}>
+                  {state.status === "running"
                     ? (WORKFLOW_STAGES.find(s => s.id === activeStageId)?.label ?? "Running")
-                  : state.status === "done"    ? "Campaign Ready ✅"
-                  : "Brief Intake"}
-              </h2>
-              {state.status !== "idle" && (
+                    : "Campaign Ready ✅"}
+                </h2>
                 <div style={{ display: "flex", gap: 10 }}>
-                  {state.status === "done" && (
-                    <button style={{ display: "flex", alignItems: "center", gap: 6,
-                      padding: "8px 18px", borderRadius: 8, border: "none", cursor: "pointer",
-                      background: "linear-gradient(135deg, #7c3aed, #a855f7)",
-                      color: "white", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
-                      ✓ Accept
+                    {state.status === "done" && (
+                      <button style={{ display: "flex", alignItems: "center", gap: 6,
+                        padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer",
+                        background: "linear-gradient(135deg, #7c3aed, #a855f7)",
+                        color: "white", fontSize: 13, fontWeight: 700, fontFamily: "inherit" }}>
+                        ✓ Accept
+                      </button>
+                    )}
+                    <button onClick={handleReset}
+                      style={{ padding: "7px 16px", borderRadius: 8, border: "1.5px solid #e5e7eb",
+                        cursor: "pointer", background: "white", color: "#374151",
+                        fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>
+                      Cancel
                     </button>
-                  )}
-                  <button onClick={handleReset}
-                    style={{ padding: "8px 18px", borderRadius: 8, border: "1.5px solid #e5e7eb",
-                      cursor: "pointer", background: "white", color: "#374151",
-                      fontSize: 13, fontWeight: 600, fontFamily: "inherit" }}>
-                    Cancel
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
+                  </div>
+              </div>
+            )}
+          </div>
 
           {/* Content */}
           <div style={{ flex: 1, overflow: "auto", display: "flex", flexDirection: "column" as const }}>
