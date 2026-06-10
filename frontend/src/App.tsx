@@ -1068,10 +1068,12 @@ function RunningView({
   agentStatus,
   liveLog,
   milestones,
+  compact = false,
 }: {
   agentStatus: Record<string, string>;
   liveLog: AgentEvent[];
   milestones: Record<string, Record<string, unknown>>;
+  compact?: boolean;
 }) {
   // Most recent running agent
   const activeKey = useMemo(() =>
@@ -1101,11 +1103,11 @@ function RunningView({
   const doneCount = HARNESS_STAGES.filter(s => agentStatus[s.key] === "done").length;
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", fontFamily: "Inter,sans-serif" }}>
+    <div style={{ display: "flex", height: compact ? "100%" : "100vh", overflow: "hidden", fontFamily: "Inter,sans-serif" }}>
 
-      {/* ── LEFT: step sidebar ───────────────────────────────── */}
+      {/* ── LEFT: step sidebar — hidden in compact/3-panel mode ── */}
       <div style={{ width: 340, flexShrink: 0, background: "#fff", borderRight: "1px solid #e2e8f0",
-        display: "flex", flexDirection: "column", padding: "28px 20px", overflowY: "auto" as const }}>
+        display: compact ? "none" : "flex", flexDirection: "column", padding: "28px 20px", overflowY: "auto" as const }}>
 
         {/* Logo */}
         <div style={{ marginBottom: 28 }}><AsterLogo /></div>
@@ -2374,8 +2376,9 @@ export default function App() {
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "14px 28px", borderBottom: "1px solid #f3f4f6", flexShrink: 0 }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, color: "#111827", margin: 0 }}>
-                {state.status === "idle" ? "Brief Intake"
-                  : state.status === "running" ? "Creative Direction"
+                {state.status === "idle"    ? "Brief Intake"
+                  : state.status === "running"
+                    ? (WORKFLOW_STAGES.find(s => s.id === activeStageId)?.label ?? "Running")
                   : state.status === "done"    ? "Campaign Ready ✅"
                   : "Brief Intake"}
               </h2>
@@ -2415,6 +2418,7 @@ export default function App() {
                 agentStatus={state.agentStatus}
                 liveLog={state.liveLog}
                 milestones={state.milestones}
+                compact={true}
               />
             )}
 
