@@ -2061,11 +2061,10 @@ const AGENT_DESCS  = [
   "Produces engaging short videos and reels visually",
   "Adapts content for every platform and channel",
 ];
-// Light bg hex (no #) fed to DiceBear to tint each agent's avatar
-const AGENT_AVATAR_BG = ["e9d5ff","cffafe","d1fae5","fef3c7","fce7f3","e0e7ff","ccfbf1"];
-// DiceBear personas — illustrated human avatars, unique per agent name
-const avatarUrl = (label: string, bg: string) =>
-  `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(label)}&backgroundColor=${bg}&radius=50&scale=115`;
+// Real-looking photo headshots — one consistent photo per agent (pravatar.cc)
+const AGENT_AVATAR_IMGS = [12, 5, 32, 47, 23, 68, 17];
+const avatarUrl = (_label: string, idx: number) =>
+  `https://i.pravatar.cc/150?img=${AGENT_AVATAR_IMGS[idx]}`;
 
 // [left, top] offset of info card relative to node centre
 const CARD_OFF: [number, number][] = [
@@ -2085,7 +2084,7 @@ function AgentNetworkWakeUp() {
     const a = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
     return { ...s, x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R,
       num: String(i + 1).padStart(2, "0"), color: AGENT_COLORS[i], desc: AGENT_DESCS[i],
-      co: CARD_OFF[i], avatar: avatarUrl(s.label, AGENT_AVATAR_BG[i]) };
+      co: CARD_OFF[i], avatar: avatarUrl(s.label, i) };
   });
 
   return (
