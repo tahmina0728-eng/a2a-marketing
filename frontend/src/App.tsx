@@ -2061,6 +2061,12 @@ const AGENT_DESCS  = [
   "Produces engaging short videos and reels visually",
   "Adapts content for every platform and channel",
 ];
+// Light bg hex (no #) fed to DiceBear to tint each agent's avatar
+const AGENT_AVATAR_BG = ["e9d5ff","cffafe","d1fae5","fef3c7","fce7f3","e0e7ff","ccfbf1"];
+// DiceBear personas — illustrated human avatars, unique per agent name
+const avatarUrl = (label: string, bg: string) =>
+  `https://api.dicebear.com/7.x/personas/svg?seed=${encodeURIComponent(label)}&backgroundColor=${bg}&radius=50&scale=115`;
+
 // [left, top] offset of info card relative to node centre
 const CARD_OFF: [number, number][] = [
   [ 32, -40],  // 0 top
@@ -2079,7 +2085,7 @@ function AgentNetworkWakeUp() {
     const a = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
     return { ...s, x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R,
       num: String(i + 1).padStart(2, "0"), color: AGENT_COLORS[i], desc: AGENT_DESCS[i],
-      co: CARD_OFF[i] };
+      co: CARD_OFF[i], avatar: avatarUrl(s.label, AGENT_AVATAR_BG[i]) };
   });
 
   return (
@@ -2149,18 +2155,18 @@ function AgentNetworkWakeUp() {
               transform: "translate(-50%,-50%)", zIndex: 3,
               animation: `node-in 0.5s ${0.15 + i * 0.12}s cubic-bezier(0.22,1,0.36,1) both` }}>
 
-              {/* Node circle */}
-              <div style={{ width: 48, height: 48, borderRadius: "50%", position: "relative" as const,
-                background: `radial-gradient(circle at 40% 35%, ${n.color}22, ${n.color}08)`,
-                border: `2px solid ${n.color}55`,
-                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22,
-                boxShadow: `0 0 18px ${n.color}30`,
+              {/* Node circle with avatar */}
+              <div style={{ width: 54, height: 54, borderRadius: "50%", position: "relative" as const,
+                border: `2.5px solid ${n.color}70`,
+                boxShadow: `0 0 20px ${n.color}35, 0 2px 8px rgba(0,0,0,0.1)`,
+                overflow: "hidden",
                 animation: `node-glow 2.4s ${i * 0.35}s ease-in-out infinite` }}>
-                {n.icon}
+                <img src={n.avatar} alt={n.label}
+                  style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
                 {/* Number badge */}
                 <div style={{ position: "absolute" as const, top: -7, right: n.co[0] < 0 ? undefined : -7,
                   left: n.co[0] < 0 ? -7 : undefined,
-                  width: 18, height: 18, borderRadius: "50%",
+                  width: 19, height: 19, borderRadius: "50%",
                   background: n.color, border: "2px solid white",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: 8, fontWeight: 800, color: "white",
