@@ -1567,27 +1567,33 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
   const publishedCount = results ? Object.values(results).filter((r: any) => r.status !== "skipped" && r.status !== "error").length : 0;
 
   return (
-    <div style={{ borderRadius: 24, overflow: "hidden", boxShadow: "0 24px 80px rgba(0,0,0,0.18)" }}>
-      {/* Dark hero header */}
-      <div style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)", padding: "40px 40px 32px", position: "relative", overflow: "hidden" }}>
-        {/* Decorative circles */}
-        <div style={{ position: "absolute", top: -60, right: -60, width: 240, height: 240, borderRadius: "50%", background: "rgba(99,102,241,0.15)" }} />
-        <div style={{ position: "absolute", bottom: -40, left: -40, width: 160, height: 160, borderRadius: "50%", background: "rgba(16,185,129,0.1)" }} />
+    <div style={{ borderRadius: 20, overflow: "hidden", border: "1px solid #ede9fe",
+      boxShadow: "0 4px 24px rgba(124,58,237,0.10)" }}>
+      {/* Purple/white header */}
+      <div style={{ background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 60%, #ede9fe 100%)",
+        padding: "32px 36px 28px", position: "relative", overflow: "hidden",
+        borderBottom: "1px solid #ede9fe" }}>
+        {/* Decorative orb shapes */}
+        <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200,
+          borderRadius: "50%", background: "rgba(167,139,250,0.12)", pointerEvents: "none" as const }} />
+        <div style={{ position: "absolute", bottom: -30, left: -30, width: 140, height: 140,
+          borderRadius: "50%", background: "rgba(196,132,252,0.08)", pointerEvents: "none" as const }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.45)", letterSpacing: "0.18em", textTransform: "uppercase", marginBottom: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", letterSpacing: "0.18em",
+            textTransform: "uppercase" as const, marginBottom: 8 }}>
             Final Step
           </div>
-          <div style={{ fontSize: 30, fontWeight: 900, color: "white", lineHeight: 1.2, marginBottom: 8 }}>
+          <div style={{ fontSize: 26, fontWeight: 900, color: "#3b0764", lineHeight: 1.2, marginBottom: 6 }}>
             {published ? `✅ Live on ${publishedCount} channel${publishedCount !== 1 ? "s" : ""}` : "🚀 Launch Campaign"}
           </div>
-          <div style={{ fontSize: 14, color: "rgba(255,255,255,0.55)", marginBottom: published ? 0 : 28 }}>
+          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: published ? 0 : 24 }}>
             {published ? "Your campaign is now live. Track performance in your dashboards." : `Select channels to activate — ${displayChannels.length} available`}
           </div>
 
           {/* Channel selection chips */}
           {!published && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
               {displayChannels.map(ch => {
                 const cfg = PUBLISH_CHANNEL_CFG[ch];
                 if (!cfg) return null;
@@ -1596,19 +1602,19 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
                   <div key={ch} onClick={() => toggle(cfg.publishKey)}
                     style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
                       borderRadius: 12, cursor: "pointer", transition: "all 0.2s",
-                      background: isOn ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.07)",
-                      border: `1.5px solid ${isOn ? "rgba(255,255,255,0.55)" : "rgba(255,255,255,0.14)"}`,
-                      boxShadow: isOn ? "0 0 0 3px rgba(255,255,255,0.12)" : "none" }}>
+                      background: isOn ? "#7c3aed" : "white",
+                      border: `1.5px solid ${isOn ? "#7c3aed" : "#ede9fe"}`,
+                      boxShadow: isOn ? "0 0 0 3px rgba(124,58,237,0.12)" : "0 1px 4px rgba(0,0,0,0.05)" }}>
                     <span style={{ fontSize: 18 }}>{cfg.icon}</span>
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: isOn ? "white" : "rgba(255,255,255,0.65)" }}>{ch}</div>
-                      <div style={{ fontSize: 9, color: "rgba(255,255,255,0.35)" }}>{cfg.desc}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: isOn ? "white" : "#374151" }}>{ch}</div>
+                      <div style={{ fontSize: 9, color: isOn ? "rgba(255,255,255,0.65)" : "#9ca3af" }}>{cfg.desc}</div>
                     </div>
                     <div style={{ width: 18, height: 18, borderRadius: "50%", marginLeft: 4, flexShrink: 0,
-                      background: isOn ? "#10b981" : "rgba(255,255,255,0.12)",
-                      border: `2px solid ${isOn ? "#10b981" : "rgba(255,255,255,0.25)"}`,
+                      background: isOn ? "rgba(255,255,255,0.25)" : "#f5f3ff",
+                      border: `2px solid ${isOn ? "rgba(255,255,255,0.5)" : "#ddd6fe"}`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 10, color: "white", fontWeight: 800 }}>
+                      fontSize: 10, color: isOn ? "white" : "#9ca3af", fontWeight: 800 }}>
                       {isOn ? "✓" : ""}
                     </div>
                   </div>
@@ -1621,39 +1627,43 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
 
       {/* Action bar */}
       {!published && (
-        <div style={{ padding: "20px 40px", background: "#1e293b", display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ padding: "16px 36px", background: "white", display: "flex",
+          alignItems: "center", gap: 16, borderTop: "1px solid #f3f4f6" }}>
           {/* Selected image thumbnail */}
           {selectedImageB64 && (
             <div style={{ flexShrink: 0, position: "relative" as const }}>
               <img src={`data:image/jpeg;base64,${selectedImageB64}`} alt="Selected key visual"
-                style={{ width: 52, height: 52, objectFit: "cover" as const, borderRadius: 8,
-                  border: "2px solid rgba(255,255,255,0.3)", display: "block" }} />
-              <div style={{ position: "absolute" as const, top: -5, right: -5, width: 16, height: 16,
-                borderRadius: "50%", background: "#10b981", border: "2px solid #1e293b",
+                style={{ width: 48, height: 48, objectFit: "cover" as const, borderRadius: 8,
+                  border: "2px solid #ede9fe", display: "block" }} />
+              <div style={{ position: "absolute" as const, top: -4, right: -4, width: 15, height: 15,
+                borderRadius: "50%", background: "#7c3aed", border: "2px solid white",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 8, color: "white", fontWeight: 800, lineHeight: 1 }}>✓</div>
             </div>
           )}
           {selected.has("email") && (
             <input type="email" placeholder="Recipient email address" value={email} onChange={e => setEmail(e.target.value)}
-              style={{ flex: 1, padding: "11px 16px", borderRadius: 10, border: "1.5px solid rgba(255,255,255,0.15)",
-                background: "rgba(255,255,255,0.07)", color: "white", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+              style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: "1.5px solid #ddd6fe",
+                background: "#faf5ff", color: "#374151", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
           )}
           {selected.size === 0 ? (
-            <div style={{ flex: 1, fontSize: 13, color: "rgba(255,255,255,0.4)", fontStyle: "italic" }}>
+            <div style={{ flex: 1, fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>
               Select channels above to enable launch
             </div>
           ) : (
-            <div style={{ flex: 1, fontSize: 13, color: "rgba(255,255,255,0.6)" }}>
+            <div style={{ flex: 1, fontSize: 13, color: "#7c3aed", fontWeight: 500 }}>
               {selected.size} channel{selected.size > 1 ? "s" : ""} selected
             </div>
           )}
           <button onClick={handlePublish} disabled={loading || selected.size === 0}
-            style={{ padding: "13px 32px", borderRadius: 12, border: "none", cursor: selected.size === 0 ? "not-allowed" : "pointer",
-              background: selected.size === 0 ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #6366f1, #4f46e5)",
-              color: selected.size === 0 ? "rgba(255,255,255,0.3)" : "white",
-              fontSize: 14, fontWeight: 800, letterSpacing: "0.02em", transition: "all 0.2s",
-              boxShadow: selected.size > 0 ? "0 4px 20px rgba(99,102,241,0.4)" : "none" }}>
+            style={{ padding: "12px 28px", borderRadius: 12, border: "none",
+              cursor: selected.size === 0 ? "not-allowed" : "pointer",
+              background: selected.size === 0
+                ? "#f5f3ff"
+                : "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+              color: selected.size === 0 ? "#9ca3af" : "white",
+              fontSize: 13, fontWeight: 800, letterSpacing: "0.02em", transition: "all 0.2s",
+              boxShadow: selected.size > 0 ? "0 4px 20px rgba(124,58,237,0.35)" : "none" }}>
             {loading ? "Launching…" : selected.size === 0 ? "Select Channels" : `🚀 Launch to ${selected.size} Channel${selected.size > 1 ? "s" : ""}`}
           </button>
         </div>
@@ -3056,24 +3066,28 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
               {/* Left rail: circle + connector line */}
               <div style={{ display: "flex", flexDirection: "column" as const,
                 alignItems: "center", width: 26, flexShrink: 0 }}>
-                {/* Step circle */}
+                {/* Step circle — A2A gradient for done/active, grey for future */}
                 <div style={{
                   width: 24, height: 24, borderRadius: "50%", flexShrink: 0, zIndex: 1,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: isDone ? 11 : 10, fontWeight: 700,
-                  background: isDone || isActive ? "#7c3aed" : "white",
-                  color: isDone || isActive ? "white" : "#9ca3af",
-                  border: isDone || isActive ? "none" : "1.5px solid #d1d5db",
-                  boxShadow: isActive ? "0 0 0 4px rgba(124,58,237,0.12)" : "none",
+                  fontSize: 10, fontWeight: 700,
+                  background: (isDone || isActive)
+                    ? "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 40%, #f472b6 70%, #fb923c 100%)"
+                    : "white",
+                  color: (isDone || isActive) ? "white" : "#9ca3af",
+                  border: (isDone || isActive) ? "none" : "1.5px solid #d1d5db",
+                  boxShadow: isActive ? "0 0 0 4px rgba(124,58,237,0.15)" : "none",
                   transition: "all 0.3s",
                 }}>
                   {isDone ? "✓" : idx + 1}
                 </div>
-                {/* Connector line — stretches to fill the stage's content height */}
+                {/* Connector line */}
                 {!isLast && (
                   <div style={{
                     width: 1.5, flex: 1, minHeight: 20, marginTop: 2,
-                    background: isDone ? "#7c3aed" : "#e5e7eb",
+                    background: isDone
+                      ? "linear-gradient(rgba(167,139,250,0.6), rgba(196,132,252,0.3))"
+                      : "#e5e7eb",
                     transition: "background 0.4s",
                   }} />
                 )}
