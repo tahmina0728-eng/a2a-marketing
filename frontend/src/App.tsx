@@ -2185,7 +2185,7 @@ const RIGHT_X = 60;
 const LEFT_X  = -176;
 
 const CARD_OFF: [number, number][] = [
-  [RIGHT_X, -36],  // 0 Logos
+  [-58, -80],      // 0 Logos — centred above avatar: co[0]=(54-170)/2, co[1]=-(card_h+gap)
   [RIGHT_X, -10],  // 1 Helia
   [RIGHT_X, -12],  // 2 Ideon
   [RIGHT_X,   6],  // 3 Aether
@@ -2298,7 +2298,7 @@ function AgentNetworkWakeUp() {
                 border: `1px solid ${n.color}30`,
                 borderRadius: 10,
                 boxShadow: `0 2px 16px rgba(0,0,0,0.06), 0 0 10px ${n.color}15`,
-                textAlign: n.co[0] < 0 ? "right" as const : "left" as const }}>
+                textAlign: i === 0 ? "center" as const : n.co[0] < 0 ? "right" as const : "left" as const }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: n.color, marginBottom: 3 }}>
                   {n.label}
                 </div>
