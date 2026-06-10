@@ -2087,45 +2087,45 @@ function BriefIntakeView({
   if (phase === 2) {
     const hasAllSources = !!milestone?.fan_truth;
     return (
-      <div style={{ flex: 1, overflowY: "auto" as const, padding: "36px 48px",
+      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "40px 48px", overflowY: "auto" as const,
         background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #faf5ff 100%)" }}>
-        <div style={{ maxWidth: 580, margin: "0 auto" }}>
+        <div style={{ width: "100%", maxWidth: 680 }}>
           <OrbHeader done={false} />
 
           {/* Data sources */}
           <div style={{ fontSize: 11, fontWeight: 800, color: "#7c3aed", letterSpacing: "0.12em",
-            textTransform: "uppercase" as const, marginBottom: 14 }}>
+            textTransform: "uppercase" as const, marginBottom: 16 }}>
             Querying Data Sources
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 20 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 24 }}>
             {BRIEF_DATA_SOURCES.map((src, idx) => {
               const done = hasAllSources || (milestone && idx === 0);
               return (
                 <div key={src.id} style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "12px 14px", borderRadius: 12,
+                  display: "flex", alignItems: "center", gap: 16,
+                  padding: "20px 22px", borderRadius: 16,
                   background: done ? "rgba(124,58,237,0.06)" : "white",
-                  border: `1.5px solid ${done ? "rgba(124,58,237,0.25)" : "#e5e7eb"}`,
+                  border: `1.5px solid ${done ? "rgba(124,58,237,0.3)" : "#e5e7eb"}`,
+                  boxShadow: done ? "0 2px 12px rgba(124,58,237,0.08)" : "0 1px 6px rgba(0,0,0,0.04)",
                   transition: "all 0.4s ease",
-                  animationDelay: `${src.delay}ms`,
                 }}>
-                  <div style={{ width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                    background: done ? "rgba(124,58,237,0.1)" : "#f9fafb",
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+                    background: done ? "rgba(124,58,237,0.12)" : "#f9fafb",
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
                     {src.icon}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#111827",
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", marginBottom: 3 }}>
                       {src.label}
                     </div>
-                    <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 1 }}>← {src.from}</div>
+                    <div style={{ fontSize: 12, color: "#9ca3af" }}>← {src.from}</div>
                   </div>
                   {done
-                    ? <span style={{ fontSize: 13, color: "#7c3aed", fontWeight: 800, flexShrink: 0 }}>✓</span>
-                    : <div style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+                    ? <span style={{ fontSize: 16, color: "#7c3aed", fontWeight: 800, flexShrink: 0 }}>✓</span>
+                    : <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
                         {[0,1,2].map(d => (
-                          <div key={d} style={{ width: 4, height: 4, borderRadius: "50%",
+                          <div key={d} style={{ width: 5, height: 5, borderRadius: "50%",
                             background: "#c084fc",
                             animation: `wave-dot 1.2s ${idx * 0.15 + d * 0.2}s ease-in-out infinite` }} />
                         ))}
