@@ -3035,8 +3035,31 @@ function Sidebar() {
         background: "linear-gradient(90deg, transparent, rgba(124,58,237,0.2), transparent)",
         position: "relative" as const, zIndex: 2 }} />
 
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
+      {/* Decorative ring element — lower area */}
+      <div style={{ flex: 1, display: "flex", alignItems: "center",
+        justifyContent: "center", position: "relative" as const, zIndex: 2 }}>
+        {/* Outer ring */}
+        <div style={{
+          width: 148, height: 148, borderRadius: "50%",
+          border: "1.5px solid rgba(124,58,237,0.14)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          boxShadow: "0 0 28px rgba(124,58,237,0.05) inset",
+          background: "radial-gradient(circle, rgba(167,139,250,0.05) 0%, transparent 70%)",
+          animation: "hub-beat 4s ease-in-out infinite",
+        }}>
+          {/* Inner ring */}
+          <div style={{
+            width: 96, height: 96, borderRadius: "50%",
+            border: "1px solid rgba(240,40,204,0.12)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "radial-gradient(circle, rgba(240,40,204,0.04) 0%, transparent 70%)",
+            animation: "hub-beat 3s 0.8s ease-in-out infinite",
+          }}>
+            {/* Small orb at centre */}
+            <GradientOrb size={38} />
+          </div>
+        </div>
+      </div>
 
       {/* Powered by Infosys Aster */}
       <div style={{ padding: "14px 20px", borderTop: "1px solid #f3f4f6",
