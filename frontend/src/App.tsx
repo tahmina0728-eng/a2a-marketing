@@ -1195,12 +1195,15 @@ function RunningView({
             }}>
               <div style={{
                 width: 90, height: 90, borderRadius: "50%",
-                background: `radial-gradient(circle at 35% 35%, ${v.blob1} 0%, ${v.g1} 50%, ${v.g2} 100%)`,
-                boxShadow: `0 8px 32px ${v.g1}50`,
+                background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+                boxShadow: "0 8px 32px rgba(139,92,246,0.4)",
                 display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 36,
                 animation: "icon-breathe 2.5s ease-in-out infinite",
-              }}>{stage?.icon ?? "🤖"}</div>
+              }}>
+                <svg width={34} height={34} viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
+                </svg>
+              </div>
               <div style={{ textAlign: "center" as const }}>
                 <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
                   color: v.g1, textTransform: "uppercase" as const, marginBottom: 8 }}>
@@ -1671,19 +1674,16 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
   );
 }
 // ── Results view ─────────────────────────────────────────────
-function ResultsView({ output, campaignId, onReset }: {
+function ResultsView({ output, campaignId }: {
   output: Record<string, unknown> | null;
   campaignId: string | null;
-  onReset: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [selectedKV, setSelectedKV] = useState(0);
-  // machine_brief fields are spread into output by usePipeline, so output IS the brief
   const brief    = output as any;
   const strategy = output?.creative_strategy as any;
   const copy     = output?.campaign_copy as any;
   const cp       = (output as any)?.creative_pipeline;
-  const isReady  = brief?.status === "READY";
   // CDP audience insights
   const cdpLines = output?.audience_insights
     ? String(output.audience_insights).split("\n").filter((l: string) => l.trim())
@@ -1721,34 +1721,20 @@ function ResultsView({ output, campaignId, onReset }: {
   );
 
   return (
-    <div style={styles.resultsPage}>
-      {/* Header */}
-      <div style={styles.resultsHero}>
-        <div style={styles.resultsHeroInner}>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <AsterLogo size={0.8} />
-            <div style={{ width: 1, height: 36, background: "#e2e8f0" }} />
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: "#d1fae5",
-                border: "1px solid #a7f3d0", display: "flex", alignItems: "center",
-                justifyContent: "center", fontSize: 16 }}>✅</div>
-              <div>
-                <div style={styles.resultsTitle}>Campaign Ready</div>
-                {campaignId && <div style={styles.campaignIdTag}>#{campaignId}</div>}
-              </div>
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ padding: "6px 16px", borderRadius: 20, fontSize: 12, fontWeight: 700,
-              background: isReady ? "#d1fae5" : "#fef3c7",
-              color: isReady ? "#065f46" : "#92400e",
-              border: `1px solid ${isReady ? "#a7f3d0" : "#fde68a"}` }}>
-              {brief?.status ?? "—"}
-            </div>
-            <button className="reset-btn" onClick={onReset}>New Campaign</button>
-          </div>
+    <div style={{ ...styles.resultsPage, background: "#fafafa" }}>
+      {/* Slim campaign ID banner */}
+      {campaignId && (
+        <div style={{ padding: "10px 28px", borderBottom: "1px solid #f3f4f6",
+          display: "flex", alignItems: "center", gap: 10, background: "white", flexShrink: 0 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 12px", borderRadius: 99,
+            background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed" }}>
+            ✅ Campaign Ready
+          </span>
+          <span style={{ fontSize: 11, color: "#9ca3af", fontFamily: "monospace", letterSpacing: "0.04em" }}>
+            #{campaignId}
+          </span>
         </div>
-      </div>
+      )}
 
       {/* Timeline */}
       <div style={{ maxWidth: 860, margin: "0 auto", padding: "40px 24px 24px" }}>
@@ -1851,10 +1837,10 @@ function ResultsView({ output, campaignId, onReset }: {
 
         {/* Step 3: Campaign Copy */}
         {copy?.short?.headline && (
-          <TL step={3} icon="✍️" color="#0055A4" label="Campaign Copy">
-            <div style={{ background: "white", borderRadius: 16, border: "1px solid #bfdbfe",
-              overflow: "hidden", boxShadow: "0 2px 12px rgba(0,85,164,0.08)" }}>
-              <div style={{ background: "linear-gradient(135deg, #0055A4, #0369a1)", padding: "16px 24px", textAlign: "center" }}>
+          <TL step={3} icon="✍️" color="#6366f1" label="Campaign Copy">
+            <div style={{ background: "white", borderRadius: 16, border: "1px solid #e0e7ff",
+              overflow: "hidden", boxShadow: "0 2px 12px rgba(99,102,241,0.08)" }}>
+              <div style={{ background: "linear-gradient(135deg, #4f46e5, #7c3aed)", padding: "16px 24px", textAlign: "center" }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.55)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 6 }}>Short Headline</div>
                 <div style={{ fontSize: 24, fontWeight: 900, color: "white" }}>"{copy.short.headline}"</div>
               </div>
@@ -2326,6 +2312,324 @@ function BriefIntakeView({
   );
 }
 
+// ── Shared agent intake helpers ──────────────────────────────
+function AgentIntakeHeader({ label, title, g1, g2, icon, done }: {
+  label: string; title: string; g1: string; g2: string; icon: string; done: boolean;
+}) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+      <div style={{
+        width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
+        background: `radial-gradient(circle at 35% 35%, ${g1}99 0%, ${g1} 45%, ${g2} 100%)`,
+        boxShadow: `0 4px 20px ${g1}55`,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        fontSize: 24,
+        animation: done ? "none" : "icon-breathe 2.5s ease-in-out infinite",
+      }}>{icon}</div>
+      <div>
+        <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
+          color: g1, textTransform: "uppercase" as const, marginBottom: 3 }}>
+          {label} · {done ? "COMPLETE ✓" : "RUNNING"}
+        </div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>{title}</div>
+      </div>
+    </div>
+  );
+}
+
+function AgentGeneratingView() {
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
+      alignItems: "center", justifyContent: "center", gap: 28 }}>
+      {/* Same A2A purple orb used by the briefing agent */}
+      <div style={{
+        width: 90, height: 90, borderRadius: "50%",
+        background: "radial-gradient(circle at 35% 35%, #a78bfa 0%, #c084fc 35%, #f472b6 65%, #fb923c 100%)",
+        boxShadow: "0 8px 32px rgba(139,92,246,0.4)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        animation: "icon-breathe 2.5s ease-in-out infinite",
+      }}>
+        <svg width={34} height={34} viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
+        </svg>
+      </div>
+      <div style={{ fontSize: 20, fontWeight: 600, color: "#374151", letterSpacing: "-0.01em" }}>
+        Generating ...
+      </div>
+    </div>
+  );
+}
+
+// ── Strategy / Content Creator intake view ────────────────────
+function StrategyIntakeView({ milestone, liveMsg, agentDone }: {
+  milestone: Record<string,unknown> | undefined;
+  liveMsg: string | null;
+  agentDone: boolean;
+}) {
+  const g1 = "#d97706", g2 = "#ea580c";
+  const m = (milestone ?? {}) as any;
+  const hasData = !!milestone || !!liveMsg;
+  const phase: 1 | 2 | 3 = agentDone && milestone ? 3 : hasData ? 2 : 1;
+
+  if (phase === 1) return <AgentGeneratingView />;
+
+  if (phase === 2) return (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "40px 48px", background: "linear-gradient(135deg, #fffbeb 0%, #fff7ed 50%, #fffbeb 100%)" }}>
+      <div style={{ maxWidth: 680, width: "100%" }}>
+        <AgentIntakeHeader label="CONTENT CREATOR" title="Building Creative Strategy"
+          g1={g1} g2={g2} icon="💡" done={false} />
+        {liveMsg && (
+          <div style={{ fontSize: 13, color: g1, fontStyle: "italic",
+            padding: "12px 16px", borderRadius: 10,
+            background: `${g1}12`, border: `1px solid ${g1}25` }}>
+            {liveMsg}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const SCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
+    <div style={{ background: "white", border: `1px solid ${g1}22`, borderRadius: 14,
+      padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
+      boxShadow: `0 1px 8px ${g1}10` }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: g1, letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
+      {children}
+    </div>
+  );
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
+      background: "linear-gradient(180deg, #fffbeb 0%, #ffffff 180px)" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <AgentIntakeHeader label="CONTENT CREATOR" title="Creative Strategy"
+          g1={g1} g2={g2} icon="💡" done={true} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {m.big_idea && (
+            <SCard title="Big Idea" full>
+              <div style={{ fontSize: 22, fontWeight: 800, fontStyle: "italic",
+                color: g1, lineHeight: 1.3 }}>"{m.big_idea}"</div>
+            </SCard>
+          )}
+          {m.hero_message && (
+            <SCard title="Hero Message" full>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", lineHeight: 1.4 }}>
+                "{m.hero_message}"
+              </div>
+              {m.tagline && (
+                <div style={{ marginTop: 8, fontSize: 14, color: "#6b7280", fontStyle: "italic" }}>
+                  {m.tagline}
+                </div>
+              )}
+            </SCard>
+          )}
+          {m.strategic_framework && (
+            <SCard title="Strategic Framework">
+              <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>
+                {String(m.strategic_framework).slice(0, 260)}
+                {String(m.strategic_framework).length > 260 ? "…" : ""}
+              </div>
+            </SCard>
+          )}
+          {(m.messaging_pillars as string[])?.length > 0 && (
+            <SCard title="Messaging Pillars">
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                {(m.messaging_pillars as string[]).slice(0, 4).map((p: string, i: number) => (
+                  <span key={i} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 99,
+                    background: `${g1}12`, border: `1px solid ${g1}30`, color: g1, fontWeight: 600 }}>
+                    {String(p).slice(0, 40)}
+                  </span>
+                ))}
+              </div>
+            </SCard>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Copy Agent intake view ────────────────────────────────────
+function CopyIntakeView({ milestone, liveMsg, agentDone }: {
+  milestone: Record<string,unknown> | undefined;
+  liveMsg: string | null;
+  agentDone: boolean;
+}) {
+  const g1 = "#2563eb", g2 = "#0369a1";
+  const m = (milestone ?? {}) as any;
+  const hasData = !!milestone || !!liveMsg;
+  const phase: 1 | 2 | 3 = agentDone && milestone ? 3 : hasData ? 2 : 1;
+
+  if (phase === 1) return <AgentGeneratingView />;
+
+  if (phase === 2) return (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "40px 48px", background: "linear-gradient(135deg, #eff6ff 0%, #e0f2fe 50%, #eff6ff 100%)" }}>
+      <div style={{ maxWidth: 680, width: "100%" }}>
+        <AgentIntakeHeader label="COPY AGENT" title="Writing Campaign Copy"
+          g1={g1} g2={g2} icon="✍️" done={false} />
+        {liveMsg && (
+          <div style={{ fontSize: 13, color: g1, fontStyle: "italic",
+            padding: "12px 16px", borderRadius: 10,
+            background: `${g1}10`, border: `1px solid ${g1}25` }}>
+            {liveMsg}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const CCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
+    <div style={{ background: "white", border: `1px solid ${g1}22`, borderRadius: 14,
+      padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
+      boxShadow: `0 1px 8px ${g1}10` }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: g1, letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
+      {children}
+    </div>
+  );
+
+  const channelCopy = m.channel_copy as Record<string, string> | undefined;
+  const COPY_CFG: Record<string, { icon: string; label: string; color: string; bg: string }> = {
+    instagram_caption: { icon: "📸", label: "Instagram", color: "#7c3aed", bg: "#fdf4ff" },
+    tiktok_hook:       { icon: "🎵", label: "TikTok",    color: "#be185d", bg: "#fff0f6" },
+    youtube_script:    { icon: "▶️", label: "YouTube",   color: "#dc2626", bg: "#fff1f2" },
+    google_headline:   { icon: "🔍", label: "Google",    color: "#1967d2", bg: "#eff6ff" },
+    meta_caption:      { icon: "📘", label: "Meta",      color: "#1877f2", bg: "#eff6ff" },
+    ooh_headline:      { icon: "🏙️", label: "OOH",      color: "#d97706", bg: "#fffbeb" },
+    web_headline:      { icon: "🌐", label: "Website",   color: "#059669", bg: "#f0fdf4" },
+    email_subject:     { icon: "📧", label: "Email",     color: "#0369a1", bg: "#f0f9ff" },
+  };
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
+      background: "linear-gradient(180deg, #eff6ff 0%, #ffffff 180px)" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <AgentIntakeHeader label="COPY AGENT" title="Campaign Copy"
+          g1={g1} g2={g2} icon="✍️" done={true} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          {/* Billboard hero */}
+          {m.short_headline && (
+            <CCard title="Short Headline" full>
+              <div style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`,
+                borderRadius: 10, padding: "20px 24px", textAlign: "center" as const, marginBottom: 8 }}>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.2 }}>
+                  "{m.short_headline}"
+                </div>
+                {m.cta && (
+                  <div style={{ marginTop: 12, display: "inline-block", padding: "6px 20px",
+                    borderRadius: 99, background: "white", color: g1, fontSize: 12, fontWeight: 800 }}>
+                    {m.cta}
+                  </div>
+                )}
+              </div>
+            </CCard>
+          )}
+          {m.medium_headline && (
+            <CCard title="Medium Headline">
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1.4 }}>
+                "{m.medium_headline}"
+              </div>
+            </CCard>
+          )}
+          {m.body && (
+            <CCard title="Body Copy">
+              <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>
+                {String(m.body).slice(0, 200)}{String(m.body).length > 200 ? "…" : ""}
+              </div>
+            </CCard>
+          )}
+          {channelCopy && Object.keys(channelCopy).length > 0 && (
+            <CCard title="Channel Copy" full>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {Object.entries(channelCopy).map(([key, val]) => {
+                  const cfg = COPY_CFG[key] ?? { icon: "📢", label: key, color: "#64748b", bg: "#f8fafc" };
+                  return (
+                    <div key={key} style={{ padding: "10px 12px", borderRadius: 10,
+                      background: cfg.bg, border: `1px solid ${cfg.color}20` }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: cfg.color,
+                        textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 5 }}>
+                        {cfg.icon} {cfg.label}
+                      </div>
+                      <div style={{ fontSize: 12, color: cfg.color, lineHeight: 1.4 }}>
+                        {val.slice(0, 90)}{val.length > 90 ? "…" : ""}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CCard>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Culture / Cultural Research intake view ───────────────────
+function CultureIntakeView({ milestone, liveMsg, agentDone }: {
+  milestone: Record<string,unknown> | undefined;
+  liveMsg: string | null;
+  agentDone: boolean;
+}) {
+  const g1 = "#0d9488", g2 = "#0891b2";
+  const raw = milestone?.brief ? String(milestone.brief) : "";
+  const hasData = !!milestone || !!liveMsg;
+  const phase: 1 | 2 | 3 = agentDone && milestone ? 3 : hasData ? 2 : 1;
+
+  if (phase === 1) return <AgentGeneratingView />;
+
+  if (phase === 2) return (
+    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "40px 48px", background: "linear-gradient(135deg, #f0fdfa 0%, #ecfeff 50%, #f0fdfa 100%)" }}>
+      <div style={{ maxWidth: 680, width: "100%" }}>
+        <AgentIntakeHeader label="CULTURAL RESEARCH" title="Analysing Cultural Context"
+          g1={g1} g2={g2} icon="🌍" done={false} />
+        {liveMsg && (
+          <div style={{ fontSize: 13, color: g1, fontStyle: "italic",
+            padding: "12px 16px", borderRadius: 10,
+            background: `${g1}10`, border: `1px solid ${g1}25` }}>
+            {liveMsg}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const sentences = raw
+    .replace(/\*\*([^*]+)\*\*/g, "$1").replace(/^#+\s*/gm, "").replace(/^[-*]\s*/gm, "")
+    .split(/(?<=[.!?])\s+/).map(s => s.trim()).filter(s => s.length > 25).slice(0, 6);
+
+  const ICONS = ["🌍", "💫", "🎯", "⚡", "🔥", "✨"];
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
+      background: "linear-gradient(180deg, #f0fdfa 0%, #ffffff 180px)" }}>
+      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <AgentIntakeHeader label="CULTURAL RESEARCH" title="Cultural Intelligence"
+          g1={g1} g2={g2} icon="🌍" done={true} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          {sentences.map((s, i) => (
+            <div key={i} style={{ display: "flex", gap: 14, padding: "18px 20px",
+              borderRadius: 14, background: "white",
+              border: `1px solid ${i === 0 ? g1 + "40" : "#e5e7eb"}`,
+              boxShadow: `0 1px 8px ${g1}${i === 0 ? "14" : "06"}`,
+              gridColumn: i === 0 ? "1 / -1" : undefined }}>
+              <span style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>{ICONS[i]}</span>
+              <span style={{ fontSize: i === 0 ? 15 : 13, color: "#1a2332", lineHeight: 1.6,
+                fontWeight: i === 0 ? 600 : 400 }}>
+                {s}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Gradient Orb (A2A logo style) ────────────────────────────
 function GradientOrb({ size = 40 }: { size?: number }) {
   const u = `orb${size}`;
@@ -2516,6 +2820,10 @@ function Sidebar({ history, onNew }: {
         )}
       </div>
 
+      {/* Powered by Infosys Aster — always visible at sidebar bottom */}
+      <div style={{ padding: "14px 18px", borderTop: "1px solid #f3f4f6", flexShrink: 0 }}>
+        <AsterLogo size={0.65} />
+      </div>
     </div>
   );
 }
@@ -2846,14 +3154,46 @@ export default function App() {
               />
             )}
 
-            {state.status === "running" && activeStageId !== "brief" && (
-              <RunningView
-                agentStatus={state.agentStatus}
-                liveLog={state.liveLog}
-                milestones={state.milestones}
-                compact={true}
-              />
-            )}
+            {state.status === "running" && activeStageId !== "brief" && (() => {
+              // Derive the agent currently in focus (running, or last done)
+              const focusKey =
+                [...state.liveLog].reverse().find(e => e.status === "running")?.agent
+                ?? [...state.liveLog].reverse().find(e => e.status === "done")?.agent
+                ?? null;
+              const liveMsg = (key: string) =>
+                [...state.liveLog].reverse().find(e => e.agent === key && e.status === "running")?.message ?? null;
+
+              if (focusKey === "strategy") return (
+                <StrategyIntakeView
+                  milestone={state.milestones["strategy"]}
+                  liveMsg={liveMsg("strategy")}
+                  agentDone={state.agentStatus["strategy"] === "done"}
+                />
+              );
+              if (focusKey === "copy") return (
+                <CopyIntakeView
+                  milestone={state.milestones["copy"]}
+                  liveMsg={liveMsg("copy")}
+                  agentDone={state.agentStatus["copy"] === "done"}
+                />
+              );
+              if (focusKey === "culture") return (
+                <CultureIntakeView
+                  milestone={state.milestones["culture"]}
+                  liveMsg={liveMsg("culture")}
+                  agentDone={state.agentStatus["culture"] === "done"}
+                />
+              );
+              // kv, reel, channel → existing RunningView
+              return (
+                <RunningView
+                  agentStatus={state.agentStatus}
+                  liveLog={state.liveLog}
+                  milestones={state.milestones}
+                  compact={true}
+                />
+              );
+            })()}
 
             {state.status === "error" && (() => {
               const isAuth = state.error?.includes("credentials") || state.error?.includes("auth");
@@ -2878,7 +3218,6 @@ export default function App() {
               <ResultsView
                 output={state.pipeline_output}
                 campaignId={state.campaign_id}
-                onReset={handleReset}
               />
             )}
           </div>
