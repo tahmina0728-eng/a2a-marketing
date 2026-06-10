@@ -1721,11 +1721,12 @@ function ResultsView({ output, campaignId }: {
   );
 
   return (
-    <div style={{ ...styles.resultsPage, background: "#fafafa" }}>
+    <div style={{ ...styles.resultsPage,
+      background: "linear-gradient(180deg, #faf5ff 0%, #f5f3ff 80px, #ffffff 260px)" }}>
       {/* Slim campaign ID banner */}
       {campaignId && (
-        <div style={{ padding: "10px 28px", borderBottom: "1px solid #f3f4f6",
-          display: "flex", alignItems: "center", gap: 10, background: "white", flexShrink: 0 }}>
+        <div style={{ padding: "10px 28px", borderBottom: "1px solid #ede9fe",
+          display: "flex", alignItems: "center", gap: 10, background: "rgba(250,245,255,0.9)", flexShrink: 0 }}>
           <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 12px", borderRadius: 99,
             background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed" }}>
             ✅ Campaign Ready
@@ -3155,9 +3156,11 @@ export default function App() {
             )}
 
             {state.status === "running" && activeStageId !== "brief" && (() => {
-              // Derive the agent currently in focus (running, or last done)
+              // Prioritise agentStatus so we get the right agent the instant it
+              // starts, even before any liveLog entries have arrived for it.
               const focusKey =
-                [...state.liveLog].reverse().find(e => e.status === "running")?.agent
+                HARNESS_STAGES.find(s => state.agentStatus[s.key] === "running")?.key
+                ?? [...state.liveLog].reverse().find(e => e.status === "running")?.agent
                 ?? [...state.liveLog].reverse().find(e => e.status === "done")?.agent
                 ?? null;
               const liveMsg = (key: string) =>
