@@ -3035,21 +3035,21 @@ function Sidebar() {
         justifyContent: "center", position: "relative" as const, zIndex: 2 }}>
         {/* Outer ring */}
         <div style={{
-          width: 116, height: 116, borderRadius: "50%",
+          width: 190, height: 190, borderRadius: "50%",
           border: "1.5px solid rgba(124,58,237,0.13)",
           display: "flex", alignItems: "center", justifyContent: "center",
-          background: "radial-gradient(circle, rgba(167,139,250,0.05) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(167,139,250,0.06) 0%, transparent 70%)",
           animation: "hub-beat 4s ease-in-out infinite",
         }}>
           {/* Inner ring */}
           <div style={{
-            width: 74, height: 74, borderRadius: "50%",
+            width: 124, height: 124, borderRadius: "50%",
             border: "1px solid rgba(240,40,204,0.11)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            background: "radial-gradient(circle, rgba(240,40,204,0.04) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(240,40,204,0.05) 0%, transparent 70%)",
             animation: "hub-beat 3s 0.8s ease-in-out infinite",
           }}>
-            <GradientOrb size={30} />
+            <GradientOrb size={48} />
           </div>
         </div>
       </div>
