@@ -2180,8 +2180,10 @@ const avatarUrl = (_label: string, idx: number) =>
   `https://i.pravatar.cc/150?img=${AGENT_AVATAR_IMGS[idx]}`;
 
 // [left, top] offset of info card relative to node centre
+// Outer node div is 54px wide; transform:translate(-50%,-50%) shifts it left 27px.
+// Right gap = co[0] - 54 = 40-54 = -14 (14px overlap). Left gap = -(co[0]+170) = -(-184+170) = 14px overlap. Symmetric.
 const RIGHT_X = 40;
-const LEFT_X  = -210;  // LEFT_X + card width (170) = -40, matching RIGHT_X gap
+const LEFT_X  = -184;
 const CARD_OFF: [number, number][] = [
   [RIGHT_X, -40],
   [RIGHT_X, -40],
