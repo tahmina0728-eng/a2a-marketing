@@ -233,7 +233,8 @@ aggregation_agent = Agent(
 performance_agent = Agent(
     name        = "performance_agent",
     model       = settings.reasoning_model,
-    description = "Generates the initial KPI tracking framework and first-48h monitoring plan.",
+    description = "Pre-launch performance forecaster — predicts reach, CTR, ROAS per channel using historical benchmarks and Fan Truth score.",
     instruction = PERFORMANCE_AGENT_INSTRUCTIONS,
+    output_key  = "performance_forecast",
     mode        = "single_turn",
 )

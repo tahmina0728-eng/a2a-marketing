@@ -50,10 +50,11 @@ export function usePipeline() {
       }
       const output = {
         ..._flatMB2,
-        creative_strategy: result.creative_strategy,
-        campaign_copy:     result.campaign_copy,
-        audience_insights: (_flatMB2.audience_insights as string | undefined) ?? result.machine_brief?.audience_insights,
-        creative_pipeline: result.creative_pipeline,
+        creative_strategy:    result.creative_strategy,
+        campaign_copy:        result.campaign_copy,
+        audience_insights:    (_flatMB2.audience_insights as string | undefined) ?? result.machine_brief?.audience_insights,
+        creative_pipeline:    result.creative_pipeline,
+        performance_forecast: result.performance_forecast,
       };
       setState({
         campaign_id:     result.campaign_id ?? null,
@@ -114,10 +115,11 @@ export function usePipeline() {
           }
           const output = {
             ..._flatMB,
-            creative_strategy: result.creative_strategy,
-            campaign_copy:     result.campaign_copy,
-            audience_insights: (_flatMB.audience_insights as string | undefined) ?? result.machine_brief?.audience_insights,
-            creative_pipeline: result.creative_pipeline,
+            creative_strategy:    result.creative_strategy,
+            campaign_copy:        result.campaign_copy,
+            audience_insights:    (_flatMB.audience_insights as string | undefined) ?? result.machine_brief?.audience_insights,
+            creative_pipeline:    result.creative_pipeline,
+            performance_forecast: result.performance_forecast,
           };
           setState((s) => ({
             ...s,

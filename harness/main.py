@@ -57,10 +57,56 @@ from app.config import get_settings
 from app.models import BriefRequest
 from app.pipeline import briefing_pipeline, root_agent
 from app.creative_pipeline import experiment_pipeline
-from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq, run_copy_agent, run_creative_pipeline_direct
+from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq, run_copy_agent, run_creative_pipeline_direct, run_performance_forecast
 
 logger   = structlog.get_logger()
 settings = get_settings()
+
+GCP_PROJECT       = os.getenv("GOOGLE_CLOUD_PROJECT", "dauntless-karma-497108-b0")
+BQ_OUTPUT_DATASET = "campaign_outputs"
+
+
+async def _bq_log_machine_brief(campaign_id: str, machine_brief: dict, brief) -> None:
+    """Fire-and-forget: write one row to campaign_outputs.machine_briefs in BigQuery."""
+    try:
+        from google.cloud import bigquery as _bq
+        import datetime as _dt
+
+        client = _bq.Client(project=GCP_PROJECT)
+        table_id = f"{GCP_PROJECT}.{BQ_OUTPUT_DATASET}.machine_briefs"
+
+        ft = machine_brief.get("fan_truth", {})
+        if isinstance(ft, str):
+            try: ft = json.loads(ft)
+            except Exception: ft = {}
+
+        channels = brief.channels if hasattr(brief, "channels") else []
+
+        row = {
+            "campaign_id":       campaign_id,
+            "campaign_name":     getattr(brief, "campaign_name", ""),
+            "brand":             getattr(brief, "brand", ""),
+            "market":            getattr(brief, "market", ""),
+            "product_category":  getattr(brief, "product_category", ""),
+            "season":            getattr(brief, "season", ""),
+            "channels":          ", ".join(str(c) for c in channels),
+            "moment_type":       getattr(brief, "moment_type", ""),
+            "validation_score":  float(machine_brief.get("validation_score") or 0),
+            "validation_status": str(machine_brief.get("validation_status") or ""),
+            "fan_truth_score":   float(ft.get("overall") or ft.get("score") or 0),
+            "fan_truth_verdict": str(ft.get("verdict") or ""),
+            "flag_count":        int(machine_brief.get("flag_count") or 0),
+            "brief_json":        json.dumps(machine_brief)[:50000],
+            "created_at":        _dt.datetime.utcnow().isoformat() + "Z",
+        }
+
+        errors = client.insert_rows_json(table_id, [row])
+        if errors:
+            logger.warning("bq_insert_errors", errors=errors)
+        else:
+            logger.info("bq_machine_brief_logged", campaign_id=campaign_id)
+    except Exception as e:
+        logger.warning("bq_log_failed", campaign_id=campaign_id, error=str(e))
 
 
 @asynccontextmanager
@@ -323,6 +369,9 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
                 "channels": _extract(aud_lines, "channels"),
             },
         }))
+        # Log machine_brief to BigQuery (fire-and-forget — don't block pipeline)
+        asyncio.create_task(_bq_log_machine_brief(campaign_id, machine_brief, brief))
+
         await asyncio.sleep(10)  # 10 s so user can read fan truth + CDP results
 
         # ── Stage 1b: Creative strategy ───────────────────────────────────
@@ -505,6 +554,36 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         await push_event(campaign_id, "channel", "milestone", json.dumps(channel_data))
         await asyncio.sleep(3)
 
+        # ── Stage 3: Performance forecast (Nexus) ────────────────────────
+        await push_event(campaign_id, "performance", "running",
+                         "Nexus is forecasting reach, ROAS and channel performance…")
+        hb_perf = asyncio.create_task(_heartbeat(campaign_id, "performance", [
+            "Querying historical campaign benchmarks…",
+            "Applying Fan Truth score uplift factors…",
+            "Modelling channel reach curves for each platform…",
+            "Computing blended ROAS confidence intervals…",
+        ], interval=18))
+        try:
+            perf_forecast = await run_performance_forecast(
+                machine_brief = machine_brief,
+                strategy      = strategy,
+                copy          = copy,
+                channels      = channels_list,
+                campaign_id   = campaign_id,
+            )
+        except Exception as _pe:
+            logger.warning("performance_forecast_failed", error=str(_pe))
+            perf_forecast = {}
+        finally:
+            hb_perf.cancel()
+
+        if perf_forecast:
+            await push_event(campaign_id, "performance", "milestone",
+                             json.dumps(perf_forecast))
+        await push_event(campaign_id, "performance", "done",
+                         f"Forecast ready — {perf_forecast.get('overall_confidence','—')} confidence ✓")
+        await asyncio.sleep(3)
+
         result = {
             "status":             "ok",
             "campaign_id":        campaign_id,
@@ -512,6 +591,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "creative_strategy":  strategy,
             "campaign_copy":      copy,
             "creative_pipeline":  creative_result,
+            "performance_forecast": perf_forecast,
             "processing_time_ms": int((time.time() - t_start) * 1000),
         }
         await push_event(campaign_id, "__done__", "done", json.dumps(result))

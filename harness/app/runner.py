@@ -1775,3 +1775,96 @@ Output EXACTLY this format (nothing else):
     }
 
 
+async def run_performance_forecast(
+    machine_brief: dict,
+    strategy: dict,
+    copy: dict,
+    channels: list,
+    campaign_id: str,
+) -> dict:
+    """Generate pre-launch performance forecast using Vertex AI (Nexus agent)."""
+    import google.genai as _g
+    from app.config import get_settings as _gs
+
+    _ss  = _gs()
+    _gc  = _g.Client(vertexai=True, project=_ss.gcp_project, location=_ss.gcp_region)
+
+    ft       = machine_brief.get("fan_truth", {})
+    ft_score = ft.get("overall", 70) if isinstance(ft, dict) else 70
+    brand    = machine_brief.get("brand", "")
+    market   = machine_brief.get("market", "")
+    season   = machine_brief.get("season", "")
+
+    # Derive confidence based on Fan Truth score
+    if ft_score >= 80:
+        conf = "HIGH"
+        conf_note = f"Fan Truth {ft_score}/100 — strong authentic connection drives +15% organic uplift"
+    elif ft_score >= 60:
+        conf = "MEDIUM"
+        conf_note = f"Fan Truth {ft_score}/100 — solid but could benefit from deeper cultural specificity"
+    else:
+        conf = "LOW"
+        conf_note = f"Fan Truth {ft_score}/100 — confidence reduced 20%; recommend brief refinement"
+
+    channels_str = ", ".join(channels) if channels else "Instagram, TikTok, Google Ads"
+
+    prompt = f"""You are Nexus, a pre-launch campaign performance forecaster for {brand}.
+
+Use these inputs to generate a realistic pre-launch performance forecast:
+
+CAMPAIGN SUMMARY:
+- Brand: {brand}
+- Market: {market}
+- Season: {season}
+- Channels: {channels_str}
+- Fan Truth Score: {ft_score}/100 ({conf_note})
+- Big Idea: {strategy.get("big_idea", "")}
+- Hero Message: {strategy.get("hero_message", "")}
+- Budget: {machine_brief.get("budget", "£50,000")}
+
+BENCHMARKS (typical for {market} beauty/FMCG campaigns):
+- Instagram: CTR 1.8-2.5%, Reach 2-5M per £10k spend, Engagement 4-6%, ROAS 2.5-3.5x
+- TikTok: CTR 2.5-4%, Reach 3-8M per £10k spend, Engagement 6-9%, ROAS 2.0-3.0x
+- Google Ads: CTR 3-6%, Reach 1-3M per £10k spend, ROAS 4-6x
+- Email: CTR 18-24%, Reach depends on list size, ROAS 3-5x
+- OOH: Impressions 500k-2M, low direct ROAS but high brand uplift
+
+Apply these Fan Truth adjustments:
+- Fan Truth >= 80: +15% organic reach, boost confidence to HIGH
+- Fan Truth 60-79: standard benchmarks, MEDIUM confidence
+- Fan Truth < 60: -20% on reach forecasts, LOW confidence
+
+Produce a JSON object (no markdown, no explanation):
+{{
+  "campaign_id": "{campaign_id}",
+  "headline_prediction": "<one bold sentence predicting campaign performance>",
+  "overall_confidence": "{conf}",
+  "predicted_total_reach": "<e.g. 8.2M – 11.4M across all channels>",
+  "predicted_blended_roas": "<e.g. 3.2x>",
+  "fan_truth_impact": "<2 sentences on how the Fan Truth score affects performance>",
+  "benchmark_comparison": "<1-2 sentences comparing to typical {market} {season} campaigns>",
+  "channel_forecasts": [
+    {{
+      "channel": "<channel name>",
+      "predicted_reach": "<e.g. 4.2M – 5.8M>",
+      "predicted_ctr": "<e.g. 2.3%>",
+      "predicted_roas": "<e.g. 3.1x>",
+      "predicted_engagement": "<e.g. 5.8%>",
+      "confidence": "HIGH|MEDIUM|LOW",
+      "budget_pct": <0.0–1.0 float>,
+      "risk_flag": "<optional short risk>",
+      "opportunity": "<optional short opportunity>"
+    }}
+  ],
+  "top_risk": "<single biggest risk to performance>",
+  "top_opportunity": "<single biggest upside opportunity>",
+  "first_48h_watchlist": ["<metric to watch 1>", "<metric to watch 2>", "<metric to watch 3>"],
+  "recommended_budget_split": {{"<channel>": <0.0–1.0 float>}}
+}}
+
+Only include channels from this list: {channels_str}
+Budget split percentages must sum to 1.0."""
+
+    raw = await _vertex_generate(_gc, os.getenv("CREATIVE_MODEL", "gemini-3.5-flash"), prompt)
+    return _parse_agent_response(raw)
+

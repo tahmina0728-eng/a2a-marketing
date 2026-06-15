@@ -188,13 +188,14 @@ const ORB_BG = [
 // ── Harness pipeline agents (for loading display) ────────────
 // Order matches actual backend execution
 const HARNESS_STAGES = [
-  { key: "briefing", icon: "📋", label: "Logos",    desc: "Validating brief & Fan Truth score" },
-  { key: "strategy", icon: "💡", label: "Helia",    desc: "Building big idea & strategy" },
-  { key: "copy",     icon: "✍️", label: "Ideon",    desc: "Writing campaign copy variants" },
-  { key: "culture",  icon: "🌍", label: "Aether",   desc: "Researching cultural intelligence" },
-  { key: "kv",       icon: "🎨", label: "Morphis",  desc: "Generating key visual with Gemini 3 Pro Image" },
-  { key: "reel",     icon: "🎬", label: "Kinetik",  desc: "Generating 6s campaign reel with Veo" },
-  { key: "channel",  icon: "📡", label: "Poly",     desc: "Publishing to Instagram, TikTok & more" },
+  { key: "briefing",     icon: "📋", label: "Logos",    desc: "Validating brief & Fan Truth score" },
+  { key: "strategy",     icon: "💡", label: "Helia",    desc: "Building big idea & strategy" },
+  { key: "copy",         icon: "✍️", label: "Ideon",    desc: "Writing campaign copy variants" },
+  { key: "culture",      icon: "🌍", label: "Aether",   desc: "Researching cultural intelligence" },
+  { key: "kv",           icon: "🎨", label: "Morphis",  desc: "Generating key visual with Gemini 3 Pro Image" },
+  { key: "reel",         icon: "🎬", label: "Kinetik",  desc: "Generating 6s campaign reel with Veo" },
+  { key: "channel",      icon: "📡", label: "Poly",     desc: "Publishing to Instagram, TikTok & more" },
+  { key: "performance",  icon: "📊", label: "Nexus",    desc: "Forecasting reach, ROAS & channel performance" },
 ];
 
 // ── Brief Form (6-step wizard) ───────────────────────────────
@@ -945,6 +946,64 @@ function ChannelPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: str
   );
 }
 
+function PerformancePanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
+  const hasData = m && (m.predicted_total_reach || m.headline_prediction);
+  const ROSE = "#f43f5e";
+
+  if (!hasData) return (
+    <div style={{ width: "100%" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 12 }}>Forecasting Performance</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        {["📊 Reach model", "💰 ROAS curves", "🎯 Confidence", "⏱ 48h watchlist"].map((item, i) => (
+          <div key={i} className="source-card" style={{ animationDelay: `${i * 250}ms`, padding: "12px 14px" }}>
+            <div style={{ fontSize: 13, marginBottom: 6 }}>{item}</div>
+            <div style={{ display: "flex", gap: 4 }}>
+              {[0,1,2].map(d => <span key={d} className="source-dot" style={{ animationDelay: `${d * 0.2}s` }} />)}
+            </div>
+          </div>
+        ))}
+      </div>
+      {liveMsg && <div style={{ marginTop: 10, fontSize: 12, color: ROSE, fontStyle: "italic" }}>{liveMsg}</div>}
+    </div>
+  );
+
+  const confColor = (c: string) => c === "HIGH" ? "#059669" : c === "MEDIUM" ? "#d97706" : "#dc2626";
+  const conf = String(m?.overall_confidence ?? "—");
+
+  return (
+    <div style={{ width: "100%" }} className="msg-fade">
+      <div style={{ fontSize: 10, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 12 }}>Pre-Launch Forecast — Nexus</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+        {[
+          { label: "Total Reach",   value: String(m?.predicted_total_reach ?? "—") },
+          { label: "Blended ROAS",  value: String(m?.predicted_blended_roas ?? "—") },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ background: "white", border: "1px solid #fecdd3", borderRadius: 10,
+            padding: "10px 12px", textAlign: "center" as const }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "#111827" }}>{value}</div>
+            <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, marginTop: 2,
+              textTransform: "uppercase" as const }}>{label}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
+        background: "white", border: "1px solid #fecdd3", borderRadius: 10 }}>
+        <span style={{ fontSize: 12, color: "#374151", fontWeight: 600 }}>Confidence:</span>
+        <span style={{ fontSize: 12, fontWeight: 800, color: confColor(conf) }}>{conf}</span>
+      </div>
+      {!!m?.headline_prediction && (
+        <div style={{ marginTop: 8, fontSize: 12, color: "#374151", fontStyle: "italic",
+          lineHeight: 1.5, padding: "8px 12px", background: "#fff1f3", borderRadius: 10,
+          border: "1px solid #fecdd3" }}>
+          "{String(m!.headline_prediction).slice(0, 120)}{String(m!.headline_prediction).length > 120 ? "…" : ""}"
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CulturePanel({ m }: { m?: Record<string,unknown> }) {
   const raw = String(m?.brief ?? "");
   if (!raw) return (
@@ -1422,7 +1481,8 @@ function RunningView({
               {displayKey === "culture"   && <CulturePanel m={milestones.culture} />}
               {displayKey === "kv"        && <KVPanel m={milestones.kv} liveMsg={liveMsg} reelMilestone={milestones.reel as Record<string,unknown> | undefined} />}
               {displayKey === "reel"      && <ReelSpotlightPanel m={milestones.reel} liveMsg={liveMsg} />}
-              {displayKey === "channel"   && <ChannelPanel m={milestones.channel} liveMsg={liveMsg} />}
+              {displayKey === "channel"     && <ChannelPanel m={milestones.channel} liveMsg={liveMsg} />}
+              {displayKey === "performance" && <PerformancePanel m={milestones.performance} liveMsg={liveMsg} />}
             </div>
           </div>
           )
@@ -1852,6 +1912,7 @@ function ResultsView({ output, campaignId }: {
   const imagesB64: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
   const videoB64: string = cp?.video_b64 ? String(cp.video_b64) : "";
   const adaptations = cp?.channel_adaptations as Record<string, {label: string; image_b64: string; ratio: string}> | undefined;
+  const perfForecast = (output as any)?.performance_forecast as Record<string, unknown> | undefined;
 
   const CHANNEL_ICONS: Record<string, string> = {
     instagram_feed: "📸", instagram_stories: "📱", tiktok: "🎵",
@@ -2142,8 +2203,128 @@ function ResultsView({ output, campaignId }: {
           </TL>
         )}
 
-        {/* Step 7: Launch */}
-        <TL step={7} icon="🚀" color="#7c3aed" label="Launch Campaign">
+        {/* Step 7: Performance Forecast */}
+        {perfForecast && (
+          <TL step={7} icon="📊" color="#f43f5e" label="Performance Forecast — Nexus">
+            {(() => {
+              const pf = perfForecast as any;
+              const ROSE = "#f43f5e";
+              const ROSE_BORDER = "#fecdd3";
+              const ROSE_LIGHT  = "#fff1f3";
+              const confColor = (c: string) =>
+                c === "HIGH" ? "#059669" : c === "MEDIUM" ? "#d97706" : "#dc2626";
+              const confBg = (c: string) =>
+                c === "HIGH" ? "#f0fdf4" : c === "MEDIUM" ? "#fffbeb" : "#fff1f2";
+              const confBorderColor = (c: string) =>
+                c === "HIGH" ? "#bbf7d0" : c === "MEDIUM" ? "#fde68a" : "#fecdd3";
+              const channelForecasts: any[] = Array.isArray(pf.channel_forecasts) ? pf.channel_forecasts : [];
+              const conf = String(pf.overall_confidence ?? "—");
+              return (
+                <div style={{ background: "white", borderRadius: 16, border: `1px solid ${ROSE_BORDER}`,
+                  overflow: "hidden", boxShadow: "0 2px 12px rgba(244,63,94,0.08)" }}>
+                  {/* Headline */}
+                  {pf.headline_prediction && (
+                    <div style={{ padding: "16px 20px", background: ROSE_LIGHT,
+                      borderBottom: `1px solid ${ROSE_BORDER}` }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
+                        textTransform: "uppercase" as const, marginBottom: 6 }}>Forecast Headline</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", fontStyle: "italic",
+                        lineHeight: 1.4 }}>"{pf.headline_prediction}"</div>
+                    </div>
+                  )}
+                  {/* KPI strip */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: `1px solid ${ROSE_BORDER}` }}>
+                    {[
+                      { label: "Predicted Reach",  value: pf.predicted_total_reach  ?? "—" },
+                      { label: "Blended ROAS",      value: pf.predicted_blended_roas ?? "—" },
+                      { label: "Confidence",         value: conf },
+                    ].map(({ label, value }, i) => (
+                      <div key={label} style={{ padding: "14px 18px", textAlign: "center" as const,
+                        borderRight: i < 2 ? `1px solid ${ROSE_BORDER}` : undefined }}>
+                        <div style={{ fontSize: 20, fontWeight: 800,
+                          color: label === "Confidence" ? confColor(value) : "#111827" }}>{value}</div>
+                        <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, marginTop: 3,
+                          textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Channel forecasts */}
+                  {channelForecasts.length > 0 && (
+                    <div style={{ padding: "16px 20px", borderBottom: `1px solid ${ROSE_BORDER}` }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
+                        textTransform: "uppercase" as const, marginBottom: 12 }}>Channel Forecasts</div>
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                        {channelForecasts.map((cf: any, i: number) => (
+                          <div key={i} style={{ display: "grid",
+                            gridTemplateColumns: "140px 1fr 1fr 1fr 1fr auto",
+                            alignItems: "center", gap: 10, padding: "10px 14px",
+                            background: ROSE_LIGHT, borderRadius: 10, border: `1px solid ${ROSE_BORDER}` }}>
+                            <div style={{ fontWeight: 700, fontSize: 12, color: "#111827" }}>{cf.channel}</div>
+                            {[
+                              { v: cf.predicted_reach,      l: "Reach" },
+                              { v: cf.predicted_ctr,        l: "CTR" },
+                              { v: cf.predicted_roas,       l: "ROAS" },
+                              { v: cf.predicted_engagement, l: "Eng." },
+                            ].map(({ v, l }) => (
+                              <div key={l} style={{ textAlign: "center" as const }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{v ?? "—"}</div>
+                                <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600,
+                                  textTransform: "uppercase" as const }}>{l}</div>
+                              </div>
+                            ))}
+                            <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
+                              background: confBg(cf.confidence), color: confColor(cf.confidence),
+                              border: `1px solid ${confBorderColor(cf.confidence)}`,
+                              textTransform: "uppercase" as const, whiteSpace: "nowrap" as const }}>
+                              {cf.confidence}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Risk / Opportunity */}
+                  {(pf.top_risk || pf.top_opportunity) && (
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr",
+                      borderBottom: `1px solid ${ROSE_BORDER}` }}>
+                      {pf.top_risk && (
+                        <div style={{ padding: "14px 18px", borderRight: `1px solid ${ROSE_BORDER}` }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", letterSpacing: "0.1em",
+                            textTransform: "uppercase" as const, marginBottom: 6 }}>⚠ Top Risk</div>
+                          <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.6 }}>{pf.top_risk}</div>
+                        </div>
+                      )}
+                      {pf.top_opportunity && (
+                        <div style={{ padding: "14px 18px" }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: "#059669", letterSpacing: "0.1em",
+                            textTransform: "uppercase" as const, marginBottom: 6 }}>✦ Top Opportunity</div>
+                          <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.6 }}>{pf.top_opportunity}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* 48h watchlist */}
+                  {Array.isArray(pf.first_48h_watchlist) && pf.first_48h_watchlist.length > 0 && (
+                    <div style={{ padding: "14px 18px" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
+                        textTransform: "uppercase" as const, marginBottom: 8 }}>First 48h Watchlist</div>
+                      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                        {(pf.first_48h_watchlist as string[]).map((item: string, i: number) => (
+                          <span key={i} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99,
+                            background: ROSE_LIGHT, border: `1px solid ${ROSE_BORDER}`,
+                            color: ROSE, fontWeight: 600 }}>⏱ {item}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </TL>
+        )}
+
+        {/* Step 8: Launch */}
+        <TL step={perfForecast ? 8 : 7} icon="🚀" color="#7c3aed" label="Launch Campaign">
           <DistributePanel output={output} campaignId={campaignId}
             selectedImageB64={imagesB64[selectedKV] ?? undefined} />
         </TL>
@@ -2164,7 +2345,7 @@ function ResultsView({ output, campaignId }: {
   );
 }
 // ── Agent network wakeup screen (shown before Logos starts) ───
-const AGENT_COLORS = ["#7c3aed","#06b6d4","#10b981","#f59e0b","#ec4899","#6366f1","#14b8a6"];
+const AGENT_COLORS = ["#7c3aed","#06b6d4","#10b981","#f59e0b","#ec4899","#6366f1","#14b8a6","#f43f5e"];
 const AGENT_DESCS  = [
   "Understands your goals, audience, product and campaign objectives",
   "Crafts big ideas and messaging territories that inspire",
@@ -2173,9 +2354,10 @@ const AGENT_DESCS  = [
   "Creates striking key visuals, ad designs and imagery",
   "Produces engaging short videos and reels visually",
   "Adapts content for every platform and channel",
+  "Forecasts reach, ROAS and performance before launch",
 ];
 // Real-looking photo headshots — one consistent photo per agent (pravatar.cc)
-const AGENT_AVATAR_IMGS = [12, 5, 32, 47, 23, 68, 17];
+const AGENT_AVATAR_IMGS = [12, 5, 32, 47, 23, 68, 17, 55];
 const avatarUrl = (_label: string, idx: number) =>
   `https://i.pravatar.cc/150?img=${AGENT_AVATAR_IMGS[idx]}`;
 
@@ -2193,6 +2375,7 @@ const CARD_OFF: [number, number][] = [
   [LEFT_X,    6],  // 4 Morphis
   [LEFT_X,  -12],  // 5 Kinetik
   [LEFT_X,  -36],  // 6 Poly
+  [RIGHT_X,  28],  // 7 Nexus — lower right
 ];
 function AgentNetworkWakeUp() {
   const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 160;
@@ -2991,6 +3174,208 @@ function ChannelAdapterIntakeView({ milestone, liveMsg }: {
   );
 }
 
+// ── Performance / Nexus forecast view ────────────────────────
+function PerformanceIntakeView({ milestone, liveMsg }: {
+  milestone: Record<string,unknown> | undefined;
+  liveMsg: string | null;
+}) {
+  if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
+
+  const m = milestone as any;
+  const channelForecasts: any[] = Array.isArray(m.channel_forecasts) ? m.channel_forecasts : [];
+
+  const ROSE = "#f43f5e";
+  const ROSE_LIGHT = "#fff1f3";
+  const ROSE_BORDER = "#fecdd3";
+
+  const confColor = (c: string) =>
+    c === "HIGH" ? "#059669" : c === "MEDIUM" ? "#d97706" : "#dc2626";
+  const confBg    = (c: string) =>
+    c === "HIGH" ? "#f0fdf4" : c === "MEDIUM" ? "#fffbeb" : "#fff1f2";
+  const confBorder = (c: string) =>
+    c === "HIGH" ? "#bbf7d0" : c === "MEDIUM" ? "#fde68a" : "#fecdd3";
+
+  const FCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
+    <div style={{
+      background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 14,
+      padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
+      boxShadow: "0 1px 8px rgba(244,63,94,0.06)",
+    }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
+        textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
+      {children}
+    </div>
+  );
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
+      background: "linear-gradient(180deg, #fff1f3 0%, #ffffff 180px)" }}>
+      <div style={{ maxWidth: 920, margin: "0 auto" }}>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
+            background: `linear-gradient(135deg, ${ROSE} 0%, #be123c 100%)`,
+            boxShadow: "0 4px 20px rgba(244,63,94,0.32)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <span style={{ fontSize: 22 }}>📊</span>
+          </div>
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
+              color: ROSE, textTransform: "uppercase" as const, marginBottom: 3 }}>
+              NEXUS · COMPLETE ✓
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>Pre-Launch Performance Forecast</div>
+          </div>
+        </div>
+
+        {/* Top KPI strip */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+          {[
+            { label: "Predicted Reach",  value: m.predicted_total_reach,  icon: "👥" },
+            { label: "Blended ROAS",     value: m.predicted_blended_roas, icon: "💰" },
+            { label: "Confidence",        value: m.overall_confidence,     icon: "🎯" },
+          ].map(({ label, value, icon }) => (
+            <div key={label} style={{
+              background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 12,
+              padding: "16px 20px", textAlign: "center" as const,
+              boxShadow: "0 1px 6px rgba(244,63,94,0.06)",
+            }}>
+              <div style={{ fontSize: 20, marginBottom: 6 }}>{icon}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#111827" }}>{value ?? "—"}</div>
+              <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, marginTop: 3,
+                textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+
+          {/* Headline prediction */}
+          {m.headline_prediction && (
+            <FCard title="Forecast Headline" full>
+              <div style={{ fontSize: 17, fontWeight: 700, color: "#111827", lineHeight: 1.45,
+                fontStyle: "italic" }}>
+                "{m.headline_prediction}"
+              </div>
+            </FCard>
+          )}
+
+          {/* Fan Truth impact */}
+          {m.fan_truth_impact && (
+            <FCard title="Fan Truth Impact">
+              <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{m.fan_truth_impact}</div>
+            </FCard>
+          )}
+
+          {/* Benchmark comparison */}
+          {m.benchmark_comparison && (
+            <FCard title="vs. Benchmarks">
+              <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{m.benchmark_comparison}</div>
+            </FCard>
+          )}
+
+          {/* Channel-by-channel forecasts */}
+          {channelForecasts.length > 0 && (
+            <FCard title="Channel Forecasts" full>
+              <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+                {channelForecasts.map((cf: any, i: number) => (
+                  <div key={i} style={{
+                    display: "grid", gridTemplateColumns: "160px 1fr 1fr 1fr 1fr auto",
+                    alignItems: "center", gap: 12,
+                    background: ROSE_LIGHT, borderRadius: 10, padding: "14px 16px",
+                    border: `1px solid ${ROSE_BORDER}`,
+                  }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: "#111827" }}>
+                      {cf.channel}
+                    </div>
+                    <div style={{ textAlign: "center" as const }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{cf.predicted_reach}</div>
+                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" as const }}>Reach</div>
+                    </div>
+                    <div style={{ textAlign: "center" as const }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{cf.predicted_ctr}</div>
+                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" as const }}>CTR</div>
+                    </div>
+                    <div style={{ textAlign: "center" as const }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{cf.predicted_roas}</div>
+                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" as const }}>ROAS</div>
+                    </div>
+                    <div style={{ textAlign: "center" as const }}>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{cf.predicted_engagement}</div>
+                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" as const }}>Eng.</div>
+                    </div>
+                    <div>
+                      <span style={{
+                        fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 99,
+                        background: confBg(cf.confidence), color: confColor(cf.confidence),
+                        border: `1px solid ${confBorder(cf.confidence)}`,
+                        textTransform: "uppercase" as const, letterSpacing: "0.06em",
+                      }}>{cf.confidence}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </FCard>
+          )}
+
+          {/* Risk / Opportunity */}
+          {(m.top_risk || m.top_opportunity) && (
+            <>
+              {m.top_risk && (
+                <FCard title="Top Risk">
+                  <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{m.top_risk}</div>
+                </FCard>
+              )}
+              {m.top_opportunity && (
+                <FCard title="Top Opportunity">
+                  <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{m.top_opportunity}</div>
+                </FCard>
+              )}
+            </>
+          )}
+
+          {/* First 48h watchlist */}
+          {Array.isArray(m.first_48h_watchlist) && m.first_48h_watchlist.length > 0 && (
+            <FCard title="First 48h Watchlist" full>
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                {(m.first_48h_watchlist as string[]).map((item: string, i: number) => (
+                  <span key={i} style={{
+                    fontSize: 12, padding: "5px 12px", borderRadius: 99,
+                    background: ROSE_LIGHT, border: `1px solid ${ROSE_BORDER}`,
+                    color: ROSE, fontWeight: 600,
+                  }}>⏱ {item}</span>
+                ))}
+              </div>
+            </FCard>
+          )}
+
+          {/* Budget split */}
+          {m.recommended_budget_split && Object.keys(m.recommended_budget_split).length > 0 && (
+            <FCard title="Recommended Budget Split" full>
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                {Object.entries(m.recommended_budget_split as Record<string,number>).map(([ch, pct]) => (
+                  <div key={ch} style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    background: ROSE_LIGHT, border: `1px solid ${ROSE_BORDER}`,
+                    borderRadius: 10, padding: "8px 14px",
+                  }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>{ch}</span>
+                    <span style={{ fontSize: 15, fontWeight: 800, color: ROSE }}>{(pct * 100).toFixed(0)}%</span>
+                  </div>
+                ))}
+              </div>
+            </FCard>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Gradient Orb (A2A logo style) ────────────────────────────
 function GradientOrb({ size = 40 }: { size?: number }) {
   const u = `orb${size}`;
@@ -3186,8 +3571,8 @@ const WORKFLOW_STAGES = [
   { id: "brief",    label: "Brief Intake",        agents: ["briefing"] },
   { id: "creative", label: "Creative Direction",  agents: ["culture", "strategy", "copy", "kv", "reel"] },
   { id: "channel",  label: "Channel Adoption",    agents: ["channel"] },
+  { id: "perform",  label: "Performance",         agents: ["performance"] },
   { id: "activate", label: "Activation",          agents: [] as string[] },
-  { id: "perform",  label: "Performance",         agents: [] as string[] },
 ];
 
 function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditName }: {
@@ -3409,6 +3794,7 @@ export default function App() {
     if (state.status === "idle") return wizardStarted ? "brief" : null;
     if (state.status === "running") {
       const as = state.agentStatus;
+      if (["performance"].some(k => as[k] === "running" || as[k] === "done")) return "perform";
       if (["channel"].some(k => as[k] === "running" || as[k] === "done")) return "channel";
       if (["culture","strategy","copy","kv","reel"].some(k => as[k] === "running" || as[k] === "done")) return "creative";
       return "brief";
@@ -3555,6 +3941,12 @@ export default function App() {
                 <ChannelAdapterIntakeView
                   milestone={state.milestones["channel"]}
                   liveMsg={liveMsg("channel")}
+                />
+              );
+              if (focusKey === "performance") return (
+                <PerformanceIntakeView
+                  milestone={state.milestones["performance"]}
+                  liveMsg={liveMsg("performance")}
                 />
               );
               // fallback (focusKey null)

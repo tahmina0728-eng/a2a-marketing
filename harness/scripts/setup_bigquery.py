@@ -2,6 +2,7 @@
 setup_bigquery.py — Create BigQuery dataset + tables and seed from pgvector data.
 
 Creates:
+  campaign_outputs.machine_briefs        ← pipeline audit log (new)
   briefing_agent.fan_truth_library
   briefing_agent.channel_benchmarks
   briefing_agent.historical_campaigns
@@ -19,9 +20,10 @@ from psycopg2.extras import RealDictCursor
 from google.cloud import bigquery
 from google.api_core.exceptions import Conflict
 
-GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT", "dauntless-karma-497108-b0")
-BQ_LOCATION = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
-BQ_DATASET  = os.getenv("BQ_DATASET", "briefing_agent")
+GCP_PROJECT        = os.getenv("GOOGLE_CLOUD_PROJECT", "dauntless-karma-497108-b0")
+BQ_LOCATION        = "US"          # must be multi-region US — not us-central1
+BQ_DATASET         = os.getenv("BQ_DATASET", "briefing_agent")
+BQ_OUTPUT_DATASET  = "campaign_outputs"
 
 PG_HOST = os.getenv("PGVECTOR_HOST", "127.0.0.1")
 PG_PORT = int(os.getenv("PGVECTOR_PORT", "5433"))
@@ -30,15 +32,43 @@ PG_PASS = os.getenv("PGVECTOR_PASSWORD", "campaignos")
 PG_DB   = os.getenv("PGVECTOR_DB", "marketing")
 
 
-def create_dataset(client: bigquery.Client):
-    dataset_id = f"{GCP_PROJECT}.{BQ_DATASET}"
-    dataset    = bigquery.Dataset(dataset_id)
+def create_dataset(client: bigquery.Client, dataset_id: str):
+    full_id = f"{GCP_PROJECT}.{dataset_id}"
+    dataset  = bigquery.Dataset(full_id)
     dataset.location = BQ_LOCATION
     try:
         client.create_dataset(dataset, exists_ok=True)
-        print(f"  Dataset {dataset_id} ready (location: {BQ_LOCATION})")
+        print(f"  Dataset ready: {full_id} (location: {BQ_LOCATION})")
     except Conflict:
-        print(f"  Dataset {dataset_id} already exists")
+        print(f"  Dataset exists: {full_id}")
+
+
+def create_machine_briefs_table(client: bigquery.Client):
+    schema = [
+        bigquery.SchemaField("campaign_id",       "STRING",    description="UUID for this pipeline run"),
+        bigquery.SchemaField("campaign_name",      "STRING"),
+        bigquery.SchemaField("brand",              "STRING"),
+        bigquery.SchemaField("market",             "STRING"),
+        bigquery.SchemaField("product_category",   "STRING"),
+        bigquery.SchemaField("season",             "STRING"),
+        bigquery.SchemaField("channels",           "STRING",   description="Comma-separated"),
+        bigquery.SchemaField("moment_type",        "STRING"),
+        bigquery.SchemaField("validation_score",   "FLOAT64"),
+        bigquery.SchemaField("validation_status",  "STRING"),
+        bigquery.SchemaField("fan_truth_score",    "FLOAT64"),
+        bigquery.SchemaField("fan_truth_verdict",  "STRING"),
+        bigquery.SchemaField("flag_count",         "INT64"),
+        bigquery.SchemaField("brief_json",         "STRING",   description="Full machine brief JSON"),
+        bigquery.SchemaField("created_at",         "TIMESTAMP"),
+    ]
+    table_id = f"{GCP_PROJECT}.{BQ_OUTPUT_DATASET}.machine_briefs"
+    table    = bigquery.Table(table_id, schema=schema)
+    table.time_partitioning = bigquery.TimePartitioning(
+        type_=bigquery.TimePartitioningType.DAY,
+        field="created_at",
+    )
+    client.create_table(table, exists_ok=True)
+    print(f"  Table ready: {table_id}")
 
 
 def create_fan_truth_table(client: bigquery.Client):
@@ -159,26 +189,29 @@ def seed_from_pgvector(client: bigquery.Client):
 
 
 if __name__ == "__main__":
-    print(f"=== Setting up BigQuery dataset in {BQ_LOCATION} ===\n")
+    print(f"=== Setting up BigQuery (location: {BQ_LOCATION}) ===\n")
     client = bigquery.Client(project=GCP_PROJECT)
 
-    print("1. Creating dataset...")
-    create_dataset(client)
+    print("1. Creating datasets...")
+    create_dataset(client, BQ_OUTPUT_DATASET)   # campaign_outputs
+    create_dataset(client, BQ_DATASET)          # briefing_agent
 
     print("\n2. Creating tables...")
+    create_machine_briefs_table(client)         # campaign_outputs.machine_briefs
     create_fan_truth_table(client)
     create_channel_benchmarks_table(client)
     create_historical_campaigns_table(client)
 
-    print("\n3. Seeding from pgvector...")
+    print("\n3. Seeding briefing_agent tables from pgvector...")
     seed_from_pgvector(client)
 
     print(f"""
 === Done ===
-BigQuery dataset: {GCP_PROJECT}.{BQ_DATASET}
-Location: {BQ_LOCATION}
+Datasets created in location: {BQ_LOCATION}
+  {GCP_PROJECT}.{BQ_OUTPUT_DATASET}.machine_briefs  ← pipeline logs written here
+  {GCP_PROJECT}.{BQ_DATASET}.*                      ← source data for agents
 
-Tables created and seeded with pgvector data.
-Now run: uv run python scripts/index_bigquery.py
-to pull the data back into pgvector embeddings.
+Analytics query to verify:
+  SELECT * FROM `{GCP_PROJECT}.{BQ_OUTPUT_DATASET}.machine_briefs`
+  ORDER BY created_at DESC LIMIT 50;
 """)

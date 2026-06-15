@@ -428,19 +428,30 @@ class CampaignAggregation(BaseModel):
     summary:           str                   = ""
 
 
-class KPIActual(BaseModel):
-    kpi:      str
-    target:   str
-    actual:   str = "pending"
-    variance: str = "pending"
-    status:   str = "pending"
+class ChannelForecast(BaseModel):
+    """Pre-launch performance prediction for a single channel."""
+    channel:               str
+    predicted_reach:       str            = Field(..., description="Estimated reach range e.g. '4.2M – 5.8M'")
+    predicted_ctr:         str            = Field(..., description="Predicted CTR e.g. '2.3%'")
+    predicted_roas:        str            = Field(..., description="Predicted ROAS e.g. '3.1x'")
+    predicted_engagement:  str            = Field(..., description="Predicted engagement rate e.g. '5.8%'")
+    confidence:            str            = Field(..., description="HIGH / MEDIUM / LOW")
+    budget_pct:            float          = Field(..., description="Recommended budget allocation 0-100")
+    risk_flag:             Optional[str]  = Field(None, description="Key risk for this channel, if any")
+    opportunity:           Optional[str]  = Field(None, description="Specific upside opportunity")
 
 
-class PerformanceReport(BaseModel):
-    """Output of the performance_agent node."""
-    campaign_id:     str
-    kpi_actuals:     list[KPIActual] = Field(default_factory=list)
-    overall_status:  str             = "pending"
-    insights:        list[str]       = Field(default_factory=list)
-    recommendations: list[str]       = Field(default_factory=list)
-    next_steps:      str             = ""
+class PerformanceForecast(BaseModel):
+    """Output of the performance_agent node — pre-launch campaign forecast."""
+    campaign_id:              str
+    headline_prediction:      str            = Field(..., description="One-sentence overall forecast e.g. 'Strong campaign — 4.5M estimated reach across 3 channels'")
+    overall_confidence:       str            = Field(..., description="HIGH / MEDIUM / LOW — overall forecast confidence")
+    predicted_total_reach:    str            = Field(..., description="Combined reach estimate across all channels")
+    predicted_blended_roas:   str            = Field(..., description="Blended ROAS estimate across all channels")
+    fan_truth_impact:         str            = Field(..., description="How the Fan Truth score affects predicted performance")
+    benchmark_comparison:     str            = Field(..., description="How this campaign compares to historical benchmarks for this brand")
+    channel_forecasts:        list[ChannelForecast] = Field(default_factory=list)
+    top_risk:                 str            = Field(..., description="Single biggest risk to campaign performance")
+    top_opportunity:          str            = Field(..., description="Single biggest upside opportunity")
+    first_48h_watchlist:      list[str]      = Field(default_factory=list, description="3-5 specific metrics to monitor in first 48h post-launch")
+    recommended_budget_split: dict[str, float] = Field(default_factory=dict, description="Channel -> recommended % of total budget")
