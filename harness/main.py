@@ -711,10 +711,11 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
     """
     from app.publisher import (
         publish_google_ads, generate_brand_website, send_campaign_email,
+        publish_instagram, publish_instagram_reel,
     )
     results: dict = {}
     # Determine which channels to publish — empty list means all
-    selected = set(req.channels) if req.channels else {"google_ads", "landing_page", "email"}
+    selected = set(req.channels) if req.channels else {"google_ads", "landing_page", "email", "instagram"}
 
     # Store KV image resized to 600px wide for email (Gmail blocks data: URIs;
     # also Imagen 4 raw output can be very large — resize before serving).
@@ -840,6 +841,75 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
                 "status": "skipped",
                 "reason": "No recipient — enter email in the launch panel or set EMAIL_FROM in .env",
             }
+
+    # ── 4. Instagram ──────────────────────────────────────────────────────────
+    if "instagram" in selected:
+        _ig_image_url = ""
+        try:
+            from google.cloud import storage as _gcs_ig
+            from app.config import get_settings as _gs_ig
+            _cfg_ig = _gs_ig()
+            _client_ig = _gcs_ig.Client()
+            _bucket_ig = _client_ig.bucket(_cfg_ig.gcs_bucket)
+            # KV concept 1 is already in GCS from the creative pipeline
+            _kv_blob_path = f"outputs/{campaign_id}/kv_image_1.jpg"
+            _kv_blob = _bucket_ig.blob(_kv_blob_path)
+            if not _kv_blob.exists():
+                # Fall back: upload from in-memory resized image
+                if campaign_id in _campaign_images:
+                    _kv_blob.upload_from_string(_campaign_images[campaign_id],
+                                                content_type="image/jpeg")
+            # Try to make the blob publicly readable (fails gracefully on uniform-access buckets)
+            try:
+                _kv_blob.make_public()
+            except Exception as _pub_err:
+                logger.debug("instagram_make_public_skipped", error=str(_pub_err))
+            _ig_image_url = f"https://storage.googleapis.com/{_cfg_ig.gcs_bucket}/{_kv_blob_path}"
+        except Exception as _ig_url_err:
+            logger.warning("instagram_gcs_url_failed", error=str(_ig_url_err))
+
+        # Build caption from campaign copy
+        _cfg_ig_brand = __import__("app.publisher", fromlist=["BRAND_CONFIG"]).BRAND_CONFIG
+        _brand_tagline = (_cfg_ig_brand.get(req.brand, {}).get("tagline", ""))
+        _ig_caption = "\n\n".join(filter(None, [
+            req.hero_message,
+            (req.body or "")[:200] + ("…" if len(req.body or "") > 200 else ""),
+            _brand_tagline,
+            f"#{req.brand.replace(' ', '')} #CampaignOS #LimitedEdition",
+        ]))
+        results["instagram"] = publish_instagram(
+            image_url = _ig_image_url,
+            caption   = _ig_caption,
+            brand     = req.brand,
+        )
+
+        # ── Instagram Reel ─────────────────────────────────────────────────────
+        _reel_gcs_path = f"outputs/{campaign_id}/reel.mp4"
+        _reel_video_url = ""
+        try:
+            from google.cloud import storage as _gcs_reel
+            from app.config import get_settings as _gs_reel
+            _cfg_reel = _gs_reel()
+            _reel_blob = _gcs_reel.Client().bucket(_cfg_reel.gcs_bucket).blob(_reel_gcs_path)
+            if _reel_blob.exists():
+                try:
+                    _reel_blob.make_public()
+                except Exception:
+                    pass
+                _reel_video_url = (
+                    f"https://storage.googleapis.com/{_cfg_reel.gcs_bucket}/{_reel_gcs_path}"
+                )
+        except Exception as _reel_url_err:
+            logger.warning("instagram_reel_gcs_url_failed", error=str(_reel_url_err))
+
+        if _reel_video_url:
+            results["instagram_reel"] = publish_instagram_reel(
+                video_url = _reel_video_url,
+                caption   = _ig_caption,
+                brand     = req.brand,
+            )
+        else:
+            results["instagram_reel"] = {"status": "skipped", "reason": "No reel found in GCS"}
 
     return {"status": "ok", "campaign_id": campaign_id, "results": results}
 

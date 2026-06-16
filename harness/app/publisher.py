@@ -1425,6 +1425,228 @@ def _build_email_html(
 </html>"""
 
 
+def publish_instagram(
+    image_url: str,
+    caption: str = "",
+    brand: str = "",
+) -> dict:
+    """
+    Publish a single image post to Instagram Business account via Graph API.
+
+    Requires in .env / Cloud Run env vars:
+      INSTAGRAM_ACCESS_TOKEN          — Page Access Token with instagram_content_publish
+      INSTAGRAM_BUSINESS_ACCOUNT_ID   — Instagram Business Account ID (numeric)
+
+    image_url may be a public HTTPS URL or a GCS URI (gs://...) — GCS URIs are
+    automatically converted to storage.googleapis.com public URLs.
+    """
+    import requests
+
+    access_token = os.getenv("INSTAGRAM_ACCESS_TOKEN", "")
+    ig_user_id   = os.getenv("INSTAGRAM_BUSINESS_ACCOUNT_ID", "")
+
+    if not access_token or not ig_user_id:
+        logger.warning("instagram_skipped",
+                       reason="INSTAGRAM_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID not set")
+        return {
+            "status": "skipped",
+            "reason": (
+                "Instagram credentials not configured. "
+                "Set INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_BUSINESS_ACCOUNT_ID in .env."
+            ),
+        }
+
+    if not image_url:
+        return {"status": "skipped", "reason": "No image URL provided for Instagram post"}
+
+    # Convert GCS URI → public HTTPS URL
+    if image_url.startswith("gs://"):
+        image_url = "https://storage.googleapis.com/" + image_url[5:]
+
+    api_base = "https://graph.facebook.com/v19.0"
+
+    # ── Step 1: Create media container ────────────────────────────────────────
+    try:
+        resp = requests.post(
+            f"{api_base}/{ig_user_id}/media",
+            data={
+                "image_url":    image_url,
+                "caption":      caption or "",
+                "access_token": access_token,
+            },
+            timeout=30,
+        )
+        data = resp.json()
+        if "error" in data:
+            err = data["error"]
+            logger.error("instagram_container_failed", error=err)
+            return {"status": "error", "step": "create_container",
+                    "error": err.get("message", str(err))}
+
+        creation_id = data.get("id")
+        if not creation_id:
+            return {"status": "error", "step": "create_container",
+                    "error": "No creation_id in API response"}
+
+        logger.info("instagram_container_created", creation_id=creation_id, brand=brand)
+
+    except Exception as e:
+        logger.error("instagram_container_exception", error=str(e))
+        return {"status": "error", "step": "create_container", "error": str(e)}
+
+    # ── Step 2: Publish container ──────────────────────────────────────────────
+    try:
+        resp = requests.post(
+            f"{api_base}/{ig_user_id}/media_publish",
+            data={
+                "creation_id":  creation_id,
+                "access_token": access_token,
+            },
+            timeout=30,
+        )
+        data = resp.json()
+        if "error" in data:
+            err = data["error"]
+            logger.error("instagram_publish_failed", error=err)
+            return {"status": "error", "step": "publish",
+                    "error": err.get("message", str(err))}
+
+        post_id = data.get("id", "")
+        logger.info("instagram_published", post_id=post_id, brand=brand)
+        return {
+            "status":    "published",
+            "platform":  "Instagram",
+            "post_id":   post_id,
+            "image_url": image_url,
+            "caption":   caption[:100] + "…" if len(caption) > 100 else caption,
+            "ig_user":   ig_user_id,
+        }
+
+    except Exception as e:
+        logger.error("instagram_publish_exception", error=str(e))
+        return {"status": "error", "step": "publish", "error": str(e)}
+
+
+def publish_instagram_reel(
+    video_url: str,
+    caption: str = "",
+    brand: str = "",
+) -> dict:
+    """
+    Publish a video as an Instagram Reel via Graph API.
+
+    Flow: create container → poll status_code until FINISHED → publish.
+    Video must be a publicly accessible HTTPS URL (MP4, H.264, max 15 min).
+    GCS URIs (gs://...) are auto-converted to storage.googleapis.com URLs.
+
+    Requires same env vars as publish_instagram():
+      INSTAGRAM_ACCESS_TOKEN, INSTAGRAM_BUSINESS_ACCOUNT_ID
+    """
+    import requests
+    import time
+
+    access_token = os.getenv("INSTAGRAM_ACCESS_TOKEN", "")
+    ig_user_id   = os.getenv("INSTAGRAM_BUSINESS_ACCOUNT_ID", "")
+
+    if not access_token or not ig_user_id:
+        logger.warning("instagram_reel_skipped", reason="credentials not set")
+        return {
+            "status": "skipped",
+            "reason": "Set INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_BUSINESS_ACCOUNT_ID in .env.",
+        }
+
+    if not video_url:
+        return {"status": "skipped", "reason": "No video URL provided for Instagram Reel"}
+
+    if video_url.startswith("gs://"):
+        video_url = "https://storage.googleapis.com/" + video_url[5:]
+
+    api_base = "https://graph.facebook.com/v19.0"
+
+    # ── Step 1: Create Reel container ─────────────────────────────────────────
+    try:
+        resp = requests.post(
+            f"{api_base}/{ig_user_id}/media",
+            data={
+                "media_type":    "REELS",
+                "video_url":     video_url,
+                "caption":       caption or "",
+                "share_to_feed": "true",
+                "access_token":  access_token,
+            },
+            timeout=30,
+        )
+        data = resp.json()
+        if "error" in data:
+            err = data["error"]
+            logger.error("instagram_reel_container_failed", error=err)
+            return {"status": "error", "step": "create_container",
+                    "error": err.get("message", str(err))}
+
+        creation_id = data.get("id")
+        if not creation_id:
+            return {"status": "error", "step": "create_container",
+                    "error": "No creation_id in response"}
+
+        logger.info("instagram_reel_container_created", creation_id=creation_id, brand=brand)
+
+    except Exception as e:
+        logger.error("instagram_reel_container_exception", error=str(e))
+        return {"status": "error", "step": "create_container", "error": str(e)}
+
+    # ── Step 2: Poll until FINISHED (max 5 min, 5-sec intervals) ──────────────
+    for poll in range(60):
+        time.sleep(5)
+        try:
+            st = requests.get(
+                f"{api_base}/{creation_id}",
+                params={"fields": "status_code", "access_token": access_token},
+                timeout=15,
+            ).json()
+            status_code = st.get("status_code", "")
+            logger.debug("instagram_reel_poll", poll=poll + 1, status=status_code)
+
+            if status_code == "FINISHED":
+                break
+            if status_code == "ERROR":
+                return {"status": "error", "step": "processing",
+                        "error": f"Instagram rejected the reel: {st}"}
+        except Exception as _pe:
+            logger.warning("instagram_reel_poll_error", error=str(_pe))
+    else:
+        return {"status": "error", "step": "processing",
+                "error": "Reel processing timed out after 5 minutes"}
+
+    # ── Step 3: Publish ────────────────────────────────────────────────────────
+    try:
+        resp = requests.post(
+            f"{api_base}/{ig_user_id}/media_publish",
+            data={"creation_id": creation_id, "access_token": access_token},
+            timeout=30,
+        )
+        data = resp.json()
+        if "error" in data:
+            err = data["error"]
+            logger.error("instagram_reel_publish_failed", error=err)
+            return {"status": "error", "step": "publish",
+                    "error": err.get("message", str(err))}
+
+        post_id = data.get("id", "")
+        logger.info("instagram_reel_published", post_id=post_id, brand=brand)
+        return {
+            "status":    "published",
+            "platform":  "Instagram Reels",
+            "post_id":   post_id,
+            "video_url": video_url,
+            "caption":   caption[:100] + "…" if len(caption) > 100 else caption,
+            "ig_user":   ig_user_id,
+        }
+
+    except Exception as e:
+        logger.error("instagram_reel_publish_exception", error=str(e))
+        return {"status": "error", "step": "publish", "error": str(e)}
+
+
 def send_campaign_email(
     to_email:       str,
     brand:          str,
