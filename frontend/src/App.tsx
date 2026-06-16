@@ -1787,9 +1787,19 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
           <div style={{ fontSize: 26, fontWeight: 900, color: "#3b0764", lineHeight: 1.2, marginBottom: 6 }}>
             {published ? `✅ Live on ${publishedCount} channel${publishedCount !== 1 ? "s" : ""}` : "🚀 Launch Campaign"}
           </div>
-          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: published ? 0 : 24 }}>
+          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: published ? 8 : 24 }}>
             {published ? "Your campaign is now live. Track performance in your dashboards." : `Select channels to activate — ${displayChannels.length} available`}
           </div>
+
+          {/* Re-publish button */}
+          {published && (
+            <button onClick={() => { setPublished(false); setResults(null); setSelected(new Set()); }}
+              style={{ background: "none", border: "1.5px solid #c4b5fd", color: "#7c3aed",
+                borderRadius: 99, padding: "6px 16px", fontSize: 12, fontWeight: 700,
+                cursor: "pointer", marginBottom: 16 }}>
+              + Publish to more channels
+            </button>
+          )}
 
           {/* Channel selection chips */}
           {!published && (

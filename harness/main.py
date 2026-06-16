@@ -36,6 +36,7 @@ from pydantic import BaseModel as _BaseModel  # avoid clash with app.models
 _pipelines: dict[str, dict] = {}  # {cid: {"events": [...], "signal": asyncio.Event}}
 _channel_adaptations: dict[str, dict] = {}  # {campaign_id: channel_adaptations}
 _campaign_reels: dict[str, str] = {}         # {campaign_id: video_b64}
+_campaign_reel_uris: dict[str, str] = {}    # {campaign_id: gs:// URI of reel}
 
 
 async def push_event(cid: str, agent: str, status: str, message: str) -> None:
@@ -511,6 +512,9 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         _reel = creative_result.get("video_b64", "")
         if _reel:
             _campaign_reels[campaign_id] = _reel
+        _reel_uri = creative_result.get("video_uri", "")
+        if _reel_uri:
+            _campaign_reel_uris[campaign_id] = _reel_uri
         logger.info("campaign_stage2_done", campaign_id=campaign_id, ms2=ms2,
                     n_images=len(_images))
         if _images:
@@ -884,21 +888,41 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
         )
 
         # ── Instagram Reel ─────────────────────────────────────────────────────
-        _reel_gcs_path = f"outputs/{campaign_id}/reel.mp4"
         _reel_video_url = ""
         try:
             from google.cloud import storage as _gcs_reel
             from app.config import get_settings as _gs_reel
             _cfg_reel = _gs_reel()
-            _reel_blob = _gcs_reel.Client().bucket(_cfg_reel.gcs_bucket).blob(_reel_gcs_path)
+            _gcs_client_r = _gcs_reel.Client()
+
+            # Prefer the URI recorded at pipeline time (handles retry path reel_retry.mp4)
+            _stored_uri = _campaign_reel_uris.get(campaign_id, "")
+            if _stored_uri and _stored_uri.startswith("gs://"):
+                _uri_without = _stored_uri[5:]
+                _uri_bucket, _, _uri_blob_path = _uri_without.partition("/")
+                _reel_blob = _gcs_client_r.bucket(_uri_bucket).blob(_uri_blob_path)
+                logger.info("instagram_reel_checking_stored_uri", uri=_stored_uri)
+            else:
+                # Fallback: try canonical path then retry path
+                _reel_gcs_path = f"outputs/{campaign_id}/reel.mp4"
+                _reel_blob = _gcs_client_r.bucket(_cfg_reel.gcs_bucket).blob(_reel_gcs_path)
+                if not _reel_blob.exists():
+                    _reel_gcs_path = f"outputs/{campaign_id}/reel_retry.mp4"
+                    _reel_blob = _gcs_client_r.bucket(_cfg_reel.gcs_bucket).blob(_reel_gcs_path)
+                logger.info("instagram_reel_checking_path", path=_reel_gcs_path)
+                _uri_bucket = _cfg_reel.gcs_bucket
+                _uri_blob_path = _reel_gcs_path
+
             if _reel_blob.exists():
                 try:
                     _reel_blob.make_public()
                 except Exception:
                     pass
-                _reel_video_url = (
-                    f"https://storage.googleapis.com/{_cfg_reel.gcs_bucket}/{_reel_gcs_path}"
-                )
+                _reel_video_url = f"https://storage.googleapis.com/{_uri_bucket}/{_uri_blob_path}"
+                logger.info("instagram_reel_url_ready", url=_reel_video_url)
+            else:
+                logger.warning("instagram_reel_not_found_in_gcs",
+                               campaign_id=campaign_id, stored_uri=_stored_uri)
         except Exception as _reel_url_err:
             logger.warning("instagram_reel_gcs_url_failed", error=str(_reel_url_err))
 

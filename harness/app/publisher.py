@@ -187,9 +187,12 @@ def generate_glenfiddich_website(campaign_image_b64: str = "", campaign_id: str 
 
     prod_srcs    = [_gcs_to_b64(p, "image/jpeg", 800) for p in products[:3]]
     # Try multiple assets for hero background — pick first that loads successfully
-    hero_bg_src  = next((s for s in [_gcs_to_b64(a, "image/jpeg", 800) for a in assets[:3]] if s), "")
-    camp_src     = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else hero_bg_src
-    hero_bg_src  = f"data:image/jpeg;base64,{hero_image_b64}" if hero_image_b64 else hero_bg_src
+    _gcs_hero    = next((s for s in [_gcs_to_b64(a, "image/jpeg", 800) for a in assets[:3]] if s), "")
+    camp_src     = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else _gcs_hero
+    # Priority: website 16:9 adaptation → KV campaign image → GCS brand asset
+    hero_bg_src  = (f"data:image/jpeg;base64,{hero_image_b64}"    if hero_image_b64    else
+                    f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else
+                    _gcs_hero)
 
     # Use the harness /brand-logo/ endpoint — avoids PNG→JPEG transparency loss
     logo_html = '<img src="/brand-logo/Glenfiddich" alt="Glenfiddich × AMF1" style="height:40px;object-fit:contain;">'
