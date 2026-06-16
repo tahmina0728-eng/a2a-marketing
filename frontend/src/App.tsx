@@ -73,7 +73,7 @@ const BRANDS = [
   { id: "Rnorr",       label: "Rnorr",       emoji: "🥣", logo: "/brands/rnorr-logo.png"       },
   { id: "Sunglow",     label: "Sunglow",     emoji: "✨", logo: "/brands/sunglow-logo.png"     },
   { id: "Boozt",       label: "Boozt",       emoji: "💨", logo: "/brands/boozt-logo.png"       },
-  { id: "Glenfiddich", label: "Glenfiddich", emoji: "🥃", logo: "/brands/glenfiddich-logo.png" },
+  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", logo: "/brands/glenfiddich-logo.png" },
 ];
 
 
@@ -86,16 +86,16 @@ const BRAND_PRODUCTS: Record<string, string[]> = {
               "Curl Refresh Spray", "Edge Control", "Protective Style Serum"],
   Boozt:       ["Original Energy", "Zero Sugar", "Sport Hydration",
                "Tropical Blast", "Arctic Mint", "Classic"],
-  Glenfiddich: ["12 Year Old", "15 Year Old", "18 Year Old", "21 Year Old Gran Reserva",
-               "14 Year Old Bourbon Cask", "IPA Experiment", "Project XX",
-               "Grand Chateau 31 Year Old", "Fire & Cane"],
+  Glenfiddich: ["16 Year Old — AMF1 Limited Edition", "12 Year Old", "15 Year Old",
+               "18 Year Old", "21 Year Old Gran Reserva", "14 Year Old Bourbon Cask",
+               "IPA Experiment", "Project XX", "Grand Cru 23 Year Old"],
 };
 
 const BRAND_CATEGORY: Record<string, string> = {
   Rnorr:       "Dry Cook-In Sauces",
   Sunglow:     "Hair Care",
   Boozt:       "Energy Drinks",
-  Glenfiddich: "Single Malt Scotch Whisky",
+  Glenfiddich: "Single Malt Scotch Whisky × Aston Martin F1",
 };
 
 const BRAND_FAN_TRUTHS: Record<string, string[]> = {
@@ -121,11 +121,12 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
     "Zero limits. Pure energy. One can.",
   ],
   Glenfiddich: [
+    "Two icons. One bottle. The moment after the race is the one worth celebrating.",
+    "16 years of patience. One season of speed. Both take everything you've got.",
+    "The podium moment is loud. What you raise a glass to afterwards is yours alone.",
+    "When you gift a Glenfiddich AMF1, you're not giving a bottle — you're giving a story.",
+    "136 years of craft. The same obsession Aston Martin bring to every lap.",
     "The first sip of a whisky that's older than most of your friendships",
-    "Good whisky doesn't rush you — and neither should the best moments",
-    "Some bottles are too good to open — until the moment is finally right",
-    "When you gift a Glenfiddich, you're not giving a bottle — you're giving thought",
-    "136 years of one family making one whisky in one valley",
   ],
 };
 
@@ -134,7 +135,7 @@ const INTERESTS: Record<string, string[]> = {
   Rnorr:     ["Home cooks", "Families", "Students", "Budget shoppers", "Food lovers", "Meal preppers", "Time-poor professionals"],
   Sunglow:   ["Natural hair community", "Protective styles", "Wash day routines", "Scalp health", "Curl definition", "Black hair care", "Beauty enthusiasts"],
   Boozt:       ["Athletes & gym-goers", "Students", "Festival-goers", "Gamers", "Young professionals", "Outdoor adventurers"],
-  Glenfiddich: ["Whisky enthusiasts", "Premium gifters", "Collectors", "Connoisseurs", "Corporate entertainers", "Single malt beginners", "Occasion celebrators"],
+  Glenfiddich: ["F1 enthusiasts", "Whisky connoisseurs", "Premium gifters", "Luxury collectors", "Corporate entertainers", "Motorsport fans", "Occasion celebrators"],
   default:     ["Families", "Students", "Young professionals", "Beauty lovers", "Lifestyle"],
 };
 const REGIONS     = ["United Kingdom", "Australia", "United States", "New Zealand", "SEA", "Global"];
@@ -286,13 +287,13 @@ function BriefForm({ onFullCampaign }: {
             <div className="wizard-step-label">Step 1 of 7</div>
             <h2 className="wizard-heading">Select your <span className="gradient-text">brand</span></h2>
             <p className="wizard-subheading">Which brand is this campaign for?</p>
-            <div className="goal-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+            <div className="goal-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
               {BRANDS.map((b) => (
                 <div key={b.id} className={`goal-tile${d.brand === b.id ? " selected" : ""}`}
                   onClick={() => setD((p) => ({ ...p, brand: b.id, product: "", productCustom: "" }))}>
-                  <div className="goal-tile-icon">
+                  <div className="goal-tile-icon" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 48 }}>
                     <img src={b.logo} alt={b.label}
-                      style={{ height: 40, maxWidth: "100%", objectFit: "contain", display: "block" }} />
+                      style={{ height: b.id === "Glenfiddich" ? "auto" : 40, maxHeight: b.id === "Glenfiddich" ? 36 : 40, maxWidth: "100%", objectFit: "contain", display: "block" }} />
                   </div>
                   <div className="goal-tile-label">{b.label}</div>
                 </div>
@@ -560,9 +561,13 @@ function BriefForm({ onFullCampaign }: {
             ? <button className="wizard-back-btn" onClick={() => setStep((s) => s - 1)}>← Back</button>
             : <div />}
           {step < TOTAL_STEPS
-            ? <button className="wizard-next-btn" disabled={!canProceed()} onClick={() => setStep((s) => s + 1)}>
-                {step === TOTAL_STEPS - 1 ? "Review →" : "Continue →"}
-              </button>
+            ? <button disabled={!canProceed()} onClick={() => setStep((s) => s + 1)} style={{
+                width: 48, height: 48, borderRadius: "50%", border: "none", cursor: canProceed() ? "pointer" : "not-allowed",
+                background: ORB_BG,
+                color: "white", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
+                boxShadow: canProceed() ? "0 4px 16px rgba(124,58,237,0.45)" : "none",
+                opacity: canProceed() ? 1 : 0.35, transition: "opacity 0.15s, box-shadow 0.15s",
+              }}>→</button>
             : <button className="wizard-launch-btn" disabled={!canProceed()} onClick={handleFullLaunch}>
                 🚀 Generate AI Campaign
               </button>}
@@ -3786,7 +3791,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
 
-  const [wizardStarted, setWizardStarted]   = useState(false);
+  const [wizardStarted, setWizardStarted]   = useState(true);
   const [campaignName,  setCampaignName]    = useState("New Campaign");
   const [briefData,     setBriefData]       = useState<import("./types/pipeline").HarnessBriefRequest | null>(null);
 

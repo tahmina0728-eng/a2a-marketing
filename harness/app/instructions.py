@@ -453,44 +453,82 @@ with a sleek blowout, or European with wavy highlighted hair. NEVER always choos
 a dark-skinned Black woman with 4C/Afro curls — vary every time.
 For Boozt: person of ANY ethnicity holding or drinking a Boozt can, high-energy urban, gym or sport context.
 
-GLENFIDDICH — PREMIUM SINGLE MALT SCOTCH WHISKY:
-Glenfiddich is a luxury heritage brand. The bottle IS the hero — no model required unless
-the brief is a gifting or occasion campaign that calls for human presence.
+GLENFIDDICH × ASTON MARTIN F1 — LIMITED EDITION 16 YEAR OLD:
+This is NOT standard Glenfiddich. This is a luxury dual-brand collaboration between
+Glenfiddich Single Malt Scotch Whisky and the Aston Martin Aramco Formula One Team.
+Every visual decision must honour BOTH brand identities simultaneously.
 
-PRODUCT TREATMENT (mandatory):
-• The Glenfiddich bottle must be lit dramatically — single strong key light from upper-left
-  or upper-right, creating specular highlights along the dark forest-green glass.
-• Show the label facing the camera, perfectly sharp, at hero scale (minimum 25% image height).
-• If featuring a whisky dram/glass: amber liquid must glow — warm tungsten backlight through
-  the glass creates the liquid's characteristic amber-gold luminosity. Never show it flat.
-• For multi-product layouts: stagger 2–3 bottles at different depths, each lit independently.
+THE PRODUCT — know it precisely:
+• Glenfiddich 16 Year Old Single Malt Scotch Whisky — Limited Edition
+• Bottle: deep TEAL / peacock green glass — NOT the standard Glenfiddich forest green.
+  This teal is richer, more saturated, distinctly modern.
+• Label: white Glenfiddich stag centred on teal, "Aged 16 Years" beneath, Aston Martin
+  wings logo below the Glenfiddich name. Clean, architectural, dual-branded.
+• Tube/gift box: same deep teal, "16" large on the body, a bold vertical chartreuse
+  lime-green stripe running the full height — this stripe is the visual signature of
+  the collaboration. It signals F1 precision on a whisky bottle.
+• The amber whisky liquid inside is the colour contrast hero against the teal exterior.
 
-VISUAL AESTHETIC — always premium, always earned:
-• Colour language: deep forest green (bottle), warm amber gold (whisky liquid), antique cream
-  or aged parchment (text zone), rich espresso brown (surface/background). Never flat or clinical.
-• Lighting: dramatic chiaroscuro — deep shadows, rich pools of warm light. Think a master
-  portrait painter applied to product photography. The image must feel luxurious at a glance.
-• Textures that signal heritage: aged oak stave, hammered copper, cracked leather, hand-laid
-  stone, Speyside mist — use ONE texture as a grounding surface or background element.
-• The Glenfiddich stag emblem (on the label) should be legible — never obscure the label.
+SIGNATURE CAMPAIGN SURFACES (use these — they are in the actual campaign):
+• EMERALD GREEN MARBLE: the primary surface in this campaign. Rich, veined, deep green
+  marble — both table surface and sometimes wall. This is non-negotiable for product hero shots.
+• BURL WOOD / WARM OAK: warm amber-brown burl wood tabletop — used for intimate close-ups
+  with the crystal glass and amber whisky in the foreground. Adds warmth against the cool teal.
+• TOBACCO / COGNAC UPHOLSTERY: warm tan or caramel leather/velvet seating in background —
+  the lounge/hospitality suite atmosphere. Never a clinical studio.
+
+GLASSWARE (mandatory when a dram is shown):
+• RIBBED CRYSTAL TUMBLER — a wide, low ribbed glass, not a rocks glass. The ridges catch
+  the warm amber light and create beautiful reflections. This is the campaign's signature glass.
+• Amber whisky, no ice (or a single large clear sphere if the brief calls for it).
+• Backlight the glass so the amber liquid glows — warm tungsten light through the glass.
+
+PRODUCT TREATMENT:
+• The bottle must be lit with a single strong key light from upper-left or upper-right,
+  creating specular highlights along the teal glass.
+• The chartreuse/lime-green stripe on the tube must be clearly visible — it is the
+  collab's visual mark. Never crop or obscure it.
+• Show label facing camera, perfectly sharp, at hero scale (minimum 25% image height).
+• Bottle and tube are often shown together as a pair — tube slightly behind and taller.
+
+VISUAL AESTHETIC — where heritage craft meets F1 precision:
+• Colour language: deep teal (bottle), chartreuse lime (accent stripe), warm amber
+  (whisky liquid), emerald green (marble surface), cognac/tobacco (warm setting tones).
+• Lighting: warm, intimate, directional — luxury bar or hospitality suite, not a studio.
+  Pools of warm light on the product. Deep, comfortable shadows in the background.
+  The overall feel is an exclusive post-race celebration in a private lounge.
+• The mood is QUIET LUXURY — intimate, confident, understated. Two icons together,
+  neither shouting. The restraint IS the message.
+• Dual logo lockup: the Glenfiddich stag and the Aston Martin wings appear together
+  in the composition — reference this in the typographic zone or on the product label.
 
 CAMPAIGN CONTEXT — vary by brief type:
-• GIFTING campaign: Include an elegant surface (dark lacquered wood, marble, slate) with
-  the bottle as a gift being revealed. Warm, intimate lighting. Quiet luxury — not loud.
-• OCCASION / CELEBRATION: Crystal dram glass with a single large ice sphere and visible
-  amber pour catching the light. The bottle is positioned as the source of the moment.
-• HERITAGE / CRAFT: Reveal the distillery context — copper pot still detail, oak cask end,
-  Glenfiddich valley mist. Product in foreground, heritage texture fills the background.
-• ALWAYS-ON / PREMIUM LIFESTYLE: Dark, moody studio. Bottle hero centre-right.
-  Deep shadow left — this is the text zone for the headline. Minimal, authoritative.
+• GIFTING: Bottle + tube on emerald green marble, warm overhead key light. The chartreuse
+  stripe catches the light. Ribbed crystal glass beside it, empty. Intimate bar background.
+• OCCASION / CELEBRATION: Wide ribbed crystal glass with amber whisky on warm burl wood.
+  Bottle in background, slightly defocused but teal clearly visible. Menu card or subtle
+  racing reference in the background. The moment just after the podium.
+• LIFESTYLE / HOSPITALITY: Person in luxury evening or smart-casual attire, seated in
+  a cognac/tan lounge chair, reaching toward the bottle or holding the glass. Emerald
+  green marble table between them and camera. Warm, low, cinematic lighting.
+• ALWAYS-ON / HERO: Pure product on emerald marble. Bottle + tube + glass arranged in
+  a deliberate triangle composition. No person. Dark background. Chartreuse stripe glowing.
 
-FORBIDDEN for Glenfiddich:
-— Bright, cheerful, colourful backgrounds (this is not a FMCG grocery product)
-— Generic "whisky rocks glass on wood" clichés without intentional design architecture
-— Models in casual or street-wear contexts
-— Any visual that reads as cheap, fast, or mass-market
-— Flat even lighting across the bottle (kills the premium feel)
-— More than one lifestyle scene element — restraint signals luxury
+TYPOGRAPHY FONT — critical:
+• PRIMARY: Aston Martin Flare (Bold for headlines, Medium for sublines, Regular for body).
+  This font is architectural, confident, and distinctly premium — NOT a generic serif.
+• SECONDARY: Agrandir Regular for supporting copy and labels.
+• Both fonts are available in the brand assets.
+
+FORBIDDEN for this campaign:
+— Generic "whisky on wood" product shots without emerald marble or the teal bottle
+— Standard dark Scotch whisky atmosphere (Speyside mist, copper stills, barrels) — wrong product
+— The traditional Glenfiddich dark forest green palette — this bottle is TEAL, not dark green
+— Models in racing suits or pit-lane contexts — this is the luxury hospitality side of F1
+— Any visual that feels mass-market, fast, or loud
+— Flat even lighting — the product must feel lit and intentional
+— Showing any whisky glass other than the ribbed crystal tumbler
+— Ignoring the chartreuse lime stripe — it is the collaboration's visual identity
 
 ════════════════════════════════════════════════════════════
 YOUR BRIEF — ALL IN CONTEXT
