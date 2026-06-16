@@ -1466,15 +1466,14 @@ Output EXACTLY this format (nothing else):
 
 ═══ MANDATORY RULES ═══
 - FULL BLEED — subject and background fill the entire frame edge to edge, no flat panels
-- LEFT SIDE naturally darker/hazier/more atmospheric than right (scene depth, not a flat colour)
-  so overlaid typography reads clearly — achieved through lighting, depth of field, or shadows
 - Model and products positioned centre-right or right, facing slightly left into the frame
 - Photorealistic DSLR advertising photography quality
 - Magical effects: {_magic['effects']}
 - Bold saturated colours — award-winning art direction
-- NO text anywhere EXCEPT on product packaging labels (which must show '{brand}' clearly)
+- NO text anywhere in the image — headline is injected separately after generation
 - Fan truth ({_ft_ctx}) visible in model's expression and scene energy
-- Season ({_season_ctx}) woven into atmosphere, lighting temperature, and mood""", temp=0.9)
+- Season ({_season_ctx}) woven into atmosphere, lighting temperature, and mood
+- Natural balanced lighting across the full frame — no artificial dark zone on the left""", temp=0.9)
 
     # Parse the 2 concept prompts
     import re as _re
@@ -1649,10 +1648,22 @@ Output EXACTLY this format (nothing else):
         if not generated_bytes_list:
             raise ValueError("Gemini Pro Image returned no images")
 
-        # Headline text is now rendered by Gemini directly in the image — no Pillow text overlay.
-        # _apply_brand_overlay is skipped; images are used as-is from the model.
+        # Apply Pillow overlay: headline text + brand label stamp (logo handled separately).
+        # Each concept gets a different copy variant so the two KVs look distinct.
+        _headline_short  = copy_headline or _extract_headline(big_idea)
+        _words           = [w.strip() for w in _headline_short.split() if w.strip()]
+        # Concept 0 → full headline; Concept 1 → punchline (last half of words)
+        _alt_headline    = " ".join(_words[max(0, len(_words) // 2):]) if len(_words) > 2 else _headline_short
+        _concept_lines   = [_headline_short, _alt_headline]
+
         primary_bytes = generated_bytes_list[0]  # raw, for channel crops
-        images_b64 = [base64.b64encode(b).decode("utf-8") for b in generated_bytes_list]
+        images_b64 = []
+        for i, _img_bytes in enumerate(generated_bytes_list):
+            _hl = _concept_lines[i] if i < len(_concept_lines) else _headline_short
+            _overlaid = _apply_brand_overlay(
+                _img_bytes, brand, _hl, product_uris, product_name
+            )
+            images_b64.append(base64.b64encode(_overlaid).decode("utf-8"))
         image_b64 = images_b64[0] if images_b64 else None
         log.info("p2_generate_image_done", n_generated=len(images_b64))
 

@@ -3116,10 +3116,11 @@ function CultureIntakeView({ milestone, liveMsg }: {
 }
 
 // ── KV Generator intake view ─────────────────────────────────
-function KVIntakeView({ milestone, liveMsg, reelMilestone }: {
+function KVIntakeView({ milestone, liveMsg, reelMilestone, agentDone }: {
   milestone: Record<string,unknown> | undefined;
   liveMsg: string | null;
   reelMilestone: Record<string,unknown> | undefined;
+  agentDone?: boolean;
 }) {
   if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
 
@@ -3129,7 +3130,7 @@ function KVIntakeView({ milestone, liveMsg, reelMilestone }: {
       <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" as const,
         justifyContent: "center", padding: "32px 36px" }}>
         <div style={{ maxWidth: 800, margin: "0 auto", width: "100%" }}>
-          <AgentIntakeHeader label="MORPHIS" title="Key Visual" done={true} />
+          <AgentIntakeHeader label="MORPHIS" title="Key Visual" done={agentDone ?? true} />
           <KVPanel m={milestone} liveMsg={liveMsg} reelMilestone={reelMilestone} />
         </div>
       </div>
@@ -3947,6 +3948,7 @@ export default function App() {
                   milestone={state.milestones["kv"]}
                   liveMsg={liveMsg("kv")}
                   reelMilestone={state.milestones["reel"]}
+                  agentDone={state.agentStatus["kv"] === "done"}
                 />
               );
               if (focusKey === "reel") return (

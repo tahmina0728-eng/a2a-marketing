@@ -505,9 +505,14 @@ async def generate_and_save_kv_image(
             pass
         campaign_copy_json = tool_context.state.get("campaign_copy", "{}")
 
-        # Headline text is rendered by Gemini directly in the image — Pillow compositing skipped.
-        # _composite_brand_assets is intentionally not called here.
-        mime_type = "image/png"
+        image_data = _composite_brand_assets(
+            image_data         = image_data,
+            brand              = brand,
+            brand_locks        = brand_locks,
+            campaign_copy_json = campaign_copy_json,
+            product_name       = product_name,
+        )
+        mime_type = "image/jpeg"  # always JPEG after compositing
 
         # Save via ADK artifact service — InMemory locally, GCS in production.
         version = await tool_context.save_artifact(
