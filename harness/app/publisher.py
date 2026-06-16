@@ -49,6 +49,22 @@ BRAND_CONFIG: dict[str, dict] = {
         "copy":       "Rnorr stock cubes and cook-in sauces bring rich, authentic flavour to every dish. Trusted by home cooks for generations.",
         "features":   ["No Artificial Colours", "Real Herb Extracts", "Trusted Since 1838", "100% Natural Stock"],
     },
+    # Glenfiddich × AMF1: #0E6B6B Deep Teal (bottle) | #B8D400 Chartreuse (AMF1 stripe) | Aston Martin Flare
+    "Glenfiddich": {
+        "primary":    "#0A6B65",   # Deep Teal — the actual AMF1 bottle colour
+        "secondary":  "#064d49",   # Darker teal for overlays and depth
+        "accent":     "#B8D400",   # Chartreuse lime — the AMF1 collaboration stripe
+        "accent2":    "#D4F000",   # Brighter chartreuse for highlights
+        "text":       "#ffffff",
+        "body_bg":    "#ffffff",
+        "section_bg": "#f0faf9",   # very light teal tint
+        "font":       "'Cormorant Garamond', 'Georgia', serif",
+        "font_url":   "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&display=swap",
+        "tagline":    "After the noise, your quiet victory.",
+        "hero_tag":   "🏎 Limited Edition · AMF1 × Glenfiddich",
+        "copy":       "Glenfiddich 16 Year Old — a Limited Edition created with the Aston Martin Aramco Formula One™ Team. Two icons. One extraordinary Scotch.",
+        "features":   ["Aged 16 Years", "Single Malt Scotch Whisky", "AMF1 Limited Edition", "Product of Scotland"],
+    },
     # Boozt: #0E105E Midnight | #0086FE Boozt Blue | #00BFFE Sky | #FFFFFF White | Rubik italic
     "Boozt": {
         "primary":    "#0E105E",   # Midnight (master brand colour)
