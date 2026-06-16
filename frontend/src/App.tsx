@@ -70,9 +70,10 @@ const GOALS = [
 ];
 
 const BRANDS = [
-  { id: "Rnorr",   label: "Rnorr",   emoji: "🥣", logo: "/brands/rnorr-logo.png"   },
-  { id: "Sunglow", label: "Sunglow", emoji: "✨", logo: "/brands/sunglow-logo.png" },
-  { id: "Boozt",   label: "Boozt",   emoji: "💨", logo: "/brands/boozt-logo.png"   },
+  { id: "Rnorr",       label: "Rnorr",       emoji: "🥣", logo: "/brands/rnorr-logo.png"       },
+  { id: "Sunglow",     label: "Sunglow",     emoji: "✨", logo: "/brands/sunglow-logo.png"     },
+  { id: "Boozt",       label: "Boozt",       emoji: "💨", logo: "/brands/boozt-logo.png"       },
+  { id: "Glenfiddich", label: "Glenfiddich", emoji: "🥃", logo: "/brands/glenfiddich-logo.png" },
 ];
 
 
@@ -83,14 +84,18 @@ const BRAND_PRODUCTS: Record<string, string[]> = {
   Sunglow:   ["Moisture Shampoo", "Moisture Conditioner", "Deep Repair Treatment",
               "Scalp Nourish Oil", "Define & Glow Serum", "Leave-In Conditioner",
               "Curl Refresh Spray", "Edge Control", "Protective Style Serum"],
-  Boozt:     ["Original Energy", "Zero Sugar", "Sport Hydration",
-              "Tropical Blast", "Arctic Mint", "Classic"],
+  Boozt:       ["Original Energy", "Zero Sugar", "Sport Hydration",
+               "Tropical Blast", "Arctic Mint", "Classic"],
+  Glenfiddich: ["12 Year Old", "15 Year Old", "18 Year Old", "21 Year Old Gran Reserva",
+               "14 Year Old Bourbon Cask", "IPA Experiment", "Project XX",
+               "Grand Chateau 31 Year Old", "Fire & Cane"],
 };
 
 const BRAND_CATEGORY: Record<string, string> = {
-  Rnorr:     "Dry Cook-In Sauces",
-  Sunglow:   "Hair Care",
-  Boozt:     "Energy Drinks",
+  Rnorr:       "Dry Cook-In Sauces",
+  Sunglow:     "Hair Care",
+  Boozt:       "Energy Drinks",
+  Glenfiddich: "Single Malt Scotch Whisky",
 };
 
 const BRAND_FAN_TRUTHS: Record<string, string[]> = {
@@ -115,14 +120,22 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
     "Peak performance isn't a personality — it's a decision you make every day",
     "Zero limits. Pure energy. One can.",
   ],
+  Glenfiddich: [
+    "The first sip of a whisky that's older than most of your friendships",
+    "Good whisky doesn't rush you — and neither should the best moments",
+    "Some bottles are too good to open — until the moment is finally right",
+    "When you gift a Glenfiddich, you're not giving a bottle — you're giving thought",
+    "136 years of one family making one whisky in one valley",
+  ],
 };
 
 const AGE_GROUPS  = ["13–17", "18–24", "25–34", "35–44", "45–54", "55+"];
 const INTERESTS: Record<string, string[]> = {
   Rnorr:     ["Home cooks", "Families", "Students", "Budget shoppers", "Food lovers", "Meal preppers", "Time-poor professionals"],
   Sunglow:   ["Natural hair community", "Protective styles", "Wash day routines", "Scalp health", "Curl definition", "Black hair care", "Beauty enthusiasts"],
-  Boozt:     ["Athletes & gym-goers", "Students", "Festival-goers", "Gamers", "Young professionals", "Outdoor adventurers"],
-  default:   ["Families", "Students", "Young professionals", "Beauty lovers", "Lifestyle"],
+  Boozt:       ["Athletes & gym-goers", "Students", "Festival-goers", "Gamers", "Young professionals", "Outdoor adventurers"],
+  Glenfiddich: ["Whisky enthusiasts", "Premium gifters", "Collectors", "Connoisseurs", "Corporate entertainers", "Single malt beginners", "Occasion celebrators"],
+  default:     ["Families", "Students", "Young professionals", "Beauty lovers", "Lifestyle"],
 };
 const REGIONS     = ["United Kingdom", "Australia", "United States", "New Zealand", "SEA", "Global"];
 const SEASONS     = ["Spring", "Summer", "Autumn", "Winter", "All Year"];

@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CampaignOS — Technical Presentation Script</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  :root {
+    --purple:     #7c3aed;
+    --purple-light: #ede9fe;
+    --purple-mid: #a78bfa;
+    --rose:       #f43f5e;
+    --rose-light: #fff1f3;
+    --green:      #059669;
+    --amber:      #d97706;
+    --blue:       #2563eb;
+    --ink:        #111827;
+    --mid:        #374151;
+    --muted:      #6b7280;
+    --border:     #e5e7eb;
+    --bg:         #fafafa;
+    --white:      #ffffff;
+    --card-bg:    #ffffff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* ── HEADER ── */
+  .doc-header {
+    background: linear-gradient(135deg, #1e0050 0%, #4c1d95 50%, #7c3aed 100%);
+    padding: 56px 60px 48px;
+    color: white;
+  }
+  .doc-header .eyebrow {
+    font-size: 11px; font-weight: 700; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #c4b5fd; margin-bottom: 14px;
+  }
+  .doc-header h1 {
+    font-size: 38px; font-weight: 900; line-height: 1.15;
+    letter-spacing: -0.02em; margin-bottom: 10px;
+  }
+  .doc-header .subtitle {
+    font-size: 16px; color: #ddd6fe; font-weight: 400;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .container { max-width: 960px; margin: 0 auto; padding: 48px 32px 80px; }
+
+  /* ── SLIDE ── */
+  .slide {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    margin-bottom: 36px;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+  }
+
+  .slide-header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 22px 28px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
+  }
+  .slide-number {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    color: white; font-size: 13px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .slide-title { font-size: 17px; font-weight: 800; color: var(--ink); }
+  .slide-tag {
+    margin-left: auto; font-size: 10px; font-weight: 700;
+    padding: 4px 10px; border-radius: 99px;
+    background: #ede9fe; color: #7c3aed;
+    text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap;
+  }
+
+  .slide-body { padding: 28px 32px; }
+
+  /* ── SPEAKER NOTE ── */
+  .speaker-note {
+    background: #fffbeb; border: 1px solid #fde68a;
+    border-left: 4px solid #f59e0b;
+    border-radius: 10px; padding: 14px 18px;
+    margin-bottom: 22px; font-size: 13px; color: #92400e; line-height: 1.65;
+  }
+  .speaker-note strong { color: #78350f; }
+
+  /* ── SECTION LABEL ── */
+  .section-label {
+    font-size: 10px; font-weight: 800; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--purple);
+    margin-bottom: 10px; margin-top: 24px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── BODY TEXT ── */
+  p { margin-bottom: 14px; color: var(--mid); font-size: 14px; line-height: 1.75; }
+  p:last-child { margin-bottom: 0; }
+  strong { color: var(--ink); font-weight: 700; }
+
+  /* ── AGENT CARD ── */
+  .agent-card {
+    border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 24px; overflow: hidden;
+  }
+  .agent-header {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
+    border-bottom: 1px solid #ede9fe;
+  }
+  .agent-orb {
+    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 4px 14px rgba(124,58,237,0.3);
+  }
+  .agent-orb.rose { background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%); box-shadow: 0 4px 14px rgba(244,63,94,0.3); }
+  .agent-orb.teal { background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%); box-shadow: 0 4px 14px rgba(13,148,136,0.3); }
+  .agent-orb.blue { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); box-shadow: 0 4px 14px rgba(37,99,235,0.3); }
+  .agent-orb.fn   { background: linear-gradient(135deg, #374151 0%, #1f2937 100%); box-shadow: 0 4px 14px rgba(55,65,81,0.3); }
+  .agent-meta { flex: 1; }
+  .agent-name { font-size: 15px; font-weight: 800; color: var(--ink); }
+  .agent-label { font-size: 11px; color: var(--purple); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .agent-badge {
+    font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 99px;
+    background: #ede9fe; color: #7c3aed;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .agent-badge.fn { background: #f3f4f6; color: #374151; }
+
+  .agent-body { padding: 18px 20px; }
+
+  /* ── IO GRID ── */
+  .io-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 14px 0; }
+  .io-box {
+    border-radius: 10px; padding: 14px 16px;
+    font-size: 13px; line-height: 1.6;
+  }
+  .io-box.input  { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .io-box.output { background: #f0fdf4; border: 1px solid #86efac; }
+  .io-box .io-label {
+    font-size: 9px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .io-box.input  .io-label { color: #1d4ed8; }
+  .io-box.output .io-label { color: #059669; }
+
+  /* ── CODE BLOCK ── */
+  pre {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    background: #0f172a; color: #e2e8f0;
+    border-radius: 10px; padding: 16px 20px;
+    overflow-x: auto; margin: 14px 0; line-height: 1.7;
+  }
+  .comment { color: #64748b; }
+  .key     { color: #7dd3fc; }
+  .str     { color: #86efac; }
+  .num     { color: #fbbf24; }
+  .kw      { color: #c084fc; }
+  .route   { color: #f43f5e; font-weight: 700; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  th {
+    text-align: left; padding: 10px 14px;
+    background: #f5f3ff; border: 1px solid #ede9fe;
+    font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
+    text-transform: uppercase; color: var(--purple);
+  }
+  td { padding: 10px 14px; border: 1px solid var(--border); color: var(--mid); vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+
+  /* ── SSE EVENTS ── */
+  .sse-block {
+    background: #0f172a; border-radius: 10px; padding: 16px 20px; margin: 12px 0;
+  }
+  .sse-label {
+    font-size: 9px; font-weight: 800; letter-spacing: 0.16em;
+    text-transform: uppercase; color: #64748b; margin-bottom: 10px;
+  }
+  .sse-event {
+    font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+    color: #94a3b8; line-height: 1.7; margin-bottom: 6px;
+  }
+  .sse-event:last-child { margin-bottom: 0; }
+  .sse-event .agent-key { color: #f43f5e; }
+  .sse-event .status-key { color: #34d399; }
+  .sse-event .msg { color: #fbbf24; }
+
+  /* ── FLOW DIAGRAM ── */
+  .flow {
+    display: flex; flex-direction: column; gap: 0; margin: 16px 0;
+  }
+  .flow-step {
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .flow-left {
+    display: flex; flex-direction: column; align-items: center;
+    width: 30px; flex-shrink: 0;
+  }
+  .flow-dot {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    flex-shrink: 0; display: flex; align-items: center;
+    justify-content: center; font-size: 9px; color: white; font-weight: 800;
+  }
+  .flow-dot.fn { background: linear-gradient(135deg, #374151, #1f2937); }
+  .flow-dot.rose { background: linear-gradient(135deg, #f43f5e, #be123c); }
+  .flow-line {
+    width: 2px; flex: 1; min-height: 16px;
+    background: linear-gradient(rgba(124,58,237,0.4), rgba(124,58,237,0.1));
+    margin: 2px 0;
+  }
+  .flow-content {
+    flex: 1; padding-bottom: 14px;
+  }
+  .flow-name { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .flow-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 2px; }
+  .flow-output {
+    display: inline-block; margin-top: 6px; font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    background: #f0fdf4; border: 1px solid #86efac;
+    color: #059669; border-radius: 6px; padding: 2px 8px;
+  }
+
+  /* ── TECH STACK TABLE ── */
+  .stack-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0;
+  }
+  .stack-item {
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; background: #fafafa;
+  }
+  .stack-layer {
+    font-size: 9px; font-weight: 800; color: var(--purple);
+    letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px;
+  }
+  .stack-tech { font-size: 13px; font-weight: 700; color: var(--ink); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    border: none; border-top: 1px solid var(--border); margin: 28px 0;
+  }
+
+  /* ── FOOTER ── */
+  .doc-footer {
+    text-align: center; padding: 32px;
+    font-size: 12px; color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  @media print {
+    .slide { page-break-inside: avoid; box-shadow: none; }
+    body { background: white; }
+    .container { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="doc-header">
+  <div class="eyebrow">Technical Architecture · Presentation Script</div>
+  <h1>CampaignOS</h1>
+  <div class="subtitle">Full System Architecture — Frontend, Backend, Agents, Infrastructure</div>
+</div>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 1 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">1</div>
+      <div class="slide-title">What Is CampaignOS?</div>
+      <div class="slide-tag">Overview</div>
+    </div>
+    <div class="slide-body">
+      <div class="speaker-note"><strong>Say this:</strong> CampaignOS is an end-to-end AI-powered campaign production platform. A marketing team fills in one brief — brand, product, audience, budget, channels — and the system produces a validated strategy, campaign copy, hero visual, a six-second video reel, and a pre-launch performance forecast. Everything a team would normally spend two weeks producing, delivered in under five minutes.</div>
+
+      <div class="section-label">Three Pillars</div>
+      <div class="io-grid">
+        <div class="io-box input">
+          <div class="io-label">Multi-Agent AI Pipeline</div>
+          Powered by Google ADK 2.0. Specialised agents each own one stage of the creative process and hand off structured data to the next agent via a Directed Acyclic Graph.
+        </div>
+        <div class="io-box output">
+          <div class="io-label">Real-Time Frontend</div>
+          React + TypeScript UI that streams live agent progress over Server-Sent Events — every agent's status visible in real time.
+        </div>
+      </div>
+      <div class="io-box input" style="margin-top:10px">
+        <div class="io-label">Google Cloud Infrastructure</div>
+        Vertex AI (Gemini, Imagen 4, Veo), Vertex AI Search, Cloud SQL + pgvector, BigQuery, Cloud Storage, Cloud Run.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 2 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">2</div>
+      <div class="slide-title">Frontend Technology Stack</div>
+      <div class="slide-tag">Frontend</div>
+    </div>
+    <div class="slide-body">
+      <div class="speaker-note"><strong>Say this:</strong> The frontend is a React 18 + TypeScript single-page application built with Vite. The entire UI — all components, state management, and API integration — lives in a single file: App.tsx. This is intentional for a demo platform: one file, zero magic, every line visible.</div>
+
+      <div class="stack-grid">
+        <div class="stack-item">
+          <div class="stack-layer">Framework</div>
+          <div class="stack-tech">React 18 + TypeScript</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-layer">Build Tool</div>
+          <div class="stack-tech">Vite — ultra-fast HMR dev server</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-layer">UI Components</div>
+          <div class="stack-tech">100% custom — no UI library, pure inline styles</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-layer">Animations</div>
+          <div class="stack-tech">Pure CSS keyframes (icon-breathe, wave-dot, fade-in)</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-layer">State Management</div>
+          <div class="stack-tech">React hooks — useState, usePipeline custom hook</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-layer">Real-Time Streaming</div>
+          <div class="stack-tech">Native EventSource (Server-Sent Events)</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-layer">Type Safety</div>
+          <div class="stack-tech">TypeScript interfaces mirror Python Pydantic models exactly</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-layer">Agent Network Graph</div>
+          <div class="stack-tech">SVG + trigonometric positioning — 8 nodes on a circle</div>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:20px">Three Screen States</div>
+      <table>
+        <tr><th>Status</th><th>Screen</th><th>What renders</th></tr>
+        <tr><td><code>idle</code></td><td>Home</td><td>Animated agent network SVG + 6-step brief wizard form</td></tr>
+        <tr><td><code>running</code></td><td>Live Pipeline</td><td>3-panel layout: Steps sidebar + Live agent panel + Network diagram</td></tr>
+        <tr><td><code>done</code></td><td>Results</td><td>Vertical timeline: strategy → copy → KV → reel → forecast → launch</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 3 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">3</div>
+      <div class="slide-title">Frontend → Backend: The Full Connection</div>
+      <div class="slide-tag">Integration</div>
+    </div>
+    <div class="slide-body">
+      <div class="speaker-note"><strong>Say this:</strong> This is the most important integration point. Let me show you exactly how data flows from the moment "Generate Campaign" is clicked to the moment the results appear on screen.</div>
+
+      <div class="section-label">Step 1 — POST the Brief</div>
+      <pre><span class="comment">// usePipeline.ts — startFullCampaign()</span>
+<span class="kw">const</span> res = <span class="kw">await</span> fetch(<span class="str">`${API_BASE}/campaign`</span>, {
+  method: <span class="str">"POST"</span>,
+  headers: { <span class="str">"Content-Type"</span>: <span class="str">"application/json"</span> },
+  body: JSON.stringify(brief),
+});
+<span class="comment">// Response arrives in milliseconds ↓</span>
+<span class="kw">const</span> { campaign_id } = <span class="kw">await</span> res.json();
+<span class="comment">// → "campaign-sunglow-summer-27b422"  (pipeline already running in background)</span></pre>
+
+      <div class="section-label">Step 2 — Open the SSE Stream</div>
+      <pre><span class="kw">const</span> es = <span class="kw">new</span> EventSource(<span class="str">`${API_BASE}/events/${campaign_id}`</span>);
+<span class="comment">// Long-lived HTTP connection. Browser auto-reconnects if dropped.</span>
+
+es.onmessage = (e) => {
+  <span class="kw">const</span> ev = JSON.parse(e.data);
+  <span class="comment">// ev = { agent, status, message, t }</span>
+};</pre>
+
+      <div class="section-label">Step 3 — Event Processing Logic</div>
+      <table>
+        <tr><th>ev.status</th><th>Frontend Action</th></tr>
+        <tr><td><code>"running"</code></td><td>Sets <code>agentStatus[agent] = "running"</code>, adds to live log, shows animated dots in sidebar</td></tr>
+        <tr><td><code>"done"</code></td><td>Sets <code>agentStatus[agent] = "done"</code>, extracts inline milestone data if <code>message</code> contains <code>_text</code></td></tr>
+        <tr><td><code>"milestone"</code></td><td>Parses JSON from <code>message</code>, merges into <code>milestones[agent]</code> — populates agent detail panels</td></tr>
+        <tr><td><code>"step_data"</code></td><td>Same as milestone — used for incremental KV pipeline data</td></tr>
+        <tr><td><code>"__done__"</code></td><td>Pipeline complete — parses full result, sets <code>status: "done"</code>, renders ResultsView</td></tr>
+        <tr><td><code>"__error__"</code></td><td>Sets <code>status: "error"</code>, shows error card with recovery hint</td></tr>
+      </table>
+
+      <div class="section-label">Step 4 — SSE Event Example (Nexus / Performance)</div>
+      <div class="sse-block">
+        <div class="sse-label">SSE Events arriving in sequence</div>
+        <div class="sse-event">data: {"{"}<span class="agent-key">"agent"</span>: <span class="msg">"performance"</span>, <span class="status-key">"status"</span>: <span class="msg">"running"</span>, <span class="msg">"message"</span>: <span class="msg">"Forecasting reach, ROAS…"</span>{"}"}</div>
+        <div class="sse-event">data: {"{"}<span class="agent-key">"agent"</span>: <span class="msg">"performance"</span>, <span class="status-key">"status"</span>: <span class="msg">"milestone"</span>, <span class="msg">"message"</span>: <span class="msg">"{\"headline_prediction\":\"Strong campaign...\",\"channel_forecasts\":[...]}"</span>{"}"}</div>
+        <div class="sse-event">data: {"{"}<span class="agent-key">"agent"</span>: <span class="msg">"performance"</span>, <span class="status-key">"status"</span>: <span class="msg">"done"</span>, <span class="msg">"message"</span>: <span class="msg">"Forecast ready — HIGH confidence ✓"</span>{"}"}</div>
+        <div class="sse-event">data: {"{"}<span class="agent-key">"agent"</span>: <span class="msg">"__done__"</span>, <span class="status-key">"status"</span>: <span class="msg">"done"</span>, <span class="msg">"message"</span>: <span class="msg">"{\"machine_brief\":{...},\"performance_forecast\":{...}}"</span>{"}"}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 4 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">4</div>
+      <div class="slide-title">Backend: FastAPI Application & Routes</div>
+      <div class="slide-tag">Backend</div>
+    </div>
+    <div class="slide-body">
+      <div class="speaker-note"><strong>Say this:</strong> The backend is a FastAPI application running as an async Python server. The key design decision: when a campaign starts, the HTTP response closes immediately and the pipeline runs as a background asyncio task. The frontend tracks progress via the SSE stream, never blocking on a long HTTP call.</div>
+
+      <table>
+        <tr><th>Route</th><th>Method</th><th>Purpose</th></tr>
+        <tr><td><code>/campaign</code></td><td>POST</td><td>Start campaign → returns <code>campaign_id</code> in milliseconds, pipeline runs in background</td></tr>
+        <tr><td><code>/events/{id}</code></td><td>GET</td><td>SSE stream — holds connection open, pushes events as agents complete</td></tr>
+        <tr><td><code>/brief</code></td><td>POST</td><td>Run briefing stage only via ADK (synchronous)</td></tr>
+        <tr><td><code>/brief-full</code></td><td>POST</td><td>Brief + Strategy + Copy synchronously — no streaming</td></tr>
+        <tr><td><code>/pipeline</code></td><td>POST</td><td>Full ADK DAG — all agents, no SSE streaming</td></tr>
+        <tr><td><code>/health</code></td><td>GET</td><td>Cloud Run liveness probe</td></tr>
+        <tr><td><code>/readiness</code></td><td>GET</td><td>Checks agents + search client are loaded</td></tr>
+        <tr><td><code>/landing/{id}</code></td><td>GET</td><td>Serves the AI-generated brand landing page HTML</td></tr>
+      </table>
+
+      <div class="section-label" style="margin-top:20px">SSE Architecture — Zero CPU Blocking</div>
+      <pre><span class="comment"># Per-campaign event store in memory</span>
+_pipelines: dict[str, dict] = {
+  <span class="str">"campaign-abc-123"</span>: {
+    <span class="str">"events"</span>: [...],             <span class="comment"># list of all events so far</span>
+    <span class="str">"signal"</span>: asyncio.Event()    <span class="comment"># wakes SSE generator when new event arrives</span>
+  }
+}
+
+<span class="comment"># SSE generator — runs per connected client</span>
+<span class="kw">async def</span> generate():
+    idx = <span class="num">0</span>
+    <span class="kw">while</span> campaign_id <span class="kw">in</span> _pipelines:
+        <span class="kw">while</span> idx &lt; len(events):
+            yield f<span class="str">"data: {json.dumps(events[idx])}\n\n"</span>
+            idx += <span class="num">1</span>
+        <span class="kw">await</span> asyncio.wait_for(signal.wait(), timeout=<span class="num">600</span>)
+        <span class="comment"># ↑ Suspends here — zero CPU — until push_event() wakes it</span></pre>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 5 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">5</div>
+      <div class="slide-title">Harness Folder Structure</div>
+      <div class="slide-tag">File Architecture</div>
+    </div>
+    <div class="slide-body">
+      <pre><span class="comment">harness/</span>
+├── <span class="key">main.py</span>               <span class="comment">← FastAPI app: HTTP routes + SSE event store</span>
+├── <span class="key">app/</span>
+│   ├── <span class="key">pipeline.py</span>       <span class="comment">← ADK Workflow DAG (graph wiring, edges, JoinNode)</span>
+│   ├── <span class="key">agents.py</span>         <span class="comment">← 14+ agent instances (model, instructions, output_key)</span>
+│   ├── <span class="key">nodes.py</span>          <span class="comment">← Deterministic function nodes (zero LLM cost)</span>
+│   ├── <span class="key">runner.py</span>         <span class="comment">← Execution engine for /campaign route (2000+ lines)</span>
+│   ├── <span class="key">models.py</span>         <span class="comment">← All Pydantic data models (input → output per stage)</span>
+│   ├── <span class="key">instructions.py</span>   <span class="comment">← System prompt for every agent</span>
+│   ├── <span class="key">tools.py</span>          <span class="comment">← Custom ADK tools (image generation + save)</span>
+│   ├── <span class="key">config.py</span>         <span class="comment">← All env vars via pydantic-settings (@lru_cache)</span>
+│   ├── <span class="key">brand_assets.py</span>   <span class="comment">← Loads logos/images/guidelines from GCS or local disk</span>
+│   ├── <span class="key">search_client.py</span>  <span class="comment">← Vertex AI Search client (brand rules + benchmarks)</span>
+│   ├── <span class="key">data_loader.py</span>    <span class="comment">← BigQuery read/write helpers</span>
+│   ├── <span class="key">pgvector_client.py</span><span class="comment">← PostgreSQL + pgvector semantic audience search</span>
+│   ├── <span class="key">creative_pipeline.py</span><span class="comment">← Image gen, Pillow overlay, Veo reel, channel crops</span>
+│   └── <span class="key">publisher.py</span>      <span class="comment">← Landing page, Google Ads mock, Gmail SMTP email</span>
+└── <span class="key">scripts/</span>
+    ├── <span class="key">setup_bigquery.py</span> <span class="comment">← Creates BQ datasets/tables, seeds from pgvector</span>
+    └── <span class="key">setup_pgvector.py</span> <span class="comment">← Creates vector tables, embeds + loads all data</span></pre>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 6 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">6</div>
+      <div class="slide-title">Two Execution Paths</div>
+      <div class="slide-tag">Architecture</div>
+    </div>
+    <div class="slide-body">
+      <div class="io-grid">
+        <div class="io-box input">
+          <div class="io-label">Path A — /campaign (UI path)</div>
+          <strong>Hand-coded async orchestrator in main.py.</strong> Calls runner.py functions directly in sequence. Emits SSE events at every stage. This is what the frontend uses. Maximum control over timing, logging, and event shaping.
+        </div>
+        <div class="io-box output">
+          <div class="io-label">Path B — /pipeline (ADK DAG)</div>
+          <strong>Pure Google ADK Workflow.</strong> Uses root_agent from pipeline.py — full DAG with fan-out, fan-in (JoinNode), and HITL gates. Accessed via adk web or /pipeline endpoint. The architecturally "correct" ADK path.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 7 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">7</div>
+      <div class="slide-title">Complete Agent Pipeline — All 16 Steps</div>
+      <div class="slide-tag">Agent Deep Dive</div>
+    </div>
+    <div class="slide-body">
+      <div class="speaker-note"><strong>Say this:</strong> Let me walk through every step of the pipeline from brief submission to final results, showing what each agent receives as input, what it does with it, and what it produces as output.</div>
+
+      <div class="section-label">Step 0 — Brief Submission</div>
+      <p>Marketer completes the 6-step wizard and clicks Generate. Frontend POSTs the <code>BriefRequest</code> to <code>/campaign</code>. Backend creates a <code>campaign_id</code>, starts the background task, and returns in milliseconds. Frontend opens the SSE stream.</p>
+
+      <hr class="divider"/>
+
+      <!-- load_brand_context -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-orb fn">⚙️</div>
+          <div class="agent-meta">
+            <div class="agent-name">load_brand_context</div>
+            <div class="agent-label">Function Node · No LLM · Zero Cost</div>
+          </div>
+          <div class="agent-badge fn">DETERMINISTIC</div>
+        </div>
+        <div class="agent-body">
+          <div class="io-grid">
+            <div class="io-box input"><div class="io-label">Input</div>Raw BriefRequest: campaign name, brand, goal, channels, audience, Fan Truth, budget</div>
+            <div class="io-box output"><div class="io-label">Output</div>BriefingContext: brand guidelines + all benchmarks + CDP audience + brand locks</div>
+          </div>
+          <p style="margin-top:12px"><strong>What it does:</strong> Loads brand guidelines markdown from GCS. Lists product images, logos, fonts. Makes 5 Vertex AI Search queries in parallel (brand rules, Fan Truth library, campaign benchmarks, channel benchmarks, moment type rules). Queries pgvector for CDP audience profiles matching the audience description via cosine similarity (Gemini Embedding 2). Packages everything into <code>BriefingContext</code> — the LLM receives all data without making any tool calls.</p>
+        </div>
+      </div>
+
+      <!-- briefing_agent -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-orb">📋</div>
+          <div class="agent-meta">
+            <div class="agent-name">briefing_agent — <strong>Logos</strong></div>
+            <div class="agent-label">Gemini 3.5 Flash · Vertex AI · single_turn</div>
+          </div>
+          <div class="agent-badge">BRIEFING</div>
+        </div>
+        <div class="agent-body">
+          <div class="io-grid">
+            <div class="io-box input"><div class="io-label">Input</div>Full BriefingContext: brand guidelines, Fan Truth library, channel benchmarks, CDP profiles, the raw brief</div>
+            <div class="io-box output"><div class="io-label">Output</div>MachineBrief: Fan Truth score (Specific/Shared/Special/Overall), validation score, KPI flags, brand locks, compliance flags</div>
+          </div>
+          <p style="margin-top:12px"><strong>Fan Truth scoring (3 dimensions, 0–100 each):</strong></p>
+          <table>
+            <tr><th>Dimension</th><th>What it measures</th><th>Example</th></tr>
+            <tr><td>Specific</td><td>Is the insight precise and non-generic?</td><td>"Women of colour struggle to find make-up for their undertone" scores high; "people love beauty" scores low</td></tr>
+            <tr><td>Shared</td><td>Does the audience universally recognise it?</td><td>Must feel like "yes, that's me" to the target fan</td></tr>
+            <tr><td>Special</td><td>Does it make people feel good about the brand?</td><td>Ownable, not just true of the whole category</td></tr>
+          </table>
+          <p><strong>Overall ≥ 70</strong> → PASS (brief proceeds). <strong>Overall &lt; 70</strong> → FAIL (brief flagged, suggested rewrite provided).</p>
+          <div class="sse-block" style="margin-top:12px">
+            <div class="sse-label">SSE Events emitted</div>
+            <div class="sse-event">data: {"{"}<span class="agent-key">"agent"</span>: <span class="msg">"briefing"</span>, <span class="status-key">"status"</span>: <span class="msg">"running"</span>, "message": "Loading brand guidelines & audience data…"{"}"}</div>
+            <div class="sse-event">data: {"{"}<span class="agent-key">"agent"</span>: <span class="msg">"briefing"</span>, <span class="status-key">"status"</span>: <span class="msg">"done"</span>, "message": "{\"_text\":\"Brief validated ✓ — Fan Truth PASS 82/100\",\"fan_truth\":{...}}"{"}"}</div>
+          </div>
+          <p style="margin-top:10px;font-size:12px;color:#059669;font-weight:600">→ Also triggers fire-and-forget BigQuery write to <code>campaign_outputs.machine_briefs</code></p>
+        </div>
+      </div>
+
+      <!-- creative_director -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-orb">💡</div>
+          <div class="agent-meta">
+            <div class="agent-name">creative_director — <strong>Helia</strong></div>
+            <div class="agent-label">Gemini 3.5 Flash · Vertex AI · single_turn</div>
+          </div>
+          <div class="agent-badge">STRATEGY</div>
+        </div>
+        <div class="agent-body">
+          <div class="io-grid">
+            <div class="io-box input"><div class="io-label">Input</div>MachineBrief + brand guidelines text + brand locks JSON</div>
+            <div class="io-box output"><div class="io-label">Output</div>CreativeStrategy: BigIdea, hero message (≤8 words), channel priorities, budget allocation %, handoff message to KV team</div>
+          </div>
+          <p style="margin-top:12px"><strong>Key outputs:</strong></p>
+          <pre><span class="key">big_idea</span>: {
+  <span class="key">title</span>: <span class="str">"Golden Radiance"</span>,
+  <span class="key">essence</span>: <span class="str">"This campaign makes people feel seen in their own skin"</span>,
+  <span class="key">visual_world</span>: <span class="str">"Warm, luminous, golden-hour light..."</span>
+}
+<span class="key">hero_message</span>: <span class="str">"Let it glow."</span>
+<span class="key">budget_allocation</span>: { <span class="str">"instagram"</span>: <span class="num">40</span>, <span class="str">"tiktok"</span>: <span class="num">35</span>, <span class="str">"google"</span>: <span class="num">25</span> }</pre>
+        </div>
+      </div>
+
+      <!-- copy_agent -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-orb">✍️</div>
+          <div class="agent-meta">
+            <div class="agent-name">copy_agent — <strong>Ideon</strong></div>
+            <div class="agent-label">Gemini 3.5 Flash · Vertex AI · single_turn</div>
+          </div>
+          <div class="agent-badge">COPY</div>
+        </div>
+        <div class="agent-body">
+          <div class="io-grid">
+            <div class="io-box input"><div class="io-label">Input</div>CreativeStrategy + MachineBrief + brand locks + selected channel list</div>
+            <div class="io-box output"><div class="io-label">Output</div>CampaignCopy: 3 length variants + channel-specific copy per platform</div>
+          </div>
+          <p style="margin-top:12px"><strong>Enforces brand locks:</strong> no tagline in captions, CTA ≤ 3 words, no corporate language. Channel-specific fields generated only for selected channels.</p>
+          <pre><span class="key">short</span>:   { <span class="key">headline</span>: <span class="str">"Let It Glow."</span> }
+<span class="key">medium</span>:  { <span class="key">headline</span>: <span class="str">"Real glow. No filter needed."</span>, <span class="key">subline</span>: <span class="str">"Formulated for Black hair from the start."</span> }
+<span class="key">cta</span>: <span class="str">"Glow Now"</span>
+<span class="key">instagram_caption</span>: <span class="str">"Your glow was never lost. Just waiting. ✨ #LetItGlow"</span>
+<span class="key">tiktok_hook</span>: <span class="str">"POV: your hair finally has its moment"</span></pre>
+        </div>
+      </div>
+
+      <!-- culture -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-orb teal">🌍</div>
+          <div class="agent-meta">
+            <div class="agent-name">culture_analyst + culture_formatter — <strong>Aether</strong></div>
+            <div class="agent-label">Gemini 3.5 Flash · Google Search grounding · multi-turn</div>
+          </div>
+          <div class="agent-badge">CULTURE</div>
+        </div>
+        <div class="agent-body">
+          <div class="io-grid">
+            <div class="io-box input"><div class="io-label">Input</div>Campaign brief context: brand, product, market, season, audience</div>
+            <div class="io-box output"><div class="io-label">Output</div>CultureAnalysis: summary, sentiment_metrics dict, 3–5 actionable recommendations</div>
+          </div>
+          <p style="margin-top:12px"><strong>Makes multiple real live Google Search calls</strong> — not simulated. Researches trending conversations, hashtag momentum, creator economy signals, competitor activity. <code>culture_formatter</code> then structures the raw research into clean JSON.</p>
+        </div>
+      </div>
+
+      <!-- kv_generators -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-orb">🎨</div>
+          <div class="agent-meta">
+            <div class="agent-name">kv_generator_1 + kv_generator_2 → kv_image_agent_1 + kv_image_agent_2 — <strong>Morphis</strong></div>
+            <div class="agent-label">Gemini 3.5 Flash + Imagen 4 · Fan-Out · PARALLEL</div>
+          </div>
+          <div class="agent-badge">KV VISUAL</div>
+        </div>
+        <div class="agent-body">
+          <div class="io-grid">
+            <div class="io-box input"><div class="io-label">Input</div>CreativeStrategy + CampaignCopy + brand guidelines + product images from GCS</div>
+            <div class="io-box output"><div class="io-label">Output</div>2× KVConcept with image_b64 (JPEG), gcs_uri, image_prompt — then kv_ranker selects the stronger one</div>
+          </div>
+          <p style="margin-top:12px"><strong>Two parallel art directors with different design lenses:</strong></p>
+          <div class="io-grid">
+            <div class="io-box input">
+              <div class="io-label">kv_generator_1 — Graphic-Led</div>
+              Layout, colour fields, and typography are the primary design decisions. Photography enters in service of the graphic system.
+            </div>
+            <div class="io-box output">
+              <div class="io-label">kv_generator_2 — Image-Led</div>
+              One powerful photographic or CGI hero moment. Typography is designed into the composition, not placed over it.
+            </div>
+          </div>
+          <p><strong>kv_image_agent</strong> calls <code>generate_and_save_kv_image</code> tool → Imagen 4 (Vertex AI) → Pillow overlay (headline, brand colours, logo) → GCS save → returns <code>image_b64</code></p>
+          <p><strong>kv_ranker</strong> evaluates both concepts on brand alignment and strategic fit, selects the stronger one.</p>
+        </div>
+      </div>
+
+      <!-- reel -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-orb rose">🎬</div>
+          <div class="agent-meta">
+            <div class="agent-name">Veo Pipeline — <strong>Kinetik</strong></div>
+            <div class="agent-label">Veo 3.1 · Vertex AI · Long-running operation · Polls up to 8 min</div>
+          </div>
+          <div class="agent-badge">REEL</div>
+        </div>
+        <div class="agent-body">
+          <div class="io-grid">
+            <div class="io-box input"><div class="io-label">Input</div>Brand name, Big Idea, hero message, season, product name, audience description, GCS bucket config</div>
+            <div class="io-box output"><div class="io-label">Output</div>6-second MP4 campaign reel — video_b64 (base64 encoded)</div>
+          </div>
+          <p style="margin-top:12px">Constructs a Veo prompt from the campaign creative brief. Submits to <code>veo-3.1-generate-001</code> — starts a long-running operation. Polls every 15 seconds. Downloads the completed video from GCS when ready.</p>
+        </div>
+      </div>
+
+      <!-- channel -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-orb blue">📡</div>
+          <div class="agent-meta">
+            <div class="agent-name">Channel Adaptation + content_agent — <strong>Poly</strong></div>
+            <div class="agent-label">Pillow (Python) + Gemini 3.5 Flash · single_turn</div>
+          </div>
+          <div class="agent-badge">CHANNEL</div>
+        </div>
+        <div class="agent-body">
+          <div class="io-grid">
+            <div class="io-box input"><div class="io-label">Input</div>KV hero image + channel list + CampaignCopy + format specs per channel</div>
+            <div class="io-box output"><div class="io-label">Output</div>channel_adaptations (smart-cropped images per aspect ratio) + ContentPackage (per-channel headline, CTA, caption, legal text)</div>
+          </div>
+          <p style="margin-top:12px"><strong>Aspect ratio crops via Pillow smart-crop:</strong> Instagram Feed (1:1), Stories/TikTok (9:16), Website Banner (16:9), Email Banner (3:1). Each crop centres on the subject using attention-based cropping.</p>
+        </div>
+      </div>
+
+      <!-- performance / nexus -->
+      <div class="agent-card">
+        <div class="agent-header">
+          <div class="agent-orb rose">📊</div>
+          <div class="agent-meta">
+            <div class="agent-name">run_performance_forecast — <strong>Nexus</strong></div>
+            <div class="agent-label">Gemini 3.5 Flash · Vertex AI · Pre-Launch Predictor</div>
+          </div>
+          <div class="agent-badge">PERFORMANCE</div>
+        </div>
+        <div class="agent-body">
+          <div class="io-grid">
+            <div class="io-box input"><div class="io-label">Input</div>MachineBrief (Fan Truth score) + CreativeStrategy + CampaignCopy + channel list + campaign_id</div>
+            <div class="io-box output"><div class="io-label">Output</div>PerformanceForecast: per-channel reach/CTR/ROAS/engagement predictions + confidence + budget split + 48h watchlist</div>
+          </div>
+          <p style="margin-top:12px"><strong>Fan Truth Score adjustments:</strong></p>
+          <table>
+            <tr><th>Fan Truth Score</th><th>Confidence</th><th>Reach Adjustment</th></tr>
+            <tr><td>≥ 80</td><td style="color:#059669;font-weight:700">HIGH</td><td>+15% organic reach uplift (authentic connection drives sharing)</td></tr>
+            <tr><td>60 – 79</td><td style="color:#d97706;font-weight:700">MEDIUM</td><td>Standard benchmarks applied</td></tr>
+            <tr><td>&lt; 60</td><td style="color:#dc2626;font-weight:700">LOW</td><td>−20% on all reach forecasts, confidence reduced</td></tr>
+          </table>
+          <pre style="margin-top:12px"><span class="key">headline_prediction</span>: <span class="str">"Strong campaign — 82/100 Fan Truth drives 12.4M est. reach"</span>
+<span class="key">overall_confidence</span>: <span class="str">"HIGH"</span>
+<span class="key">predicted_total_reach</span>: <span class="str">"10.2M – 14.6M across 3 channels"</span>
+<span class="key">predicted_blended_roas</span>: <span class="str">"3.4x"</span>
+<span class="key">channel_forecasts</span>: [
+  { <span class="key">channel</span>: <span class="str">"Instagram"</span>, <span class="key">predicted_reach</span>: <span class="str">"4.8M–6.2M"</span>, <span class="key">predicted_ctr</span>: <span class="str">"2.4%"</span>, <span class="key">confidence</span>: <span class="str">"HIGH"</span> },
+  { <span class="key">channel</span>: <span class="str">"TikTok"</span>, <span class="key">predicted_reach</span>: <span class="str">"5.4M–8.4M"</span>, <span class="key">predicted_ctr</span>: <span class="str">"3.2%"</span>, <span class="key">confidence</span>: <span class="str">"HIGH"</span> }
+]
+<span class="key">first_48h_watchlist</span>: [<span class="str">"Instagram Stories swipe-up rate"</span>, <span class="str">"TikTok completion rate"</span>]</pre>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 8 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">8</div>
+      <div class="slide-title">Complete Data Flow Diagram</div>
+      <div class="slide-tag">System Flow</div>
+    </div>
+    <div class="slide-body">
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot" style="background:#2563eb">👤</div><div class="flow-line"></div></div>
+          <div class="flow-content"><div class="flow-name">BriefRequest (from UI wizard)</div><div class="flow-desc">campaign_name, brand, goal, budget, kpis, channels, audience, fan_truth, season, market</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot fn">⚙️</div><div class="flow-line"></div></div>
+          <div class="flow-content"><div class="flow-name">load_brand_context</div><div class="flow-desc">GCS + Vertex AI Search + pgvector → all brand data pre-loaded</div><div class="flow-output">→ BriefingContext</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot">📋</div><div class="flow-line"></div></div>
+          <div class="flow-content"><div class="flow-name">briefing_agent (Logos)</div><div class="flow-desc">Fan Truth score, validation, KPI flags, brand locks · BigQuery write triggered</div><div class="flow-output">→ MachineBrief</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot">💡</div><div class="flow-line"></div></div>
+          <div class="flow-content"><div class="flow-name">creative_director (Helia)</div><div class="flow-desc">Big Idea, hero message, channel priorities, budget allocation</div><div class="flow-output">→ CreativeStrategy</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot">✍️</div><div class="flow-line"></div></div>
+          <div class="flow-content"><div class="flow-name">copy_agent (Ideon)</div><div class="flow-desc">Short / medium / long copy + per-channel copy for every selected platform</div><div class="flow-output">→ CampaignCopy</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot teal" style="background:#0d9488">🌍</div><div class="flow-line"></div></div>
+          <div class="flow-content"><div class="flow-name">culture_analyst + formatter (Aether)</div><div class="flow-desc">Live Google Search → cultural signals, trends, hashtag momentum</div><div class="flow-output">→ CultureAnalysis</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot">🎨</div><div class="flow-line"></div></div>
+          <div class="flow-content"><div class="flow-name">kv_generator × 2 → kv_image_agent × 2 (Morphis) — PARALLEL</div><div class="flow-desc">2 art directors (graphic-led + image-led) → Imagen 4 → Pillow overlay → GCS save → kv_ranker selects winner</div><div class="flow-output">→ KVConcept + image_b64</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot rose">🎬</div><div class="flow-line"></div></div>
+          <div class="flow-content"><div class="flow-name">Veo Pipeline (Kinetik)</div><div class="flow-desc">Veo 3.1 long-running operation → polls until complete → downloads from GCS</div><div class="flow-output">→ video_b64 (6s MP4)</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot" style="background:#2563eb">📡</div><div class="flow-line"></div></div>
+          <div class="flow-content"><div class="flow-name">Channel Adapter + content_agent (Poly)</div><div class="flow-desc">Smart-crop KV → 4 aspect ratios · per-channel headline, caption, CTA, legal text</div><div class="flow-output">→ ContentPackage + channel_adaptations</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot rose">📊</div><div class="flow-line"></div></div>
+          <div class="flow-content"><div class="flow-name">performance_forecast (Nexus)</div><div class="flow-desc">Fan Truth adjustments + channel benchmarks → per-channel reach/ROAS/CTR/confidence</div><div class="flow-output">→ PerformanceForecast</div></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-dot" style="background:#059669">🚀</div></div>
+          <div class="flow-content"><div class="flow-name">__done__ event → ResultsView</div><div class="flow-desc">Frontend receives full result JSON, closes SSE, renders complete campaign timeline</div><div class="flow-output">→ Campaign live in UI</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 9 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">9</div>
+      <div class="slide-title">Google Cloud Infrastructure</div>
+      <div class="slide-tag">Infrastructure</div>
+    </div>
+    <div class="slide-body">
+      <table>
+        <tr><th>Service</th><th>What it does in CampaignOS</th><th>Key detail</th></tr>
+        <tr>
+          <td><strong>Vertex AI — Gemini 3.5 Flash</strong></td>
+          <td>All 8 AI agents — brief validation, strategy, copy, culture, KV direction, channel routing, performance forecast</td>
+          <td>Location: <code>us-central1</code>. Retry on 429 with backoff + automatic cheaper-model fallback</td>
+        </tr>
+        <tr>
+          <td><strong>Vertex AI — Imagen 4 (Gemini 3 Pro Image)</strong></td>
+          <td>Key visual generation — the campaign hero image</td>
+          <td>Each KV concept generates one image. Both run in parallel. Pillow applies overlay post-generation.</td>
+        </tr>
+        <tr>
+          <td><strong>Vertex AI — Veo 3.1</strong></td>
+          <td>6-second campaign reel generation</td>
+          <td>Long-running operation — polls every 15s, up to 8 min. Returns GCS URI of completed video.</td>
+        </tr>
+        <tr>
+          <td><strong>Vertex AI — Gemini Embedding 2</strong></td>
+          <td>768-dim embeddings for audience profiles (setup time) and query embeddings at runtime</td>
+          <td>Task type <code>RETRIEVAL_DOCUMENT</code> for data, <code>RETRIEVAL_QUERY</code> for queries</td>
+        </tr>
+        <tr>
+          <td><strong>Vertex AI Search</strong></td>
+          <td>Brand intelligence retrieval: brand rules, Fan Truth library, campaign benchmarks, channel benchmarks</td>
+          <td>Location: <code>global</code>. One Search App with GCS + BigQuery datastores. Summarised results returned to agents.</td>
+        </tr>
+        <tr>
+          <td><strong>Cloud SQL + pgvector</strong></td>
+          <td>Semantic audience search — CDP profiles embedded and stored as 768-dim vectors</td>
+          <td>PostgreSQL 15 + pgvector extension. Cosine similarity (<code>&lt;=&gt;</code> operator) for nearest neighbour search.</td>
+        </tr>
+        <tr>
+          <td><strong>BigQuery</strong></td>
+          <td>Campaign audit log (<code>campaign_outputs.machine_briefs</code>) + source data for Search (<code>briefing_agent.*</code>)</td>
+          <td>Location: <code>US</code> multi-region. Partitioned by DAY on <code>created_at</code>. Fire-and-forget write per campaign.</td>
+        </tr>
+        <tr>
+          <td><strong>Cloud Storage</strong></td>
+          <td>Brand assets (logos, product images, guidelines) + generated KV images + Veo video output</td>
+          <td>Bucket: <code>dauntless-karma-497108-b0-campaignos</code>. Structure: <code>brands/{brand}/</code> + <code>outputs/{campaign_id}/</code></td>
+        </tr>
+        <tr>
+          <td><strong>Cloud Run</strong></td>
+          <td>Hosts the FastAPI harness. Scales to zero when idle.</td>
+          <td>Deployed via Cloud Build. Frontend served as separate static container or CDN.</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 10 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">10</div>
+      <div class="slide-title">Design Principles & Architecture Decisions</div>
+      <div class="slide-tag">Architecture</div>
+    </div>
+    <div class="slide-body">
+      <div class="section-label">No Model Hallucination on Brand Data</div>
+      <p>Brand guidelines, logos, and colour codes are loaded from GCS at the start of every pipeline run — they are never in the model's training data. <code>load_brand_context</code> retrieves the current, authoritative guidelines and injects them directly into the context window. Brand locks (font, colours, forbidden words) are passed as a typed <code>BrandLocks</code> model through every stage.</p>
+
+      <div class="section-label">Structured Outputs via Pydantic</div>
+      <p>Every agent produces a typed Pydantic model as output. If the LLM returns malformed JSON, <code>_parse_agent_response()</code> strips markdown fences and retries. Downstream agents always receive clean, validated data — never raw text to interpret.</p>
+
+      <div class="section-label">Fan Truth as a Quality Gate</div>
+      <p>The Fan Truth score governs three things: (1) whether the brief passes to creative stage, (2) the performance forecast confidence level, and (3) the BigQuery audit record for trend analysis. It is not decorative — it is a data signal that flows through the entire pipeline.</p>
+
+      <div class="section-label">SSE vs WebSocket</div>
+      <p>Server-Sent Events are used rather than WebSockets. SSE is unidirectional (server → client only), simpler to scale on Cloud Run, and natively supported by the browser's <code>EventSource</code> API with built-in reconnection. No WebSocket upgrade handshake overhead.</p>
+
+      <div class="section-label">Fire-and-Forget BigQuery Logging</div>
+      <p>The BigQuery write runs as <code>asyncio.create_task()</code> immediately after the briefing stage. It never blocks the pipeline. If it fails, a warning is logged but the campaign continues unaffected.</p>
+
+      <div class="section-label">KV Fan-Out / Fan-In Pattern</div>
+      <p>Two art directors run in parallel (Python asyncio + ADK JoinNode). This halves the KV generation time and produces creative diversity — graphic-led vs image-led. The ranker evaluates both and selects the stronger concept before proceeding. In the ADK DAG path, the JoinNode enforces both must complete before continuing.</p>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════ SLIDE 11 -->
+  <div class="slide">
+    <div class="slide-header">
+      <div class="slide-number">11</div>
+      <div class="slide-title">Full Technology Stack Summary</div>
+      <div class="slide-tag">Summary</div>
+    </div>
+    <div class="slide-body">
+      <table>
+        <tr><th>Layer</th><th>Technology</th></tr>
+        <tr><td><strong>Frontend Framework</strong></td><td>React 18, TypeScript, Vite</td></tr>
+        <tr><td><strong>UI Components</strong></td><td>100% custom — no library, pure inline styles + CSS keyframe animations</td></tr>
+        <tr><td><strong>State Management</strong></td><td>React hooks — useState + custom usePipeline hook</td></tr>
+        <tr><td><strong>Real-Time Streaming</strong></td><td>Native EventSource API (Server-Sent Events)</td></tr>
+        <tr><td><strong>Backend Framework</strong></td><td>FastAPI (Python 3.11), uvicorn ASGI, asyncio</td></tr>
+        <tr><td><strong>Agent Orchestration</strong></td><td>Google ADK 2.0 Workflow DAG (pipeline.py) + custom async runner (runner.py)</td></tr>
+        <tr><td><strong>Language Models</strong></td><td>Gemini 3.5 Flash via Vertex AI (all 8 reasoning agents)</td></tr>
+        <tr><td><strong>Image Generation</strong></td><td>Imagen 4 / Gemini 3 Pro Image via Vertex AI</td></tr>
+        <tr><td><strong>Video Generation</strong></td><td>Veo 3.1 via Vertex AI (long-running operation)</td></tr>
+        <tr><td><strong>Embeddings</strong></td><td>Gemini Embedding 2 — 768 dimensions, Vertex AI</td></tr>
+        <tr><td><strong>Brand Intelligence</strong></td><td>Vertex AI Search (GCS + BigQuery datastores, global location)</td></tr>
+        <tr><td><strong>Audience Intelligence</strong></td><td>Cloud SQL PostgreSQL 15 + pgvector (cosine similarity)</td></tr>
+        <tr><td><strong>Image Processing</strong></td><td>Pillow (Python) — text overlay, smart-crop, channel adaptation</td></tr>
+        <tr><td><strong>Audit Logging</strong></td><td>BigQuery — campaign_outputs.machine_briefs, partitioned by DAY</td></tr>
+        <tr><td><strong>Brand Assets</strong></td><td>Google Cloud Storage — guidelines, logos, product images, KV output</td></tr>
+        <tr><td><strong>Deployment</strong></td><td>Cloud Run + Cloud Build (containerised, scales to zero)</td></tr>
+        <tr><td><strong>Package Management</strong></td><td>uv (Python), npm (Node)</td></tr>
+        <tr><td><strong>Data Validation</strong></td><td>Pydantic v2 (Python) — all agent inputs and outputs strictly typed</td></tr>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<div class="doc-footer">
+  CampaignOS — A2A Marketing Intelligence Platform &nbsp;·&nbsp; Powered by Infosys Aster × Google Cloud
+</div>
+
+</body>
+</html>

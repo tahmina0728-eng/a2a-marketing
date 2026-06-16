@@ -109,6 +109,8 @@ VECTOR_DIM = 768 if USE_GEMINI else 384  # gemini-embedding-2 with output_dimens
 
 
 
+
+
 print(f"Embedding backend: {'Gemini ' + GEMINI_MODEL + ' (768 dims)' if USE_GEMINI else 'sentence-transformers all-MiniLM-L6-v2 (384 dims)'}")
 
 
@@ -535,6 +537,27 @@ def seed_fan_truths(cur):
         {"brand": "Sunglow", "statement": "My hair looks nice", "category": "Generic", "verdict": "FAIL", "specific": 12, "shared": 85, "special": 14, "overall": 37},
 
 
+        # Glenfiddich - Single Malt Scotch Whisky
+
+
+        {"brand": "Glenfiddich", "statement": "The first sip of a whisky that's older than most of your friendships", "category": "Single Malt Scotch", "verdict": "PASS", "specific": 86, "shared": 74, "special": 85, "overall": 82},
+
+
+        {"brand": "Glenfiddich", "statement": "Good whisky doesn't rush you - and neither should the best moments", "category": "Premium Spirits", "verdict": "PASS", "specific": 80, "shared": 82, "special": 78, "overall": 80},
+
+
+        {"brand": "Glenfiddich", "statement": "Some bottles are too good to open - until the moment is finally right", "category": "Single Malt Scotch", "verdict": "PASS", "specific": 83, "shared": 76, "special": 88, "overall": 82},
+
+
+        {"brand": "Glenfiddich", "statement": "When you gift a Glenfiddich, you're not giving a bottle - you're giving thought", "category": "Gifting", "verdict": "PASS", "specific": 78, "shared": 80, "special": 90, "overall": 83},
+
+
+        {"brand": "Glenfiddich", "statement": "136 years of one family making one whisky in one valley", "category": "Heritage", "verdict": "PASS", "specific": 88, "shared": 70, "special": 92, "overall": 83},
+
+
+        {"brand": "Glenfiddich", "statement": "People enjoy whisky", "category": "Generic", "verdict": "FAIL", "specific": 8, "shared": 88, "special": 10, "overall": 35},
+
+
     ]
 
 
@@ -614,6 +637,24 @@ def seed_campaign_benchmarks(cur):
 
 
         {"brand": "Boozt", "product_category": "Energy Drinks", "market": "UK", "season": "All Year", "channels": ["TikTok", "YouTube", "Meta Ads"], "reach": 4200000, "ctr_pct": 2.8, "roas": 2.6, "engagement_pct": 6.4, "budget_gbp": 300000, "notes": "Always-on gaming and sport audience targeting - YouTube pre-roll strong for awareness"},
+
+
+        # Sunglow - Hair Care
+
+
+        {"brand": "Sunglow", "product_category": "Hair Care - Scalp Oil", "market": "UK", "season": "Spring", "channels": ["Instagram", "TikTok"], "reach": 3200000, "ctr_pct": 2.2, "roas": 2.9, "engagement_pct": 6.1, "budget_gbp": 220000, "notes": "Launch campaign for Black hair scalp oil - TikTok tutorials and wash-day content drove 68% of reach"},
+
+
+        {"brand": "Sunglow", "product_category": "Hair Care", "market": "UK", "season": "Summer", "channels": ["Instagram", "TikTok", "Meta Ads"], "reach": 2800000, "ctr_pct": 2.6, "roas": 3.1, "engagement_pct": 7.2, "budget_gbp": 180000, "notes": "Summer glow campaign - user testimonial content outperformed brand content 3:1 on TikTok"},
+
+
+        # Glenfiddich - Single Malt Scotch Whisky
+
+
+        {"brand": "Glenfiddich", "product_category": "Single Malt Scotch Whisky", "market": "UK", "season": "Christmas", "channels": ["OOH", "Instagram", "YouTube"], "reach": 6800000, "ctr_pct": 1.4, "roas": 4.2, "engagement_pct": 3.8, "budget_gbp": 680000, "notes": "Christmas gifting campaign - OOH in airports and premium retail drove 55% of awareness. Heritage storytelling outperformed product-led content 2:1"},
+
+
+        {"brand": "Glenfiddich", "product_category": "Single Malt Scotch Whisky", "market": "UK", "season": "All Year", "channels": ["Instagram", "YouTube", "Meta Ads"], "reach": 4200000, "ctr_pct": 1.8, "roas": 3.6, "engagement_pct": 4.5, "budget_gbp": 320000, "notes": "Always-on premium spirits awareness - YouTube whisky education content (tasting notes, craft) drove highest dwell time and purchase intent"},
 
 
     ]
@@ -1223,6 +1264,399 @@ def seed_customer_segments(cur):
 
 
             "kaggle_derivation": "Income > 50k, Recency > 30, Complain = 1 or AcceptedCmp1-5 all 0",
+
+
+        },
+
+
+        # Boozt - Energy Drinks segments
+
+
+        {
+
+
+            "brand": "Boozt",
+
+
+            "segment_name": "Gym & Fitness Regulars",
+
+
+            "size_estimate": 580000,
+
+
+            "age_range": "18-32",
+
+
+            "income_band": "GBP22k-GBP45k",
+
+
+            "top_channels": ["Instagram", "TikTok", "YouTube"],
+
+
+            "avg_weekly_spend_gbp": 14.00,
+
+
+            "behavioural_notes": (
+
+
+                "Trains 4+ times per week - energy drink is part of the pre-workout ritual. "
+
+
+                "Brand loyalty driven by performance association and peer recommendation. "
+
+
+                "Instagram gym content and YouTube fitness vloggers are primary discovery channels. "
+
+
+                "Responds to clinical/ingredient messaging (caffeine, B vitamins, zero sugar). "
+
+
+                "TikTok gym transformation content drives highest conversion for trial."
+
+
+            ),
+
+
+            "fan_truth_benchmark": "Fan Truth must score Specific > 78. 'That first sip when you need to switch on' scores 82/100. Performance and ritual framing outperforms generic energy messaging.",
+
+
+            "kaggle_derivation": "Age 18-32, high purchase frequency, brand-loyal, low price sensitivity",
+
+
+        },
+
+
+        {
+
+
+            "brand": "Boozt",
+
+
+            "segment_name": "Student Night-Shift Gamers",
+
+
+            "size_estimate": 420000,
+
+
+            "age_range": "16-24",
+
+
+            "income_band": "Under GBP22k",
+
+
+            "top_channels": ["TikTok", "YouTube", "Twitch"],
+
+
+            "avg_weekly_spend_gbp": 8.50,
+
+
+            "behavioural_notes": (
+
+
+                "Late-night gaming and study sessions are primary use occasion. "
+
+
+                "High NumDealsPurchases - buys in multipacks when on promotion. "
+
+
+                "Twitch streamers and gaming YouTubers are the most trusted endorsers. "
+
+
+                "Flavour variety is a key driver of trial - regularly switches between SKUs. "
+
+
+                "Energy drink as identity badge within gaming culture."
+
+
+            ),
+
+
+            "fan_truth_benchmark": "Fan Truth must score Shared > 75 within the gaming/student peer group. 'I just need energy' FAILS at 38/100 - too generic. 'The can that turns I can't into watch me' scores 81/100.",
+
+
+            "kaggle_derivation": "Age 16-24, high web visits, deal-seeking, multi-SKU purchasing",
+
+
+        },
+
+
+        # Sunglow - Hair Care segments
+
+
+        {
+
+
+            "brand": "Sunglow",
+
+
+            "segment_name": "Black Hair Care Advocates",
+
+
+            "size_estimate": 320000,
+
+
+            "age_range": "20-38",
+
+
+            "income_band": "GBP25k-GBP55k",
+
+
+            "top_channels": ["Instagram", "TikTok", "YouTube"],
+
+
+            "avg_weekly_spend_gbp": 22.00,
+
+
+            "behavioural_notes": (
+
+
+                "Spends significantly more on hair care than mainstream average - sees it as self-care not vanity. "
+
+
+                "Highly informed: reads ingredient lists, follows hair science creators on YouTube. "
+
+
+                "Strong community bonds - recommendations from naturalistas and wash-day content creators carry huge weight. "
+
+
+                "Deeply frustrated by mainstream brands that don't cater to their hair texture. "
+
+
+                "Loyal once trust is established - but trust must be earned through authentic representation."
+
+
+            ),
+
+
+            "fan_truth_benchmark": "Fan Truth must score Special > 82 - this segment wants to feel SEEN not just targeted. 'Your crown is not a problem to manage, it's a conversation to have' scores 88/100. Generic hair care language is immediately rejected.",
+
+
+            "kaggle_derivation": "High beauty spend, high brand loyalty, community-driven discovery, representation-sensitive",
+
+
+        },
+
+
+        {
+
+
+            "brand": "Glenfiddich",
+
+
+            "segment_name": "Whisky Initiates",
+
+
+            "size_estimate": 480000,
+
+
+            "age_range": "25-38",
+
+
+            "income_band": "GBP35k-GBP65k",
+
+
+            "top_channels": ["Instagram", "YouTube", "Meta Ads"],
+
+
+            "avg_weekly_spend_gbp": 28.00,
+
+
+            "behavioural_notes": (
+
+
+                "Just discovered single malt — graduating from blended Scotch or gin. "
+
+
+                "Glenfiddich 12YO (£46) is the gateway product for this segment. "
+
+
+                "Highly influenced by YouTube whisky education content and Instagram tasting posts. "
+
+
+                "Buys for personal consumption and casual hosting — not yet gift-buying mindset. "
+
+
+                "Brand recognition of Glenfiddich (world's best-selling single malt) reduces trial anxiety. "
+
+
+                "Apple, pear, and vanilla flavour profile described as 'approachable' resonates strongly."
+
+
+            ),
+
+
+            "fan_truth_benchmark": "Fan Truth must score Specific > 78. 'The first sip of a whisky older than most of your friendships' scores 82/100. Discovery and initiation framing outperforms heritage or collector language for this segment.",
+
+
+            "kaggle_derivation": "Income 35k-65k, premium spirits spend increasing, YouTube high engagement, Instagram discovery-led",
+
+
+        },
+
+
+        {
+
+
+            "brand": "Glenfiddich",
+
+
+            "segment_name": "Discerning Occasion Gifters",
+
+
+            "size_estimate": 620000,
+
+
+            "age_range": "32-52",
+
+
+            "income_band": "GBP55k-GBP110k",
+
+
+            "top_channels": ["OOH", "Instagram", "Google Ads"],
+
+
+            "avg_weekly_spend_gbp": 55.00,
+
+
+            "behavioural_notes": (
+
+
+                "Buys Glenfiddich primarily as a premium gift — Father's Day, Christmas, milestone birthdays. "
+
+
+                "Brand recognition is critical: Glenfiddich's iconic triangular bottle is immediately readable as a premium gift. "
+
+
+                "18YO (£99) is the sweet spot — credible enough to impress, affordable enough to give freely. "
+
+
+                "Responds to gift framing, limited edition packaging, and premium retail placement. "
+
+
+                "OOH in airports and department stores (Selfridges, John Lewis) are primary discovery moments. "
+
+
+                "Google search intent peaks in November-December — highest ROAS period of the year."
+
+
+            ),
+
+
+            "fan_truth_benchmark": "Fan Truth must score Special > 85 - this segment wants to feel like they've made a considered, impressive choice. 'When you gift a Glenfiddich, you're not giving a bottle - you're giving thought' scores 83/100.",
+
+
+            "kaggle_derivation": "Income 55k-110k, seasonal gifting spikes, high brand recognition sensitivity, OOH and search-driven",
+
+
+        },
+
+
+        {
+
+
+            "brand": "Glenfiddich",
+
+
+            "segment_name": "Whisky Connoisseurs & Collectors",
+
+
+            "size_estimate": 95000,
+
+
+            "age_range": "38-60",
+
+
+            "income_band": "GBP80k+",
+
+
+            "top_channels": ["YouTube", "Instagram", "OOH"],
+
+
+            "avg_weekly_spend_gbp": 120.00,
+
+
+            "behavioural_notes": (
+
+
+                "Buys aged expressions (21YO+) and limited releases — motivated by rarity and provenance. "
+
+
+                "Deeply knowledgeable: reads tasting notes, follows distillery news, attends whisky festivals. "
+
+
+                "Glenfiddich's 31 Year Old Grand Chateau (£1,595) and ultra-rare releases are primary targets. "
+
+
+                "Authenticity is everything — William Grant family ownership since 1886 is a genuine differentiator. "
+
+
+                "YouTube long-form distillery content (craft, cask selection, master distiller interviews) drives highest engagement. "
+
+
+                "Community-driven: highly active in whisky clubs, Reddit communities, and collector forums."
+
+
+            ),
+
+
+            "fan_truth_benchmark": "Fan Truth must score Specific > 84 and Special > 88. '136 years of one family making one whisky in one valley' scores 83/100. Heritage and craft specificity is non-negotiable. Generic premium language is immediately rejected.",
+
+
+            "kaggle_derivation": "Income 80k+, high category knowledge, collector behaviour, community-active, long-form content engagement",
+
+
+        },
+
+
+        {
+
+
+            "brand": "Sunglow",
+
+
+            "segment_name": "Natural Hair Beginners",
+
+
+            "size_estimate": 510000,
+
+
+            "age_range": "18-30",
+
+
+            "income_band": "GBP18k-GBP35k",
+
+
+            "top_channels": ["TikTok", "YouTube", "Instagram"],
+
+
+            "avg_weekly_spend_gbp": 12.50,
+
+
+            "behavioural_notes": (
+
+
+                "Recently transitioned or returning to natural hair after years of relaxers. "
+
+
+                "Overwhelmed by product choices - looks for simple, trusted routines. "
+
+
+                "TikTok wash-day tutorials are the primary education channel. "
+
+
+                "Science-backed claims (dermatologist-tested, clinically proven) reduce anxiety about new products. "
+
+
+                "Price-conscious but willing to invest more for products proven to work for their texture."
+
+
+            ),
+
+
+            "fan_truth_benchmark": "Fan Truth must score Shared > 74 within the natural hair community. 'Good hair day isn't luck - it's science built for you from the start' scores 76/100. Avoid technical jargon - accessibility is key.",
+
+
+            "kaggle_derivation": "Age 18-30, discovery-led purchasing, tutorial-influenced, education-seeking",
 
 
         },
