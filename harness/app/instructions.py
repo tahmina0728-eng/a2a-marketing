@@ -427,16 +427,24 @@ Your design approach: {design_approach}
 
 You have been briefed by the Creative Director and the Copywriter.
 Your task: produce ONE definitive advertising key visual — the kind that wins Cannes,
-looks like a real Sunsilk/Pantene/Dove campaign, and could run on a billboard tomorrow.
+looks like a real campaign for this specific brand and category, and could run on a
+billboard tomorrow.
 
-VISUAL REFERENCE — study these real ad patterns:
-• Dark studio background + woman with long shiny hair + 2-3 products lined up right
+VISUAL REFERENCE — study these real ad patterns by category:
+FMCG / hair care (Sunglow, Boozt):
+• Dark studio background + model with shiny hair + 2-3 products lined up right
 • Bold solid-colour panel left + model bursting right + products centre-foreground
 • Bright pastel studio + model in brand-colour outfit + product lineup alongside
 
-PRODUCT IS MANDATORY: Show 2-3 brand products (bottles/boxes) together in the frame,
-labels facing camera, large scale (15-20% of image height each). This is a PRODUCT
-advertisement — the product is co-equal with the model. Never hide or minimise it.
+PREMIUM SPIRITS / single malt (Glenfiddich):
+• Deep shadow studio + single bottle hero lit with a dramatic key light, amber liquid glow
+• Chiaroscuro product still life — oak, copper, stone surface, bottle at hero scale
+• Dark field with warm amber pour mid-pour into crystal glass, bottle in background
+• Negative space luxury — bottle off-centre, deep green background, minimal type zone left
+
+PRODUCT IS MANDATORY: Show 1-3 brand products prominently in the frame,
+labels facing camera. This is a PRODUCT advertisement — the product must command
+the frame. Never hide or minimise it.
 
 HAIR/MODEL VARIETY: Do NOT describe the same model type every campaign.
 For Sunglow: ROTATE ethnicity each campaign — South Asian with long glossy waves,
@@ -444,6 +452,45 @@ East Asian with straight silky hair, Latina with loose voluminous curls, mixed-r
 with a sleek blowout, or European with wavy highlighted hair. NEVER always choose
 a dark-skinned Black woman with 4C/Afro curls — vary every time.
 For Boozt: person of ANY ethnicity holding or drinking a Boozt can, high-energy urban, gym or sport context.
+
+GLENFIDDICH — PREMIUM SINGLE MALT SCOTCH WHISKY:
+Glenfiddich is a luxury heritage brand. The bottle IS the hero — no model required unless
+the brief is a gifting or occasion campaign that calls for human presence.
+
+PRODUCT TREATMENT (mandatory):
+• The Glenfiddich bottle must be lit dramatically — single strong key light from upper-left
+  or upper-right, creating specular highlights along the dark forest-green glass.
+• Show the label facing the camera, perfectly sharp, at hero scale (minimum 25% image height).
+• If featuring a whisky dram/glass: amber liquid must glow — warm tungsten backlight through
+  the glass creates the liquid's characteristic amber-gold luminosity. Never show it flat.
+• For multi-product layouts: stagger 2–3 bottles at different depths, each lit independently.
+
+VISUAL AESTHETIC — always premium, always earned:
+• Colour language: deep forest green (bottle), warm amber gold (whisky liquid), antique cream
+  or aged parchment (text zone), rich espresso brown (surface/background). Never flat or clinical.
+• Lighting: dramatic chiaroscuro — deep shadows, rich pools of warm light. Think a master
+  portrait painter applied to product photography. The image must feel luxurious at a glance.
+• Textures that signal heritage: aged oak stave, hammered copper, cracked leather, hand-laid
+  stone, Speyside mist — use ONE texture as a grounding surface or background element.
+• The Glenfiddich stag emblem (on the label) should be legible — never obscure the label.
+
+CAMPAIGN CONTEXT — vary by brief type:
+• GIFTING campaign: Include an elegant surface (dark lacquered wood, marble, slate) with
+  the bottle as a gift being revealed. Warm, intimate lighting. Quiet luxury — not loud.
+• OCCASION / CELEBRATION: Crystal dram glass with a single large ice sphere and visible
+  amber pour catching the light. The bottle is positioned as the source of the moment.
+• HERITAGE / CRAFT: Reveal the distillery context — copper pot still detail, oak cask end,
+  Glenfiddich valley mist. Product in foreground, heritage texture fills the background.
+• ALWAYS-ON / PREMIUM LIFESTYLE: Dark, moody studio. Bottle hero centre-right.
+  Deep shadow left — this is the text zone for the headline. Minimal, authoritative.
+
+FORBIDDEN for Glenfiddich:
+— Bright, cheerful, colourful backgrounds (this is not a FMCG grocery product)
+— Generic "whisky rocks glass on wood" clichés without intentional design architecture
+— Models in casual or street-wear contexts
+— Any visual that reads as cheap, fast, or mass-market
+— Flat even lighting across the bottle (kills the premium feel)
+— More than one lifestyle scene element — restraint signals luxury
 
 ════════════════════════════════════════════════════════════
 YOUR BRIEF — ALL IN CONTEXT
