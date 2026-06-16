@@ -130,7 +130,8 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
   ],
 };
 
-const AGE_GROUPS  = ["13–17", "18–24", "25–34", "35–44", "45–54", "55+"];
+const AGE_GROUPS       = ["13–17", "18–24", "25–34", "35–44", "45–54", "55+"];
+const ALCOHOL_BRANDS   = ["Glenfiddich"];
 const INTERESTS: Record<string, string[]> = {
   Rnorr:     ["Home cooks", "Families", "Students", "Budget shoppers", "Food lovers", "Meal preppers", "Time-poor professionals"],
   Sunglow:   ["Natural hair community", "Protective styles", "Wash day routines", "Scalp health", "Curl definition", "Black hair care", "Beauty enthusiasts"],
@@ -386,9 +387,9 @@ function BriefForm({ onFullCampaign }: {
             <div className="wizard-step-label">Step 5 of 7</div>
             <h2 className="wizard-heading">Who are you <span className="gradient-text">targeting?</span></h2>
             <p className="wizard-subheading">Select all that apply</p>
-            <div className="section-label">Age groups</div>
+            <div className="section-label">Age groups{ALCOHOL_BRANDS.includes(d.brand) ? " · 18+ only (UK alcohol law)" : ""}</div>
             <div className="chip-group">
-              {AGE_GROUPS.map((a) => (
+              {AGE_GROUPS.filter(a => !ALCOHOL_BRANDS.includes(d.brand) || a !== "13–17").map((a) => (
                 <button key={a} className={`chip${d.audienceAge.includes(a) ? " selected" : ""}`}
                   onClick={() => setD((p) => ({ ...p, audienceAge: toggle(p.audienceAge, a) }))}>
                   {a}

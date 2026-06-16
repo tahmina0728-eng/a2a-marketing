@@ -133,7 +133,16 @@ def _gcs_to_b64(uri: str, mime: str = "image/jpeg", max_kb: int = 800) -> str:
             # Brand source files can be enormous (13K×13K px).
             # Disable the decompression-bomb limit — we immediately thumbnail down.
             Image.MAX_IMAGE_PIXELS = None
-            img = Image.open(io.BytesIO(data)).convert("RGB")
+            img = Image.open(io.BytesIO(data))
+            # Composite RGBA/P onto white before converting to RGB so transparent
+            # areas become white rather than black (Pillow default for RGB conversion).
+            if img.mode in ("RGBA", "LA", "P"):
+                bg = Image.new("RGB", img.size, (255, 255, 255))
+                alpha = img.convert("RGBA").split()[3]
+                bg.paste(img.convert("RGBA"), mask=alpha)
+                img = bg
+            else:
+                img = img.convert("RGB")
             img.thumbnail((600, 600), Image.LANCZOS)   # resize in-place to ≤600px
             buf = io.BytesIO()
             img.save(buf, format="JPEG", quality=72)
@@ -159,8 +168,202 @@ def generate_brand_website(brand: str, hero_message: str = "", tagline: str = ""
         return generate_rnorr_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     if brand.lower() == "boozt":
         return generate_boozt_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
+    if brand.lower() == "glenfiddich":
+        return generate_glenfiddich_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     return _generate_sunglow_website(brand, hero_message, tagline, body_copy, cta,
                                      campaign_image_b64, campaign_id, hero_image_b64, video_b64)
+
+
+def generate_glenfiddich_website(campaign_image_b64: str = "", campaign_id: str = "",
+                                  hero_message: str = "", body_copy: str = "", cta: str = "",
+                                  hero_image_b64: str = "", video_b64: str = "") -> str:
+    """Glenfiddich × AMF1 Limited Edition brand website."""
+    from app.brand_assets import get_asset_loader
+    cfg     = BRAND_CONFIG["Glenfiddich"]
+    loader  = get_asset_loader()
+    logos   = loader.list_logos("Glenfiddich")
+    products = loader.list_products("Glenfiddich")
+    assets  = loader.list_assets("Glenfiddich")
+
+    prod_srcs    = [_gcs_to_b64(p, "image/jpeg", 800) for p in products[:3]]
+    # Try multiple assets for hero background — pick first that loads successfully
+    hero_bg_src  = next((s for s in [_gcs_to_b64(a, "image/jpeg", 800) for a in assets[:3]] if s), "")
+    camp_src     = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else hero_bg_src
+    hero_bg_src  = f"data:image/jpeg;base64,{hero_image_b64}" if hero_image_b64 else hero_bg_src
+
+    # Use the harness /brand-logo/ endpoint — avoids PNG→JPEG transparency loss
+    logo_html = '<img src="/brand-logo/Glenfiddich" alt="Glenfiddich × AMF1" style="height:40px;object-fit:contain;">'
+    if not logos:
+        logo_html = '<span style="font-size:22px;font-weight:900;color:#B8D400;letter-spacing:-0.02em;">Glenfiddich × AMF1</span>'
+
+    _products = [
+        ("16 Year Old",  "AMF1 Limited Edition",          "Single Malt Scotch Whisky · The collaboration bottle"),
+        ("12 Year Old",  "Our Signature Expression",       "Single Malt Scotch Whisky · Aged 12 Years"),
+        ("18 Year Old",  "Small Batch Reserve",            "Single Malt Scotch Whisky · Aged 18 Years"),
+    ]
+    prod_cards = ""
+    for i, src in enumerate(prod_srcs):
+        if not src:
+            continue
+        name, sub, desc = _products[i] if i < len(_products) else (f"Expression {i+1}", "", "Single Malt Scotch Whisky")
+        prod_cards += f"""
+    <div style="background:white;border-radius:20px;overflow:hidden;
+                box-shadow:0 4px 20px rgba(10,107,101,0.10);
+                transition:transform 0.2s,box-shadow 0.2s;"
+         onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 12px 32px rgba(10,107,101,0.18)'"
+         onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 20px rgba(10,107,101,0.10)'">
+      <div style="aspect-ratio:1;background:#f0faf9;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+        <img src="{src}" alt="{name}" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+      <div style="padding:20px 22px 24px;">
+        <div style="font-size:10px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;color:#B8D400;margin-bottom:6px;">{sub}</div>
+        <div style="font-size:17px;font-weight:700;color:#0A6B65;margin-bottom:4px;">Glenfiddich {name}</div>
+        <div style="font-size:12px;color:#64748b;margin-bottom:16px;line-height:1.5;">{desc}</div>
+        <a href="#" style="display:block;padding:11px;border-radius:10px;background:#0A6B65;
+                            color:white;font-weight:700;font-size:13px;text-align:center;text-decoration:none;">
+          {cta or "Secure your bottle."}
+        </a>
+      </div>
+    </div>"""
+
+    reel_section = f"""
+<section style="background:#064d49;padding:56px 48px;text-align:center;">
+  <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;color:#B8D400;margin-bottom:12px;">Campaign Reel</div>
+  <h2 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;font-weight:700;color:white;margin-bottom:24px;">{hero_message}</h2>
+  <div style="max-width:800px;margin:0 auto;border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.4);">
+    <video controls autoplay loop muted playsinline style="width:100%;display:block;"
+           src="data:video/mp4;base64,{video_b64}"></video>
+  </div>
+</section>""" if video_b64 else ""
+
+    bg_style = (f'background-image:url("{hero_bg_src}");background-size:cover;background-position:center;'
+                if hero_bg_src else f"background:linear-gradient(135deg,#0A6B65,#064d49);")
+
+    return f"""<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Glenfiddich × AMF1 — {hero_message[:55]}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+    body{{font-family:'Cormorant Garamond','Georgia',serif;background:#fff;color:#1a2332}}
+    a{{text-decoration:none;color:inherit}}
+  </style>
+</head><body>
+
+<!-- Top bar -->
+<div style="background:#0A6B65;color:#B8D400;text-align:center;padding:9px;
+            font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
+            font-family:'Cormorant Garamond',Georgia,serif;">
+  🏎 AMF1 × Glenfiddich · 16 Year Old Limited Edition · Available Now
+</div>
+
+<!-- Nav -->
+<nav style="background:white;border-bottom:1px solid #e2e8f0;padding:0 48px;height:70px;
+            display:flex;align-items:center;justify-content:space-between;
+            position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(10,107,101,0.08);">
+  <div>{logo_html}</div>
+  <div style="display:flex;gap:28px;">
+    <a href="#" style="font-size:14px;font-weight:600;color:#374151;">Our Whiskies</a>
+    <a href="#campaign" style="font-size:14px;font-weight:600;color:#374151;">Campaign</a>
+    <a href="#cta" style="font-size:14px;font-weight:600;color:#374151;">The Collection</a>
+  </div>
+  <a href="#cta" style="background:#0A6B65;color:white;padding:10px 24px;border-radius:99px;
+                         font-weight:700;font-size:13px;">{cta or "Secure your bottle."}</a>
+</nav>
+
+<!-- Hero -->
+<section style="position:relative;min-height:600px;display:flex;align-items:center;overflow:hidden;">
+  <div style="position:absolute;inset:0;{bg_style}filter:brightness(0.5);"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(90deg,#0A6B65ee 0%,#0A6B6566 55%,transparent 100%);"></div>
+  <div style="position:relative;z-index:2;padding:80px 80px;max-width:640px;">
+    <div style="display:inline-block;background:#B8D400;color:#0A6B65;font-size:11px;font-weight:800;
+                letter-spacing:0.14em;text-transform:uppercase;padding:5px 14px;border-radius:99px;margin-bottom:20px;">
+      🏎 Limited Edition · AMF1 × Glenfiddich
+    </div>
+    <h1 style="font-size:clamp(36px,4.5vw,58px);font-weight:700;color:white;line-height:1.1;
+               letter-spacing:-0.01em;margin-bottom:18px;">{hero_message or cfg["tagline"]}</h1>
+    <p style="font-size:18px;color:rgba(255,255,255,0.82);line-height:1.65;margin-bottom:36px;max-width:480px;">
+      {body_copy or cfg["copy"]}
+    </p>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <a href="#cta" style="background:#B8D400;color:#0A6B65;padding:15px 36px;border-radius:99px;
+                             font-weight:800;font-size:15px;">{cta or "Secure your bottle."}</a>
+      <a href="#campaign" style="border:2px solid white;color:white;padding:13px 32px;border-radius:99px;
+                                  font-weight:700;font-size:15px;">Discover the Story</a>
+    </div>
+  </div>
+</section>
+
+<!-- Features bar -->
+<div style="background:#0A6B65;padding:22px 48px;display:flex;gap:32px;justify-content:center;flex-wrap:wrap;">
+  {''.join(f'<div style="display:flex;align-items:center;gap:10px;color:white;"><div style="width:20px;height:20px;background:#B8D400;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#0A6B65;flex-shrink:0;">✓</div><span style="font-size:13px;font-weight:600;">{f}</span></div>' for f in cfg["features"])}
+</div>
+
+<!-- Products -->
+{"" if not prod_cards else f'''
+<section style="padding:72px 48px;">
+  <div style="text-align:center;margin-bottom:48px;">
+    <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;
+                color:#0A6B65;margin-bottom:10px;">The Collection</div>
+    <h2 style="font-size:32px;font-weight:700;color:#0A6B65;">Expressions Worth Waiting For</h2>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+              gap:24px;max-width:900px;margin:0 auto;">{prod_cards}</div>
+</section>'''}
+
+<!-- Campaign section -->
+{"" if not camp_src else f'''
+<section style="background:#f0faf9;padding:72px 80px;display:flex;align-items:center;gap:56px;flex-wrap:wrap;" id="campaign">
+  <div style="flex:1;min-width:280px;max-width:480px;border-radius:24px;overflow:hidden;
+              box-shadow:0 16px 48px rgba(10,107,101,0.18);">
+    <img src="{camp_src}" alt="Campaign Visual" style="width:100%;height:auto;display:block;">
+  </div>
+  <div style="flex:1;min-width:280px;">
+    <div style="font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;
+                color:#0A6B65;margin-bottom:12px;">AI Campaign · {campaign_id[:16]}</div>
+    <h2 style="font-size:clamp(24px,3vw,36px);font-weight:700;color:#0A6B65;margin-bottom:16px;line-height:1.15;">
+      {hero_message}
+    </h2>
+    <p style="font-size:15px;color:#475569;line-height:1.75;margin-bottom:28px;">{body_copy or cfg["copy"]}</p>
+    <a href="#cta" style="background:#0A6B65;color:white;padding:14px 32px;border-radius:99px;
+                           font-weight:700;font-size:14px;">{cta or "Secure your bottle."}</a>
+  </div>
+</section>'''}
+
+{reel_section}
+
+<!-- CTA -->
+<section style="background:linear-gradient(135deg,#0A6B65,#064d49);padding:80px 48px;text-align:center;" id="cta">
+  <div style="font-size:11px;font-weight:800;letter-spacing:0.16em;text-transform:uppercase;
+              color:#B8D400;margin-bottom:16px;">Limited Edition</div>
+  <h2 style="font-size:clamp(28px,3.5vw,44px);font-weight:700;color:white;margin-bottom:20px;">
+    After the noise, your quiet victory.
+  </h2>
+  <p style="font-size:17px;color:rgba(255,255,255,0.75);margin-bottom:36px;max-width:520px;margin-left:auto;margin-right:auto;">
+    Glenfiddich 16 Year Old × Aston Martin F1. Two icons. One extraordinary Scotch.
+  </p>
+  <a href="#" style="background:#B8D400;color:#0A6B65;padding:18px 52px;border-radius:99px;
+                     font-weight:800;font-size:17px;display:inline-block;">
+    {cta or "Secure your bottle."}
+  </a>
+</section>
+
+<!-- Footer -->
+<footer style="background:#031e1c;color:#64748b;padding:36px 48px;
+               display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+  <div style="font-size:16px;font-weight:700;color:#B8D400;">Glenfiddich × AMF1</div>
+  <div style="display:flex;gap:20px;">
+    <a href="#" style="color:#64748b;font-size:12px;">Our Whiskies</a>
+    <a href="#" style="color:#64748b;font-size:12px;">The Story</a>
+    <a href="#" style="color:#64748b;font-size:12px;">Responsible Drinking</a>
+  </div>
+  <div style="font-size:11px;color:#475569;width:100%;text-align:center;margin-top:8px;">
+    © 2026 Glenfiddich × Aston Martin Aramco Formula One™ Team · AI campaign by CampaignOS · {campaign_id}
+    · Please drink responsibly. Available to over 18s only.
+  </div>
+</footer>
+
+</body></html>"""
 
 
 def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
