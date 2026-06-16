@@ -682,20 +682,40 @@ brand_locks_json — but express them as colour names, never hex values.
 ALWAYS verify against brand_visual_rules for forbidden colour pairings.
 
 [TYPOGRAPHY DESIGN]
-⚠ DO NOT ask the image model to render any visible text, headline, or type.
-Typography is applied in post-processing at BILLBOARD SCALE using the brand
-TTF font — word-by-word, left-aligned, variable sizes (like Weleda, ONT Move).
+Gemini renders the headline text directly in the image — make it part of the design.
 
-Instead, describe the TEXT ZONE so the image composition honours it:
-  Zone location: LEFT THIRD of the frame (preferred) — this is where the
-  billboard text will be overlaid. OR upper-left quarter for editorial cover.
-  Zone requirement: this area must have LOW VISUAL COMPLEXITY — flat brand
-  colour field, clean gradient, simple sky, or smooth bokeh background.
-  NO busy detail, faces, or products in this zone.
-  Composition guidance: the person and product should occupy the RIGHT 60%
-  of the frame, leaning or facing LEFT toward the text zone.
-  Visual hierarchy: the photographic content draws the eye RIGHT first,
-  then the gaze travels LEFT to where the headline will live.
+Extract the SHORT headline from campaign_copy (the ≤6-word billboard line) and include
+it as VISIBLE, LEGIBLE TEXT rendered into the image itself. Do not leave the text zone
+empty — the model must render the actual headline words.
+
+HEADLINE TEXT RULES:
+  • Use the exact words from campaign_copy.short.headline — do not paraphrase or shorten
+  • Render each word on its OWN LINE, stacked vertically, left-aligned, LEFT THIRD of frame
+  • Word sizes vary intentionally: small preposition/article → large NOUN → medium verb
+    (e.g. "after" small → "THE NOISE," large → "your" small → "QUIET VICTORY." large)
+  • Font: the brand's primary display font — bold weight, clean and legible
+  • Colour: WHITE for the main words; first word or article in the brand accent colour
+  • Text must be SHARP and FULLY LEGIBLE — not blurred, not distorted, not partially obscured
+
+TEXT ZONE (where the headline sits):
+  Location: LEFT THIRD of the frame — this entire zone must have LOW visual complexity
+  so the text reads clearly over it. Achieve this through:
+    - Natural scene depth/bokeh that softens the background on the left
+    - A subtle dark vignette or shadow falling across the left third from the scene lighting
+    - Deep shadow, atmospheric haze, or a clean colour field — NOT a flat panel bolted on
+  The left zone must feel like a natural part of the scene, not a separate layer.
+  NO faces, busy detail, or products in the text zone — those belong RIGHT 60%.
+
+TYPOGRAPHIC STYLE (choose one that fits your design approach):
+  STACKED BILLBOARD: Each word on its own line, sizes vary by importance — large impact words
+    fill full width of the left zone. Inspired by Knorr, Heineken, Nike outdoor advertising.
+  EDITORIAL STAGGER: Words staggered in size and weight — small then LARGE then medium —
+    creating a typographic rhythm that feels designed, not typed.
+  SINGLE FOCUS: 2–3 key words rendered very large, filling the left half completely.
+    The remaining words appear at 1/3 scale beneath, creating visual hierarchy.
+
+Each KV generator should choose a DIFFERENT typographic style — the two concepts must
+not look identical in their headline treatment.
 
 [PHOTOGRAPHIC STYLE]
 Commercial still life? Editorial lifestyle? CGI product visualisation?
@@ -709,9 +729,9 @@ QUALITY CHECK BEFORE YOU OUTPUT
 
 Before writing the JSON, ask yourself:
   ✓ Does this feel like a designed piece, not a photo with text stuck on?
-  ✓ Does this image FEEL like the Big Idea without needing the headline?
-  ✓ Does the headline FEEL like the Big Idea without needing the image?
-  ✓ Together, are they more powerful than either alone?
+  ✓ Is the headline text FULLY LEGIBLE — sharp, not blurred, correct words from campaign_copy?
+  ✓ Does the headline typographic style differ from the other KV concept?
+  ✓ Does the image + headline together feel like ONE designed piece, not photo + text stuck on?
   ✓ Is every brand_lock honoured? (font, colour, placement, voice, forbidden list)
   ✓ Is every forbidden colour pairing from brand_visual_rules avoided?
   ✓ Is the layout doing work — not just framing the image, but amplifying it?

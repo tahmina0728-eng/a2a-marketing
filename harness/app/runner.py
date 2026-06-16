@@ -1649,15 +1649,10 @@ Output EXACTLY this format (nothing else):
         if not generated_bytes_list:
             raise ValueError("Gemini Pro Image returned no images")
 
-        # Apply brand overlay (logo + headline + brand name + product) to every variation
-        _headline_overlay = copy_headline or _extract_headline(big_idea)
+        # Headline text is now rendered by Gemini directly in the image — no Pillow text overlay.
+        # _apply_brand_overlay is skipped; images are used as-is from the model.
         primary_bytes = generated_bytes_list[0]  # raw, for channel crops
-        images_b64 = []
-        for _img_bytes in generated_bytes_list:
-            _overlaid = _apply_brand_overlay(
-                _img_bytes, brand, _headline_overlay, product_uris, product_name
-            )
-            images_b64.append(base64.b64encode(_overlaid).decode("utf-8"))
+        images_b64 = [base64.b64encode(b).decode("utf-8") for b in generated_bytes_list]
         image_b64 = images_b64[0] if images_b64 else None
         log.info("p2_generate_image_done", n_generated=len(images_b64))
 
