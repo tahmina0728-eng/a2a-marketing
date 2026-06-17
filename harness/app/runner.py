@@ -724,7 +724,10 @@ def _apply_brand_overlay(
         # ── 5. Product label stamp — brand + product name in product zone ────────
         # Placed bottom-right where products sit; guarantees brand name is readable
         # even if the AI model rendered wrong/no text on the packaging.
+        # Glenfiddich skipped — logo pill top-right already carries brand identity.
         try:
+            if brand == "Glenfiddich":
+                raise ValueError("stamp_not_needed")  # logo pill top-right covers it
             _LABEL_COLORS = {
                 "Sunglow":     {"bg": (176,   0, 100, 220), "text": (255, 255, 255), "accent": (255, 199,  44)},
                 "Rnorr":       {"bg": (  0,  86,  41, 220), "text": (255, 255, 255), "accent": (255, 222,   0)},
@@ -1707,10 +1710,9 @@ Output EXACTLY this format (nothing else):
         _headline_source = "copy_agent" if copy_headline else "big_idea_fallback"
         _headline_short  = copy_headline or _extract_headline(big_idea)
         log.info("kv_headline_source", source=_headline_source, headline=_headline_short)
-        _words           = [w.strip() for w in _headline_short.split() if w.strip()]
-        # Concept 0 → full headline; Concept 1 → punchline (last half of words)
-        _alt_headline    = " ".join(_words[max(0, len(_words) // 2):]) if len(_words) > 2 else _headline_short
-        _concept_lines   = [_headline_short, _alt_headline]
+        # Both concepts share the same headline — visual distinction comes from
+        # the independently generated background images, not truncated copy.
+        _concept_lines   = [_headline_short, _headline_short]
 
         primary_bytes = generated_bytes_list[0]  # raw, for channel crops
         images_b64 = []
