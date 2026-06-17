@@ -2230,9 +2230,9 @@ function ResultsView({ output, campaignId }: {
         {/* Step 7: Channel Adaptations */}
         {adaptations && Object.keys(adaptations).length > 0 && (
           <TL step={6} icon="📐" color="#7c3aed" label={`Channel Adaptations — ${Object.keys(adaptations).length} formats`}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12, alignItems: "start" }}>
               {Object.entries(adaptations).map(([key, val]) => (
-                <div key={key} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(67,56,202,0.08)" }}>
+                <div key={key} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(67,56,202,0.08)", alignSelf: "start" }}>
                   <div style={{ background: "#eef2ff", padding: "6px 12px", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #e0e7ff" }}>
                     <span style={{ fontSize: 13 }}>{CHANNEL_ICONS[key] ?? "📺"}</span>
                     <span style={{ fontSize: 11, fontWeight: 700, color: "#4338ca" }}>{val.label}</span>

@@ -13,6 +13,7 @@ Callers must pass: Authorization: Bearer $(gcloud auth print-identity-token)
 """
 
 import asyncio
+import base64
 import json
 import os
 import time
@@ -768,9 +769,43 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
 
     # ── 2. Brand landing page ─────────────────────────────────────────────────
     if "landing_page" in selected:
-        # Use the 16:9 website banner adaptation as the hero image if available
+        # Website banner: prefer in-memory (same instance), fall back to GCS
+        # (Cloud Run may route publish request to a different instance than the
+        # one that ran the campaign, so _channel_adaptations may be empty there)
         _adapt = _channel_adaptations.get(campaign_id, {})
         _website_banner_b64 = (_adapt.get("website") or {}).get("image_b64", "")
+        if not _website_banner_b64:
+            try:
+                from google.cloud import storage as _gcs_pub
+                _cfg_pub = get_settings()
+                _wblob = _gcs_pub.Client().bucket(_cfg_pub.gcs_bucket).blob(
+                    f"outputs/{campaign_id}/channels/website.jpg"
+                )
+                if _wblob.exists():
+                    _website_banner_b64 = base64.b64encode(
+                        _wblob.download_as_bytes()
+                    ).decode("utf-8")
+                    logger.info("website_banner_loaded_from_gcs", campaign_id=campaign_id)
+            except Exception as _wb_err:
+                logger.warning("website_banner_gcs_load_failed", error=str(_wb_err))
+
+        # KV image: use what the frontend sent; fall back to GCS kv_image_1.jpg
+        _kv_image_b64 = req.image_b64
+        if not _kv_image_b64:
+            try:
+                from google.cloud import storage as _gcs_kv
+                _cfg_kv = get_settings()
+                _kvblob = _gcs_kv.Client().bucket(_cfg_kv.gcs_bucket).blob(
+                    f"outputs/{campaign_id}/kv_image_1.jpg"
+                )
+                if _kvblob.exists():
+                    _kv_image_b64 = base64.b64encode(
+                        _kvblob.download_as_bytes()
+                    ).decode("utf-8")
+                    logger.info("kv_image_loaded_from_gcs", campaign_id=campaign_id)
+            except Exception as _kv_err:
+                logger.warning("kv_image_gcs_load_failed", error=str(_kv_err))
+
         _reel_b64 = _campaign_reels.get(campaign_id, "")
         html = generate_brand_website(
             brand              = req.brand,
@@ -778,7 +813,7 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
             tagline            = req.tagline,
             body_copy          = req.body,
             cta                = req.cta,
-            campaign_image_b64 = req.image_b64,
+            campaign_image_b64 = _kv_image_b64,
             hero_image_b64     = _website_banner_b64,
             campaign_id        = campaign_id,
             video_b64          = _reel_b64,
