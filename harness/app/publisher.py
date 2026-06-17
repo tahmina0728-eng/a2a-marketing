@@ -1710,7 +1710,30 @@ def publish_instagram(
         logger.error("instagram_container_exception", error=str(e))
         return {"status": "error", "step": "create_container", "error": str(e)}
 
-    # ── Step 2: Publish container ──────────────────────────────────────────────
+    # ── Step 2: Poll until FINISHED (max 2 min, 5-sec intervals) ──────────────
+    # Instagram needs time to fetch and cache the image before it can be published.
+    for _poll in range(24):
+        time.sleep(5)
+        try:
+            _st = requests.get(
+                f"{api_base}/{creation_id}",
+                params={"fields": "status_code", "access_token": access_token},
+                timeout=15,
+            ).json()
+            _sc = _st.get("status_code", "")
+            logger.debug("instagram_image_poll", poll=_poll + 1, status=_sc)
+            if _sc == "FINISHED":
+                break
+            if _sc == "ERROR":
+                return {"status": "error", "step": "processing",
+                        "error": f"Instagram rejected the image: {_st}"}
+        except Exception as _pe:
+            logger.warning("instagram_image_poll_error", error=str(_pe))
+    else:
+        logger.warning("instagram_image_poll_timeout", creation_id=creation_id)
+        # Proceed anyway — sometimes status API is slow but publish still works
+
+    # ── Step 3: Publish container ──────────────────────────────────────────────
     try:
         resp = requests.post(
             f"{api_base}/{ig_user_id}/media_publish",
