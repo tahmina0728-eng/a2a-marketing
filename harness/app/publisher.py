@@ -118,6 +118,17 @@ def publish_google_ads(campaign_id: str, brand: str,
 
 # ── Brand Landing Page ─────────────────────────────────────────────────────────
 
+def _make_bg_src(b64_or_url: str, mime: str = "image/jpeg") -> str:
+    """Return a CSS-ready src from raw base64, a GCS URI, or an HTTPS URL."""
+    if not b64_or_url:
+        return ""
+    if b64_or_url.startswith("gs://"):
+        return b64_or_url.replace("gs://", "https://storage.googleapis.com/", 1)
+    if b64_or_url.startswith(("https://", "http://", "data:")):
+        return b64_or_url
+    return f"data:{mime};base64,{b64_or_url}"
+
+
 def _gcs_to_b64(uri: str, mime: str = "image/jpeg", max_kb: int = 800) -> str:
     """
     Load a brand asset, resize to max 600 px, return as base64 data URI.
@@ -188,11 +199,10 @@ def generate_glenfiddich_website(campaign_image_b64: str = "", campaign_id: str 
     prod_srcs    = [_gcs_to_b64(p, "image/jpeg", 800) for p in products[:3]]
     # Try multiple assets for hero background — pick first that loads successfully
     _gcs_hero    = next((s for s in [_gcs_to_b64(a, "image/jpeg", 800) for a in assets[:3]] if s), "")
-    camp_src     = f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else _gcs_hero
+    camp_src     = _make_bg_src(campaign_image_b64) or _gcs_hero
     # Priority: website 16:9 adaptation → KV campaign image → GCS brand asset
-    hero_bg_src  = (f"data:image/jpeg;base64,{hero_image_b64}"    if hero_image_b64    else
-                    f"data:image/jpeg;base64,{campaign_image_b64}" if campaign_image_b64 else
-                    _gcs_hero)
+    # _make_bg_src handles raw base64, gs:// URIs, and https:// URLs uniformly
+    hero_bg_src  = _make_bg_src(hero_image_b64) or _make_bg_src(campaign_image_b64) or _gcs_hero
 
     # Use the harness /brand-logo/ endpoint — avoids PNG→JPEG transparency loss
     logo_html = '<img src="/brand-logo/Glenfiddich" alt="Glenfiddich × AMF1" style="height:40px;object-fit:contain;">'

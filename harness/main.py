@@ -769,42 +769,27 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
 
     # ── 2. Brand landing page ─────────────────────────────────────────────────
     if "landing_page" in selected:
-        # Website banner: prefer in-memory (same instance), fall back to GCS
-        # (Cloud Run may route publish request to a different instance than the
-        # one that ran the campaign, so _channel_adaptations may be empty there)
+        # Bucket is public — pass GCS HTTPS URLs directly instead of loading
+        # large base64 blobs into memory.  generate_brand_website/_make_bg_src
+        # handles both data URIs and https:// URLs transparently.
+        _pub_bucket = get_settings().gcs_bucket
         _adapt = _channel_adaptations.get(campaign_id, {})
+
+        # Website banner: prefer in-memory base64 (same instance, no network),
+        # then stored GCS URI, then predictable path URL.
         _website_banner_b64 = (_adapt.get("website") or {}).get("image_b64", "")
         if not _website_banner_b64:
-            try:
-                from google.cloud import storage as _gcs_pub
-                _cfg_pub = get_settings()
-                _wblob = _gcs_pub.Client().bucket(_cfg_pub.gcs_bucket).blob(
-                    f"outputs/{campaign_id}/channels/website.jpg"
-                )
-                if _wblob.exists():
-                    _website_banner_b64 = base64.b64encode(
-                        _wblob.download_as_bytes()
-                    ).decode("utf-8")
-                    logger.info("website_banner_loaded_from_gcs", campaign_id=campaign_id)
-            except Exception as _wb_err:
-                logger.warning("website_banner_gcs_load_failed", error=str(_wb_err))
+            _stored_uri = (_adapt.get("website") or {}).get("gcs_uri", "")
+            _website_banner_b64 = (
+                _stored_uri if _stored_uri else
+                f"https://storage.googleapis.com/{_pub_bucket}/outputs/{campaign_id}/channels/website.jpg"
+            )
 
-        # KV image: use what the frontend sent; fall back to GCS kv_image_1.jpg
-        _kv_image_b64 = req.image_b64
-        if not _kv_image_b64:
-            try:
-                from google.cloud import storage as _gcs_kv
-                _cfg_kv = get_settings()
-                _kvblob = _gcs_kv.Client().bucket(_cfg_kv.gcs_bucket).blob(
-                    f"outputs/{campaign_id}/kv_image_1.jpg"
-                )
-                if _kvblob.exists():
-                    _kv_image_b64 = base64.b64encode(
-                        _kvblob.download_as_bytes()
-                    ).decode("utf-8")
-                    logger.info("kv_image_loaded_from_gcs", campaign_id=campaign_id)
-            except Exception as _kv_err:
-                logger.warning("kv_image_gcs_load_failed", error=str(_kv_err))
+        # KV image: prefer what the frontend sent (already in browser state),
+        # else use the GCS public URL (always exists after a completed campaign).
+        _kv_image_b64 = req.image_b64 or (
+            f"https://storage.googleapis.com/{_pub_bucket}/outputs/{campaign_id}/kv_image_1.jpg"
+        )
 
         _reel_b64 = _campaign_reels.get(campaign_id, "")
         html = generate_brand_website(
