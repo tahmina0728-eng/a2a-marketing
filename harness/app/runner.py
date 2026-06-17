@@ -561,9 +561,10 @@ def _apply_brand_overlay(
 
         # ── Brand font ────────────────────────────────────────────────────────
         BRAND_FONT_PREFS = {
-            "Sunglow": ["Alatsi"],
-            "Rnorr":   ["Antonio", "Rubik"],
-            "Boozt":   ["Rubik"],
+            "Sunglow":     ["Alatsi"],
+            "Rnorr":       ["Antonio", "Rubik"],
+            "Boozt":       ["Rubik"],
+            "Glenfiddich": ["Cormorant"],
         }
         font_dir  = _P(__file__).parent.parent / "bucket" / "brands" / brand / "Font"
         font_path = None
@@ -589,25 +590,48 @@ def _apply_brand_overlay(
             "Sunglow": (255, 199,  44),
             "Rnorr":   (255, 222,   0),
             "Boozt":   (  0, 134, 254),
+            # Glenfiddich intentionally omitted — chartreuse blends with the AMF1 swirl background
         }
         accent_rgb = BRAND_ACCENT.get(brand, (255, 255, 255))
 
-        # ── 1. Split headline into words — billboard stacked layout ───────────
-        words = [w.strip() for w in (headline or "").split() if w.strip()]
-        if not words:
-            words = [brand.upper()]
+        # ── 1. Split headline into 2 display lines (sentence-aware) ───────────
+        # Group raw words into sentence fragments, then collapse into ≤2 lines.
+        raw_words = [w.strip() for w in (headline or "").split() if w.strip()]
+        if not raw_words:
+            raw_words = [brand.upper()]
 
-        n = len(words)
-        def _word_size(i: int) -> int:
-            if n == 1: return max(70, W // 10)
-            if n == 2: return max(48, W // 14) if i == 0 else max(70, W // 9)
-            if n == 3:
-                return [max(30, W // 28), max(72, W // 10), max(36, W // 20)][i]
-            if i == 0:   return max(26, W // 30)
-            elif i <= n // 2: return max(64, W // 12)
-            else:        return max(32, W // 22)
+        sentences: list = []
+        current:   list = []
+        for w in raw_words:
+            current.append(w)
+            if w[-1] in ".!?":
+                sentences.append(" ".join(current))
+                current = []
+        if current:
+            sentences.append(" ".join(current))
+        if not sentences:
+            sentences = [brand.upper()]
 
-        lines_spec = [(w.upper(), _word_size(i), _font(_word_size(i))) for i, w in enumerate(words)]
+        # Collapse into at most 2 display lines
+        if len(sentences) > 2:
+            mid = len(sentences) // 2
+            sentences = [" ".join(sentences[:mid]), " ".join(sentences[mid:])]
+
+        # Auto-fit each line: shrink font until it fits within 55% of image width
+        _measure = Image.new("RGBA", (1, 1))
+        _md      = ImageDraw.Draw(_measure)
+        max_line_w = int(W * 0.55)
+        base_sz    = max(44, W // 10)
+        lines_spec = []
+        for line_text in sentences:
+            sz = base_sz
+            while sz > 18:
+                fnt = _font(sz)
+                bb  = _md.textbbox((0, 0), line_text.upper(), font=fnt)
+                if (bb[2] - bb[0]) <= max_line_w:
+                    break
+                sz = max(18, int(sz * 0.88))
+            lines_spec.append((line_text.upper(), sz, _font(sz)))
 
         _tmp = Image.new("RGBA", (W, 4))
         _td  = ImageDraw.Draw(_tmp)
@@ -680,15 +704,20 @@ def _apply_brand_overlay(
                     lw  = max(32, int(_logo.width * sc))
                     lh2 = max(32, int(_logo.height * sc))
                     _logo = _logo.resize((lw, lh2), Image.LANCZOS)
-                    gr   = max(6, int(lw * 0.25))
-                    glow = Image.new("RGBA", (lw + gr*2, lh2 + gr*2), (0,0,0,0))
-                    gd   = ImageDraw.Draw(glow)
-                    gd.ellipse([gr//2, gr//2, lw+gr+gr//2, lh2+gr+gr//2], fill=(255,255,255,60))
-                    glow = glow.filter(ImageFilter.GaussianBlur(radius=gr))
-                    lx = W - lw - margin
+                    pad     = max(8, int(lw * 0.18))
+                    bg_w    = lw + pad * 2
+                    bg_h    = lh2 + pad * 2
+                    logo_bg = Image.new("RGBA", (bg_w, bg_h), (0, 0, 0, 0))
+                    _lgd    = ImageDraw.Draw(logo_bg)
+                    _lgd.rounded_rectangle(
+                        [0, 0, bg_w - 1, bg_h - 1],
+                        radius=max(6, pad // 2),
+                        fill=(255, 255, 255, 210),
+                    )
+                    lx = W - lw - margin - pad
                     ly = margin
-                    img.paste(glow, (lx-gr, ly-gr), glow)
-                    img.paste(_logo, (lx, ly), _logo)
+                    img.paste(logo_bg, (lx, ly), logo_bg)
+                    img.paste(_logo, (lx + pad, ly + pad), _logo)
         except Exception as _le:
             logger.debug("logo_skipped", brand=brand, error=str(_le))
 
@@ -697,9 +726,11 @@ def _apply_brand_overlay(
         # even if the AI model rendered wrong/no text on the packaging.
         try:
             _LABEL_COLORS = {
-                "Sunglow": {"bg": (176, 0, 100, 220),   "text": (255, 255, 255), "accent": (255, 199, 44)},
-                "Rnorr":   {"bg": (0, 86, 41, 220),     "text": (255, 255, 255), "accent": (255, 222, 0)},
-                "Boozt":   {"bg": (14, 16, 94, 220),    "text": (255, 255, 255), "accent": (0, 186, 254)},
+                "Sunglow":     {"bg": (176,   0, 100, 220), "text": (255, 255, 255), "accent": (255, 199,  44)},
+                "Rnorr":       {"bg": (  0,  86,  41, 220), "text": (255, 255, 255), "accent": (255, 222,   0)},
+                "Boozt":       {"bg": ( 14,  16,  94, 220), "text": (255, 255, 255), "accent": (  0, 186, 254)},
+                # White bg so the stamp always pops against the dark teal/green image
+                "Glenfiddich": {"bg": (255, 255, 255, 225), "text": (  6,  75,  71), "accent": (  6,  75,  71)},
             }
             _lc = _LABEL_COLORS.get(brand, {"bg": (20, 20, 20, 200), "text": (255, 255, 255), "accent": (255, 200, 0)})
             _sw = int(W * 0.17)
@@ -744,7 +775,7 @@ def _apply_brand_overlay(
         result = img.convert("RGB")
         buf = io.BytesIO()
         result.save(buf, format="JPEG", quality=93)
-        logger.info("brand_overlay_applied", brand=brand, words=words, W=W, H=H)
+        logger.info("brand_overlay_applied", brand=brand, lines=len(raw_words), W=W, H=H)
         return buf.getvalue()
 
     except Exception as e:
@@ -840,10 +871,20 @@ async def generate_campaign_reel(
                 f"Deep midnight navy and cobalt blue brand colours, energetic and clean atmosphere."
             )
 
+    def _glenfiddich_scene(p: str) -> str:
+        return (
+            f"A sophisticated man in a dark green blazer stands in a moody bar interior, "
+            f"picking up a glass of {p} as amber liquid catches warm candlelight. "
+            f"A teal-and-chartreuse Glenfiddich AMF1 bottle gleams prominently in the foreground. "
+            f"Slow cinematic dolly push-in, bokeh highlights, deep teal and chartreuse brand palette. "
+            f"Premium Scotch whisky advertising quality — elegant, restrained, confident."
+        )
+
     _BRAND_SCENE_FN = {
-        "Sunglow": _sunglow_scene,
-        "Rnorr":   _rnorr_scene,
-        "Boozt":   _boozt_scene,
+        "Sunglow":     _sunglow_scene,
+        "Rnorr":       _rnorr_scene,
+        "Boozt":       _boozt_scene,
+        "Glenfiddich": _glenfiddich_scene,
     }
     brand_scene = _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN \
         else f"A premium advertising scene featuring {_prod} with dynamic energy and brand colours."
@@ -879,19 +920,33 @@ Output the prompt only.""",
 
     # ── Call Veo ──────────────────────────────────────────────────────────────
     loop = asyncio.get_event_loop()
+    veo_model = os.getenv("VEO_MODEL", "veo-3.1-generate-001")
+
+    async def _veo_generate(prompt: str, out_uri: str):
+        """Call generate_videos; on 429 wait 60 s and retry once."""
+        for _attempt in range(2):
+            try:
+                return await loop.run_in_executor(None, lambda: _gc.models.generate_videos(
+                    model=veo_model,
+                    prompt=prompt,
+                    config=GenerateVideosConfig(
+                        aspect_ratio="16:9",
+                        duration_seconds=6,
+                        output_gcs_uri=out_uri,
+                        number_of_videos=1,
+                        generate_audio=True,
+                    ),
+                ))
+            except Exception as _ve:
+                if _attempt == 0 and ("429" in str(_ve) or "RESOURCE_EXHAUSTED" in str(_ve)):
+                    log.warning("veo_rate_limited_retrying", error=str(_ve)[:120], wait_s=60)
+                    await asyncio.sleep(60)
+                else:
+                    raise
+        raise RuntimeError("unreachable")  # pragma: no cover
+
     try:
-        veo_model = os.getenv("VEO_MODEL", "veo-3.1-generate-001")
-        operation = await loop.run_in_executor(None, lambda: _gc.models.generate_videos(
-            model=veo_model,
-            prompt=final_prompt,
-            config=GenerateVideosConfig(
-                aspect_ratio="16:9",
-                duration_seconds=6,
-                output_gcs_uri=output_uri,
-                number_of_videos=1,
-                generate_audio=True,
-            ),
-        ))
+        operation = await _veo_generate(final_prompt, output_uri)
         log.info("veo_operation_started", name=getattr(operation, "name", "unknown"))
 
         # Poll until complete (max 8 min)
@@ -905,29 +960,28 @@ Output the prompt only.""",
 
         if not operation.result or not operation.result.generated_videos:
             log.warning("veo_no_videos_returned", prompt_preview=final_prompt[:200])
-            # Retry once with a minimal safe fallback prompt
-            fallback_prompt = (
+            # Retry once with a brand-specific safe fallback prompt
+            _retry_scenes = {
+                "Boozt":       (f"A confident person opens a can of {product_name or 'Boozt'} energy drink in a "
+                                f"bright modern setting, condensation droplets in slow motion, cobalt blue lighting. "
+                                f"Upbeat music. Voiceover: '{copy_headline or big_idea}'."),
+                "Glenfiddich": (f"Close-up of a {product_name or 'Glenfiddich'} whisky bottle on a dark bar surface, "
+                                f"amber liquid poured into a crystal glass catching warm light. "
+                                f"Teal and chartreuse brand colours. Elegant orchestral music."),
+                "Sunglow":     (f"A woman with beautiful natural hair smiles in warm golden light, "
+                                f"a {product_name or 'Sunglow'} product bottle beside her. "
+                                f"Magenta-pink brand palette. Uplifting music."),
+                "Rnorr":       (f"A home cook drops a {product_name or 'Rnorr'} stock cube into a steaming pot, "
+                                f"golden broth bubbling with fresh vegetables. "
+                                f"Green and yellow brand palette. Warm kitchen atmosphere."),
+            }
+            fallback_prompt = _retry_scenes.get(
+                brand,
                 f"A premium advertising video for {brand} {product_name or 'product'}. "
-                f"A person enjoying a refreshing {product_name or brand} beverage in a bright modern setting. "
-                f"The product is prominently featured with brand colours. "
-                f"Upbeat music. Warm confident voiceover: '{copy_headline or big_idea}'."
-            ) if brand == "Boozt" else (
-                f"A premium advertising video for {brand}. "
-                f"Professional lifestyle footage with brand colours prominent. "
-                f"Upbeat background music with confident voiceover."
+                f"Product prominently featured with brand colours. Upbeat music."
             )
             log.info("veo_retrying_fallback_prompt", prompt=fallback_prompt[:120])
-            operation2 = await loop.run_in_executor(None, lambda: _gc.models.generate_videos(
-                model=veo_model,
-                prompt=fallback_prompt,
-                config=GenerateVideosConfig(
-                    aspect_ratio="16:9",
-                    duration_seconds=6,
-                    output_gcs_uri=output_uri.replace(".mp4", "_retry.mp4"),
-                    number_of_videos=1,
-                    generate_audio=True,
-                ),
-            ))
+            operation2 = await _veo_generate(fallback_prompt, output_uri.replace(".mp4", "_retry.mp4"))
             deadline2 = time.time() + 480
             while not operation2.done:
                 if time.time() > deadline2:
@@ -1650,7 +1704,9 @@ Output EXACTLY this format (nothing else):
 
         # Apply Pillow overlay: headline text + brand label stamp (logo handled separately).
         # Each concept gets a different copy variant so the two KVs look distinct.
+        _headline_source = "copy_agent" if copy_headline else "big_idea_fallback"
         _headline_short  = copy_headline or _extract_headline(big_idea)
+        log.info("kv_headline_source", source=_headline_source, headline=_headline_short)
         _words           = [w.strip() for w in _headline_short.split() if w.strip()]
         # Concept 0 → full headline; Concept 1 → punchline (last half of words)
         _alt_headline    = " ".join(_words[max(0, len(_words) // 2):]) if len(_words) > 2 else _headline_short
@@ -1757,9 +1813,16 @@ Output EXACTLY this format (nothing else):
                 reasoning_model = _settings_r.gemini_model_reasoning,
             )
             if video_b64:
-                await _emit("reel", "milestone", _json2.dumps({"video_b64": video_b64}))
+                # Send GCS URI immediately so frontend can stream directly from GCS.
+                # Also send video_b64 for in-browser playback without extra fetch.
+                # video_b64 of a 6s video can be 20+ MB — send URI first as fast signal.
+                await _emit("reel", "milestone", _json2.dumps({
+                    "video_uri": video_uri,
+                    "video_b64": video_b64,
+                }))
                 await _emit("reel", "done", "Campaign reel ready ✓")
             else:
+                log.warning("reel_no_video_returned", campaign_id=campaign_id)
                 await _emit("reel", "error", "Reel generation failed or timed out")
         except Exception as e:
             log.warning("p2_reel_failed", error=str(e))

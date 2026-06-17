@@ -441,6 +441,10 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             hb3.cancel()
         short_hl  = (copy.get("short")  or {}).get("headline", "")
         medium_hl = (copy.get("medium") or {}).get("headline", "")
+        if not short_hl and not medium_hl:
+            logger.warning("copy_agent_headline_missing",
+                           has_raw_output="raw_output" in copy,
+                           copy_keys=list(copy.keys()))
 
         # Build channel-specific copy fields dynamically from whatever was generated
         _channel_copy: dict = {}

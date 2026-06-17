@@ -1076,6 +1076,11 @@ function KVPanel({ m, liveMsg, reelMilestone }: { m?: Record<string,unknown>; li
   const imageB64    = m?.image_b64    ? String(m.image_b64)    : "";
   const imagesB64   = m?.images_b64   ? (m.images_b64 as string[]) : imageB64 ? [imageB64] : [];
   const videoB64    = reelMilestone?.video_b64 ? String(reelMilestone.video_b64) : "";
+  // GCS public URL fallback — used when SSE dropped before video_b64 arrived
+  const videoUri    = reelMilestone?.video_uri ? String(reelMilestone.video_uri)
+                        .replace(/^gs:\/\/([^/]+)\/(.+)$/, "https://storage.googleapis.com/$1/$2")
+                      : "";
+  const videoSrc    = videoB64 ? `data:video/mp4;base64,${videoB64}` : videoUri;
 
   const activeStep = imagesB64.length > 0 ? 4 : imagePrompt ? 3 : bigIdea ? 2 : brandLocks ? 1 : 0;
   const isGeneratingImg = imagesB64.length === 0 && (liveMsg?.toLowerCase().includes("imagen") || !!imagePrompt);
@@ -1195,14 +1200,14 @@ function KVPanel({ m, liveMsg, reelMilestone }: { m?: Record<string,unknown>; li
       </div>
 
     {/* Campaign Reel video player */}
-    {videoB64 && (
+    {videoSrc && (
       <div style={{ marginTop: 16, padding: "14px 16px", background: "#0f172a", borderRadius: 12 }}>
         <div style={{ fontSize: 11, fontWeight: 800, color: "#f59e0b", letterSpacing: "0.1em",
           textTransform: "uppercase" as const, marginBottom: 10 }}>🎬 Campaign Reel · 6s</div>
         <video controls autoPlay loop muted playsInline
           style={{ width: "100%", borderRadius: 8, display: "block" }}
-          src={`data:video/mp4;base64,${videoB64}`} />
-        <a href={`data:video/mp4;base64,${videoB64}`} download={`campaign-reel.mp4`}
+          src={videoSrc} />
+        <a href={videoSrc} download="campaign-reel.mp4"
           style={{ display: "inline-block", marginTop: 10, fontSize: 11, fontWeight: 700,
             color: "#f59e0b", textDecoration: "none" }}>
           ⬇ Download Reel
@@ -1216,7 +1221,11 @@ function KVPanel({ m, liveMsg, reelMilestone }: { m?: Record<string,unknown>; li
 // ── Reel spotlight panel (used inside RunningView spotlight card) ─
 function ReelSpotlightPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
   const videoB64 = m?.video_b64 ? String(m.video_b64) : "";
-  if (videoB64) {
+  const videoUri = m?.video_uri
+    ? String(m.video_uri).replace(/^gs:\/\/([^/]+)\/(.+)$/, "https://storage.googleapis.com/$1/$2")
+    : "";
+  const videoSrc = videoB64 ? `data:video/mp4;base64,${videoB64}` : videoUri;
+  if (videoSrc) {
     return (
       <div style={{ width: "100%" }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: "#ec4899", letterSpacing: "0.1em",
@@ -1224,8 +1233,8 @@ function ReelSpotlightPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMs
         <video controls autoPlay loop muted playsInline
           style={{ width: "100%", borderRadius: 12, display: "block",
             boxShadow: "0 4px 24px rgba(0,0,0,0.15)" }}
-          src={`data:video/mp4;base64,${videoB64}`} />
-        <a href={`data:video/mp4;base64,${videoB64}`} download="campaign-reel.mp4"
+          src={videoSrc} />
+        <a href={videoSrc} download="campaign-reel.mp4"
           style={{ display: "inline-block", marginTop: 10, fontSize: 12, fontWeight: 700,
             color: "#ec4899", textDecoration: "none" }}>
           ⬇ Download Reel
@@ -1940,6 +1949,10 @@ function ResultsView({ output, campaignId }: {
 
   const imagesB64: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
   const videoB64: string = cp?.video_b64 ? String(cp.video_b64) : "";
+  const videoUri: string = cp?.video_uri
+    ? String(cp.video_uri).replace(/^gs:\/\/([^/]+)\/(.+)$/, "https://storage.googleapis.com/$1/$2")
+    : "";
+  const videoSrc: string = videoB64 ? `data:video/mp4;base64,${videoB64}` : videoUri;
   const adaptations = cp?.channel_adaptations as Record<string, {label: string; image_b64: string; ratio: string}> | undefined;
   const perfForecast = (output as any)?.performance_forecast as Record<string, unknown> | undefined;
 
@@ -2197,15 +2210,15 @@ function ResultsView({ output, campaignId }: {
         )}
 
         {/* Step 6: Campaign Reel */}
-        {videoB64 && (
+        {videoSrc && (
           <TL step={6} icon="🎬" color="#7c3aed" label="Campaign Reel — 6s Veo">
             <div style={{ background: "#0f172a", borderRadius: 12, overflow: "hidden" }}>
               <video controls autoPlay loop muted playsInline
                 style={{ width: "100%", display: "block" }}
-                src={`data:video/mp4;base64,${videoB64}`} />
+                src={videoSrc} />
               <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ fontSize: 11, color: "#94a3b8" }}>6s · 16:9 · Veo 3</span>
-                <a href={`data:video/mp4;base64,${videoB64}`} download="campaign-reel.mp4"
+                <a href={videoSrc} download="campaign-reel.mp4"
                   style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textDecoration: "none" }}>
                   ⬇ Download mp4
                 </a>
@@ -3157,13 +3170,17 @@ function ReelIntakeView({ milestone, liveMsg }: {
   if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
 
   const videoB64 = milestone.video_b64 ? String(milestone.video_b64) : "";
+  const videoUri = milestone.video_uri
+    ? String(milestone.video_uri).replace(/^gs:\/\/([^/]+)\/(.+)$/, "https://storage.googleapis.com/$1/$2")
+    : "";
+  const videoSrc = videoB64 ? `data:video/mp4;base64,${videoB64}` : videoUri;
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
       background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         <AgentIntakeHeader label="KINETIK" title="Campaign Reel" done={true} />
-        {videoB64 ? (
+        {videoSrc ? (
           <div style={{ background: "#0f172a", borderRadius: 16, padding: "20px 24px" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#f59e0b",
               letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 12 }}>
@@ -3171,8 +3188,8 @@ function ReelIntakeView({ milestone, liveMsg }: {
             </div>
             <video controls autoPlay loop muted playsInline
               style={{ width: "100%", borderRadius: 10, display: "block" }}
-              src={`data:video/mp4;base64,${videoB64}`} />
-            <a href={`data:video/mp4;base64,${videoB64}`} download="campaign-reel.mp4"
+              src={videoSrc} />
+            <a href={videoSrc} download="campaign-reel.mp4"
               style={{ display: "inline-block", marginTop: 12, fontSize: 12, fontWeight: 700,
                 color: "#f59e0b", textDecoration: "none" }}>
               ⬇ Download Reel
