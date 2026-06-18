@@ -1664,7 +1664,9 @@ Output EXACTLY this format (nothing else):
         log.info("p2_generate_image_start", model=image_model, n=len(enriched_concepts))
         await _emit("kv", "running", f"Generating {len(enriched_concepts)} campaign visuals with brand references…")
 
-        async def _gen_one_image(prompt: str) -> bytes | None:
+        async def _gen_one_image(prompt: str, delay: float = 0.0) -> bytes | None:
+            if delay:
+                await asyncio.sleep(delay)
             loop = asyncio.get_event_loop()
             # Build multimodal contents: reference images first, then prompt
             contents: list = []
@@ -1695,14 +1697,10 @@ Output EXACTLY this format (nothing else):
                         return None
             return None
 
-        # Sequential generation: 65s gap ensures each call is in a fresh QPM minute window.
-        # gemini-3-pro-image is a Preview model with ~1 RPM; parallel calls always 429.
-        _img_results = []
-        for _ci, _cp in enumerate(enriched_concepts):
-            if _ci > 0:
-                log.info("p2_image_quota_gap", wait_s=65, concept=_ci)
-                await asyncio.sleep(65)
-            _img_results.append(await _gen_one_image(_cp))
+        # Stagger 15s per concept to avoid competing for the same QPM window
+        _img_results = await asyncio.gather(*[
+            _gen_one_image(p, delay=i * 15) for i, p in enumerate(enriched_concepts)
+        ])
         generated_bytes_list = [r for r in _img_results if r is not None]
         if not generated_bytes_list:
             raise ValueError("Gemini Pro Image returned no images")
