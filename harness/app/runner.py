@@ -1689,7 +1689,7 @@ Output EXACTLY this format (nothing else):
                     return None
                 except Exception as _e:
                     if "429" in str(_e) and attempt < 3:
-                        wait = 8 * (2 ** attempt)
+                        wait = 20 * (2 ** attempt)  # 20s, 40s, 80s
                         log.warning("p2_image_rate_limit", attempt=attempt + 1, wait_s=wait)
                         await asyncio.sleep(wait)
                     else:
@@ -1697,9 +1697,9 @@ Output EXACTLY this format (nothing else):
                         return None
             return None
 
-        # Stagger starts by 5s each to avoid simultaneous 429s
+        # Stagger 15s per concept to avoid competing for the same QPM window
         _img_results = await asyncio.gather(*[
-            _gen_one_image(p, delay=i * 2) for i, p in enumerate(enriched_concepts)
+            _gen_one_image(p, delay=i * 15) for i, p in enumerate(enriched_concepts)
         ])
         generated_bytes_list = [r for r in _img_results if r is not None]
         if not generated_bytes_list:
