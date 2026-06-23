@@ -530,6 +530,165 @@ _CHANNEL_KEY_MAP: dict = {
 }
 
 
+def _apply_ubs_overlay(
+    img_data:     bytes,
+    headline:     str,
+    product_name: str = "",
+    font_dir=None,
+) -> bytes:
+    """
+    UBS Bank full-bleed KV — matches official UBS Instagram / brand style.
+
+    Full-bleed photo background with:
+      ├── Semi-transparent white wash behind text for readability
+      ├── 4px UBS Red (#E60000) vertical accent line at left margin
+      ├── Large regular-weight Frutiger headline (sentence case)
+      ├── Smaller sub-copy below if product_name supplied
+      └── UBS logo (white box) bottom-right corner
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        import io as _io
+        from pathlib import Path as _P
+
+        UBS_RED   = (230,   0,   0)
+        UBS_BLACK = ( 15,  15,  15)
+        UBS_GRAY  = ( 89,  89,  89)
+        UBS_WHITE = (255, 255, 255)
+
+        Image.MAX_IMAGE_PIXELS = None
+        photo = Image.open(_io.BytesIO(img_data)).convert("RGBA")
+        if max(photo.size) > 1536:
+            sc    = 1536 / max(photo.size)
+            photo = photo.resize((int(photo.width * sc), int(photo.height * sc)), Image.LANCZOS)
+        W, H = photo.size
+
+        canvas = photo.copy()
+        margin  = max(32, int(W * 0.05))
+        _fd     = _P(font_dir) if font_dir else None
+
+        def _ubs_font(bold: bool, size: int):
+            if _fd and _fd.exists():
+                for f in sorted(_fd.glob("*.ttf")):
+                    n = f.name.lower()
+                    if bold and ("bold" in n or "heavy" in n):
+                        try: return ImageFont.truetype(str(f), size)
+                        except: pass
+                    elif not bold and "bold" not in n and "italic" not in n:
+                        try: return ImageFont.truetype(str(f), size)
+                        except: pass
+            try:    return ImageFont.load_default(size=size)
+            except: return ImageFont.load_default()
+
+        hl_clean  = (headline or "UBS Bank").strip()
+        red_x     = margin
+        text_x    = red_x + 14           # 4px line + 10px gap
+        max_txt_w = int(W * 0.62) - text_x
+
+        _tmp = Image.new("RGBA", (1, 1))
+        _td  = ImageDraw.Draw(_tmp)
+
+        def _wrap(text, max_w, fnt):
+            words, lines, cur = text.split(), [], ""
+            for w in words:
+                test = (cur + " " + w).strip()
+                if (_td.textbbox((0, 0), test, font=fnt)[2]) <= max_w:
+                    cur = test
+                else:
+                    if cur: lines.append(cur)
+                    cur = w
+            if cur: lines.append(cur)
+            return lines or [text]
+
+        # Target: headline fills ~42% of image height — regular weight like the reference
+        head_sz = max(36, int(H * 0.092))
+        while head_sz > 22:
+            hfnt  = _ubs_font(bold=False, size=head_sz)
+            lines = _wrap(hl_clean, max_txt_w, hfnt)
+            if len(lines) * int(head_sz * 1.32) <= int(H * 0.50):
+                break
+            head_sz = max(22, int(head_sz * 0.88))
+
+        hfnt    = _ubs_font(bold=False, size=head_sz)
+        lines   = _wrap(hl_clean, max_txt_w, hfnt)
+        line_h  = int(head_sz * 1.32)
+        block_h = len(lines) * line_h
+
+        text_y   = int(H * 0.07)
+        sub_gap  = int(head_sz * 0.5)
+        sub_h    = (int(head_sz * 0.4) + sub_gap) if product_name else 0
+        total_h  = block_h + sub_h
+
+        # Semi-transparent white wash behind the entire text block
+        wash_pad_r = int(W * 0.04)
+        wash_pad_b = int(H * 0.04)
+        wash_x2 = text_x + max_txt_w + wash_pad_r
+        wash_y1 = max(0, text_y - int(H * 0.04))
+        wash_y2 = text_y + total_h + wash_pad_b
+        wash = Image.new("RGBA", (wash_x2, wash_y2 - wash_y1), (255, 255, 255, 185))
+        canvas.alpha_composite(wash, (0, wash_y1))
+
+        draw = ImageDraw.Draw(canvas)
+
+        # Red vertical accent line
+        line_top = text_y - int(head_sz * 0.08)
+        line_bot = text_y + block_h + int(head_sz * 0.08)
+        draw.rectangle([red_x, line_top, red_x + 4, line_bot], fill=(*UBS_RED, 255))
+
+        # Headline — regular weight, dark near-black
+        y = text_y
+        for line in lines:
+            draw.text((text_x, y), line, font=hfnt, fill=(*UBS_BLACK, 255))
+            y += line_h
+
+        # Sub-copy — product name below headline
+        if product_name:
+            sub_sz = max(14, int(head_sz * 0.38))
+            sfnt   = _ubs_font(bold=False, size=sub_sz)
+            draw.text((text_x, y + sub_gap // 2), product_name,
+                      font=sfnt, fill=(*UBS_GRAY, 255))
+
+        # UBS logo — bottom-right corner, white box (matches reference)
+        try:
+            from app.brand_assets import get_asset_loader as _gal
+            _logos = _gal().list_logos("UBS Bank")
+            _lpath = next(
+                (p for p in _logos if "whiteBG" in p or "whitebg" in p.lower()),
+                _logos[0] if _logos else None,
+            )
+            # Fallback: logo copied alongside the Font folder
+            if not _lpath and font_dir:
+                _local_logo = _P(font_dir).parent / "Logos" / "ubs-bank-logo.png"
+                if _local_logo.exists():
+                    _lpath = str(_local_logo)
+            if _lpath:
+                _lb = (_P(_lpath).read_bytes() if not str(_lpath).startswith("gs://")
+                       else __import__("app.creative_pipeline", fromlist=["_load_bytes"])._load_bytes(_lpath))
+                _logo = Image.open(_io.BytesIO(_lb)).convert("RGBA")
+                max_lw = int(W * 0.20)
+                max_lh = int(H * 0.09)
+                sc  = min(max_lw / max(1, _logo.width), max_lh / max(1, _logo.height), 1.0)
+                lw  = max(60, int(_logo.width  * sc))
+                lh2 = max(22, int(_logo.height * sc))
+                _logo = _logo.resize((lw, lh2), Image.LANCZOS)
+                pad = 12
+                lx  = W - lw - pad * 2 - int(W * 0.03)
+                ly  = H - lh2 - pad * 2 - int(H * 0.04)
+                lbg = Image.new("RGBA", (lw + pad * 2, lh2 + pad * 2), (*UBS_WHITE, 255))
+                canvas.alpha_composite(lbg,  (lx, ly))
+                canvas.alpha_composite(_logo, (lx + pad, ly + pad))
+        except Exception: pass
+
+        result = canvas.convert("RGB")
+        buf = _io.BytesIO()
+        result.save(buf, format="JPEG", quality=93)
+        return buf.getvalue()
+
+    except Exception as _e:
+        logger.warning("ubs_overlay_failed", error=str(_e))
+        return img_data
+
+
 def _apply_brand_overlay(
     img_data:     bytes,
     brand:        str,
@@ -560,6 +719,11 @@ def _apply_brand_overlay(
         margin = max(24, int(W * 0.035))
 
         # ── Brand font ────────────────────────────────────────────────────────
+        # UBS Bank uses its own editorial layout — redirect immediately
+        if brand == "UBS Bank":
+            _ubs_font_dir = _P(__file__).parent.parent / "bucket" / "brands" / "UBS Bank" / "Font"
+            return _apply_ubs_overlay(img_data, headline, product_name, str(_ubs_font_dir))
+
         BRAND_FONT_PREFS = {
             "Sunglow":     ["Alatsi"],
             "Rnorr":       ["Antonio", "Rubik"],
@@ -1033,6 +1197,7 @@ async def run_creative_pipeline_direct(
     brand_guidelines: str,
     big_idea_seed: str = "",
     copy_headline: str = "",
+    copy_headlines: list = None,
     product_name: str = "",
     fan_truth: str = "",
     season: str = "",
@@ -1706,13 +1871,14 @@ Output EXACTLY this format (nothing else):
             raise ValueError("Gemini Pro Image returned no images")
 
         # Apply Pillow overlay: headline text + brand label stamp (logo handled separately).
-        # Each concept gets a different copy variant so the two KVs look distinct.
-        _headline_source = "copy_agent" if copy_headline else "big_idea_fallback"
-        _headline_short  = copy_headline or _extract_headline(big_idea)
-        log.info("kv_headline_source", source=_headline_source, headline=_headline_short)
-        # Both concepts share the same headline — visual distinction comes from
-        # the independently generated background images, not truncated copy.
-        _concept_lines   = [_headline_short, _headline_short]
+        # Concept 1 gets the short billboard headline; concept 2 gets the medium headline
+        # so the two KVs carry distinct copy angles (not just different backgrounds).
+        _fallback        = _extract_headline(big_idea)
+        _hl1 = (copy_headlines[0] if copy_headlines and len(copy_headlines) > 0 else None) or copy_headline or _fallback
+        _hl2 = (copy_headlines[1] if copy_headlines and len(copy_headlines) > 1 else None) or copy_headline or _fallback
+        _headline_short  = _hl1
+        log.info("kv_headlines", hl1=_hl1, hl2=_hl2)
+        _concept_lines   = [_hl1, _hl2]
 
         primary_bytes = generated_bytes_list[0]  # raw, for channel crops
         images_b64 = []
