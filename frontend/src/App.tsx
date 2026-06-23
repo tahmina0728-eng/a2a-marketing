@@ -301,7 +301,7 @@ function BriefForm({ onFullCampaign }: {
             <div className="wizard-step-label">Step 1 of 7</div>
             <h2 className="wizard-heading">Select your <span className="gradient-text">brand</span></h2>
             <p className="wizard-subheading">Which brand is this campaign for?</p>
-            <div className="goal-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+            <div className="goal-grid" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
               {BRANDS.map((b) => (
                 <div key={b.id} className={`goal-tile${d.brand === b.id ? " selected" : ""}`}
                   onClick={() => setD((p) => ({ ...p, brand: b.id, product: "", productCustom: "" }))}>
