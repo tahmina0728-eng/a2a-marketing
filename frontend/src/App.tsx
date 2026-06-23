@@ -74,6 +74,7 @@ const BRANDS = [
   { id: "Sunglow",     label: "Sunglow",     emoji: "✨", logo: "/brands/sunglow-logo.png"     },
   { id: "Boozt",       label: "Boozt",       emoji: "💨", logo: "/brands/boozt-logo.png"       },
   { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", logo: "/brands/glenfiddich-logo.png" },
+  { id: "UBS Bank",    label: "UBS Bank",    emoji: "🏦", logo: "/brands/ubs-bank-logo.png"    },
 ];
 
 
@@ -89,6 +90,9 @@ const BRAND_PRODUCTS: Record<string, string[]> = {
   Glenfiddich: ["16 Year Old — AMF1 Limited Edition", "12 Year Old", "15 Year Old",
                "18 Year Old", "21 Year Old Gran Reserva", "14 Year Old Bourbon Cask",
                "IPA Experiment", "Project XX", "Grand Cru 23 Year Old"],
+  "UBS Bank":  ["Wealth Management", "Private Banking", "Asset Management",
+               "Investment Banking", "Sustainable Finance", "Family Office Services",
+               "Philanthropy Advisory", "Corporate Solutions", "Personal Banking"],
 };
 
 const BRAND_CATEGORY: Record<string, string> = {
@@ -96,6 +100,7 @@ const BRAND_CATEGORY: Record<string, string> = {
   Sunglow:     "Hair Care",
   Boozt:       "Energy Drinks",
   Glenfiddich: "Single Malt Scotch Whisky × Aston Martin F1",
+  "UBS Bank":  "Private Banking & Wealth Management",
 };
 
 const BRAND_FAN_TRUTHS: Record<string, string[]> = {
@@ -128,6 +133,13 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
     "136 years of craft. The same obsession Aston Martin bring to every lap.",
     "The first sip of a whisky that's older than most of your friendships",
   ],
+  "UBS Bank": [
+    "Confidence isn't about having all the answers — it's about having the right advisor.",
+    "When your wealth works as hard as you do, clarity replaces complexity.",
+    "The best financial decisions aren't made in a rush — they're made with precision.",
+    "A clearer financial future isn't a luxury. It's what the right partnership makes possible.",
+    "Real wealth isn't just what you accumulate — it's what you protect for the next generation.",
+  ],
 };
 
 const AGE_GROUPS       = ["13–17", "18–24", "25–34", "35–44", "45–54", "55+"];
@@ -137,6 +149,7 @@ const INTERESTS: Record<string, string[]> = {
   Sunglow:   ["Natural hair community", "Protective styles", "Wash day routines", "Scalp health", "Curl definition", "Black hair care", "Beauty enthusiasts"],
   Boozt:       ["Athletes & gym-goers", "Students", "Festival-goers", "Gamers", "Young professionals", "Outdoor adventurers"],
   Glenfiddich: ["F1 enthusiasts", "Whisky connoisseurs", "Premium gifters", "Luxury collectors", "Corporate entertainers", "Motorsport fans", "Occasion celebrators"],
+  "UBS Bank":  ["High-net-worth individuals", "Investors & wealth builders", "Entrepreneurs & founders", "Family offices", "Institutional investors", "Sustainable finance advocates", "Premium banking clients"],
   default:     ["Families", "Students", "Young professionals", "Beauty lovers", "Lifestyle"],
 };
 const REGIONS     = ["United Kingdom", "Australia", "United States", "New Zealand", "SEA", "Global"];

@@ -40,7 +40,7 @@ VECTOR_DIM    = 768   # gemini-embedding-2 via Google AI (vertexai=False)
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
 
 # Brands to index — McDonalds excluded (not a current brand)
-ALLOWED_BRANDS = {"Rnorr", "Boozt", "Sunglow", "Glenfiddich"}
+ALLOWED_BRANDS = {"Rnorr", "Boozt", "Sunglow", "Glenfiddich", "UBS Bank"}
 
 
 def get_embedding(text: str) -> list[float]:

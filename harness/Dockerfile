@@ -29,10 +29,11 @@ COPY main.py ./
 COPY app/ ./app/
 
 # Copy brand guidelines (text — small, used when GCS search returns empty)
-COPY bucket/brands/Rnorr/Guidelines/        ./bucket/brands/Rnorr/Guidelines/
-COPY bucket/brands/Sunglow/Guidelines/      ./bucket/brands/Sunglow/Guidelines/
-COPY bucket/brands/Boozt/Guidelines/        ./bucket/brands/Boozt/Guidelines/
-COPY bucket/brands/Glenfiddich/Guidelines/  ./bucket/brands/Glenfiddich/Guidelines/
+COPY bucket/brands/Rnorr/Guidelines/           ./bucket/brands/Rnorr/Guidelines/
+COPY bucket/brands/Sunglow/Guidelines/         ./bucket/brands/Sunglow/Guidelines/
+COPY bucket/brands/Boozt/Guidelines/           ./bucket/brands/Boozt/Guidelines/
+COPY bucket/brands/Glenfiddich/Guidelines/     ./bucket/brands/Glenfiddich/Guidelines/
+COPY "bucket/brands/UBS Bank/Guidelines/"      "./bucket/brands/UBS Bank/Guidelines/"
 
 # Copy brand fonts (used by Pillow for KV image overlay at runtime)
 COPY bucket/brands/Sunglow/Font/  ./bucket/brands/Sunglow/Font/

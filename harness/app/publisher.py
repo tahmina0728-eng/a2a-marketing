@@ -81,6 +81,22 @@ BRAND_CONFIG: dict[str, dict] = {
         "copy":       "Boozt Energy Drink delivers instant focus, sustained energy and electrolyte hydration — engineered for people who don't stop.",
         "features":   ["Zero Sugar", "Natural Caffeine", "Electrolyte Blend", "B-Vitamin Complex"],
     },
+    # UBS Bank: #E60000 UBS Red | #000000 Black | #F4F3EF Stone | Arial/Frutiger
+    "UBS Bank": {
+        "primary":    "#E60000",   # UBS Red — accent colour (keys, CTA, keyline)
+        "secondary":  "#000000",   # Black — headlines and structure
+        "accent":     "#F4F3EF",   # Stone — calm editorial background
+        "accent2":    "#595959",   # Secondary text / captions
+        "text":       "#ffffff",
+        "body_bg":    "#F4F3EF",   # Stone (default advisory layout background)
+        "section_bg": "#ffffff",   # White for clean data/product sections
+        "font":       "Arial, Helvetica, sans-serif",
+        "font_url":   "",
+        "tagline":    "Helping you discover a clearer financial future.",
+        "hero_tag":   "🏦 Private Banking & Wealth Management",
+        "copy":       "UBS delivers integrated wealth and investment solutions to high-net-worth individuals, families, and institutions — combining Swiss precision with global reach to make your financial future feel clear and within reach.",
+        "features":   ["Wealth Management", "Private Banking", "Asset Management", "Global Reach"],
+    },
 }
 DEFAULT_BRAND = {"primary": "#0055A4", "secondary": "#003d7a", "accent": "#f59e0b",
                  "accent2": "#fbbf24", "text": "#ffffff", "body_bg": "#f8f9fa",
