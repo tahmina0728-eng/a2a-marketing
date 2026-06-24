@@ -1,0 +1,481 @@
+UBS - BRAND GUIDELINES FOR DIGITAL ADVERTISING
+===============================================
+
+A working brand-guideline and campaign skill for UBS digital advertising.
+Every recommendation below traces back to the brand brief. Use real values
+(HEX/RGB, font names, exact pixel dimensions) - never vague advice.
+
+Scope note: This is an illustrative working guideline built from the supplied
+brief and publicly known UBS brand attributes (Swiss red, the three-keys logo,
+Frutiger typography). For any client-facing or production deliverable, validate
+final values against UBS's official brand portal and legal/compliance team.
+The font files (Frutiger.ttf, Frutiger_bold.ttf) were provided by the user;
+do not redistribute them - embed only where licensing permits, and fall back
+to Arial otherwise.
+
+
+HOW TO USE THIS GUIDE
+---------------------
+When asked to design or review a UBS digital asset, work through these four
+areas in order and tie each choice back to the brief:
+
+  1. Brand brief     - confirm audience, brand promise, personality,
+                       competitors, and the core feeling the ad must leave.
+  2. Core identity   - apply the logo, color, type, imagery, iconography,
+                       and voice rules below.
+  3. Digital layer   - use exact platform specs, safe margins, motion,
+                       and accessibility rules.
+  4. Sample campaign - when proving the system, execute one idea across
+                       3+ formats with a right/wrong example.
+
+Behavioral rules:
+  - Give specific, usable values, not vague guidance.
+    e.g. "Frutiger Bold 64px, UBS Red #E60000, 64px margin" not
+    "use a bold font and red."
+  - Trace every recommendation to the brief. If a choice doesn't serve
+    trust, clarity, or precision - reconsider it.
+  - Red is an ACCENT, never a wash. Long copy is black on white/stone,
+    or white on black.
+  - Always include the risk disclaimer on any asset that mentions
+    investing, returns, or performance (see Voice & Tone).
+
+
+================================================================
+1. BRAND BRIEF
+================================================================
+
+One-line positioning:
+  UBS is a global financial partner delivering integrated wealth and
+  investment solutions to help clients achieve a clearer, more secure
+  financial future.
+
+Core promise / north-star line:
+  "Helping you discover a clearer financial future."
+
+Audience:
+  - High-net-worth individuals and families
+  - Entrepreneurs and business leaders
+  - Institutional investors
+  - Corporate clients
+
+Personality (5 adjectives):
+  Trusted · Expert · Precise · Reassuring · Global
+  (Underlying brand values, expressed through the three-keys logo:
+  confidence, security, success.)
+
+Brand pillars:
+  1. Wealth Management    - end-to-end planning, investing, philanthropy.
+  2. Asset Management     - broad capabilities across traditional and
+                            alternative assets.
+  3. Investment Bank      - advice, execution, and tailored solutions
+                            for institutions.
+
+Competitors (positioning reference):
+  Morgan Stanley Wealth Management, J.P. Morgan Private Bank,
+  Goldman Sachs Private Wealth, Julius Baer, Deutsche Bank Wealth,
+  BlackRock (asset management).
+  Note: Credit Suisse is now part of UBS - do not reference it as
+  a competitor.
+
+Competitive edge:
+  Integrated offering across wealth, asset, and investment banking;
+  personalized long-term advisory; global reach with local expertise;
+  Swiss heritage of trust and precision.
+
+Core feeling every ad must leave:
+  "I have a precise, trustworthy expert who makes my financial future
+  feel clear and within reach - calm, controlled confidence, never hype."
+
+
+================================================================
+2. CORE IDENTITY
+================================================================
+
+2.1 LOGO SYSTEM
+---------------
+The UBS logo is the three keys symbol (the keys of Zurich, representing
+confidence, security, success) set to the left of the "UBS" wordmark -
+used together as a horizontal lockup.
+
+  Clear space:
+    Keep a minimum clear area equal to the HEIGHT of the three-keys symbol
+    (= the cap height of the "U") on all four sides. Nothing - text, image
+    edge, or other logo - enters this zone.
+
+  Minimum size (digital):
+    Keys-plus-wordmark lockup: 24px tall minimum on screen;
+    88px wide minimum for the full lockup.
+    For favicons/app tiles: use the keys symbol alone at 16px minimum.
+
+  Color versions:
+    - UBS Red (#E60000) keys + Black (#000000) wordmark on light backgrounds.
+    - All-white reversed lockup on Red, Black, or dark imagery.
+    - One-color black is allowed where color is unavailable.
+
+  Placement:
+    Typically top-left or bottom-right of an ad; right-align in horizontal
+    banners. Always on a clean, high-contrast area.
+
+  Logo misuse - NEVER:
+    - Recolor the keys or wordmark to off-brand colors, gradients, or photos.
+    - Stretch, condense, rotate, or skew.
+    - Add drop shadows, outlines, bevels, or glows.
+    - Place on busy imagery or low-contrast backgrounds.
+    - Recreate, re-typeset, or rearrange the keys/wordmark relationship.
+    - Box the logo or crowd it past its clear-space rule.
+
+
+2.2 COLOR PALETTE
+-----------------
+PRIMARY COLORS
+  Name         HEX       RGB
+  UBS Red      #E60000   230, 0, 0
+  Black        #000000   0, 0, 0
+
+SECONDARY COLORS
+  Name         HEX       RGB
+  White        #FFFFFF   255, 255, 255
+  Stone        #F4F3EF   244, 243, 239   (warm off-white)
+
+FUNCTIONAL DIGITAL EXTENSIONS
+  Role                    HEX       RGB           Use
+  Secondary text/captions #595959   89, 89, 89    Sub-copy, captions,
+                                                   disclaimers on white
+                                                   (>7:1 contrast)
+  Hairlines / dividers    #D8D6D0   216, 214, 208 1px rules, table borders
+                                                   on stone/white
+
+Usage rules:
+  - RED = ACCENT. Use for the single emphasis element per layout
+    (keyline, underline, CTA, the keys). Do not fill large backgrounds
+    with red; reserve full-bleed red for hero moments.
+  - Stone (#F4F3EF) is the default calm background for editorial/advisory
+    layouts; white for clean data and product layouts; black for
+    premium/contrast moments.
+  - Aim for roughly: 70% neutral / 25% black type / 5% red.
+
+
+2.3 TYPOGRAPHY
+--------------
+  Level              Font              Fallback    Notes
+  Headline/display   Frutiger Bold     Arial Bold  Tight, confident,
+                                                   sentence case
+  Subhead            Frutiger Regular  Arial
+  Body               Frutiger Regular  Arial
+  CTA / button       Frutiger Bold     Arial Bold
+  Legal/disclaimer   Frutiger Regular  Arial       Smaller, must stay legible
+
+Web/email font stack:
+  font-family: "Frutiger", Arial, Helvetica, sans-serif;
+
+Where Frutiger is not licensed for embedding (most web/email/3rd-party ad
+servers): ship Arial as the live face - it is the designated secondary font,
+not a degraded fallback.
+
+Case:
+  Sentence case for headlines and body (advisory, human). Avoid all-caps
+  for long strings; small caps acceptable for short labels.
+
+Alignment:
+  Left-aligned, ragged right. No justified body text.
+
+DIGITAL TYPE SCALE (square / 1080-class assets):
+  Use             Size                    Line height
+  Display         64-88px Frutiger Bold   1.05-1.1
+  Subhead         32-40px Frutiger Reg    1.2
+  Body            24-28px Frutiger Reg    1.4
+  CTA label       24-28px Frutiger Bold   1.2
+  Legal           12-14px (min 12px)      1.3
+
+
+2.4 IMAGERY & ART DIRECTION
+----------------------------
+  Mood:
+    Calm, optimistic, precise. Controlled confidence - never aspirational
+    excess or hype.
+
+  People:
+    Real, credible clients and advisors; natural light; genuine moments
+    (planning, conversation, looking ahead). Avoid cliched stock - no
+    staged handshakes, no money/gold imagery, no fist-pumps.
+
+  Composition:
+    Swiss-precision grid, generous neutral/stone space, strong horizon
+    and alignment, clear single focal point.
+
+  Data visuals:
+    Clean, minimal, honest. Thin lines, one red accent line/point, ample
+    whitespace, no 3D, no decorative gradients. Charts must be readable
+    and never misleading.
+
+  Signature device:
+    "Blur-to-sharp" - imagery or data that resolves from soft focus into
+    crisp clarity (visual metaphor for "a clearer financial future").
+
+
+2.5 ICONOGRAPHY
+---------------
+  - Geometric line icons, consistent 2px stroke, rounded-to-square
+    terminals matching Frutiger's tone.
+  - Single weight per set; monochrome (black on light, white on dark);
+    red only for an active/emphasis state.
+  - Functional and literal - clarity over decoration.
+  - The three-keys motif may inspire a recurring graphic device but is
+    not an icon for reuse.
+
+
+2.6 VOICE & TONE
+----------------
+  - Professional and advisory - speaks as a trusted expert partner.
+  - Clear, structured, insightful - short sentences, no jargon, confident.
+  - Reassuring and long-term - calm, secure, never hype or pressure.
+
+On-brand line examples:
+  "Discover a clearer financial future."
+  "Advice tailored to your needs."
+  "A total wealth solution."
+
+MANDATORY RISK DISCLAIMER
+  Include on any asset mentioning investing, returns, or performance:
+
+  "The value of investments can go down as well as up. You may not get
+  back the amount you invested."
+
+  Plus the required entity/regulatory line per market. Place legibly -
+  small is fine, illegible is not.
+
+
+================================================================
+3. DIGITAL ADVERTISING LAYER
+================================================================
+
+3.1 PLATFORM SPECS
+------------------
+  Format                   Dimensions    Ratio   Notes
+  Instagram feed           1080x1080     1:1     Primary social unit
+  Instagram Stories/Reels  1080x1920     9:16    Full-screen vertical
+  Display - MPU            300x250       -       Standard rectangle
+  Display - Leaderboard    728x90        -       Top-of-page horizontal
+  Display - Skyscraper     160x600       -       Vertical sidebar
+  Video                    1920x1080     16:9    Also cut 1:1 + 9:16
+                                                 Bumper 6s, 15s / 30s
+
+
+3.2 LAYOUT & SAFE MARGINS
+--------------------------
+  1080x1080:
+    64px outer margin all sides. Logo top-left or bottom-right within
+    margin; one headline, one CTA.
+
+  1080x1920 Stories:
+    64px side margins. Reserve top ~250px and bottom ~340px for platform
+    UI/CTA sticker - keep logo, headline, and disclaimer inside the
+    central safe zone.
+
+  728x90:
+    16px padding; logo lockup right-aligned, headline + CTA left/center.
+    One message only.
+
+  300x250:
+    20px padding; stacked headline - CTA - logo. Keep to a single idea.
+
+  160x600:
+    16px padding; vertical stack, logo at top or bottom, generous spacing.
+
+  Video 1920x1080:
+    Keep text within title-safe (90%) and graphics within action-safe
+    (93%); hold an end card >=2s with logo + disclaimer.
+
+  All formats:
+    Align to a grid, lead with one headline, never crowd the logo's
+    clear space.
+
+
+3.3 MOTION GUIDELINES
+---------------------
+  Easing:
+    cubic-bezier(0.4, 0.0, 0.2, 1) (ease-in-out) - calm and precise.
+    No bounce/elastic.
+
+  Durations:
+    Micro-interactions: 200-300ms
+    Scene transitions:  400-600ms
+    Pre-roll:           6s / 15s / 30s
+
+  Signature motion:
+    The "blur-to-sharp" focus resolve as the headline lands; red enters
+    as an underline/keyline reveal - never a full-screen flash.
+
+  Accessibility:
+    No content flashing more than 3 times per second (WCAG 2.3.1).
+    Captions/subtitles on all video; legible end-card disclaimer
+    held >=2s.
+
+  Pacing:
+    Unhurried and confident; let whitespace and a single message breathe.
+
+
+3.4 ACCESSIBILITY (WCAG 2.1 AA)
+--------------------------------
+Contrast minimum: 4.5:1 for normal text, 3:1 for large text
+(>=24px regular / >=18.66px bold).
+
+Verified pairs for the UBS palette:
+  Foreground / Background              Ratio    Normal   Large
+  Black (#000000) on White (#FFFFFF)   21:1     PASS     PASS
+  Black on Stone (#F4F3EF)             ~19:1    PASS     PASS
+  White (#FFFFFF) on Red (#E60000)     ~4.8:1   PASS     PASS
+  Red (#E60000) on White               ~4.8:1   PASS     PASS
+  Red (#E60000) on Black               ~4.4:1   FAIL     PASS only
+  Black (#000000) on Red               ~4.4:1   FAIL     PASS only
+  #595959 on White                     ~7:1     PASS     PASS
+
+Practical rules:
+  - NEVER set body/small text in red on black, or black on red - both
+    fall below 4.5:1. Use red on black only for large display words
+    (>=24px), and prefer white on red or black on white/stone for
+    anything readable.
+  - Red-on-white and white-on-red pass but only just (~4.8:1) - don't
+    shrink red copy below body size.
+  - Use #595959 for secondary/legal copy on white when full black is
+    too heavy; it stays AA-safe.
+
+Minimum legible mobile font sizes:
+  Body:              16px minimum (prefer 18-24px on social)
+  Captions/secondary: 14px minimum
+  Legal/disclaimer:   12px minimum on social/large units;
+                      11px absolute floor on small display banners
+  Tap targets:        >=44x44px
+  Never rely on color alone to convey meaning (pair red with
+  text/underline).
+
+
+================================================================
+4. SAMPLE CAMPAIGN - "CLEARER."
+================================================================
+
+Concept:
+  A "blur-to-sharp" system. Each asset opens soft/out-of-focus and
+  resolves into crisp clarity exactly as the headline lands - the literal
+  expression of "a clearer financial future." Swiss-precision grid, stone
+  whitespace, red as the single accent (an underline that draws under the
+  key word).
+
+Tagline:
+  "A clearer financial future, tailored to you."
+
+Supporting lines:
+  "See what's possible."
+  "Clarity, by design."
+
+Why it's on-brand:
+  Clarity + precision (Swiss heritage), tailored = client-focused advisory,
+  calm confidence = reassuring tone. Red stays an accent; neutral structure
+  carries trust.
+
+
+EXECUTIONS (3+ FORMATS)
+------------------------
+
+A. Instagram Feed - 1080x1080
+  Background: Stone #F4F3EF. 64px margins.
+  Frame 1 (motion): client portrait soft/blurred.
+  Frame 2: snaps sharp as headline appears.
+  Headline: Frutiger Bold ~72px, Black - "A clearer financial future"
+            with "clearer" underlined in UBS Red #E60000.
+  Subline:  Frutiger Regular 32px, #595959 - "Advice tailored to your needs."
+  CTA:      Frutiger Bold 26px, white on red #E60000 pill - "Speak to an advisor"
+  Logo:     Bottom-right (white-area, clear space respected).
+  Disclaimer: 12px along the bottom margin.
+
+B. Instagram Story - 1080x1920
+  Full-bleed image, dark gradient lower third; content inside central
+  safe zone (top 250 / bottom 340 reserved).
+  Headline: Frutiger Bold 80px, white - "See what's possible."
+            Red underline reveal.
+  CTA:      Platform "Learn more" swipe sticker zone.
+  Logo:     Top-left, reversed white.
+  Disclaimer: 12px above the bottom safe margin.
+
+C. Display MPU - 300x250
+  Background: White. 20px padding.
+  Headline: Frutiger Bold 26px, Black (two lines) -
+            "A clearer financial future." Red underline under "clearer."
+  CTA:      Frutiger Bold 14px, white on red - "Find out more."
+  Logo:     Bottom-right (Red keys + Black wordmark).
+  Legal:    11px single line at the very bottom.
+
+(Optional 4th: 728x90 leaderboard - logo right, headline + red-underline
+left, CTA center.)
+
+
+RIGHT vs WRONG
+--------------
+  Element      RIGHT                              WRONG
+  Red usage    Single underline/CTA accent        Full red background
+                                                  flooded with red text
+  Contrast     Black headline on stone;           Red body text on black
+               white CTA text on red              panel (<4.4:1, fails AA)
+  Type         Frutiger Bold headline,            All-caps, justified,
+               sentence case, left-aligned        mixed fonts, centered
+  Logo         Clear space respected,             Stretched, recolored,
+               correct lockup, bottom-right       drop-shadowed, crowded
+  Layout       One message, grid-aligned,         Multiple competing
+               generous stone space               messages, cluttered
+  Compliance   Risk disclaimer present            Disclaimer omitted or
+               and legible (>=12px)               shrunk to illegible size
+  Tone         "Advice tailored to your needs."   "Get rich fast -
+                                                  guaranteed returns!"
+
+
+================================================================
+5. PRE-FLIGHT CHECKLIST
+================================================================
+Use before shipping any UBS asset:
+
+  [ ] Choice traces to the brief (trust / clarity / precision;
+      correct pillar + audience).
+  [ ] Correct dimensions and safe margins for the placement (see S3.1-3.2).
+  [ ] Logo: correct lockup, clear space respected, >= minimum size,
+      no misuse.
+  [ ] Colors from the approved palette; red used as accent (~5% of layout).
+  [ ] Frutiger (or Arial fallback) only; sizes >= minimum legible;
+      left-aligned, sentence case.
+  [ ] All text/background pairs meet AA contrast - no red-on-black or
+      black-on-red body text.
+  [ ] Risk disclaimer present and legible wherever investing/returns
+      are mentioned.
+  [ ] Motion: ease-in-out, no flashing >3x/sec, captions on video,
+      end card >=2s.
+  [ ] One clear message; calm, confident, reassuring tone.
+
+
+================================================================
+6. QUICK REFERENCE
+================================================================
+
+Promise:
+  "Helping you discover a clearer financial future."
+
+Colors:
+  Red    #E60000  (230, 0, 0)
+  Black  #000000  (0, 0, 0)
+  White  #FFFFFF  (255, 255, 255)
+  Stone  #F4F3EF  (244, 243, 239)
+
+Typography:
+  Frutiger Bold (headlines) / Frutiger Regular (body)
+  Arial fallback
+  Font stack: "Frutiger", Arial, Helvetica, sans-serif
+
+Accessibility floor:
+  4.5:1 contrast for normal text
+  Body >= 16px
+  Legal >= 12px (>= 11px small banners)
+
+Red rule:
+  Accent only - never body text on black, never a default
+  background wash.
+
+===============================================
+End of UBS Brand Guidelines for Digital Advertising

@@ -1,0 +1,30 @@
+# Rnorr Brand Asset Manifest
+# Source: gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/
+
+## LOGOS
+- Rnorr-Logo.png: gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Logos/Rnorr-Logo.png
+
+## PRODUCT IMAGES
+- Product1 (product1.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Products/product1.jpg
+- Product2 (product2.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Products/product2.jpg
+- Product3 (product3.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Products/product3.jpg
+- Product4 (product4.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Products/product4.jpg
+- Product5 (product5.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Products/product5.jpg
+- Product6 (product6.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Products/product6.jpg
+- Product7 (product7.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Products/product7.jpg
+- Product8 (product8.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Products/product8.jpg
+- Product9 (product9.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Products/product9.jpg
+
+## FONTS
+- .DS_Store: gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Font/.DS_Store
+- Antonio-VariableFont_wght.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Font/Antonio-VariableFont_wght.ttf
+- Rubik-VariableFont_wght.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Font/Rubik-VariableFont_wght.ttf
+
+## CAMPAIGN ASSETS / BANNERS
+- banner1.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Assets/banner1.jpg
+- banner2.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Assets/banner2.jpg
+- banner3.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Assets/banner3.jpg
+- banner4.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Assets/banner4.jpg
+
+## COLOUR SWATCHES
+- Colour.png: gs://dauntless-karma-497108-b0-campaignos/brands/Rnorr/Colours/Colour.png

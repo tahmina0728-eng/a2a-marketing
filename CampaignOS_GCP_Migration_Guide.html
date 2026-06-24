@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CampaignOS — GCP Migration Guide</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: #1a1a2e;
+      background: #f5f7fa;
+    }
+
+    /* ── Layout ── */
+    .page-wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      background: #1a1a2e;
+      color: #c8d0e0;
+      padding: 32px 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-brand {
+      padding: 0 24px 24px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      margin-bottom: 16px;
+    }
+
+    .sidebar-brand h2 {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #4fc3f7;
+    }
+
+    .sidebar-brand p {
+      font-size: 11px;
+      color: #7986a0;
+      margin-top: 4px;
+    }
+
+    .sidebar nav a {
+      display: block;
+      padding: 7px 24px;
+      font-size: 13px;
+      color: #8a96b0;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      transition: all 0.15s;
+    }
+
+    .sidebar nav a:hover {
+      color: #e2e8f0;
+      background: rgba(255,255,255,0.05);
+      border-left-color: #4fc3f7;
+    }
+
+    /* ── Main content ── */
+    .content {
+      flex: 1;
+      padding: 48px 56px;
+      max-width: 960px;
+    }
+
+    /* ── Header ── */
+    .doc-header {
+      margin-bottom: 48px;
+      padding-bottom: 32px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .doc-header h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #1a1a2e;
+      margin-bottom: 12px;
+    }
+
+    .meta-badges {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-blue  { background: #dbeafe; color: #1d4ed8; }
+    .badge-green { background: #dcfce7; color: #166534; }
+
+    /* ── Sections ── */
+    .section {
+      margin-bottom: 56px;
+      scroll-margin-top: 24px;
+    }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    h2 .section-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      background: #1a1a2e;
+      color: #fff;
+      border-radius: 50%;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #374151;
+      margin: 24px 0 12px;
+    }
+
+    h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: #4b5563;
+      margin: 16px 0 8px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      background: #f1f5f9;
+      padding: 4px 10px;
+      border-radius: 6px;
+      display: inline-block;
+    }
+
+    p { margin-bottom: 12px; color: #374151; }
+
+    /* ── Tables ── */
+    .table-wrap { overflow-x: auto; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      background: #fff;
+    }
+
+    thead tr { background: #1a1a2e; }
+    thead th {
+      padding: 11px 16px;
+      text-align: left;
+      color: #c8d0e0;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    tbody tr { border-bottom: 1px solid #f1f5f9; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f8fafc; }
+    td { padding: 10px 16px; color: #374151; vertical-align: top; }
+    td:first-child { font-weight: 500; white-space: nowrap; }
+
+    /* ── Code blocks ── */
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 20px 24px;
+      border-radius: 10px;
+      overflow-x: auto;
+      font-size: 13px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+      font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+    }
+
+    code {
+      font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+      font-size: 13px;
+      background: #f1f5f9;
+      color: #be185d;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    pre code {
+      background: none;
+      color: inherit;
+      padding: 0;
+      border-radius: 0;
+      font-size: inherit;
+    }
+
+    /* ── Callout boxes ── */
+    .callout {
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      font-size: 13.5px;
+      border-left: 4px solid;
+      display: flex;
+      gap: 10px;
+    }
+
+    .callout-warn  { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+    .callout-info  { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+    .callout-note  { background: #f0fdf4; border-color: #22c55e; color: #14532d; }
+
+    .callout-icon { flex-shrink: 0; font-size: 16px; }
+
+    /* ── Checklist ── */
+    .checklist { list-style: none; margin-bottom: 16px; }
+    .checklist li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 6px 0;
+      font-size: 14px;
+      color: #374151;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .checklist li:last-child { border-bottom: none; }
+
+    .checklist li .checkbox {
+      width: 18px;
+      height: 18px;
+      border: 2px solid #cbd5e1;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-top: 3px;
+    }
+
+    /* ── Folder tree ── */
+    .folder-tree {
+      background: #0f172a;
+      color: #94a3b8;
+      padding: 20px 24px;
+      border-radius: 10px;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 13px;
+      line-height: 1.8;
+      margin-bottom: 20px;
+    }
+
+    .folder-tree .dir  { color: #7dd3fc; font-weight: 600; }
+    .folder-tree .file { color: #a5f3fc; }
+    .folder-tree .comment { color: #64748b; }
+
+    /* ── Service overview cards ── */
+    .service-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+
+    .service-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .service-card .icon { font-size: 22px; margin-bottom: 8px; }
+    .service-card .name { font-weight: 700; font-size: 13px; color: #1a1a2e; margin-bottom: 4px; }
+    .service-card .desc { font-size: 12px; color: #6b7280; line-height: 1.5; }
+
+    /* ── Step cards (checklist) ── */
+    .step-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .step-card h4 {
+      background: none;
+      padding: 0;
+      margin: 0 0 14px;
+      font-size: 15px;
+      color: #1a1a2e;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .step-badge {
+      background: #1a1a2e;
+      color: #fff;
+      padding: 2px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    ul { padding-left: 20px; margin-bottom: 12px; }
+    ul li { margin-bottom: 4px; color: #374151; font-size: 14px; }
+
+    strong { color: #1a1a2e; }
+
+    hr { border: none; border-top: 2px solid #e2e8f0; margin: 40px 0; }
+
+    /* ── Print ── */
+    @media print {
+      .sidebar { display: none; }
+      .content { padding: 24px; max-width: 100%; }
+      pre { break-inside: avoid; }
+      .section { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<div class="page-wrapper">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <h2>CampaignOS</h2>
+      <p>GCP Migration Guide</p>
+    </div>
+    <nav>
+      <a href="#overview">1. Services Overview</a>
+      <a href="#cloud-run">2. Cloud Run</a>
+      <a href="#cloud-build">3. Cloud Build</a>
+      <a href="#gcs">4. Cloud Storage</a>
+      <a href="#bigquery">5. BigQuery</a>
+      <a href="#cloud-sql">6. Cloud SQL</a>
+      <a href="#vertex-ai">7. Vertex AI</a>
+      <a href="#secret-manager">8. Secret Manager</a>
+      <a href="#gcr">9. Container Registry</a>
+      <a href="#iam">10. IAM</a>
+      <a href="#apis">11. APIs to Enable</a>
+      <a href="#external">12. External Services</a>
+      <a href="#no-docker">13. Running Without Docker</a>
+      <a href="#checklist">14. Migration Checklist</a>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <main class="content">
+
+    <div class="doc-header">
+      <h1>CampaignOS — GCP Migration Guide</h1>
+      <div class="meta-badges">
+        <span class="badge badge-blue">Source: dauntless-karma-497108-b0</span>
+        <span class="badge badge-green">Target: Organisation GCP Account</span>
+      </div>
+    </div>
+
+    <!-- 1. Overview -->
+    <div class="section" id="overview">
+      <h2><span class="section-num">1</span> GCP Services Overview</h2>
+      <div class="service-grid">
+        <div class="service-card"><div class="icon">☁️</div><div class="name">Cloud Run</div><div class="desc">FastAPI backend + React frontend hosting</div></div>
+        <div class="service-card"><div class="icon">🔨</div><div class="name">Cloud Build</div><div class="desc">CI/CD — build Docker image, push to GCR, deploy</div></div>
+        <div class="service-card"><div class="icon">🗂️</div><div class="name">Cloud Storage</div><div class="desc">Brand assets, images, videos, landing pages</div></div>
+        <div class="service-card"><div class="icon">📊</div><div class="name">BigQuery</div><div class="desc">Campaign audit log + source benchmarks</div></div>
+        <div class="service-card"><div class="icon">🐘</div><div class="name">Cloud SQL</div><div class="desc">PostgreSQL 16 + pgvector semantic search</div></div>
+        <div class="service-card"><div class="icon">🤖</div><div class="name">Vertex AI</div><div class="desc">Gemini, Veo, embeddings, Search</div></div>
+        <div class="service-card"><div class="icon">🔐</div><div class="name">Secret Manager</div><div class="desc">API keys, tokens, credentials</div></div>
+        <div class="service-card"><div class="icon">📦</div><div class="name">Container Registry</div><div class="desc">Docker image storage (GCR)</div></div>
+      </div>
+    </div>
+
+    <!-- 2. Cloud Run -->
+    <div class="section" id="cloud-run">
+      <h2><span class="section-num">2</span> Cloud Run</h2>
+
+      <h3>campaignos-harness (FastAPI backend)</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Region</td><td><code>us-central1</code></td></tr>
+          <tr><td>Image</td><td><code>gcr.io/dauntless-karma-497108-b0/campaignos-harness:latest</code></td></tr>
+          <tr><td>Memory</td><td>4Gi</td></tr>
+          <tr><td>CPU</td><td>2</td></tr>
+          <tr><td>Timeout</td><td>3600s</td></tr>
+          <tr><td>Concurrency</td><td>10</td></tr>
+          <tr><td>Auth</td><td><code>--allow-unauthenticated</code></td></tr>
+          <tr><td>Service URL</td><td><code>https://campaignos-harness-958438970145.us-central1.run.app</code></td></tr>
+          <tr><td>Service account</td><td><code>958438970145-compute@developer.gserviceaccount.com</code> (default Compute Engine SA)</td></tr>
+          <tr><td>Cloud SQL</td><td>Unix socket: <code>dauntless-karma-497108-b0:us-central1:campaignos-pgvector</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>campaignos-frontend (React/Vite UI)</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Region</td><td><code>us-central1</code></td></tr>
+          <tr><td>Image</td><td><code>gcr.io/dauntless-karma-497108-b0/campaignos-frontend:latest</code></td></tr>
+          <tr><td>Memory</td><td>256Mi</td></tr>
+          <tr><td>CPU</td><td>1</td></tr>
+          <tr><td>Build arg</td><td><code>VITE_API_URL</code> → harness Cloud Run URL</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Environment variables injected into campaignos-harness</h3>
+      <pre>GOOGLE_CLOUD_PROJECT=$PROJECT_ID
+GOOGLE_CLOUD_LOCATION=global
+GOOGLE_GENAI_USE_VERTEXAI=TRUE
+GCS_BUCKET=dauntless-karma-497108-b0-campaignos
+BRAND_ASSETS_MODE=gcs
+SEARCH_MODE=live
+SEARCH_ENGINE_ID=campaignos-briefing-search
+SEARCH_LOCATION=global
+GEMINI_MODEL_REASONING=gemini-3.5-flash
+CREATIVE_MODEL=gemini-3.5-flash
+GEMINI_MODEL_IMAGE=gemini-3-pro-image
+GEMINI_MODEL_IMAGE_ADAPTER=gemini-3-pro-image
+VEO_MODEL=veo-3.1-generate-001
+REEL_ENABLED=true
+USE_GEMINI_EMBEDDINGS=true
+GEMINI_EMBEDDING_MODEL=gemini-embedding-2
+PGVECTOR_HOST=/cloudsql/dauntless-karma-497108-b0:us-central1:campaignos-pgvector
+PGVECTOR_PORT=5432
+PGVECTOR_USER=campaignos
+PGVECTOR_DB=marketing
+PGVECTOR_PASSWORD=campaignos123
+BQ_DATASET=briefing_agent
+BQ_OUTPUT_DATASET=campaign_outputs
+BQ_LOGGING_ENABLED=true
+ENVIRONMENT=production
+LOG_LEVEL=INFO
+HARNESS_URL=https://campaignos-harness-958438970145.us-central1.run.app
+EMAIL_SMTP_HOST=smtp.gmail.com
+EMAIL_SMTP_PORT=587
+EMAIL_FROM_NAME=CampaignOS
+INSTAGRAM_BUSINESS_ACCOUNT_ID=17841415786098555
+META_APP_ID=2002436330660173</pre>
+
+      <h3>Secrets injected (from Secret Manager)</h3>
+      <pre>GROQ_API_KEY=GROQ_API_KEY:latest
+GOOGLE_API_KEY=GOOGLE_EMBEDDING_KEY:latest
+EMAIL_APP_PASSWORD=EMAIL_APP_PASSWORD:latest
+EMAIL_FROM=EMAIL_FROM:latest
+INSTAGRAM_ACCESS_TOKEN=INSTAGRAM_ACCESS_TOKEN:latest</pre>
+    </div>
+
+    <!-- 3. Cloud Build -->
+    <div class="section" id="cloud-build">
+      <h2><span class="section-num">3</span> Cloud Build</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Config file</td><td><code>harness/cloudbuild.yaml</code></td></tr>
+          <tr><td>Build machine</td><td><code>E2_HIGHCPU_8</code></td></tr>
+          <tr><td>Logging</td><td><code>CLOUD_LOGGING_ONLY</code></td></tr>
+        </tbody>
+      </table></div>
+      <h3>Build steps</h3>
+      <pre>1. docker build -t gcr.io/$PROJECT_ID/campaignos-harness:latest .
+2. docker push gcr.io/$PROJECT_ID/campaignos-harness:latest
+3. gcloud run deploy campaignos-harness ... (env vars + secrets above)</pre>
+    </div>
+
+    <!-- 4. GCS -->
+    <div class="section" id="gcs">
+      <h2><span class="section-num">4</span> Cloud Storage (GCS)</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Bucket name</td><td><code>dauntless-karma-497108-b0-campaignos</code></td></tr>
+          <tr><td>Region</td><td><code>us-central1</code></td></tr>
+          <tr><td>Access</td><td>Uniform Bucket-Level Access — public read (<code>allUsers: roles/storage.objectViewer</code>)</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Folder structure</h3>
+      <div class="folder-tree">
+<span class="dir">brands/</span>
+  <span class="dir">{brand}/</span>
+    <span class="dir">Guidelines/</span>
+      <span class="file">brand_guidelines.md</span>  <span class="comment">← indexed by Vertex AI Search</span>
+    <span class="dir">Logos/</span>                    <span class="comment">← brand logo files (PNG/SVG)</span>
+    <span class="dir">Products/</span>                 <span class="comment">← product images</span>
+    <span class="dir">Font/</span>                     <span class="comment">← TTF brand font files (used by Pillow for KV overlay)</span>
+    <span class="dir">Assets/</span>                   <span class="comment">← reference campaign images (passed to Gemini as context)</span>
+    <span class="dir">Colours/</span>                  <span class="comment">← colour swatch images</span>
+
+<span class="dir">outputs/</span>
+  <span class="dir">{campaign_id}/</span>
+    <span class="file">kv_image_1.jpg</span>            <span class="comment">← generated KV image concept 1</span>
+    <span class="file">kv_image_2.jpg</span>            <span class="comment">← generated KV image concept 2</span>
+    <span class="dir">channels/</span>
+      <span class="file">{channel}.jpg</span>           <span class="comment">← instagram_feed, tiktok, etc.</span>
+    <span class="file">landing.html</span>              <span class="comment">← brand landing page (persisted across restarts)</span>
+    <span class="file">reel.mp4</span>                  <span class="comment">← Veo-generated campaign reel</span>
+    <span class="file">reel_retry.mp4</span>            <span class="comment">← Veo retry output (fallback path)</span>
+      </div>
+
+      <h3>Code usage</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>File</th><th>Usage</th></tr></thead>
+        <tbody>
+          <tr><td><code>app/brand_assets.py</code></td><td>Reads guidelines, lists logos/products/assets</td></tr>
+          <tr><td><code>app/runner.py</code></td><td>Uploads KV images + channel adaptations; reads reel MP4</td></tr>
+          <tr><td><code>main.py</code></td><td>Uploads/downloads landing pages; uploads Instagram images; reads logos</td></tr>
+          <tr><td><code>app/creative_pipeline.py</code></td><td>Reads brand asset images as multimodal Gemini inputs</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- 5. BigQuery -->
+    <div class="section" id="bigquery">
+      <h2><span class="section-num">5</span> BigQuery</h2>
+
+      <h3>Dataset: briefing_agent (region: US)</h3>
+      <p>Source/reference data loaded at runtime.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Table</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr><td><code>historical_campaigns</code></td><td>Brand/product/market/season campaign performance history</td></tr>
+          <tr><td><code>fan_truth_library</code></td><td>Fan Truth examples with PASS/FAIL scores (specific/shared/special)</td></tr>
+          <tr><td><code>channel_benchmarks</code></td><td>Per-channel CTR, CPM, engagement, completion benchmarks</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Dataset: campaign_outputs (region: US)</h3>
+      <p>Pipeline audit log — one row per run.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Table</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr><td><code>machine_briefs</code></td><td>campaign_id, brand, market, product_category, season, channels, validation_score, fan_truth_score, brief_json (up to 50KB) — time-partitioned by <code>created_at</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Access</h3>
+      <ul>
+        <li>Library: <code>google-cloud-bigquery &gt;= 3.41.0</code></li>
+        <li>Client: <code>google.cloud.bigquery.Client(project=GCP_PROJECT)</code></li>
+        <li>Writes: <code>insert_rows_json</code> (fire-and-forget, non-blocking)</li>
+        <li>Config: <code>BQ_LOGGING_ENABLED=true</code> to enable writes</li>
+      </ul>
+    </div>
+
+    <!-- 6. Cloud SQL -->
+    <div class="section" id="cloud-sql">
+      <h2><span class="section-num">6</span> Cloud SQL</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Instance name</td><td><code>campaignos-pgvector</code></td></tr>
+          <tr><td>Full connection name</td><td><code>dauntless-karma-497108-b0:us-central1:campaignos-pgvector</code></td></tr>
+          <tr><td>Engine</td><td>PostgreSQL 16 + <code>pgvector</code> extension</td></tr>
+          <tr><td>Region</td><td><code>us-central1</code></td></tr>
+          <tr><td>Database</td><td><code>marketing</code></td></tr>
+          <tr><td>User</td><td><code>campaignos</code></td></tr>
+          <tr><td>Password</td><td><code>campaignos123</code></td></tr>
+          <tr><td>Production connection</td><td>Unix socket via <code>--add-cloudsql-instances</code> in Cloud Run</td></tr>
+          <tr><td>Local dev connection</td><td>TCP <code>127.0.0.1:5433</code> (Cloud SQL Auth Proxy or local container)</td></tr>
+        </tbody>
+      </table></div>
+
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <span>Password is currently hardcoded in <code>cloudbuild.yaml</code>. Move to Secret Manager in the new project.</span>
+      </div>
+
+      <h3>Tables</h3>
+      <p>All tables have HNSW vector indexes with <code>vector_cosine_ops</code> (768 dimensions).</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Table</th><th>Contents</th></tr></thead>
+        <tbody>
+          <tr><td><code>fan_truths</code></td><td>Fan Truth examples with embeddings</td></tr>
+          <tr><td><code>campaign_benchmarks</code></td><td>Historical campaign performance with embeddings</td></tr>
+          <tr><td><code>channel_benchmarks</code></td><td>Per-channel performance data with embeddings</td></tr>
+          <tr><td><code>customer_segments</code></td><td>Synthetic CDP customer segments with embeddings</td></tr>
+          <tr><td><code>customer_insights</code></td><td>Kaggle CDP real data with embeddings</td></tr>
+          <tr><td><code>brand_guidelines_chunks</code></td><td>Chunked brand guidelines for RAG search</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>Setup scripts</h3>
+      <ul>
+        <li><code>harness/scripts/setup_pgvector.py</code> — creates extension + tables</li>
+        <li>Seed scripts in <code>harness/scripts/</code> — populate data and generate embeddings</li>
+      </ul>
+    </div>
+
+    <!-- 7. Vertex AI -->
+    <div class="section" id="vertex-ai">
+      <h2><span class="section-num">7</span> Vertex AI</h2>
+
+      <h3>7a. Gemini — Text Generation</h3>
+      <p>All called via <code>genai.Client(vertexai=True, project=..., location=...)</code></p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Env var</th><th>Model</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td><code>GEMINI_MODEL_REASONING</code></td><td><code>gemini-3.5-flash</code></td><td>Brief validation, strategy, copy, forecast, Veo prompt</td></tr>
+          <tr><td><code>CREATIVE_MODEL</code></td><td><code>gemini-3.5-flash</code></td><td>Creative pipeline (culture research, brand summarizer, creative director)</td></tr>
+          <tr><td>Fallback</td><td><code>gemini-2.0-flash</code></td><td>Auto-fallback on 429 / rate limit</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>7b. Gemini — Image Generation</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Env var</th><th>Model</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td><code>GEMINI_MODEL_IMAGE</code></td><td><code>gemini-3-pro-image</code></td><td>KV image generation with multimodal brand photo references</td></tr>
+          <tr><td><code>GEMINI_MODEL_IMAGE_ADAPTER</code></td><td><code>gemini-3-pro-image</code></td><td>Channel adaptation image resizing</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout callout-warn">
+        <span class="callout-icon">⚠️</span>
+        <span><code>gemini-3-pro-image</code> is a Preview model with ~1 RPM quota. Images are generated sequentially with a 65s gap between concepts to avoid exhaustion.</span>
+      </div>
+
+      <h3>7c. Veo — Video Generation</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Env var</th><th>Model</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td><code>VEO_MODEL</code></td><td><code>veo-3.1-generate-001</code></td><td>6-second campaign reel, 16:9, with audio</td></tr>
+        </tbody>
+      </table></div>
+      <ul>
+        <li>Output written to GCS: <code>gs://{bucket}/outputs/{campaign_id}/reel.mp4</code></li>
+        <li>Polled up to 8 minutes for completion</li>
+        <li>429 retry: 60s wait then retry once</li>
+        <li>Self-service quota: <strong>capped at 1 req/min</strong> on <code>us-central1</code> — increase requires Google Cloud Sales contact</li>
+      </ul>
+
+      <h3>7d. Gemini Embeddings</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Env var</th><th>Model</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td><code>GEMINI_EMBEDDING_MODEL</code></td><td><code>gemini-embedding-2</code></td><td>768-dim vectors for pgvector semantic search</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout callout-info">
+        <span class="callout-icon">ℹ️</span>
+        <span>Uses <strong>Google AI API endpoint</strong> (<code>vertexai=False</code>), NOT Vertex AI. Requires a separate <code>GOOGLE_API_KEY</code> (Secret Manager: <code>GOOGLE_EMBEDDING_KEY</code>).</span>
+      </div>
+
+      <h3>7e. Vertex AI Search (Discovery Engine)</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Setting</th><th>Value</th></tr></thead>
+        <tbody>
+          <tr><td>Search engine ID</td><td><code>campaignos-briefing-search</code></td></tr>
+          <tr><td>Location</td><td><code>global</code></td></tr>
+          <tr><td>Library</td><td><code>google-cloud-discoveryengine &gt;= 0.13.12, &lt; 0.14.0</code></td></tr>
+        </tbody>
+      </table></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Datastore</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td><code>campaignos-brand-guidelines</code> (GCS unstructured)</td><td><code>gs://{bucket}/brands/*/Guidelines/*.md</code></td></tr>
+          <tr><td>BigQuery structured</td><td><code>briefing_agent.historical_campaigns</code>, <code>fan_truth_library</code>, <code>channel_benchmarks</code></td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>7f. Google ADK</h3>
+      <ul>
+        <li>Version: <code>google-adk==2.0.0b1</code></li>
+        <li>Session service: <code>InMemorySessionService</code> (no Firestore/Vertex AI session persistence)</li>
+        <li><code>google.adk.tools.google_search</code> used in <code>creative_pipeline.py</code> (culture researcher agent)</li>
+      </ul>
+    </div>
+
+    <!-- 8. Secret Manager -->
+    <div class="section" id="secret-manager">
+      <h2><span class="section-num">8</span> Secret Manager</h2>
+      <p>Stored in source project <code>dauntless-karma-497108-b0</code>. Must be re-created in new project.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Secret name</th><th>Env var in Cloud Run</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>GROQ_API_KEY</code></td><td><code>GROQ_API_KEY</code></td><td>Groq API key (alternative LLM backend)</td></tr>
+          <tr><td><code>GOOGLE_EMBEDDING_KEY</code></td><td><code>GOOGLE_API_KEY</code></td><td>Google AI API key for <code>gemini-embedding-2</code></td></tr>
+          <tr><td><code>EMAIL_APP_PASSWORD</code></td><td><code>EMAIL_APP_PASSWORD</code></td><td>Gmail SMTP app password</td></tr>
+          <tr><td><code>EMAIL_FROM</code></td><td><code>EMAIL_FROM</code></td><td>From address for campaign emails</td></tr>
+          <tr><td><code>INSTAGRAM_ACCESS_TOKEN</code></td><td><code>INSTAGRAM_ACCESS_TOKEN</code></td><td>Meta Instagram Graph API long-lived token</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- 9. GCR -->
+    <div class="section" id="gcr">
+      <h2><span class="section-num">9</span> Container Registry (GCR)</h2>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Image</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>gcr.io/dauntless-karma-497108-b0/campaignos-harness:latest</code></td><td>FastAPI backend</td></tr>
+          <tr><td><code>gcr.io/dauntless-karma-497108-b0/campaignos-frontend:latest</code></td><td>React/Vite frontend</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout callout-note">
+        <span class="callout-icon">✅</span>
+        <span>In the new project, images are automatically pushed to <code>gcr.io/{NEW_PROJECT_ID}/...</code> when Cloud Build runs. No manual image copy needed.</span>
+      </div>
+    </div>
+
+    <!-- 10. IAM -->
+    <div class="section" id="iam">
+      <h2><span class="section-num">10</span> IAM</h2>
+      <p>Currently uses the <strong>default Compute Engine SA</strong>: <code>958438970145-compute@developer.gserviceaccount.com</code>.</p>
+      <p>For the new project, create a named SA (e.g. <code>campaignos-sa@{NEW_PROJECT_ID}.iam.gserviceaccount.com</code>) and grant:</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Role</th><th>Purpose</th></tr></thead>
+        <tbody>
+          <tr><td><code>roles/aiplatform.user</code></td><td>Vertex AI — Gemini, Veo, Vertex AI Search</td></tr>
+          <tr><td><code>roles/bigquery.dataEditor</code></td><td>Read/write BigQuery tables</td></tr>
+          <tr><td><code>roles/bigquery.jobUser</code></td><td>Run BigQuery jobs</td></tr>
+          <tr><td><code>roles/storage.objectAdmin</code></td><td>Read/write GCS bucket</td></tr>
+          <tr><td><code>roles/secretmanager.secretAccessor</code></td><td>Read secrets at runtime</td></tr>
+          <tr><td><code>roles/cloudsql.client</code></td><td>Connect to Cloud SQL via socket</td></tr>
+          <tr><td><code>roles/run.invoker</code></td><td>Allow Cloud Run to invoke other services</td></tr>
+        </tbody>
+      </table></div>
+
+      <h3>GCS bucket public read</h3>
+      <pre>gcloud storage buckets add-iam-policy-binding gs://{NEW_BUCKET} \
+  --member=allUsers \
+  --role=roles/storage.objectViewer</pre>
+    </div>
+
+    <!-- 11. APIs -->
+    <div class="section" id="apis">
+      <h2><span class="section-num">11</span> APIs to Enable</h2>
+      <pre>gcloud services enable \
+  aiplatform.googleapis.com \
+  bigquery.googleapis.com \
+  storage.googleapis.com \
+  run.googleapis.com \
+  cloudbuild.googleapis.com \
+  secretmanager.googleapis.com \
+  sqladmin.googleapis.com \
+  discoveryengine.googleapis.com \
+  containerregistry.googleapis.com</pre>
+    </div>
+
+    <!-- 12. External -->
+    <div class="section" id="external">
+      <h2><span class="section-num">12</span> External Services (Non-GCP)</h2>
+      <p>Not migrated — exist outside GCP. Credentials need to be re-added to Secret Manager in the new project.</p>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Service</th><th>Details</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Instagram Graph API (Meta)</strong></td><td>Account ID: <code>17841415786098555</code>, App ID: <code>2002436330660173</code>. Long-lived token in Secret Manager. Token expires every ~60 days — refresh via Meta Graph API Explorer.</td></tr>
+          <tr><td><strong>Gmail SMTP</strong></td><td><code>smtp.gmail.com:587</code>, app password stored in Secret Manager</td></tr>
+          <tr><td><strong>Groq API</strong></td><td>Alternative LLM backend, key in Secret Manager</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+
+    <!-- 13. Without Docker -->
+    <div class="section" id="no-docker">
+      <h2><span class="section-num">13</span> Running Without Docker</h2>
+      <p>Docker is only required for Cloud Run deployment. Local development and all setup scripts run directly with <code>uv</code>.</p>
+
+      <h3>Local dev</h3>
+      <pre>cd harness
+
+# One-time: install uv
+pip install uv
+
+# Install dependencies
+uv sync
+
+# Run server (reads harness/.env automatically)
+uv run uvicorn main:app --host 0.0.0.0 --port 8000</pre>
+
+      <h3>Run setup / seed scripts</h3>
+      <pre>cd harness
+uv run python scripts/setup_bigquery.py
+uv run python scripts/setup_pgvector.py
+uv run python scripts/setup_search.py
+uv run python scripts/index_brand_assets.py
+uv run python scripts/index_gcs_guidelines.py</pre>
+
+      <h3>Cloud SQL locally (without Docker)</h3>
+      <p>Use Cloud SQL Auth Proxy to tunnel the Cloud SQL instance to a local TCP port:</p>
+      <pre>./cloud-sql-proxy {NEW_PROJECT_ID}:us-central1:campaignos-pgvector --port 5433</pre>
+      <p>Then <code>.env</code> points to <code>127.0.0.1:5433</code> as normal.</p>
+
+      <div class="callout callout-note">
+        <span class="callout-icon">✅</span>
+        <span><strong>Windows note:</strong> Pillow bundles libjpeg/zlib on Windows — the system packages in the Dockerfile (<code>libjpeg-dev</code>, <code>zlib1g-dev</code>, <code>libfreetype6-dev</code>) are Linux-only and not needed locally.</span>
+      </div>
+    </div>
+
+    <!-- 14. Checklist -->
+    <div class="section" id="checklist">
+      <h2><span class="section-num">14</span> Migration Checklist</h2>
+
+      <div class="step-card">
+        <h4><span class="step-badge">Step 1</span> New GCP project setup</h4>
+        <ul class="checklist">
+          <li><span class="checkbox"></span>Create new GCP project in organisation account</li>
+          <li><span class="checkbox"></span>Enable all APIs listed in Section 11</li>
+          <li><span class="checkbox"></span>Create service account <code>campaignos-sa</code> with all IAM roles in Section 10</li>
+          <li><span class="checkbox"></span>Link billing account</li>
+        </ul>
+      </div>
+
+      <div class="step-card">
+        <h4><span class="step-badge">Step 2</span> Cloud Storage</h4>
+        <ul class="checklist">
+          <li><span class="checkbox"></span>Create new GCS bucket in <code>us-central1</code>, enable Uniform Bucket-Level Access</li>
+          <li><span class="checkbox"></span>Grant <code>allUsers: roles/storage.objectViewer</code></li>
+          <li><span class="checkbox"></span>Copy all <code>brands/</code> assets:</li>
+        </ul>
+        <pre>gcloud storage cp -r gs://dauntless-karma-497108-b0-campaignos/brands gs://{NEW_BUCKET}/brands</pre>
+      </div>
+
+      <div class="step-card">
+        <h4><span class="step-badge">Step 3</span> Cloud SQL</h4>
+        <ul class="checklist">
+          <li><span class="checkbox"></span>Create new PostgreSQL 16 instance with <code>pgvector</code> in <code>us-central1</code></li>
+          <li><span class="checkbox"></span>Create database <code>marketing</code>, user <code>campaignos</code></li>
+          <li><span class="checkbox"></span>Store password in Secret Manager (do <strong>not</strong> hardcode in cloudbuild.yaml)</li>
+          <li><span class="checkbox"></span>Run <code>uv run python scripts/setup_pgvector.py</code></li>
+          <li><span class="checkbox"></span>Run seed scripts to populate + embed data</li>
+        </ul>
+      </div>
+
+      <div class="step-card">
+        <h4><span class="step-badge">Step 4</span> BigQuery</h4>
+        <ul class="checklist">
+          <li><span class="checkbox"></span>Run <code>uv run python scripts/setup_bigquery.py</code></li>
+          <li><span class="checkbox"></span>Verify datasets <code>briefing_agent</code> and <code>campaign_outputs</code> created in <code>US</code> region</li>
+          <li><span class="checkbox"></span>Seed <code>historical_campaigns</code>, <code>fan_truth_library</code>, <code>channel_benchmarks</code></li>
+        </ul>
+      </div>
+
+      <div class="step-card">
+        <h4><span class="step-badge">Step 5</span> Vertex AI Search</h4>
+        <ul class="checklist">
+          <li><span class="checkbox"></span>Run <code>uv run python scripts/setup_search.py</code></li>
+          <li><span class="checkbox"></span>Run <code>uv run python scripts/index_brand_assets.py</code></li>
+          <li><span class="checkbox"></span>Run <code>uv run python scripts/index_gcs_guidelines.py</code></li>
+          <li><span class="checkbox"></span>Verify <code>SEARCH_ENGINE_ID</code> — update if new engine ID differs</li>
+        </ul>
+      </div>
+
+      <div class="step-card">
+        <h4><span class="step-badge">Step 6</span> Secret Manager</h4>
+        <ul class="checklist">
+          <li><span class="checkbox"></span><code>GROQ_API_KEY</code></li>
+          <li><span class="checkbox"></span><code>GOOGLE_EMBEDDING_KEY</code> (Google AI API key for embeddings)</li>
+          <li><span class="checkbox"></span><code>EMAIL_APP_PASSWORD</code></li>
+          <li><span class="checkbox"></span><code>EMAIL_FROM</code></li>
+          <li><span class="checkbox"></span><code>INSTAGRAM_ACCESS_TOKEN</code></li>
+          <li><span class="checkbox"></span><code>PGVECTOR_PASSWORD</code> (move from plain env var to secret)</li>
+        </ul>
+      </div>
+
+      <div class="step-card">
+        <h4><span class="step-badge">Step 7</span> Update project references in code</h4>
+        <p>Search and replace <code>dauntless-karma-497108-b0</code> in:</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th>File</th><th>What to update</th></tr></thead>
+          <tbody>
+            <tr><td><code>harness/cloudbuild.yaml</code></td><td>GCS bucket name, Cloud SQL instance name, harness URL, <code>PGVECTOR_HOST</code></td></tr>
+            <tr><td><code>harness/scripts/setup_search.py</code></td><td>Project ID, bucket name</td></tr>
+            <tr><td><code>harness/scripts/setup_bigquery.py</code></td><td>Project ID</td></tr>
+            <tr><td><code>infra/setup_gcp.sh</code></td><td>Project ID, bucket name</td></tr>
+          </tbody>
+        </table></div>
+        <ul>
+          <li>Update <code>HARNESS_URL</code> in <code>cloudbuild.yaml</code> (new Cloud Run URL, known after first deploy)</li>
+          <li>Update <code>VITE_API_URL</code> build arg in frontend Cloud Build config</li>
+        </ul>
+      </div>
+
+      <div class="step-card">
+        <h4><span class="step-badge">Step 8</span> Cloud Build + Cloud Run</h4>
+        <ul class="checklist">
+          <li><span class="checkbox"></span>Connect new project's Cloud Build to the GitHub repo</li>
+          <li><span class="checkbox"></span>Trigger Cloud Build — images pushed to new project's GCR automatically</li>
+          <li><span class="checkbox"></span>Verify Cloud Run services start and health check passes</li>
+          <li><span class="checkbox"></span>Update <code>harness/.env</code> with new project ID, bucket name, Cloud SQL connection</li>
+        </ul>
+      </div>
+
+      <div class="step-card">
+        <h4><span class="step-badge">Step 9</span> Post-migration verification</h4>
+        <ul class="checklist">
+          <li><span class="checkbox"></span>Run a full campaign end-to-end (brief → strategy → KV images → reel → landing page)</li>
+          <li><span class="checkbox"></span>Verify Instagram publishing works (token is project-agnostic)</li>
+          <li><span class="checkbox"></span>Check BigQuery <code>machine_briefs</code> receives rows</li>
+          <li><span class="checkbox"></span>Check GCS <code>outputs/</code> receives generated files</li>
+          <li><span class="checkbox"></span>Verify landing page hero image loads (public GCS HTTPS URL)</li>
+        </ul>
+      </div>
+
+    </div>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,42 @@
+# Sunglow Brand Asset Manifest
+# Source: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/
+
+## LOGOS
+- sunglow_logo.png: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Logos/sunglow_logo.png
+- sunglow_logo_Yellow.png: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Logos/sunglow_logo_Yellow.png
+- sunglow_logo_green.png: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Logos/sunglow_logo_green.png
+- sunglow_logo_organge.png: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Logos/sunglow_logo_organge.png
+- sunglow_logo_purple.png: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Logos/sunglow_logo_purple.png
+
+## PRODUCT IMAGES
+- Product1 (.DS_Store): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/.DS_Store
+- Product2 (.DS_Store): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/png/.DS_Store
+- Product3 (product1.png): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/png/product1.png
+- Product4 (product2.png): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/png/product2.png
+- Product5 (product3.png): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/png/product3.png
+- Product6 (product4.png): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/png/product4.png
+- Product7 (product5.png): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/png/product5.png
+- Product8 (product6.png): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/png/product6.png
+- Product9 (product1.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/product1.jpg
+- Product10 (product2.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/product2.jpg
+- Product11 (product3.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/product3.jpg
+- Product12 (product4.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/product4.jpg
+- Product13 (product5.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/product5.jpg
+- Product14 (product6.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Products/product6.jpg
+
+## FONTS
+- .DS_Store: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Font/.DS_Store
+- Alatsi-Regular.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Font/Alatsi-Regular.ttf
+
+## CAMPAIGN ASSETS / BANNERS
+- Banner1.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Assets/Banner1.jpg
+- Banner2.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Assets/Banner2.jpg
+- Banner3.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Assets/Banner3.jpg
+- Banner4.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Assets/Banner4.jpg
+- Banner5.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Assets/Banner5.jpg
+- Banner6.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Assets/Banner6.jpg
+- Banner7.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Assets/Banner7.jpg
+- Banner8.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Assets/Banner8.jpg
+
+## COLOUR SWATCHES
+- Colour.png.png: gs://dauntless-karma-497108-b0-campaignos/brands/Sunglow/Colours/Colour.png.png

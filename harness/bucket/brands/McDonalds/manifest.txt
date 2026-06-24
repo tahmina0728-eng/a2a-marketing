@@ -1,0 +1,12 @@
+# McDonalds Brand Asset Manifest
+# Source: gs://dauntless-karma-497108-b0-campaignos/brands/McDonalds/
+
+## LOGOS
+
+## PRODUCT IMAGES
+
+## FONTS
+
+## CAMPAIGN ASSETS / BANNERS
+
+## COLOUR SWATCHES

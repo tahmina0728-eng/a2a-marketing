@@ -48,6 +48,8 @@ export interface HarnessBriefRequest {
   moment_type: string;
   audience: HarnessAudience;
   tone: string;
+  mode?: "new" | "adapt";
+  uploaded_assets?: string[];
 }
 
 export interface HarnessPipelineResponse {

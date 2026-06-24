@@ -22,12 +22,15 @@ ADK 2.0 mechanics used here:
 
 import json
 import re
+from typing import AsyncGenerator
 
 import structlog
 import yaml
 
 from google.adk import Event
+from google.adk.agents.base_agent import BaseAgent
 from google.adk.agents.invocation_context import InvocationContext
+from google.adk.events import EventActions
 from google.genai import types
 
 from app.brand_assets import get_asset_loader
@@ -334,6 +337,82 @@ def aggregate_kv_concepts(
     )
 
 
+# ── FAN TRUTH GATE ────────────────────────────────────────────────────────────
+#
+# Acts as the exit condition for the LoopAgent wrapping briefing_agent.
+# Escalates (exits the loop) on PASS; writes retry feedback to state on FAIL.
+# Max retries are enforced by LoopAgent(max_iterations=3).
+
+class FanTruthGateAgent(BaseAgent):
+    """
+    Quality gate between briefing_agent iterations in the briefing_loop.
+
+    PASS (fan_truth_score.overall >= 70):
+        Escalates → LoopAgent exits → pipeline continues to culture_analyst.
+
+    FAIL:
+        Writes specific feedback to state["brief_retry_feedback"] so
+        briefing_agent can see it on the next iteration, then yields normally
+        → LoopAgent starts the next iteration.
+    """
+
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
+        machine_brief_json = ctx.state.get("machine_brief", "")
+
+        verdict  = "FAIL"
+        overall  = 0
+        note     = ""
+        suggested_alternative = ""
+        validation_summary    = ""
+
+        try:
+            data         = json.loads(machine_brief_json)
+            ft           = data.get("fan_truth_score", {})
+            verdict      = ft.get("verdict", "FAIL")
+            overall      = ft.get("overall", 0)
+            note         = ft.get("note", "")
+            suggested_alternative = ft.get("suggested_alternative", "")
+            validation_summary = data.get("validation", {}).get("summary", "")
+        except Exception as exc:
+            logger.warning("fan_truth_gate_parse_failed", error=str(exc))
+
+        if verdict == "PASS":
+            logger.info("fan_truth_gate_pass", overall=overall)
+            yield Event(
+                author  = self.name,
+                content = types.Content(parts=[types.Part(
+                    text=f"Fan Truth PASS ({overall}/100). Brief approved — proceeding to cultural intelligence.",
+                )]),
+                actions = EventActions(escalate=True),
+            )
+        else:
+            feedback_lines = [
+                f"FAN TRUTH RETRY REQUIRED — score {overall}/100 (FAIL).",
+            ]
+            if note:
+                feedback_lines.append(f"Issue: {note}")
+            if suggested_alternative:
+                feedback_lines.append(
+                    f"Rewrite the fan_truth field using this stronger statement:\n"
+                    f'  "{suggested_alternative}"'
+                )
+            if validation_summary:
+                feedback_lines.append(f"Validation summary: {validation_summary}")
+            feedback_lines.append(
+                "Regenerate the full MachineBrief. The fan_truth_score.overall MUST reach 70 or above."
+            )
+            feedback = "\n".join(feedback_lines)
+
+            logger.info("fan_truth_gate_fail", overall=overall)
+            yield Event(
+                author  = self.name,
+                content = types.Content(parts=[types.Part(text=feedback)]),
+                state   = {"brief_retry_feedback": feedback},
+            )
+
+
 # ── PERSISTENCE FUNCTION NODES ──────────────────────────────────────────────────
 #
 # Each node follows the dual-write pattern:
@@ -343,13 +422,26 @@ def aggregate_kv_concepts(
 #
 # Agents generate; nodes persist. No tools on LLM agents for persistence.
 
-async def persist_brief(ctx: InvocationContext, node_input: MachineBrief) -> Event:
+async def persist_brief(ctx: InvocationContext) -> Event:
     """
     Persist briefing_agent output.
-    Runs between briefing_agent and culture_analyst.
+    Runs after briefing_loop (LoopAgent). Reads MachineBrief from state
+    (briefing_agent writes it there via output_key="machine_brief").
     Writes machine_brief to state and saves a JSON artifact.
     Also logs to BigQuery for audit.
     """
+    brief_json = ctx.state.get("machine_brief", "")
+    if not brief_json:
+        logger.warning("persist_brief_empty")
+        return Event(state={})
+
+    try:
+        node_input = MachineBrief.model_validate_json(brief_json)
+    except Exception as exc:
+        logger.warning("persist_brief_parse_failed", error=str(exc))
+        return Event(state={})
+
+    # Normalise to canonical JSON (re-serialise from the validated model)
     brief_json = json.dumps(node_input.model_dump(mode="json"))
 
     # State write

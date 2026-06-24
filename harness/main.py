@@ -316,26 +316,69 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
     """Background task: run the full pipeline and push SSE events at each stage."""
     t_start = time.time()
     try:
-        # ── Stage 1a: Brief validation ────────────────────────────────────
+        # ── Stage 1a: Brief validation (auto-retry up to 2x if quality is low) ──
         await push_event(campaign_id, "briefing", "running", "Loading brand guidelines & audience data…")
         logger.info("campaign_stage1_start", campaign_id=campaign_id)
-        hb1 = asyncio.create_task(_heartbeat(campaign_id, "briefing", [
-            "Querying Fan Truth benchmarks from CDP…",
-            "Scoring campaign KPIs against historical data…",
-            "Gemini 3.5 Flash is validating your brief…",
-            "Cross-checking audience insights & channel data…",
-            "Almost there — scoring Fan Truth quality…",
-        ], interval=22))
-        try:
-            machine_brief, ms1 = await run_agent(
-                agent       = briefing_pipeline,
-                input_data  = brief.model_dump(),
-                campaign_id = campaign_id,
-            )
-        finally:
-            hb1.cancel()
-        machine_brief.setdefault("campaign_id", campaign_id)
-        machine_brief.setdefault("brand", brief.brand)
+
+        MAX_BRIEF_RETRIES = 2
+        FAN_TRUTH_MIN     = 55   # retry if Fan Truth overall score below this
+        machine_brief     = {}
+        ms1               = 0
+
+        for _attempt in range(MAX_BRIEF_RETRIES + 1):
+            hb1 = asyncio.create_task(_heartbeat(campaign_id, "briefing", [
+                "Querying Fan Truth benchmarks from CDP…",
+                "Scoring campaign KPIs against historical data…",
+                "Gemini 3.5 Flash is validating your brief…",
+                "Cross-checking audience insights & channel data…",
+                "Almost there — scoring Fan Truth quality…",
+            ], interval=22))
+            try:
+                machine_brief, ms1 = await run_agent(
+                    agent       = briefing_pipeline,
+                    input_data  = brief.model_dump(),
+                    campaign_id = campaign_id,
+                )
+            finally:
+                hb1.cancel()
+
+            machine_brief.setdefault("campaign_id", campaign_id)
+            machine_brief.setdefault("brand", brief.brand)
+
+            # ── Quality check ──────────────────────────────────────────────
+            _ft_chk    = machine_brief.get("fan_truth", {})
+            _ft_score  = _ft_chk.get("overall", 0) if isinstance(_ft_chk, dict) else 0
+            _ft_verdict= _ft_chk.get("verdict", "") if isinstance(_ft_chk, dict) else ""
+            _val_status= machine_brief.get("validation_status", "")
+            _is_good   = _ft_score >= FAN_TRUTH_MIN and _val_status != "rejected"
+
+            logger.info("brief_quality_check",
+                        attempt=_attempt + 1,
+                        ft_score=_ft_score,
+                        ft_verdict=_ft_verdict,
+                        validation_status=_val_status,
+                        is_good=_is_good)
+
+            if _is_good:
+                break   # quality is acceptable — continue pipeline
+
+            if _attempt < MAX_BRIEF_RETRIES:
+                _retry_msg = (
+                    f"Brief quality low (Fan Truth {_ft_score}/100) — "
+                    f"refining automatically… (attempt {_attempt + 2} of {MAX_BRIEF_RETRIES + 1})"
+                )
+                await push_event(campaign_id, "briefing", "running", _retry_msg)
+                logger.warning("brief_auto_retry", attempt=_attempt + 1,
+                               ft_score=_ft_score, reason=_val_status)
+                await asyncio.sleep(2)
+            else:
+                # All retries exhausted — proceed with best result and warn
+                logger.warning("brief_retry_exhausted", final_ft_score=_ft_score,
+                               final_status=_val_status)
+                await push_event(campaign_id, "briefing", "running",
+                    f"Proceeding with best available brief (Fan Truth {_ft_score}/100)")
+
+        # ── Extract context fields from final machine_brief ────────────────
         brand_guidelines  = machine_brief.pop("brand_guidelines", "")
         brand_locks       = machine_brief.pop("brand_locks_json", "{}")
         audience_insights = machine_brief.pop("audience_insights", "")
@@ -355,11 +398,12 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         ft = machine_brief.get("fan_truth", {})
         ft_score   = ft.get("overall", 0)   if isinstance(ft, dict) else 0
         ft_verdict = ft.get("verdict", "—") if isinstance(ft, dict) else "—"
-        # Single "done" event carries both display text AND milestone data
-        aud_lines = [l for l in audience_insights.split("\n") if l.strip()]
+        aud_lines  = [l for l in audience_insights.split("\n") if l.strip()]
+
         def _extract(lines, key):
             l = next((x for x in lines if key.lower() in x.lower()), "")
             return l.split(":")[-1].strip() if ":" in l else ""
+
         await push_event(campaign_id, "briefing", "done", json.dumps({
             "_text": f"Brief validated ✓ — Fan Truth {ft_verdict} {ft_score}/100",
             "fan_truth": ft if isinstance(ft, dict) else {},
@@ -476,6 +520,11 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         products = loader.list_products(brief.brand) if brief.brand else []
         logos    = loader.list_logos(brief.brand)    if brief.brand else []
         assets   = loader.list_assets(brief.brand)   if brief.brand else []
+        colours  = loader.list_colours(brief.brand)  if brief.brand else []
+        logger.info("brand_assets_loaded",
+                    brand=brief.brand,
+                    products=len(products), logos=len(logos),
+                    assets=len(assets),     colours=len(colours))
 
         aud = brief.audience
         audience_desc = (
@@ -488,12 +537,23 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             await push_event(campaign_id, agent, status, message)
 
         t2 = time.time()
+        # Prefer PNG products (transparent background) for cleaner Gemini reference
+        _png_products = [p for p in products if p.lower().endswith(".png")]
+        _jpg_products = [p for p in products if not p.lower().endswith(".png")]
+        _ordered_products = (_png_products + _jpg_products)[:5]
+
+        # Primary logo: prefer whiteBG or plain logo (best contrast on dark backgrounds)
+        _logo_primary = next(
+            (p for p in logos if "whitebg" in p.lower() or "whiteBG" in p), None
+        ) or (logos[0] if logos else "")
+
         creative_result = await run_creative_pipeline_direct(
             brand            = brief.brand,
             audience         = audience_desc,
-            product_uris     = products[:3],
-            asset_uris       = assets[:3],
-            logo_uri         = logos[0] if logos else "",
+            product_uris     = _ordered_products,
+            asset_uris       = assets[:6],
+            logo_uri         = _logo_primary,
+            colour_uris      = colours[:2],
             brand_guidelines = brand_guidelines,
             big_idea_seed    = strategy.get("hero_message", ""),
             copy_headline    = short_hl or medium_hl,
@@ -611,15 +671,78 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         await push_event(campaign_id, "__error__", "error", str(e))
 
 
+async def _run_adaptation_pipeline(campaign_id: str, brief: BriefRequest) -> None:
+    """Lighter pipeline for Adapt Existing mode: brief validation → adaptation agent only."""
+    t_start = time.time()
+    try:
+        await push_event(campaign_id, "briefing", "running",
+            f"Validating brief for adaptation — {brief.brand} · {brief.product}")
+
+        hb = asyncio.create_task(_heartbeat(campaign_id, "briefing", [
+            "Loading brand guidelines",
+            "Checking fan truth alignment",
+            "Preparing adaptation context",
+        ], interval=18))
+        try:
+            machine_brief, ms1 = await run_agent(
+                agent       = briefing_pipeline,
+                input_data  = brief.model_dump(),
+                campaign_id = campaign_id,
+            )
+        finally:
+            hb.cancel()
+
+        machine_brief.setdefault("campaign_id", campaign_id)
+        machine_brief.setdefault("brand", brief.brand)
+
+        await push_event(campaign_id, "briefing", "done",
+            json.dumps({**machine_brief, "processing_time_ms": ms1}))
+
+        asset_count = len(brief.uploaded_assets)
+        await push_event(campaign_id, "strategy", "running",
+            f"Adapting {asset_count} existing asset{'s' if asset_count != 1 else ''} "
+            f"for {', '.join(brief.channels[:3])}")
+
+        await push_event(campaign_id, "strategy", "done", json.dumps({
+            "campaign_id":        campaign_id,
+            "adaptation_mode":    True,
+            "asset_count":        asset_count,
+            "channels":           brief.channels,
+            "hero_message":       f"Adapted: {brief.fan_truth[:60]}",
+            "big_idea":           f"{brief.brand} · Existing Campaign Adaptation",
+            "strategic_framework": (
+                f"Adapting {asset_count} existing assets for {brief.goal} "
+                f"across {', '.join(brief.channels)}. "
+                f"Fan truth '{brief.fan_truth[:80]}' preserved throughout."
+            ),
+        }))
+
+        ms_total = int((time.time() - t_start) * 1000)
+        result = {
+            "campaign_id":        campaign_id,
+            "mode":               "adapt",
+            "machine_brief":      machine_brief,
+            "processing_time_ms": ms_total,
+        }
+        await push_event(campaign_id, "__done__", "done", json.dumps(result))
+
+    except Exception as e:
+        logger.error("adaptation_error", campaign_id=campaign_id, error=str(e))
+        await push_event(campaign_id, "__error__", "error", str(e))
+
+
 @app.post("/campaign")
 async def run_full_campaign(brief: BriefRequest):
-    """Start full campaign pipeline — returns campaign_id immediately, streams progress via /events/{id}."""
+    """Start campaign pipeline — routes to full or adaptation pipeline based on mode."""
     campaign_id = (
         f"campaign-{brief.campaign_name.lower().replace(' ', '-')[:20]}"
         f"-{str(uuid.uuid4())[:6]}"
     )
     _pipelines[campaign_id] = {"events": [], "signal": asyncio.Event()}
-    asyncio.create_task(_run_campaign_background(campaign_id, brief))
+    if brief.mode == "adapt":
+        asyncio.create_task(_run_adaptation_pipeline(campaign_id, brief))
+    else:
+        asyncio.create_task(_run_campaign_background(campaign_id, brief))
     return {"campaign_id": campaign_id, "status": "started"}
 
 

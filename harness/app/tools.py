@@ -68,6 +68,24 @@ def _guess_image_mime(path_or_uri: str) -> str:
     }.get(ext, "image/png")
 
 
+def _part_for_uri(path_or_uri: str) -> "types.Part | None":
+    """
+    Return a genai Part for the given image source.
+    GCS URIs (gs://…) use Part.from_uri so Gemini fetches directly from GCS.
+    Local paths load bytes and use Part.from_bytes.
+    Returns None on failure (non-fatal).
+    """
+    if not path_or_uri:
+        return None
+    mime = _guess_image_mime(path_or_uri)
+    if path_or_uri.startswith("gs://"):
+        return types.Part.from_uri(file_uri=path_or_uri, mime_type=mime)
+    data = _load_asset_bytes(path_or_uri)
+    if data is None:
+        return None
+    return types.Part.from_bytes(data=data, mime_type=mime)
+
+
 # ── BRAND ASSET COMPOSITING ───────────────────────────────────────────────
 
 def _pick_primary_logo(logo_paths: list[str]) -> str | None:
@@ -426,19 +444,63 @@ async def generate_and_save_kv_image(
 
     try:
         from google import genai as _genai  # lazy — heavy dep, avoid import-time cost
+        from app.brand_assets import get_asset_loader as _get_loader
+
+        brand = tool_context.state.get("brand_name", "")
+
+        # Extract brand colors from brand_locks for explicit palette guidance in the prompt.
+        brand_locks: dict = {}
+        try:
+            brand_locks = json.loads(tool_context.state.get("brand_locks_json", "{}"))
+        except Exception:
+            pass
+
+        color_lines: list[str] = []
+        for field, label in [("primary_colour", "primary"), ("accent_colour", "accent"), ("secondary_colour", "secondary")]:
+            val = brand_locks.get(field)
+            if isinstance(val, str) and val.startswith("#"):
+                color_lines.append(f"  {label}: {val}")
+        colors_section = brand_locks.get("colors", {})
+        if isinstance(colors_section, dict):
+            for section_name, section in colors_section.items():
+                if isinstance(section, dict):
+                    for name, val in section.items():
+                        if isinstance(val, str) and val.startswith("#"):
+                            color_lines.append(f"  {section_name}/{name}: {val}")
+                elif isinstance(section, str) and section.startswith("#"):
+                    color_lines.append(f"  {section_name}: {section}")
+
+        brand_color_block = (
+            "BRAND COLOR PALETTE — use these exact hex codes for all flat panels, "
+            "graphic elements, backgrounds, and color blocks in the composition:\n"
+            + "\n".join(color_lines)
+            + "\n\n"
+        ) if color_lines else ""
+
+        # Typography note: Gemini does not render text (suppressed below), but the
+        # layout should leave clean flat-color zones at the intended text placement
+        # positions that match the brand palette — Pillow compositing will apply the
+        # brand font on top in post-processing.
+        typography_note = (
+            "TYPOGRAPHY STYLE: Do not render any text, letters, or numbers anywhere. "
+            "Instead, reserve a clean graphic panel at the bottom of the image using the "
+            "brand primary color as a flat background — this area will receive the brand "
+            "name, product name, and campaign headline in post-production using the brand's "
+            "official typeface. The panel should feel consistent with the typographic style "
+            "visible in the brand reference images above.\n\n"
+        )
 
         # Prepend a brand-protection prefix to prevent the image model from defaulting
         # to visually similar real-world brands (e.g. rendering "Rnorr" as "Knorr").
         guarded_prompt = (
             "IMPORTANT: This image is for a fictional brand. "
             "Do not render any real-world brand names, logos, or packaging. "
-            "Treat all brand names in this prompt as entirely fictional. "
-            "Do not render any visible text, headlines, or typography on the image — "
-            "the composition should be purely photographic or illustrative.\n\n"
+            "Treat all brand names in this prompt as entirely fictional.\n\n"
+            + brand_color_block
+            + typography_note
             + image_prompt
         )
 
-        # Build multi-modal contents — product photos first, text prompt last.
         product_image_map_raw = tool_context.state.get("product_image_map", "{}")
         product_image_map: dict = (
             json.loads(product_image_map_raw)
@@ -446,34 +508,75 @@ async def generate_and_save_kv_image(
             else (product_image_map_raw or {})
         )
 
-        contents: list = []
-
         # Only send product photos that the image_prompt explicitly references.
         referenced_products = {
             k: v for k, v in product_image_map.items() if k in image_prompt
         }
         products_to_send = referenced_products or product_image_map
 
+        contents: list = []
+
+        # ── 1. Brand style reference images (Assets/) — earliest = strongest influence ──
+        loader      = _get_loader()
+        asset_paths = loader.list_assets(brand)[:2]  # cap at 2 style refs
+        if asset_paths:
+            contents.append(
+                "BRAND VISUAL STYLE REFERENCE: The following image(s) show this brand's "
+                "established visual language — color palette, compositional style, mood, "
+                "typographic layout, and graphic treatment. Your generated image MUST align "
+                "with this visual identity in every detail."
+            )
+            for ap in asset_paths:
+                part = _part_for_uri(ap)
+                if part:
+                    contents.append(part)
+                    logger.info("style_ref_included", uri=ap)
+
+        # ── 2. Brand colour swatches — palette lock ───────────────────────────────────
+        colour_paths = loader.list_colours(brand)[:3]  # cap at 3 swatches
+        if colour_paths:
+            contents.append(
+                "BRAND COLOR PALETTE REFERENCE: The following swatch image(s) show the "
+                "official brand colors. Use ONLY these colors for all flat panels, graphic "
+                "elements, backgrounds, and color blocks — no off-brand tones."
+            )
+            for cp in colour_paths:
+                part = _part_for_uri(cp)
+                if part:
+                    contents.append(part)
+                    logger.info("colour_swatch_included", uri=cp)
+
+        # ── 4. Brand logo — strict identity lock ──────────────────────────────────────
+        logo_paths   = loader.list_logos(brand)
+        primary_logo = _pick_primary_logo(logo_paths)
+        if primary_logo:
+            contents.append(
+                "BRAND LOGO: This is the official brand logo. "
+                "Use it as a visual identity reference — match its colors and graphic style."
+            )
+            part = _part_for_uri(primary_logo)
+            if part:
+                contents.append(part)
+                logger.info("logo_ref_included", uri=primary_logo)
+
+        # ── 5. Product photos — subject reference ─────────────────────────────────────
         if products_to_send:
             contents.append(
-                "Reference product photography follows. "
-                "Each image is labelled by the product key used in the prompt:"
+                "PRODUCT REFERENCE: The following image(s) show the exact product to feature. "
+                "Match its shape, packaging, colors, and materials precisely — "
+                "do not invent or substitute a generic product."
             )
             for product_name, uri in products_to_send.items():
-                img_bytes = _load_asset_bytes(uri)
-                if img_bytes:
+                part = _part_for_uri(uri)
+                if part:
                     contents.append(f"{product_name}:")
-                    contents.append(
-                        types.Part.from_bytes(
-                            data      = img_bytes,
-                            mime_type = _guess_image_mime(uri),
-                        )
-                    )
+                    contents.append(part)
                     logger.info("product_photo_included", product=product_name, uri=uri)
                 else:
                     logger.warning("product_photo_skipped", product=product_name, uri=uri)
 
-        contents.append(guarded_prompt)  # text prompt always last
+        # ── 6. Text prompt — always last ──────────────────────────────────────────────
+        contents.append(guarded_prompt)
 
         client   = _genai.Client()
         response = client.models.generate_content(
@@ -496,7 +599,6 @@ async def generate_and_save_kv_image(
             raise ValueError("Gemini returned no image data")
 
         # ── Post-process: composite brand panel (logo + name + product + headline) ──
-        brand        = tool_context.state.get("brand_name", "")
         product_name = tool_context.state.get("product_name", "")
         brand_locks  = {}
         try:

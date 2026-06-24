@@ -1,0 +1,34 @@
+# Boozt Brand Asset Manifest
+# Source: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/
+
+## LOGOS
+- Boozt_Logo.png: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Logos/Boozt_Logo.png
+- Boozt_Logo_green.png: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Logos/Boozt_Logo_green.png
+- Boozt_Logo_red.png: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Logos/Boozt_Logo_red.png
+
+## PRODUCT IMAGES
+- Product1 (.DS_Store): gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Products/.DS_Store
+- Product2 (.DS_Store): gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Products/PNG/.DS_Store
+- Product3 (Product1.png): gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Products/PNG/Product1.png
+- Product4 (Product2.png): gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Products/PNG/Product2.png
+- Product5 (Product3.png): gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Products/PNG/Product3.png
+- Product6 (Product1.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Products/Product1.jpg
+- Product7 (Product2.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Products/Product2.jpg
+- Product8 (Product3.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Products/Product3.jpg
+
+## FONTS
+- .DS_Store: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Font/.DS_Store
+- Rubik-Italic-VariableFont_wght.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Font/Rubik-Italic-VariableFont_wght.ttf
+- Rubik-VariableFont_wght.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Font/Rubik-VariableFont_wght.ttf
+
+## CAMPAIGN ASSETS / BANNERS
+- Banner1.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Assets/Banner1.jpg
+- Banner2.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Assets/Banner2.jpg
+- Banner3.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Assets/Banner3.jpg
+- Banner4.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Assets/Banner4.jpg
+- Banner5.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Assets/Banner5.jpg
+- Banner6.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Assets/Banner6.jpg
+- Banner7.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Assets/Banner7.jpg
+
+## COLOUR SWATCHES
+- Colour.png.png: gs://dauntless-karma-497108-b0-campaignos/brands/Boozt/Colours/Colour.png.png

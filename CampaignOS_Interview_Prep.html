@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CampaignOS — Interview Prep Guide</title>
+  <style>
+    :root {
+      --green:  #002E23;
+      --gold:   #C5A059;
+      --light:  #f9f7f4;
+      --border: #e2ddd6;
+      --text:   #1a1a1a;
+      --muted:  #6b6560;
+      --accent: #00594F;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: var(--light);
+      color: var(--text);
+      line-height: 1.75;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--green);
+      color: #fff;
+      padding: 52px 60px 40px;
+    }
+    .header .label {
+      font-family: 'Arial', sans-serif;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 14px;
+    }
+    .header h1 {
+      font-size: 38px;
+      font-weight: normal;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+    .header h1 span { color: var(--gold); }
+    .header .subtitle {
+      font-family: 'Arial', sans-serif;
+      font-size: 15px;
+      color: rgba(255,255,255,0.65);
+      margin-top: 12px;
+    }
+    .header .meta {
+      margin-top: 28px;
+      display: flex;
+      gap: 32px;
+      font-family: 'Arial', sans-serif;
+      font-size: 12px;
+      color: rgba(255,255,255,0.5);
+    }
+    .header .meta span { color: var(--gold); font-weight: bold; }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 48px 40px 80px;
+    }
+
+    /* ── SECTION TITLE ── */
+    .section-title {
+      font-family: 'Arial', sans-serif;
+      font-size: 10px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 10px;
+      margin-top: 52px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--gold);
+      display: inline-block;
+    }
+
+    h2 {
+      font-size: 24px;
+      font-weight: normal;
+      color: var(--green);
+      margin-bottom: 20px;
+      margin-top: 4px;
+    }
+
+    h3 {
+      font-size: 15px;
+      font-family: 'Arial', sans-serif;
+      font-weight: bold;
+      color: var(--accent);
+      margin: 28px 0 10px;
+    }
+
+    p {
+      margin-bottom: 14px;
+      font-size: 15px;
+      color: #2a2a2a;
+    }
+
+    /* ── OVERVIEW CARD ── */
+    .overview-card {
+      background: var(--green);
+      color: #fff;
+      border-radius: 6px;
+      padding: 28px 32px;
+      margin-top: 8px;
+      font-size: 15px;
+      line-height: 1.8;
+    }
+    .overview-card strong { color: var(--gold); }
+
+    /* ── TABLES ── */
+    .table-wrap { overflow-x: auto; margin: 16px 0 24px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Arial', sans-serif;
+      font-size: 13.5px;
+    }
+    thead {
+      background: var(--green);
+      color: #fff;
+    }
+    thead th {
+      padding: 11px 16px;
+      text-align: left;
+      font-weight: normal;
+      letter-spacing: 0.5px;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); }
+    tbody tr:hover { background: rgba(0,46,35,0.04); }
+    tbody td { padding: 10px 16px; vertical-align: top; }
+    tbody td:first-child { font-weight: bold; color: var(--accent); white-space: nowrap; }
+    tbody td:nth-child(2) { color: var(--muted); font-size: 13px; }
+    tbody td:nth-child(3) { color: #3a3a3a; }
+
+    /* ── PIPELINE ── */
+    .pipeline {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 16px 0 24px;
+    }
+    .pipeline-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .pipeline-step:last-child { border-bottom: none; }
+    .step-num {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      background: var(--green);
+      color: #fff;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Arial', sans-serif;
+      font-size: 13px;
+      font-weight: bold;
+      margin-top: 2px;
+    }
+    .step-num.gold { background: var(--gold); color: var(--green); }
+    .step-body h4 {
+      font-family: 'Arial', sans-serif;
+      font-size: 14px;
+      font-weight: bold;
+      color: var(--green);
+      margin-bottom: 4px;
+    }
+    .step-body p {
+      font-size: 13.5px;
+      color: var(--muted);
+      margin: 0;
+      line-height: 1.6;
+    }
+    .step-body .agent-tag {
+      display: inline-block;
+      background: rgba(0,89,79,0.1);
+      color: var(--accent);
+      font-family: 'Arial', sans-serif;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      margin-bottom: 6px;
+      font-weight: bold;
+      letter-spacing: 0.3px;
+    }
+    .step-parallel {
+      background: rgba(197,160,89,0.07);
+      border-left: 3px solid var(--gold);
+    }
+
+    /* ── Q&A ── */
+    .qa-block {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin: 12px 0;
+      overflow: hidden;
+    }
+    .qa-q {
+      background: var(--green);
+      color: #fff;
+      padding: 14px 20px;
+      font-family: 'Arial', sans-serif;
+      font-size: 14px;
+      font-weight: bold;
+      line-height: 1.5;
+    }
+    .qa-q::before { content: "Q  "; color: var(--gold); }
+    .qa-a {
+      padding: 16px 20px;
+      font-size: 14.5px;
+      line-height: 1.75;
+      color: #2a2a2a;
+      border-top: 3px solid var(--gold);
+    }
+    .qa-a::before {
+      content: "A  ";
+      font-weight: bold;
+      color: var(--gold);
+      font-family: 'Arial', sans-serif;
+    }
+
+    /* ── CODE ── */
+    code {
+      font-family: 'Courier New', monospace;
+      background: rgba(0,46,35,0.08);
+      color: var(--accent);
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+    }
+
+    /* ── KEY CONCEPTS ── */
+    .concept-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin: 16px 0 24px;
+    }
+    @media(max-width: 680px) { .concept-grid { grid-template-columns: 1fr; } }
+    .concept-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--green);
+      border-radius: 4px;
+      padding: 20px;
+    }
+    .concept-card h4 {
+      font-family: 'Arial', sans-serif;
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--green);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .concept-card p {
+      font-size: 13.5px;
+      color: #3a3a3a;
+      margin: 0;
+      line-height: 1.65;
+    }
+
+    /* ── AGENT ROSTER ── */
+    .agent-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+    }
+    .agent-row:first-child { border-radius: 6px 6px 0 0; }
+    .agent-row:last-child { border-bottom: none; border-radius: 0 0 6px 6px; }
+    .agent-name {
+      font-family: 'Arial', sans-serif;
+      font-weight: bold;
+      color: var(--green);
+      font-size: 14px;
+      min-width: 90px;
+    }
+    .agent-code {
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 200px;
+    }
+    .agent-desc {
+      font-size: 13.5px;
+      color: #3a3a3a;
+    }
+
+    /* ── TIP BOX ── */
+    .tip {
+      background: rgba(197,160,89,0.12);
+      border-left: 4px solid var(--gold);
+      border-radius: 0 4px 4px 0;
+      padding: 14px 20px;
+      margin: 20px 0;
+      font-family: 'Arial', sans-serif;
+      font-size: 14px;
+      color: #3a2e1a;
+    }
+    .tip strong { color: var(--green); }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: var(--green);
+      color: rgba(255,255,255,0.4);
+      text-align: center;
+      padding: 28px;
+      font-family: 'Arial', sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+    }
+    .footer span { color: var(--gold); }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="label">Interview Preparation</div>
+  <h1>Campaign<span>OS</span> — Complete Tech Guide</h1>
+  <div class="subtitle">AI-Powered Marketing Campaign Generation Platform</div>
+  <div class="meta">
+    <div>Branch <span>feature/a2a-ui-redesign</span></div>
+    <div>Stack <span>Google ADK · FastAPI · React · Vertex AI · Veo · Cloud Run</span></div>
+    <div>Prepared <span>June 2026</span></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── WHAT IS IT ── -->
+  <div class="section-title">01 — Project Overview</div>
+  <h2>What is CampaignOS?</h2>
+
+  <div class="overview-card">
+    CampaignOS is an <strong>AI-powered marketing campaign generation platform</strong>. A marketer fills in a brief — brand, product, budget, target audience, and a "Fan Truth" — and a pipeline of AI agents autonomously produces a complete campaign: <strong>brand strategy, ad copy, key visual, channel adaptations, landing page, email, Instagram image post, and Instagram Reel</strong> — all in a single pipeline run.
+    <br/><br/>
+    The system is built around <strong>Google's Agent Development Kit (ADK)</strong>, orchestrating 10+ specialist agents as a Directed Acyclic Graph (DAG). Each agent has a single responsibility, a typed input/output schema, and passes structured JSON to the next agent in the chain.
+  </div>
+
+  <div class="tip">
+    <strong>One-line answer for "what did you build?":</strong> A multi-agent AI system that takes a marketing brief and autonomously produces a full campaign — strategy, copy, visuals, and publishes to Google Ads, email, and Instagram — using Google ADK, Gemini, Veo, and FastAPI on Cloud Run.
+  </div>
+
+
+  <!-- ── TECH STACK ── -->
+  <div class="section-title">02 — Tech Stack</div>
+  <h2>Every Technology Used</h2>
+
+  <h3>Backend</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Technology</th><th>Role</th><th>Why This Choice</th></tr></thead>
+      <tbody>
+        <tr><td>Python 3.12</td><td>Core language</td><td>Best AI/ML ecosystem, native async, ADK is Python-first</td></tr>
+        <tr><td>FastAPI</td><td>REST API + SSE server</td><td>Async-native, auto OpenAPI docs, Pydantic built-in, streaming support</td></tr>
+        <tr><td>Pydantic v2</td><td>Data validation & agent schemas</td><td>Every agent input/output is a typed model — enforces structure between agents</td></tr>
+        <tr><td>pydantic-settings</td><td>Config management</td><td>Reads all config from env vars with type safety and aliases</td></tr>
+        <tr><td>structlog</td><td>Structured JSON logging</td><td>Machine-readable logs for Cloud Logging; bind context per campaign_id</td></tr>
+        <tr><td>python-dotenv</td><td>Local env loading</td><td>Loads .env in dev; Cloud Run uses Secret Manager in prod</td></tr>
+        <tr><td>uvicorn</td><td>ASGI server</td><td>Production async server for FastAPI</td></tr>
+        <tr><td>uv</td><td>Package manager</td><td>10-100x faster than pip; used in Dockerfile for fast builds</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>AI / LLM Models</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Technology</th><th>Role</th><th>Why This Choice</th></tr></thead>
+      <tbody>
+        <tr><td>Google ADK</td><td>Multi-agent orchestration</td><td>Defines agents as a Workflow DAG — handles routing, state, tool calls, fan-out/fan-in</td></tr>
+        <tr><td>Gemini 3.5 Flash</td><td>All text agents (reasoning)</td><td>Fast, capable, Vertex AI integrated, supports structured JSON output</td></tr>
+        <tr><td>Gemini 3 Pro Image</td><td>Key Visual image generation</td><td>Best image quality for brand-accurate campaign visuals</td></tr>
+        <tr><td>Google Veo 3.1</td><td>6-second campaign Reel video</td><td>Text-to-video, direct GCS output, audio generation included</td></tr>
+        <tr><td>LiteLLM + Groq</td><td>Fallback LLM (LLaMA 3.3 70B)</td><td>Free-tier fast inference when Vertex AI quota is exceeded</td></tr>
+        <tr><td>Gemini Embedding 2</td><td>Text embeddings (768 dims)</td><td>Higher quality embeddings for semantic search vs sentence-transformers</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Data & Search</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Technology</th><th>Role</th><th>Why This Choice</th></tr></thead>
+      <tbody>
+        <tr><td>BigQuery</td><td>Historical campaigns, Fan Truth library, channel benchmarks</td><td>Analytical warehouse; integrates natively with Vertex AI Search</td></tr>
+        <tr><td>Vertex AI Search</td><td>Semantic search over brand docs + BQ data</td><td>Agent retrieves relevant context without hardcoding — RAG over brand guidelines</td></tr>
+        <tr><td>PostgreSQL + pgvector</td><td>Vector embeddings store for CDP customer data</td><td>Semantic search over customer segments; pgvector extension adds vector ops to Postgres</td></tr>
+        <tr><td>Google Cloud Storage</td><td>Brand assets, logos, images, reels, HTML pages</td><td>Central asset store — all agents read/write here; IAM-controlled public access</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Infrastructure & DevOps</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Technology</th><th>Role</th><th>Why This Choice</th></tr></thead>
+      <tbody>
+        <tr><td>Google Cloud Run</td><td>Containerised deployment</td><td>Serverless, scales to zero, 1-hour timeout (needed for Veo), Cloud SQL proxy built-in</td></tr>
+        <tr><td>Cloud Build</td><td>CI/CD pipeline</td><td>Docker build → push to GCR → deploy to Cloud Run in one YAML file</td></tr>
+        <tr><td>Docker</td><td>Containerisation</td><td>python:3.12-slim base; uv for fast deps; excludes heavy ML packages not needed at runtime</td></tr>
+        <tr><td>Secret Manager</td><td>Secrets in production</td><td>Tokens never committed to git; injected at Cloud Run startup</td></tr>
+        <tr><td>Cloud SQL (PostgreSQL)</td><td>Managed pgvector in production</td><td>Cloud SQL proxy sidecar in Cloud Run; same schema as local Docker pgvector</td></tr>
+        <tr><td>Google Container Registry</td><td>Docker image storage</td><td>Private registry, same GCP project, no auth overhead</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Publishing Integrations</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Technology</th><th>Role</th><th>Why This Choice</th></tr></thead>
+      <tbody>
+        <tr><td>Instagram Graph API</td><td>Publish image posts + Reels</td><td>Meta's official API; 2-step for images, 3-step with status polling for Reels</td></tr>
+        <tr><td>Gmail SMTP</td><td>Email campaign delivery</td><td>Simple, no extra infra; App Password auth; TLS on port 587</td></tr>
+        <tr><td>Pillow (PIL)</td><td>Image processing</td><td>PNG transparency fix (RGBA → RGB composited on white bg); brand asset manipulation</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Frontend</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Technology</th><th>Role</th><th>Why This Choice</th></tr></thead>
+      <tbody>
+        <tr><td>React + TypeScript</td><td>UI framework</td><td>Component-based, type-safe, industry standard for dashboards</td></tr>
+        <tr><td>Vite</td><td>Build tool + dev server</td><td>Fast HMR in dev; lightweight compared to CRA/webpack</td></tr>
+        <tr><td>Server-Sent Events (SSE)</td><td>Real-time pipeline streaming</td><td>Server pushes agent status updates — no polling, no WebSocket overhead</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ── WORKFLOW ── -->
+  <div class="section-title">03 — Pipeline Workflow</div>
+  <h2>How the Pipeline Works — Step by Step</h2>
+
+  <div class="pipeline">
+    <div class="pipeline-step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="agent-tag">FUNCTION NODE</div>
+        <h4>load_brand_context</h4>
+        <p>Reads brand guidelines from GCS. Queries Vertex AI Search for Fan Truth examples, KPI benchmarks, channel benchmarks, and customer segments from BigQuery. Injects all data into agent context — no LLM calls yet.</p>
+      </div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="agent-tag">LOGOS — briefing_agent</div>
+        <h4>Brief Validation + Fan Truth Scoring</h4>
+        <p>Validates the brief. Scores Fan Truth on 3 dimensions (Specific / Shared / Special, each 0–100). Flags KPIs as OK / AMBITIOUS / UNREALISTIC against historical benchmarks. Produces a <code>MachineBrief</code> JSON with all enriched data.</p>
+      </div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="agent-tag">AETHER — culture_analyst</div>
+        <h4>Live Cultural Research</h4>
+        <p>Uses Google Search tool to find relevant cultural trends, audience behaviours, and seasonal moments. Multi-turn agent — can call <code>google_search</code> multiple times before finishing.</p>
+      </div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="agent-tag">AETHER — culture_formatter</div>
+        <h4>Structure Cultural Intelligence</h4>
+        <p>Turns raw search results into a typed <code>CultureAnalysis</code> JSON: key cultural summary, sentiment metrics, and 3–5 concrete cultural hooks for the campaign.</p>
+      </div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="agent-tag">HELIA — creative_director</div>
+        <h4>Big Idea + Creative Strategy</h4>
+        <p>Synthesises brief + cultural intelligence → Big Idea title, visual world, hero message, tone, channel priorities, messaging pillars, and a handoff brief to the art directors.</p>
+      </div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="agent-tag">copy_agent</div>
+        <h4>Campaign Copy — Three Length Variants</h4>
+        <p>Writes short (≤6 words for KV/OOH), medium (social/display), and long (press/editorial) copy. Also generates channel-specific lines: Instagram caption, email subject, web headline, TikTok hook.</p>
+      </div>
+    </div>
+    <div class="pipeline-step step-parallel">
+      <div class="step-num gold">7a</div>
+      <div class="step-body">
+        <div class="agent-tag">IDEON — kv_generator_1</div>
+        <h4>Key Visual Art Direction — Concept A  <em style="color:var(--gold);font-size:12px;">(PARALLEL)</em></h4>
+        <p>Writes art direction for Key Visual concept A: composition, colour palette, typography guidance, image prompt for Gemini.</p>
+      </div>
+    </div>
+    <div class="pipeline-step step-parallel">
+      <div class="step-num gold">7b</div>
+      <div class="step-body">
+        <div class="agent-tag">IDEON — kv_generator_2</div>
+        <h4>Key Visual Art Direction — Concept B  <em style="color:var(--gold);font-size:12px;">(PARALLEL)</em></h4>
+        <p>Different compositional lens to the same brief. Running in parallel gives the ranker two genuine creative alternatives.</p>
+      </div>
+    </div>
+    <div class="pipeline-step step-parallel">
+      <div class="step-num gold">8a</div>
+      <div class="step-body">
+        <div class="agent-tag">MORPHIS — kv_image_agent_1</div>
+        <h4>Image Generation — Concept A  <em style="color:var(--gold);font-size:12px;">(PARALLEL)</em></h4>
+        <p>Calls <code>generate_and_save_kv_image</code> tool → Gemini 3 Pro Image model. Saves result to GCS and ADK artifact store.</p>
+      </div>
+    </div>
+    <div class="pipeline-step step-parallel">
+      <div class="step-num gold">8b</div>
+      <div class="step-body">
+        <div class="agent-tag">MORPHIS — kv_image_agent_2</div>
+        <h4>Image Generation — Concept B  <em style="color:var(--gold);font-size:12px;">(PARALLEL)</em></h4>
+        <p>Same as 8a but for Concept B. A <code>JoinNode</code> waits for both 8a and 8b to complete before the pipeline continues.</p>
+      </div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">9</div>
+      <div class="step-body">
+        <div class="agent-tag">KINETIK — kv_ranker</div>
+        <h4>Rank + Select Best Key Visual</h4>
+        <p>Evaluates both KV concepts against brand compliance, Fan Truth alignment, and creative strength. Selects the winner with a written rationale.</p>
+      </div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">10</div>
+      <div class="step-body">
+        <div class="agent-tag">HITL GATE</div>
+        <h4>Human-in-the-Loop KV Selection</h4>
+        <p>Pipeline pauses here. The UI shows both KV concepts side by side. The human approves the AI selection or overrides it. Pipeline resumes with the chosen concept.</p>
+      </div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">11</div>
+      <div class="step-body">
+        <div class="agent-tag">POLY — channel_router + content_agent</div>
+        <h4>Channel Adaptation</h4>
+        <p>Routes content tasks per channel (Instagram, TikTok, Website, Email). Adapts the hero creative for each format's specs — aspect ratios, copy lengths, visual hierarchy.</p>
+      </div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num">12</div>
+      <div class="step-body">
+        <div class="agent-tag">NEXUS — performance_agent</div>
+        <h4>Pre-Launch Performance Forecast</h4>
+        <p>Generates predicted reach, CTR, ROAS per channel based on historical benchmarks. Flags top risk, top opportunity, and first-48h watchlist metrics.</p>
+      </div>
+    </div>
+    <div class="pipeline-step">
+      <div class="step-num gold">★</div>
+      <div class="step-body">
+        <div class="agent-tag">KINETIK — Creative Pipeline (async)</div>
+        <h4>Veo Reel Generation + Channel Assets</h4>
+        <p>Runs in parallel with the ADK DAG. Generates a 6-second Veo video saved to GCS, plus website banner and email header adaptations of the key visual.</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ── KEY CONCEPTS ── -->
+  <div class="section-title">04 — Key Concepts</div>
+  <h2>Technical Concepts You Must Know</h2>
+
+  <div class="concept-grid">
+    <div class="concept-card">
+      <h4>Fan Truth</h4>
+      <p>Not a product claim — a real human insight the audience already believes. Scored on three axes: <strong>Specific</strong> (not generic platitude), <strong>Shared</strong> (widely held in the audience), <strong>Special</strong> (culturally resonant). All three must exceed 70 for PASS. Fail triggers a suggested alternative from the briefing agent.</p>
+    </div>
+    <div class="concept-card">
+      <h4>Brand Locks</h4>
+      <p>Non-negotiable brand rules enforced as Pydantic fields: token placement, voice archetype, headline word limit (6), caption char limit (200), CTA word limit (3), colour ratios per dwell time. The AI cannot override these — they are constraints injected into every agent's system prompt.</p>
+    </div>
+    <div class="concept-card">
+      <h4>ADK Workflow DAG</h4>
+      <p>Google's Agent Development Kit lets you define a directed acyclic graph of agents. Edges define execution order. <strong>Fan-out</strong> = two edges from one node (parallel). <strong>Fan-in</strong> = <code>JoinNode</code> that waits for all upstream agents before continuing. No custom orchestration code needed.</p>
+    </div>
+    <div class="concept-card">
+      <h4>Server-Sent Events (SSE)</h4>
+      <p>Frontend opens <code>GET /events/{campaign_id}</code> — a persistent HTTP connection. The server pushes JSON events as each agent completes: <code>{"agent":"Logos","status":"done","message":"Brief validated ✓"}</code>. Uses <code>asyncio.Event</code> to wake the SSE generator. No polling, no WebSockets.</p>
+    </div>
+    <div class="concept-card">
+      <h4>Instagram API — Two Flows</h4>
+      <p><strong>Image post:</strong> POST <code>/media</code> (create container with image_url) → POST <code>/media_publish</code>.<br/><strong>Reel:</strong> POST <code>/media</code> with <code>media_type=REELS</code> + <code>video_url</code> → poll <code>GET /{id}?fields=status_code</code> until FINISHED → POST <code>/media_publish</code>. Polling required because video processing takes time.</p>
+    </div>
+    <div class="concept-card">
+      <h4>GCS Uniform Bucket Access</h4>
+      <p>Bucket uses IAM-only access (no legacy ACLs). <code>blob.make_public()</code> fails with <code>400 Cannot get legacy ACL</code>. Fixed by IAM binding: <code>allUsers → roles/storage.objectViewer</code>. All objects become publicly readable via <code>https://storage.googleapis.com/{bucket}/{path}</code> without per-object ACLs.</p>
+    </div>
+    <div class="concept-card">
+      <h4>RAG Architecture</h4>
+      <p>Retrieval-Augmented Generation: brand guidelines (GCS) + historical data (BigQuery) are indexed in Vertex AI Search. <code>load_brand_context</code> queries the search engine and injects the top results into the agent's context window before any LLM call — giving agents grounded knowledge without hallucination.</p>
+    </div>
+    <div class="concept-card">
+      <h4>pgvector / Semantic Search</h4>
+      <p>Customer segment data (Kaggle CDP) is embedded using Gemini Embedding 2 (768 dims) and stored in PostgreSQL with the pgvector extension. Semantic search finds the most relevant customer segments for an audience description. Same schema runs in Docker locally and Cloud SQL in production.</p>
+    </div>
+  </div>
+
+
+  <!-- ── AGENT ROSTER ── -->
+  <div class="section-title">05 — Agent Roster</div>
+  <h2>All 8 Named Agents</h2>
+
+  <div style="border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-top:16px;">
+    <div class="agent-row" style="background:var(--green); color:#fff; font-family:'Arial',sans-serif; font-size:12px; letter-spacing:1px;">
+      <div style="min-width:90px; color:var(--gold);">NAME</div>
+      <div style="min-width:200px; color:var(--gold);">CODE (ADK)</div>
+      <div style="color:var(--gold);">ROLE</div>
+    </div>
+    <div class="agent-row"><div class="agent-name">Logos</div><div class="agent-code">briefing_agent</div><div class="agent-desc">Brief validation, Fan Truth scoring (Specific/Shared/Special), KPI flagging → produces <code>MachineBrief</code></div></div>
+    <div class="agent-row"><div class="agent-name">Aether</div><div class="agent-code">culture_analyst + culture_formatter</div><div class="agent-desc">Live Google Search for cultural trends; structures results into <code>CultureAnalysis</code> JSON</div></div>
+    <div class="agent-row"><div class="agent-name">Helia</div><div class="agent-code">creative_director</div><div class="agent-desc">Big Idea + <code>CreativeStrategy</code>: hero message, visual world, tone, channel priorities, messaging pillars</div></div>
+    <div class="agent-row"><div class="agent-name">—</div><div class="agent-code">copy_agent</div><div class="agent-desc">Short / medium / long copy variants; channel-specific lines (Instagram caption, email subject, web headline)</div></div>
+    <div class="agent-row"><div class="agent-name">Ideon</div><div class="agent-code">kv_generator_1 + kv_generator_2</div><div class="agent-desc">Parallel art directors — each writes a distinct <code>KVConcept</code> with image prompt (fan-out)</div></div>
+    <div class="agent-row"><div class="agent-name">Morphis</div><div class="agent-code">kv_image_agent_1 + kv_image_agent_2</div><div class="agent-desc">Parallel image generation — calls Gemini 3 Pro Image; saves to GCS + ADK artifact store (fan-in via JoinNode)</div></div>
+    <div class="agent-row"><div class="agent-name">Kinetik</div><div class="agent-code">kv_ranker + Veo runner</div><div class="agent-desc">Ranks KV concepts, selects best; generates 6-second Veo reel and saves to GCS</div></div>
+    <div class="agent-row"><div class="agent-name">Poly</div><div class="agent-code">channel_router + content_agent</div><div class="agent-desc">Maps channels → tasks; generates channel-specific content (format, headline, body, CTA, image direction)</div></div>
+    <div class="agent-row"><div class="agent-name">Nexus</div><div class="agent-code">performance_agent</div><div class="agent-desc">Pre-launch forecast: predicted reach, CTR, ROAS per channel; top risk, top opportunity, 48h watchlist</div></div>
+  </div>
+
+
+  <!-- ── Q&A ── -->
+  <div class="section-title">06 — Interview Q&amp;A</div>
+  <h2>Common Questions — Model Answers</h2>
+
+  <div class="qa-block">
+    <div class="qa-q">Why use an agent framework (ADK) instead of just calling APIs directly?</div>
+    <div class="qa-a">ADK handles agent state, message routing between agents, tool call execution, retries, and the fan-out/fan-in pattern automatically. Without it, you'd write hundreds of lines of boilerplate to manage context passing between 15 agents, track which agents completed, merge parallel results, and handle HITL gates. The Workflow DAG also makes the architecture self-documenting — you can see the entire pipeline in 20 lines of edge definitions.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How do you handle the 3–5 minute Veo reel generation without timing out?</div>
+    <div class="qa-a">The creative pipeline is fully async — <code>generate_campaign_reel()</code> uses <code>asyncio.sleep</code> between Veo operation polls, so the event loop stays free for other requests. Cloud Run timeout is set to 3600s (1 hour). The frontend never waits for the reel directly — it receives a <code>video_b64</code> milestone event via SSE when the reel is ready, which can arrive at any point during the pipeline run. The publish step separately checks GCS for the reel file.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">Why run two KV generators in parallel?</div>
+    <div class="qa-a">Each generator brings a different compositional lens to the same brief. Running them in parallel (fan-out) costs the same wall-clock time as one but gives the KV Ranker two genuine creative alternatives to evaluate. This improves output quality without increasing total pipeline time. The JoinNode (fan-in) ensures both image agents complete before ranking begins.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How do you enforce brand compliance across all AI-generated content?</div>
+    <div class="qa-a">Three layers: (1) <strong>Brand Locks</strong> — a Pydantic model with non-negotiable constraints (headline ≤6 words, CTA ≤3 words, token placement, colour ratios) injected into every agent's system prompt. (2) <strong>Brand warnings</strong> — the briefing agent flags rule violations in the brief before strategy begins. (3) <strong>KV Ranker</strong> explicitly uses brand compliance as a selection criterion when choosing between the two key visual concepts.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How does data retrieval work? (RAG)</div>
+    <div class="qa-a">Retrieval-Augmented Generation. Brand guidelines (Markdown files in GCS) and structured data (historical campaigns, Fan Truth library, channel benchmarks in BigQuery) are indexed in Vertex AI Search. The <code>load_brand_context</code> function node runs before any LLM call — it queries the search engine and injects the top-ranked results into the agent's context. The LLM never needs to call a tool to get this data; it arrives pre-loaded, which eliminates tool-call latency and hallucination risk.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">Why Cloud Run instead of GKE or Cloud Functions?</div>
+    <div class="qa-a">Cloud Run hits the sweet spot: serverless (no cluster to manage), supports a 1-hour request timeout which is required for Veo generation — Cloud Functions caps at 9 minutes which is too short. Cloud Run also has built-in Cloud SQL proxy, Secret Manager integration, and scales to zero between demo runs. GKE would be overkill for the current scale. The pipeline takes 4–8 minutes per campaign, so Functions are ruled out by the timeout alone.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How does Instagram publishing work technically?</div>
+    <div class="qa-a">Two separate flows via the Meta Graph API. <strong>Image post</strong>: POST to <code>/{ig-user-id}/media</code> with the image URL (must be publicly accessible HTTPS — served from GCS) → POST to <code>/{ig-user-id}/media_publish</code> with the creation ID. <strong>Reel</strong>: POST to <code>/media</code> with <code>media_type=REELS</code> and <code>video_url</code> → poll <code>GET /{creation-id}?fields=status_code</code> every 5 seconds until <code>status_code=FINISHED</code> (or timeout at 5 minutes) → POST <code>/media_publish</code>. Token is a 60-day long-lived User Token exchanged from a short-lived Explorer token via <code>fb_exchange_token</code>.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">What is a Fan Truth and why does it matter for campaign quality?</div>
+    <div class="qa-a">A Fan Truth is the real human insight at the heart of the campaign — not a product claim ("our shampoo is gentle") but something the audience already believes ("the first moment of a truly clean scalp is the only reset I trust"). It's scored on Specific (is it precise, not a generic cliché?), Shared (does the wider audience hold this belief?), and Special (does it tap into a culturally resonant moment?). All three must score above 70. A failing Fan Truth is flagged before strategy begins — preventing the entire downstream pipeline from building on a weak insight.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How do secrets get managed across dev and production?</div>
+    <div class="qa-a">In development: all secrets live in <code>harness/.env</code> which is gitignored — never committed. In production on Cloud Run: sensitive values (Instagram access token, Google API key, email password, Groq key) are stored in Google Cloud Secret Manager and injected at container startup via <code>--set-secrets</code> in the Cloud Run deploy command. Non-sensitive config (account IDs, bucket names, model names) are passed as plain <code>--set-env-vars</code>. The <code>cloudbuild.yaml</code> wires all of this together in the deploy step.</div>
+  </div>
+
+  <div class="qa-block">
+    <div class="qa-q">How does real-time streaming work in the UI?</div>
+    <div class="qa-a">The frontend opens a persistent HTTP connection to <code>GET /events/{campaign_id}</code>. FastAPI responds with <code>text/event-stream</code> (Server-Sent Events). Each agent's completion triggers <code>push_event()</code> which appends a JSON object to an in-memory list and calls <code>asyncio.Event.set()</code>. The SSE generator is <code>await</code>ing that event — when woken, it reads all new events from its last read position and streams them to the browser. The browser renders each event as an agent card update in real time. No polling, no WebSocket handshake, no reconnect overhead.</div>
+  </div>
+
+
+  <!-- ── CHEAT SHEET ── -->
+  <div class="section-title">07 — Quick Reference</div>
+  <h2>Numbers to Remember</h2>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Metric / Limit</th><th>Value</th><th>Context</th></tr></thead>
+      <tbody>
+        <tr><td>Pipeline duration</td><td>4–8 minutes</td><td>Dominated by Veo reel generation (3–5 min) + image generation (30–60s each)</td></tr>
+        <tr><td>Cloud Run timeout</td><td>3600s (1 hour)</td><td>Must exceed pipeline duration; Functions cap at 9 min</td></tr>
+        <tr><td>Cloud Run memory</td><td>4 GiB</td><td>Image b64 data in memory; multiple concurrent campaigns</td></tr>
+        <tr><td>Cloud Run CPUs</td><td>2</td><td>Async Python — more CPUs help concurrency</td></tr>
+        <tr><td>Reel duration</td><td>6 seconds</td><td>Veo config: <code>duration_seconds=6</code>, aspect 16:9</td></tr>
+        <tr><td>Fan Truth pass threshold</td><td>All 3 dimensions &gt; 70</td><td>Specific, Shared, Special each scored 0–100</td></tr>
+        <tr><td>Headline max words</td><td>6</td><td>Brand lock — enforced by Pydantic + system prompt</td></tr>
+        <tr><td>Caption max chars</td><td>200</td><td>Brand lock — Instagram caption limit consideration</td></tr>
+        <tr><td>KV concepts generated</td><td>2 (parallel)</td><td>Fan-out from copy_agent; ranker selects 1</td></tr>
+        <tr><td>Instagram token lifetime</td><td>60 days</td><td>Long-lived user token via fb_exchange_token; stored in Secret Manager</td></tr>
+        <tr><td>Embedding dimensions</td><td>768</td><td>Gemini Embedding 2 — higher quality than MiniLM (384 dims)</td></tr>
+        <tr><td>GCS bucket</td><td>dauntless-karma-497108-b0-campaignos</td><td>All brand assets + campaign outputs</td></tr>
+        <tr><td>Cloud Run service URL</td><td>campaignos-harness-958438970145.us-central1.run.app</td><td>Production endpoint</td></tr>
+        <tr><td>Instagram Business ID</td><td>17841415786098555</td><td>Account linked to Campaign Demo Facebook Page</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tip">
+    <strong>Key things to be most confident about in the interview:</strong> What Fan Truth is and why it matters. The DAG fan-out/fan-in pattern. How SSE streaming keeps the UI live. Why Cloud Run over other options. How Instagram Graph API two-step and three-step publishing works. How secrets are managed across dev and prod. What RAG means in this context and how Vertex AI Search is used.
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  CampaignOS — Interview Prep Guide &nbsp;|&nbsp; <span>feature/a2a-ui-redesign</span> &nbsp;|&nbsp; Confidential
+</div>
+
+</body>
+</html>

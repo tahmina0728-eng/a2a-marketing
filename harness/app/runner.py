@@ -1194,7 +1194,8 @@ async def run_creative_pipeline_direct(
     product_uris: list,
     asset_uris: list,
     logo_uri: str,
-    brand_guidelines: str,
+    colour_uris: list = None,
+    brand_guidelines: str = "",
     big_idea_seed: str = "",
     copy_headline: str = "",
     copy_headlines: list = None,
@@ -1742,33 +1743,54 @@ Output EXACTLY this format (nothing else):
                 log.debug("p2_asset_skipped", uri=uri, mime=mime)
                 continue
             data = _load_bytes(uri)
-            if data and len(data) > 1024:  # skip empty/corrupt files
+            if data and len(data) > 1024:
                 ref_parts.append(_gtypes.Part.from_bytes(data=data, mime_type=mime))
 
+        # Load colour swatch images — gives Gemini the exact brand palette
+        colour_parts = []
+        for uri in (colour_uris or [])[:2]:
+            mime = _mime_for(uri)
+            if mime not in SUPPORTED_MIME:
+                continue
+            data = _load_bytes(uri)
+            if data and len(data) > 512:
+                colour_parts.append(_gtypes.Part.from_bytes(data=data, mime_type=mime))
+
         style_analysis = ""
-        if ref_parts:
-            log.info("p2_analyze_brand_assets", n_refs=len(ref_parts))
-            await _emit("kv", "running", f"Analyzing {len(ref_parts)} brand reference images…")
+        if ref_parts or colour_parts:
+            n_total = len(ref_parts) + len(colour_parts)
+            log.info("p2_analyze_brand_assets", n_banners=len(ref_parts), n_colours=len(colour_parts))
+            await _emit("kv", "running", f"Analysing {n_total} brand assets (banners + colour palette)...")
             try:
-                vision_contents = [
-                    "These are existing campaign images for this brand. Analyze them and describe in 5-6 sentences covering: "
-                    "1) exact background colours and any gradient/glow effects, "
-                    "2) model energy — pose, expression, movement, hair treatment, "
-                    "3) magical/special effects — sparkles, light rays, bokeh, particles, steam, energy arcs, "
-                    "4) product placement — how products are staged, lit, and scaled, "
-                    "5) overall mood and emotional tone. "
-                    "Be precise and visual — this description will directly guide a new AI image generation.",
-                    *ref_parts,
-                ]
+                vision_contents = []
+                if ref_parts:
+                    vision_contents.append("These are existing campaign images for this brand. Study them carefully.")
+                    vision_contents.extend(ref_parts)
+                if colour_parts:
+                    vision_contents.append("These are the official brand colour palette swatches.")
+                    vision_contents.extend(colour_parts)
+                vision_contents.append(
+                    f"You are analysing {brand} brand visual assets. "
+                    "Describe in 6-7 sentences: "
+                    "1) exact background colours, gradients, and glow effects from the campaign ads "
+                    "   — name the specific colours with hex codes from the palette swatch if visible, "
+                    "2) model energy — pose, expression, movement, and hair treatment specific to this brand, "
+                    "3) magical/special effects — sparkles, light rays, bokeh, particles, steam, or energy arcs "
+                    "   that are signature to this brand, "
+                    "4) product placement — how the product is staged, lit, and scaled relative to the model, "
+                    "5) typography style — any text treatment visible in the ads (font weight, size, positioning), "
+                    "6) overall mood, emotional tone, and brand personality. "
+                    "Be precise with colour values and visual specifics — this will directly instruct AI image generation."
+                )
                 vision_resp = client.models.generate_content(
                     model    = _settings.gemini_model_reasoning,
                     contents = vision_contents,
                 )
                 style_analysis = vision_resp.text.strip()
-                log.info("p2_brand_style_extracted", style=style_analysis[:120])
+                log.info("p2_brand_style_extracted", style=style_analysis[:150])
             except Exception as vision_err:
                 log.warning("p2_brand_style_failed", error=str(vision_err),
-                            note="skipping style analysis, Imagen 4 will use prompt only")
+                            note="skipping style analysis, proceeding with prompt only")
 
         # â"€â"€ Step B: Enrich each concept prompt with style + no-text rule ─────────
         # Spell brand name character by character for every brand to prevent AI substitution
@@ -1798,31 +1820,52 @@ Output EXACTLY this format (nothing else):
             f"{_no_text_rule}{p}{_style_suffix}" for p in concept_prompts
         ]
 
-        # -- Step C: Load reference images (product + logo) for multimodal input --
+        # -- Step C: Load reference images (logo + colour palette + products) ------
         SUPPORTED_MIME = {"image/jpeg", "image/png", "image/gif", "image/webp"}
         _ref_parts: list = []
 
-        # Logo first — most important brand anchor
+        # Colour swatch FIRST — sets the exact palette Gemini must honour
+        for _c_uri in (colour_uris or [])[:2]:
+            _c_mime = _mime_for(_c_uri)
+            if _c_mime in SUPPORTED_MIME:
+                _c_data = _load_bytes(_c_uri)
+                if _c_data and len(_c_data) > 512:
+                    _ref_parts.append(
+                        f"BRAND COLOUR PALETTE — use ONLY these exact colours for {brand} backgrounds, "
+                        f"effects, and product packaging. Do not substitute or approximate."
+                    )
+                    _ref_parts.append(_gtypes.Part.from_bytes(data=_c_data, mime_type=_c_mime))
+
+        # Logo — most important brand identity anchor
         if logo_uri:
             _logo_mime = _mime_for(logo_uri)
             if _logo_mime in SUPPORTED_MIME:
                 _logo_data = _load_bytes(logo_uri)
                 if _logo_data:
-                    _ref_parts.append("BRAND LOGO — reproduce the exact shape, colours and design of this logo on the product packaging:")
+                    _ref_parts.append(
+                        f"BRAND LOGO — reproduce this exact {brand} logo shape, colours, and design "
+                        f"on every product label and packaging in the scene:"
+                    )
                     _ref_parts.append(_gtypes.Part.from_bytes(data=_logo_data, mime_type=_logo_mime))
                     log.info("p2_logo_ref_loaded", uri=logo_uri)
 
-        # Product images — up to 3
-        for _uri in (product_uris or [])[:3]:
+        # Product images — up to 5 (PNG preferred for transparent bg)
+        for _uri in (product_uris or [])[:5]:
             _pmime = _mime_for(_uri)
             if _pmime not in SUPPORTED_MIME:
                 continue
             _pdata = _load_bytes(_uri)
             if _pdata and len(_pdata) > 1024:
-                _ref_parts.append(f"PRODUCT REFERENCE — Reproduce this '{brand}' '{_product_ctx}' product: same packaging shape, same colours, same label design. Label must show '{brand}' on every product. Feature 2-3 of these products prominently:")
+                _ref_parts.append(
+                    f"PRODUCT REFERENCE — this is the actual '{brand}' '{_product_ctx}' packaging. "
+                    f"Reproduce the exact shape, label design, and brand colours. "
+                    f"Feature 2-3 of these products prominently in the right zone of the scene:"
+                )
                 _ref_parts.append(_gtypes.Part.from_bytes(data=_pdata, mime_type=_pmime))
 
-        log.info("p2_ref_parts_loaded", n=len([p for p in _ref_parts if not isinstance(p, str)]))
+        log.info("p2_ref_parts_loaded",
+                 n_images=len([p for p in _ref_parts if not isinstance(p, str)]),
+                 n_colours=len(colour_uris or []))
 
         # -- Step D: Generate one image per concept in parallel -------------------
         image_model = _get_settings().gemini_model_image

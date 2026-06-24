@@ -95,6 +95,20 @@ All arrays must be [] not null.
 
 Output the complete MachineBrief as valid JSON only.
 Do not include markdown fences, commentary, or any text other than the JSON object.
+
+════════════════════════════════════════════════════════════
+RETRY CONTEXT (only present on automatic retries)
+════════════════════════════════════════════════════════════
+
+{brief_retry_feedback}
+
+If brief_retry_feedback is present above, your previous MachineBrief was rejected
+because the Fan Truth score was below 70. You MUST:
+  1. Use the suggested_alternative fan truth statement provided (or write a better one)
+  2. Ensure the new fan_truth is specific (named moment), shared (broad fan relevance),
+     and special (makes people feel something about the brand)
+  3. Target fan_truth_score.overall ≥ 70 and verdict = "PASS"
+Do not repeat the same fan truth statement that was rejected.
 """
 
 

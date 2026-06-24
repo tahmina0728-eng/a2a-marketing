@@ -68,8 +68,12 @@ class BrandAssetLoader:
         return self._list_dir(brand, "Products", _IMAGE_EXTS)
 
     def list_logos(self, brand: str) -> list[str]:
-        """Return sorted list of logo paths / GCS URIs (.png/.jpg/.webp/.svg)."""
-        return self._list_dir(brand, "Logos", _IMAGE_EXTS | {".svg"})
+        """Return sorted list of logo paths / GCS URIs (.png/.jpg/.webp/.svg).
+        Checks both 'Logos/' and 'Logo/' folders (some brands use the singular form)."""
+        exts = _IMAGE_EXTS | {".svg"}
+        logos  = self._list_dir(brand, "Logos", exts)
+        logos += self._list_dir(brand, "Logo",  exts)
+        return sorted(set(logos))
 
     def list_fonts(self, brand: str) -> list[str]:
         """Return sorted list of font file paths / GCS URIs."""
@@ -103,8 +107,8 @@ class BrandAssetLoader:
             return []
         return sorted(
             str(p)
-            for p in folder.iterdir()
-            if p.suffix.lower() in extensions and not p.name.startswith(".")
+            for p in folder.rglob("*")
+            if p.is_file() and p.suffix.lower() in extensions and not p.name.startswith(".")
         )
 
     # ── GCS backend ───────────────────────────────────────────────────────

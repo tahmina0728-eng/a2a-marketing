@@ -1,0 +1,32 @@
+# UBS Bank Brand Asset Manifest
+# Source: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/
+
+## LOGOS
+
+## PRODUCT IMAGES
+- Product1 (product1.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Products/product1.jpg
+- Product2 (product2.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Products/product2.jpg
+- Product3 (product3.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Products/product3.jpg
+- Product4 (product4.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Products/product4.jpg
+- Product5 (product5.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Products/product5.jpg
+
+## FONTS
+- .DS_Store: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Font/.DS_Store
+- Frutiger.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Font/Frutiger.ttf
+- Frutiger_bold.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Font/Frutiger_bold.ttf
+
+## CAMPAIGN ASSETS / BANNERS
+- Banner1.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner1.jpg
+- Banner10.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner10.jpg
+- Banner11.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner11.jpg
+- Banner12.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner12.jpg
+- Banner2.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner2.jpg
+- Banner3.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner3.jpg
+- Banner4.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner4.jpg
+- Banner5.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner5.jpg
+- Banner6.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner6.jpg
+- Banner7.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner7.jpg
+- Banner8.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner8.jpg
+- Banner9.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/UBS Bank/Assets/Banner9.jpg
+
+## COLOUR SWATCHES

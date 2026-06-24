@@ -88,6 +88,19 @@ def _mime_for(uri: str) -> str:
     }.get(ext, "image/jpeg")
 
 
+def _part_for_uri(path_or_uri: str) -> "types.Part | None":
+    """GCS URIs use Part.from_uri; local paths fall back to Part.from_bytes."""
+    if not path_or_uri:
+        return None
+    mime = _mime_for(path_or_uri)
+    if path_or_uri.startswith("gs://"):
+        return types.Part.from_uri(file_uri=path_or_uri, mime_type=mime)
+    data = _load_bytes(path_or_uri)
+    if data is None:
+        return None
+    return types.Part.from_bytes(data=data, mime_type=mime)
+
+
 def _extract_text(node_input) -> str:
     if node_input is None:
         return ""
@@ -191,6 +204,8 @@ async def p2_generate_image(
     p2_product_uris: str = "",
     p2_asset_uris: str = "",
     p2_logo_uri: str = "",
+    p2_brand: str = "",
+    p2_brand_guidelines: str = "",
 ) -> Event:
     """
     Generates all channel images in a single gemini-3-pro-image API call.
@@ -212,15 +227,46 @@ async def p2_generate_image(
     products: list[str] = json.loads(p2_product_uris) if p2_product_uris else []
     assets: list[str] = json.loads(p2_asset_uris) if p2_asset_uris else []
 
+    # Extract brand color codes from guidelines so palette is dynamic per brand.
+    brand_color_block = ""
+    if p2_brand_guidelines and p2_brand:
+        try:
+            from app.nodes import _parse_brand_locks
+            locks = _parse_brand_locks(p2_brand, p2_brand_guidelines)
+            color_lines: list[str] = []
+            for field, label in [("primary_colour", "primary"), ("accent_colour", "accent"), ("secondary_colour", "secondary")]:
+                val = locks.get(field)
+                if isinstance(val, str) and val.startswith("#"):
+                    color_lines.append(f"  {label}: {val}")
+            colors_section = locks.get("colors", {})
+            if isinstance(colors_section, dict):
+                for section_name, section in colors_section.items():
+                    if isinstance(section, dict):
+                        for name, val in section.items():
+                            if isinstance(val, str) and val.startswith("#"):
+                                color_lines.append(f"  {section_name}/{name}: {val}")
+                    elif isinstance(section, str) and section.startswith("#"):
+                        color_lines.append(f"  {section_name}: {section}")
+            if color_lines:
+                brand_color_block = (
+                    "BRAND COLOR PALETTE — use these exact hex codes for all flat panels, "
+                    "graphic elements, backgrounds, and color blocks:\n"
+                    + "\n".join(color_lines)
+                    + "\n\n"
+                )
+        except Exception as exc:
+            logger.warning("p2_brand_locks_failed", error=str(exc))
+
     multi_image_prompt = (
         "CRITICAL: Do NOT render ANY text, words, letters, numbers, logos, or typography "
         "anywhere in any of the images. Purely photographic — text will be added in post-production.\n\n"
-        f"{p2_image_prompt}\n\n"
+        + brand_color_block
+        + f"{p2_image_prompt}\n\n"
         "Generate exactly 4 images for the following channel formats. "
         "Output each image in sequence - do not skip any:\n\n"
         "IMAGE 1 - KEY VISUAL (16:9 aspect ratio): "
         "The hero campaign image. Full creative freedom. Product is the visual anchor. "
-        "Brand colours: green #008641 and yellow #FFDE00 as flat panels.\n\n"
+        "Use the brand colours from the palette above as flat panels.\n\n"
         "IMAGE 2 - INSTAGRAM POST (1:1 aspect ratio): "
         "Recompose into a tight square. Product dominates centre. "
         "Bold graphic energy, no landscape negative space. Same brand colours.\n\n"
@@ -232,43 +278,64 @@ async def p2_generate_image(
         "single flat colour background. Must read clearly at 320px wide. Same brand colours."
     )
 
-    contents: list = [multi_image_prompt]
+    contents: list = []
 
-    # Logo - hard brand constraint across all images
-    if p2_logo_uri:
-        logo_data = _load_bytes(p2_logo_uri)
-        if logo_data:
-            contents.append(
-                "Brand logo - reproduce this logo exactly in all 4 generated images, "
-                "placed naturally without distortion."
-            )
-            contents.append(
-                types.Part.from_bytes(data=logo_data, mime_type=_mime_for(p2_logo_uri))
-            )
-
-    # Reference ads - style and mood reference
+    # ── 1. Brand style reference images — earliest parts = strongest influence ──
     for uri in assets:
-        data = _load_bytes(uri)
-        if data:
+        part = _part_for_uri(uri)
+        if part:
             contents.append(
-                "Reference ad - use for tonal and visual inspiration only; "
-                "generate original images."
+                "BRAND VISUAL STYLE REFERENCE: This image shows the brand's established "
+                "visual language — color palette, typographic layout, compositional style, "
+                "mood, and graphic treatment. All 4 generated images MUST align with this "
+                "visual identity in every detail."
             )
-            contents.append(types.Part.from_bytes(data=data, mime_type=_mime_for(uri)))
+            contents.append(part)
 
-    # Product images - the subject to feature
-    for uri in products:
-        data = _load_bytes(uri)
-        if data:
+    # ── 2. Brand colour swatches — palette lock ──────────────────────────────────
+    if p2_brand:
+        try:
+            from app.brand_assets import get_asset_loader as _get_loader
+            colour_paths = _get_loader().list_colours(p2_brand)[:3]
+            for cp in colour_paths:
+                part = _part_for_uri(cp)
+                if part:
+                    contents.append(
+                        "BRAND COLOR PALETTE REFERENCE: The following swatch shows the official "
+                        "brand colors. Use ONLY these colors for all flat panels, graphic "
+                        "elements, backgrounds, and color blocks — no off-brand tones."
+                    )
+                    contents.append(part)
+                    logger.info("p2_colour_swatch_included", uri=cp)
+        except Exception as exc:
+            logger.warning("p2_colour_swatches_failed", error=str(exc))
+
+    # ── 3. Brand logo — identity lock ──────────────────────────────────────────
+    if p2_logo_uri:
+        part = _part_for_uri(p2_logo_uri)
+        if part:
             contents.append(
-                "Product image - feature this product prominently in all images."
+                "BRAND LOGO: This is the official brand logo. "
+                "Reproduce it exactly in all 4 generated images without distortion."
             )
-            contents.append(types.Part.from_bytes(data=data, mime_type=_mime_for(uri)))
+            contents.append(part)
+
+    # ── 4. Product images — subject reference ───────────────────────────────────
+    for uri in products:
+        part = _part_for_uri(uri)
+        if part:
+            contents.append(
+                "PRODUCT REFERENCE: This is the exact product to feature in all images. "
+                "Match its shape, packaging, colors, and materials precisely."
+            )
+            contents.append(part)
+
+    # ── 5. Text prompt — always last ────────────────────────────────────────────
+    contents.append(multi_image_prompt)
 
     try:
         from google import genai as _genai_img
         img_client = _genai_img.Client(vertexai=True, project=settings.gcp_project, location=settings.gcp_region)
-        contents.append(p2_image_prompt)
         response = img_client.models.generate_content(
             model=settings.gemini_model_image,
             contents=contents,

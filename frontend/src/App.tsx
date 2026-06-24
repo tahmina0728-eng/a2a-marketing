@@ -7,9 +7,9 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: string |
   componentDidCatch(e: Error, info: ErrorInfo) { console.error("CampaignOS render error:", e, info); }
   render() {
     if (this.state.error) return (
-      <div style={{ padding: 48, fontFamily: "Inter,sans-serif", color: "#1a2332" }}>
-        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: "#dc2626" }}>⚠ Render Error</div>
-        <pre style={{ fontSize: 12, background: "#f8fafc", padding: 16, borderRadius: 8, overflowX: "auto" as const }}>{this.state.error}</pre>
+      <div style={{ padding: 48, fontFamily: "Inter,sans-serif", color: "#f1f5f9", background: "#07070f", minHeight: "100vh" }}>
+        <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 8, color: "#f87171" }}>⚠ Render Error</div>
+        <pre style={{ fontSize: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", padding: 16, borderRadius: 8, overflowX: "auto" as const, color: "#94a3b8" }}>{this.state.error}</pre>
         <button onClick={() => this.setState({ error: null })} style={{ marginTop: 16, padding: "8px 20px",
           borderRadius: 8, border: "none", background: "#0055A4", color: "white", cursor: "pointer" }}>
           Dismiss
@@ -188,6 +188,7 @@ const BUDGETS = [
 interface WizardData {
   campaignName: string;
   brand: string;
+  mode: "new" | "adapt";
   goal: GoalId | "";
   goalCustom: string;
   product: string;
@@ -203,6 +204,8 @@ interface WizardData {
   kpis: string[];
   budget: string;
   budgetCustom: string;
+  uploadedAssets: string[];
+  uploadedFileNames: string[];
 }
 
 // ── A2A orb gradient — matches the brand logo PNG ─────────────
@@ -211,6 +214,14 @@ const ORB_BG = [
   "radial-gradient(circle at 71% 26%, rgba(255,255,255,0.88) 0%, rgba(255,255,255,0) 42%)",
   "radial-gradient(circle at 36% 54%, #f028cc 0%, #cc3cf2 26%, #8840e0 52%, #b898f8 80%, #ddd6fe 100%)",
 ].join(", ");
+
+// Veo 3 reels used as ambient background videos
+const BG_REELS = [
+  "https://storage.googleapis.com/dauntless-karma-497108-b0-campaignos/outputs/campaign-sunglow-a8a5c2/reel.mp4/15941180765683294342/sample_0.mp4",
+  "https://storage.googleapis.com/dauntless-karma-497108-b0-campaignos/outputs/campaign-rnorr-b4e481/reel.mp4/16722905052776691635/sample_0.mp4",
+  "https://storage.googleapis.com/dauntless-karma-497108-b0-campaignos/outputs/campaign-glenfiddich-test-int-48c706/reel.mp4/6906882890593314376/sample_0.mp4",
+  "https://storage.googleapis.com/dauntless-karma-497108-b0-campaignos/outputs/campaign-christmas-sunglow-7244cf/reel.mp4/8236215733023162591/sample_0.mp4",
+];
 
 
 // ── Harness pipeline agents (for loading display) ────────────
@@ -234,6 +245,7 @@ function BriefForm({ onFullCampaign }: {
   const [d, setD] = useState<WizardData>({
     campaignName: "",
     brand: "Rnorr",
+    mode: "new",
     goal: "", goalCustom: "",
     product: "", productCustom: "",
     fanTruth: "", fanTruthCustom: "",
@@ -242,9 +254,11 @@ function BriefForm({ onFullCampaign }: {
     channels: ["Instagram", "TikTok"],
     kpis: ["reach", "ctr", "roas"],
     budget: "£500,000", budgetCustom: "",
+    uploadedAssets: [],
+    uploadedFileNames: [],
   });
 
-  const TOTAL_STEPS = 7;
+  const TOTAL_STEPS = d.mode === "adapt" ? 9 : 8;
 
   function toggle<T>(arr: T[], val: T): T[] {
     return arr.includes(val) ? arr.filter((v) => v !== val) : [...arr, val];
@@ -253,13 +267,15 @@ function BriefForm({ onFullCampaign }: {
   function canProceed(): boolean {
     switch (step) {
       case 0: return !!d.brand;
-      case 1: return !!d.goal && (d.goal !== "custom" || !!d.goalCustom.trim());
-      case 2: return !!d.product || !!d.productCustom.trim();
-      case 3: return !!d.fanTruth || !!d.fanTruthCustom.trim();
-      case 4: return true;
-      case 5: return d.channels.length > 0 && d.kpis.length > 0;
-      case 6: return d.budget !== "" || !!d.budgetCustom.trim();
-      case 7: return d.campaignName.trim().length >= 3;
+      case 1: return !!d.mode;
+      case 2: return !!d.goal && (d.goal !== "custom" || !!d.goalCustom.trim());
+      case 3: return !!d.product || !!d.productCustom.trim();
+      case 4: return !!d.fanTruth || !!d.fanTruthCustom.trim();
+      case 5: return true;
+      case 6: return d.channels.length > 0 && d.kpis.length > 0;
+      case 7: return d.budget !== "" || !!d.budgetCustom.trim();
+      case 8: return d.campaignName.trim().length >= 3;
+      case 9: return true;
       default: return true;
     }
   }
@@ -289,6 +305,8 @@ function BriefForm({ onFullCampaign }: {
         interests: d.audienceInterests.join(", ") || undefined,
       },
       tone: "Warm & friendly",
+      mode: d.mode,
+      uploaded_assets: d.uploadedAssets,
     };
     onFullCampaign(brief);
   }
@@ -298,7 +316,7 @@ function BriefForm({ onFullCampaign }: {
       case 0:
         return (
           <>
-            <div className="wizard-step-label">Step 1 of 7</div>
+            <div className="wizard-step-label">Step 1 of {TOTAL_STEPS}</div>
             <h2 className="wizard-heading">Select your <span className="gradient-text">brand</span></h2>
             <p className="wizard-subheading">Which brand is this campaign for?</p>
             <div className="goal-grid" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
@@ -319,7 +337,38 @@ function BriefForm({ onFullCampaign }: {
       case 1:
         return (
           <>
-            <div className="wizard-step-label">Step 2 of 7</div>
+            <div className="wizard-step-label">Step 2 of {TOTAL_STEPS}</div>
+            <h2 className="wizard-heading">What type of <span className="gradient-text">campaign?</span></h2>
+            <p className="wizard-subheading">Choose how you want to work with the AI agents</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 8 }}>
+              <div
+                className={`goal-tile${d.mode === "new" ? " selected" : ""}`}
+                onClick={() => setD((p) => ({ ...p, mode: "new" }))}
+                style={{ padding: "28px 20px", display: "flex", flexDirection: "column" as const, gap: 12, cursor: "pointer" }}>
+                <span style={{ fontSize: 36 }}>✨</span>
+                <div className="goal-tile-label" style={{ fontSize: 16 }}>New Campaign Creation</div>
+                <div className="goal-tile-desc" style={{ lineHeight: 1.5 }}>
+                  Build a full campaign from scratch — brief, strategy, key visuals, copy, and channel adaptation generated by AI.
+                </div>
+              </div>
+              <div
+                className={`goal-tile${d.mode === "adapt" ? " selected" : ""}`}
+                onClick={() => setD((p) => ({ ...p, mode: "adapt" }))}
+                style={{ padding: "28px 20px", display: "flex", flexDirection: "column" as const, gap: 12, cursor: "pointer" }}>
+                <span style={{ fontSize: 36 }}>🔄</span>
+                <div className="goal-tile-label" style={{ fontSize: 16 }}>Adapt Existing Campaign</div>
+                <div className="goal-tile-desc" style={{ lineHeight: 1.5 }}>
+                  Upload existing assets and let the AI adapt them for new channels, markets, or moments — faster and brand-safe.
+                </div>
+              </div>
+            </div>
+          </>
+        );
+
+      case 2:
+        return (
+          <>
+            <div className="wizard-step-label">Step 3 of {TOTAL_STEPS}</div>
             <h2 className="wizard-heading">What's your <span className="gradient-text">campaign goal?</span></h2>
             <p className="wizard-subheading">Choose the primary objective for this campaign</p>
             <div className="goal-grid">
@@ -341,10 +390,10 @@ function BriefForm({ onFullCampaign }: {
           </>
         );
 
-      case 2:
+      case 3:
         return (
           <>
-            <div className="wizard-step-label">Step 3 of 7</div>
+            <div className="wizard-step-label">Step 4 of {TOTAL_STEPS}</div>
             <h2 className="wizard-heading">What are we <span className="gradient-text">promoting?</span></h2>
             <p className="wizard-subheading">Select a product or enter your own</p>
             <div className="chip-group">
@@ -367,10 +416,10 @@ function BriefForm({ onFullCampaign }: {
           </>
         );
 
-      case 3:
+      case 4:
         return (
           <>
-            <div className="wizard-step-label">Step 4 of 7</div>
+            <div className="wizard-step-label">Step 5 of {TOTAL_STEPS}</div>
             <h2 className="wizard-heading">What <span className="gradient-text">fan truth</span> drives this?</h2>
             <p className="wizard-subheading">Pick a {d.brand} fan truth or write your own</p>
             <div className="truth-stack">
@@ -394,10 +443,10 @@ function BriefForm({ onFullCampaign }: {
           </>
         );
 
-      case 4:
+      case 5:
         return (
           <>
-            <div className="wizard-step-label">Step 5 of 7</div>
+            <div className="wizard-step-label">Step 6 of {TOTAL_STEPS}</div>
             <h2 className="wizard-heading">Who are you <span className="gradient-text">targeting?</span></h2>
             <p className="wizard-subheading">Select all that apply</p>
             <div className="section-label">Age groups{ALCOHOL_BRANDS.includes(d.brand) ? " · 18+ only (UK alcohol law)" : ""}</div>
@@ -439,10 +488,10 @@ function BriefForm({ onFullCampaign }: {
           </>
         );
 
-      case 5:
+      case 6:
         return (
           <>
-            <div className="wizard-step-label">Step 6 of 7</div>
+            <div className="wizard-step-label">Step 7 of {TOTAL_STEPS}</div>
             <h2 className="wizard-heading">Channels <span className="gradient-text">&amp; KPIs</span></h2>
             <p className="wizard-subheading">Where will the campaign run and how will we measure success?</p>
             <div className="section-label">Channels</div>
@@ -476,10 +525,10 @@ function BriefForm({ onFullCampaign }: {
           </>
         );
 
-      case 6:
+      case 7:
         return (
           <>
-            <div className="wizard-step-label">Step 7 of 7</div>
+            <div className="wizard-step-label">Step 8 of {TOTAL_STEPS}</div>
             <h2 className="wizard-heading">What's your <span className="gradient-text">budget?</span></h2>
             <p className="wizard-subheading">Total campaign spend</p>
             <div className="budget-grid">
@@ -499,7 +548,7 @@ function BriefForm({ onFullCampaign }: {
           </>
         );
 
-      case 7: {
+      case 8: {
         const reviewGoal    = d.goal === "custom" ? d.goalCustom : GOALS.find((g) => g.id === d.goal)?.label ?? "";
         const reviewProduct = d.product === "custom" ? d.productCustom : d.product;
         const reviewTruth   = d.fanTruth === "custom" ? d.fanTruthCustom : d.fanTruth;
@@ -510,7 +559,11 @@ function BriefForm({ onFullCampaign }: {
           <>
             <div className="wizard-step-label">Review</div>
             <h2 className="wizard-heading">Ready to <span className="gradient-text">launch?</span></h2>
-            <p className="wizard-subheading">Name your campaign then send it to the agents</p>
+            <p className="wizard-subheading">
+              {d.mode === "adapt"
+                ? "Name your campaign — you'll upload existing assets on the next step"
+                : "Name your campaign then send it to the agents"}
+            </p>
             <input className="dark-input" placeholder="Campaign name (e.g. Summer Awareness 2026)"
               value={d.campaignName}
               onChange={(e) => setD((p) => ({ ...p, campaignName: e.target.value }))}
@@ -521,6 +574,10 @@ function BriefForm({ onFullCampaign }: {
               </p>
             )}
             <div className="review-grid">
+              <div className="review-item">
+                <div className="review-item-label">Mode</div>
+                <div className="review-item-value">{d.mode === "adapt" ? "Adapt Existing" : "New Campaign"}</div>
+              </div>
               <div className="review-item review-item-full">
                 <div className="review-item-label">Goal</div>
                 <div className="review-item-value">{reviewGoal}</div>
@@ -560,34 +617,136 @@ function BriefForm({ onFullCampaign }: {
         );
       }
 
+      case 9:
+        return (
+          <>
+            <div className="wizard-step-label">Step 9 of 9 · Adapt Mode</div>
+            <h2 className="wizard-heading">Upload your <span className="gradient-text">existing assets</span></h2>
+            <p className="wizard-subheading">Add images, videos, or copy files from your current campaign</p>
+            <div
+              style={{
+                border: "2px dashed rgba(124,58,237,0.45)", borderRadius: 16, padding: "40px 24px",
+                textAlign: "center" as const, cursor: "pointer", background: "rgba(124,58,237,0.06)",
+                marginBottom: 16,
+              }}
+              onClick={() => document.getElementById("asset-upload-input")?.click()}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => {
+                e.preventDefault();
+                const files = Array.from(e.dataTransfer.files);
+                const names = files.map(f => f.name);
+                const urls  = files.map(f => URL.createObjectURL(f));
+                setD((p) => ({
+                  ...p,
+                  uploadedFileNames: [...p.uploadedFileNames, ...names],
+                  uploadedAssets:    [...p.uploadedAssets,    ...urls],
+                }));
+              }}>
+              <div style={{ fontSize: 40, marginBottom: 8 }}>📁</div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#7c3aed" }}>
+                Click or drag files here
+              </div>
+              <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>
+                Images, videos, PDFs, copy docs — any format
+              </div>
+              <input id="asset-upload-input" type="file" multiple style={{ display: "none" }}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  const names = files.map(f => f.name);
+                  const urls  = files.map(f => URL.createObjectURL(f));
+                  setD((p) => ({
+                    ...p,
+                    uploadedFileNames: [...p.uploadedFileNames, ...names],
+                    uploadedAssets:    [...p.uploadedAssets,    ...urls],
+                  }));
+                }} />
+            </div>
+            {d.uploadedFileNames.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.08em",
+                  textTransform: "uppercase" as const, marginBottom: 2 }}>
+                  {d.uploadedFileNames.length} file{d.uploadedFileNames.length > 1 ? "s" : ""} ready
+                </div>
+                {d.uploadedFileNames.map((name, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "8px 12px", borderRadius: 8, background: "#f3f0ff", border: "1px solid #ddd6fe" }}>
+                    <span style={{ fontSize: 12, color: "#3730a3", fontWeight: 500 }}>📄 {name}</span>
+                    <button
+                      onClick={() => setD((p) => ({
+                        ...p,
+                        uploadedFileNames: p.uploadedFileNames.filter((_, j) => j !== i),
+                        uploadedAssets:    p.uploadedAssets.filter((_, j) => j !== i),
+                      }))}
+                      style={{ background: "none", border: "none", cursor: "pointer",
+                        color: "#9ca3af", fontSize: 14, padding: "0 4px" }}>
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        );
+
       default: return null;
     }
   };
 
+  const [bgReelIdx, setBgReelIdx] = useState(0);
+
   return (
-    <div style={{ flex: 1, overflowY: "auto" as const }}>
-    <div style={{ minHeight: "100%", display: "flex", alignItems: "center",
-      justifyContent: "center", padding: "48px" }}>
-      <div style={{ maxWidth: 640, width: "100%" }}>
-        <div key={step} className="step-content">{stepContent()}</div>
-        <div className="wizard-nav">
-          {step > 0
-            ? <button className="wizard-back-btn" onClick={() => setStep((s) => s - 1)}>← Back</button>
-            : <div />}
-          {step < TOTAL_STEPS
-            ? <button disabled={!canProceed()} onClick={() => setStep((s) => s + 1)} style={{
-                width: 48, height: 48, borderRadius: "50%", border: "none", cursor: canProceed() ? "pointer" : "not-allowed",
-                background: ORB_BG,
-                color: "white", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
-                boxShadow: canProceed() ? "0 4px 16px rgba(124,58,237,0.45)" : "none",
-                opacity: canProceed() ? 1 : 0.35, transition: "opacity 0.15s, box-shadow 0.15s",
-              }}>→</button>
-            : <button className="wizard-launch-btn" disabled={!canProceed()} onClick={handleFullLaunch}>
-                🚀 Generate AI Campaign
-              </button>}
+    <div style={{ flex: 1, overflowY: "auto" as const, position: "relative" as const }}>
+
+      {/* Background video — all wizard steps until pipeline starts */}
+      <>
+        <video
+          key={BG_REELS[bgReelIdx]}
+          autoPlay muted playsInline
+          onEnded={() => setBgReelIdx(i => (i + 1) % BG_REELS.length)}
+          style={{
+            position: "fixed" as const, inset: 0,
+            width: "100%", height: "100%",
+            objectFit: "cover" as const,
+            zIndex: 0,
+            filter: "brightness(0.45) saturate(1.1)",
+            pointerEvents: "none" as const,
+          }}
+        >
+          <source src={BG_REELS[bgReelIdx]} type="video/mp4" />
+        </video>
+        <div style={{
+          position: "fixed" as const, inset: 0, zIndex: 1, pointerEvents: "none" as const,
+          background: "linear-gradient(135deg, rgba(7,7,15,0.80) 0%, rgba(13,9,32,0.65) 50%, rgba(7,7,15,0.85) 100%)",
+        }} />
+        <div style={{
+          position: "fixed" as const, inset: 0, zIndex: 1, pointerEvents: "none" as const,
+          background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(124,58,237,0.10) 0%, transparent 70%)",
+        }} />
+      </>
+
+      <div style={{ minHeight: "100%", display: "flex", alignItems: "center",
+        justifyContent: "center", padding: "48px",
+        position: "relative" as const, zIndex: 2 }}>
+        <div style={{ maxWidth: 640, width: "100%" }}>
+          <div key={step} className="step-content">{stepContent()}</div>
+          <div className="wizard-nav">
+            {step > 0
+              ? <button className="wizard-back-btn" onClick={() => setStep((s) => s - 1)}>← Back</button>
+              : <div />}
+            {step < TOTAL_STEPS
+              ? <button disabled={!canProceed()} onClick={() => setStep((s) => s + 1)} style={{
+                  width: 48, height: 48, borderRadius: "50%", border: "none", cursor: canProceed() ? "pointer" : "not-allowed",
+                  background: ORB_BG,
+                  color: "white", fontSize: 20, display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: canProceed() ? "0 4px 16px rgba(124,58,237,0.45)" : "none",
+                  opacity: canProceed() ? 1 : 0.35, transition: "opacity 0.15s, box-shadow 0.15s",
+                }}>→</button>
+              : <button className="wizard-launch-btn" disabled={!canProceed()} onClick={handleFullLaunch}>
+                  🚀 Generate AI Campaign
+                </button>}
+          </div>
         </div>
       </div>
-    </div>
     </div>
   );
 }
@@ -1350,7 +1509,7 @@ function RunningView({
     <div style={{ display: "flex", height: compact ? "100%" : "100vh", overflow: "hidden", fontFamily: "Inter,sans-serif" }}>
 
       {/* ── LEFT: step sidebar — hidden in compact/3-panel mode ── */}
-      <div style={{ width: 340, flexShrink: 0, background: "#fff", borderRight: "1px solid #e2e8f0",
+      <div style={{ width: 340, flexShrink: 0, background: "rgba(8,8,20,0.98)", borderRight: "1px solid rgba(255,255,255,0.07)",
         display: compact ? "none" : "flex", flexDirection: "column", padding: "28px 20px", overflowY: "auto" as const }}>
 
         {/* Logo */}
@@ -1358,20 +1517,21 @@ function RunningView({
 
         {/* Progress bar */}
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", letterSpacing: "0.09em",
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#475569", letterSpacing: "0.09em",
             textTransform: "uppercase" as const, marginBottom: 6 }}>Agents Activating</div>
-          <div style={{ height: 6, background: "#e2e8f0", borderRadius: 99, overflow: "hidden" }}>
+          <div style={{ height: 5, background: "rgba(255,255,255,0.07)", borderRadius: 99, overflow: "hidden" }}>
             <div style={{ height: "100%", borderRadius: 99, transition: "width 0.8s ease",
               background: `linear-gradient(90deg, ${v.g1}, ${v.g2})`,
+              boxShadow: `0 0 10px ${v.g1}80`,
               width: `${Math.max(4, (doneCount / HARNESS_STAGES.length) * 100)}%` }} />
           </div>
-          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 5 }}>
+          <div style={{ fontSize: 11, color: "#475569", marginTop: 5 }}>
             {doneCount} of {HARNESS_STAGES.length} complete · 2–5 min
           </div>
         </div>
 
         {/* Step list */}
-        <div style={{ display: "flex", flexDirection: "column" as const, gap: 6, flex: 1 }}>
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 5, flex: 1 }}>
           {HARNESS_STAGES.map((s, i) => {
             const st    = agentStatus[s.key];
             const isOn  = s.key === activeKey;
@@ -1380,9 +1540,9 @@ function RunningView({
             return (
               <div key={s.key} style={{
                 display: "flex", alignItems: "center", gap: 12,
-                padding: "11px 14px", borderRadius: 12,
-                background: isOn ? `${vis.g1}10` : isDone ? "#f0fdf4" : "#fafafa",
-                border: `1.5px solid ${isOn ? vis.g1 + "35" : isDone ? "#bbf7d0" : "#f1f5f9"}`,
+                padding: "10px 13px", borderRadius: 12,
+                background: isOn ? `${vis.g1}22` : isDone ? "rgba(16,185,129,0.07)" : "rgba(255,255,255,0.03)",
+                border: `1.5px solid ${isOn ? vis.g1 + "55" : isDone ? "rgba(16,185,129,0.22)" : "rgba(255,255,255,0.07)"}`,
                 transition: "all 0.35s ease",
               }}>
                 {/* Circle */}
@@ -1390,9 +1550,9 @@ function RunningView({
                   width: 30, height: 30, borderRadius: "50%", flexShrink: 0,
                   display: "flex", alignItems: "center", justifyContent: "center",
                   fontSize: isDone ? 13 : 11, fontWeight: 700,
-                  background: isOn ? vis.g1 : isDone ? "#10b981" : "#e2e8f0",
-                  color: isOn || isDone ? "#fff" : "#94a3b8",
-                  boxShadow: isOn ? `0 0 0 4px ${vis.g1}20` : "none",
+                  background: isOn ? vis.g1 : isDone ? "#10b981" : "rgba(255,255,255,0.08)",
+                  color: isOn || isDone ? "#fff" : "#475569",
+                  boxShadow: isOn ? `0 0 0 4px ${vis.g1}28` : "none",
                   animation: isOn ? "step-ring 1.6s ease-in-out infinite" : "none",
                 }}>
                   {isDone ? "✓" : isOn ? "⋯" : i + 1}
@@ -1400,11 +1560,11 @@ function RunningView({
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 700,
-                    color: isOn ? vis.g1 : isDone ? "#065f46" : "#94a3b8" }}>
+                    color: isOn ? vis.g1 : isDone ? "#34d399" : "#64748b" }}>
                     {s.icon} {s.label}
                   </div>
                   <div style={{ fontSize: 11, marginTop: 1,
-                    color: isOn ? vis.g1 + "cc" : isDone ? "#6ee7b7" : "#cbd5e1" }}>
+                    color: isOn ? vis.g1 + "cc" : isDone ? "#6ee7b780" : "#374151" }}>
                     {isOn ? "Running now" : isDone ? "Complete ✓" : "Waiting"}
                   </div>
                 </div>
@@ -1416,23 +1576,23 @@ function RunningView({
 
       {/* ── RIGHT: spotlight panel ────────────────────────────── */}
       <div style={{ flex: 1, position: "relative" as const, overflow: "auto",
-        background: `linear-gradient(145deg, ${v.g1}12 0%, ${v.g2}08 50%, #f4f6f9 100%)`,
+        background: `linear-gradient(145deg, ${v.g1}22 0%, ${v.g2}12 50%, #070712 100%)`,
         display: "flex", alignItems: "flex-start", justifyContent: "center",
         paddingTop: 48,
         transition: "background 1s ease" }}>
 
         {/* Animated blobs */}
         <div className="blob blob-1" style={{
-          background: `radial-gradient(circle, ${v.blob1}35 0%, transparent 68%)`,
+          background: `radial-gradient(circle, ${v.blob1}42 0%, transparent 68%)`,
         }} />
         <div className="blob blob-2" style={{
-          background: `radial-gradient(circle, ${v.blob2}28 0%, transparent 68%)`,
+          background: `radial-gradient(circle, ${v.blob2}32 0%, transparent 68%)`,
         }} />
 
         {/* Grid overlay */}
-        <div style={{ position: "absolute" as const, inset: 0, opacity: 0.04,
-          backgroundImage: "linear-gradient(#0055A4 1px, transparent 1px), linear-gradient(90deg, #0055A4 1px, transparent 1px)",
-          backgroundSize: "40px 40px" }} />
+        <div style={{ position: "absolute" as const, inset: 0, opacity: 1,
+          backgroundImage: "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
+          backgroundSize: "44px 44px" }} />
 
         {/* Spotlight card — re-animates on agent/mode change */}
         {displayMode !== "idle" ? (
@@ -1459,7 +1619,7 @@ function RunningView({
                   color: v.g1, textTransform: "uppercase" as const, marginBottom: 8 }}>
                   {stage?.label ?? "Agent"} · Running
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 600, color: "#374151", letterSpacing: "-0.01em" }}>
+                <div style={{ fontSize: 20, fontWeight: 600, color: "#94a3b8", letterSpacing: "-0.01em" }}>
                   Generating ...
                 </div>
               </div>
@@ -1541,7 +1701,7 @@ function RunningView({
                 {/* Pulsing rings */}
                 {[60, 95, 140].map((r, ri) => (
                   <circle key={ri} cx="200" cy="200" r={r} fill="none"
-                    stroke="rgba(0,85,164,0.12)" strokeWidth="1"
+                    stroke="rgba(124,58,237,0.18)" strokeWidth="1"
                     style={{ animation: `ring-out ${2.5 + ri * 0.8}s ${ri * 0.4}s ease-out infinite` }} />
                 ))}
                 {/* Connecting lines from center to each agent */}
@@ -1607,9 +1767,9 @@ function RunningView({
                       transform: "translate(-50%,-50%)",
                       fontSize: 9, fontWeight: 700, color: vis.g1,
                       whiteSpace: "nowrap" as const,
-                      background: "rgba(255,255,255,0.9)",
+                      background: "rgba(10,8,28,0.88)",
                       padding: "2px 6px", borderRadius: 6,
-                      border: `1px solid ${vis.g1}25`,
+                      border: `1px solid ${vis.g1}35`,
                     }}>{s.label}</div>
                   </div>
                 );
@@ -1618,16 +1778,16 @@ function RunningView({
 
             {/* Title */}
             <div style={{ textAlign: "center" as const }}>
-              <div style={{ fontSize: 22, fontWeight: 800, color: "#0f172a",
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#f1f5f9",
                 letterSpacing: "-0.02em", marginBottom: 8 }}>
                 Agents Activating...
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
                 {[0,1,2].map(d => (
-                  <div key={d} style={{ width: 6, height: 6, borderRadius: "50%", background: "#0055A4",
-                    opacity: 0.6, animation: `wave-dot 1.4s ${d * 0.2}s ease-in-out infinite` }} />
+                  <div key={d} style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c3aed",
+                    opacity: 0.7, animation: `wave-dot 1.4s ${d * 0.2}s ease-in-out infinite` }} />
                 ))}
-                <span style={{ fontSize: 13, color: "#64748b", marginLeft: 4 }}>
+                <span style={{ fontSize: 13, color: "#475569", marginLeft: 4 }}>
                   {HARNESS_STAGES.length} agents connecting
                 </span>
               </div>
@@ -1789,34 +1949,34 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
   const publishedCount = results ? Object.values(results).filter((r: any) => r.status !== "skipped" && r.status !== "error").length : 0;
 
   return (
-    <div style={{ borderRadius: 20, overflow: "hidden", border: "1px solid #ede9fe",
-      boxShadow: "0 4px 24px rgba(124,58,237,0.10)" }}>
-      {/* Purple/white header */}
-      <div style={{ background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 60%, #ede9fe 100%)",
+    <div style={{ borderRadius: 20, overflow: "hidden", border: "1px solid rgba(124,58,237,0.22)",
+      boxShadow: "0 4px 32px rgba(124,58,237,0.15)", backdropFilter: "blur(8px)" }}>
+      {/* Dark header */}
+      <div style={{ background: "linear-gradient(135deg, #0d0920 0%, #130a2e 60%, #0d0920 100%)",
         padding: "32px 36px 28px", position: "relative", overflow: "hidden",
-        borderBottom: "1px solid #ede9fe" }}>
+        borderBottom: "1px solid rgba(124,58,237,0.18)" }}>
         {/* Decorative orb shapes */}
         <div style={{ position: "absolute", top: -50, right: -50, width: 200, height: 200,
-          borderRadius: "50%", background: "rgba(167,139,250,0.12)", pointerEvents: "none" as const }} />
+          borderRadius: "50%", background: "rgba(124,58,237,0.18)", pointerEvents: "none" as const }} />
         <div style={{ position: "absolute", bottom: -30, left: -30, width: 140, height: 140,
-          borderRadius: "50%", background: "rgba(196,132,252,0.08)", pointerEvents: "none" as const }} />
+          borderRadius: "50%", background: "rgba(99,102,241,0.12)", pointerEvents: "none" as const }} />
 
         <div style={{ position: "relative", zIndex: 1 }}>
-          <div style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", letterSpacing: "0.18em",
+          <div style={{ fontSize: 10, fontWeight: 800, color: "#a78bfa", letterSpacing: "0.18em",
             textTransform: "uppercase" as const, marginBottom: 8 }}>
             Final Step
           </div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: "#3b0764", lineHeight: 1.2, marginBottom: 6 }}>
+          <div style={{ fontSize: 26, fontWeight: 900, color: "#f1f5f9", lineHeight: 1.2, marginBottom: 6 }}>
             {published ? `✅ Live on ${publishedCount} channel${publishedCount !== 1 ? "s" : ""}` : "🚀 Launch Campaign"}
           </div>
-          <div style={{ fontSize: 13, color: "#6b7280", marginBottom: published ? 8 : 24 }}>
+          <div style={{ fontSize: 13, color: "#64748b", marginBottom: published ? 8 : 24 }}>
             {published ? "Your campaign is now live. Track performance in your dashboards." : `Select channels to activate — ${displayChannels.length} available`}
           </div>
 
           {/* Re-publish button */}
           {published && (
             <button onClick={() => { setPublished(false); setResults(null); setSelected(new Set()); }}
-              style={{ background: "none", border: "1.5px solid #c4b5fd", color: "#7c3aed",
+              style={{ background: "none", border: "1.5px solid rgba(167,139,250,0.40)", color: "#a78bfa",
                 borderRadius: 99, padding: "6px 16px", fontSize: 12, fontWeight: 700,
                 cursor: "pointer", marginBottom: 16 }}>
               + Publish to more channels
@@ -1834,19 +1994,19 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
                   <div key={ch} onClick={() => toggle(cfg.publishKey)}
                     style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 16px",
                       borderRadius: 12, cursor: "pointer", transition: "all 0.2s",
-                      background: isOn ? "#7c3aed" : "white",
-                      border: `1.5px solid ${isOn ? "#7c3aed" : "#ede9fe"}`,
-                      boxShadow: isOn ? "0 0 0 3px rgba(124,58,237,0.12)" : "0 1px 4px rgba(0,0,0,0.05)" }}>
+                      background: isOn ? "rgba(124,58,237,0.85)" : "rgba(255,255,255,0.04)",
+                      border: `1.5px solid ${isOn ? "#7c3aed" : "rgba(255,255,255,0.10)"}`,
+                      boxShadow: isOn ? "0 0 0 3px rgba(124,58,237,0.20), 0 4px 16px rgba(124,58,237,0.25)" : "none" }}>
                     <span style={{ fontSize: 18 }}>{cfg.icon}</span>
                     <div>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: isOn ? "white" : "#374151" }}>{ch}</div>
-                      <div style={{ fontSize: 9, color: isOn ? "rgba(255,255,255,0.65)" : "#9ca3af" }}>{cfg.desc}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: isOn ? "white" : "#cbd5e1" }}>{ch}</div>
+                      <div style={{ fontSize: 9, color: isOn ? "rgba(255,255,255,0.65)" : "#475569" }}>{cfg.desc}</div>
                     </div>
                     <div style={{ width: 18, height: 18, borderRadius: "50%", marginLeft: 4, flexShrink: 0,
-                      background: isOn ? "rgba(255,255,255,0.25)" : "#f5f3ff",
-                      border: `2px solid ${isOn ? "rgba(255,255,255,0.5)" : "#ddd6fe"}`,
+                      background: isOn ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.06)",
+                      border: `2px solid ${isOn ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.15)"}`,
                       display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 10, color: isOn ? "white" : "#9ca3af", fontWeight: 800 }}>
+                      fontSize: 10, color: isOn ? "white" : "#475569", fontWeight: 800 }}>
                       {isOn ? "✓" : ""}
                     </div>
                   </div>
@@ -1859,31 +2019,31 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
 
       {/* Action bar */}
       {!published && (
-        <div style={{ padding: "16px 36px", background: "white", display: "flex",
-          alignItems: "center", gap: 16, borderTop: "1px solid #f3f4f6" }}>
+        <div style={{ padding: "16px 36px", background: "rgba(8,8,20,0.95)", display: "flex",
+          alignItems: "center", gap: 16, borderTop: "1px solid rgba(255,255,255,0.07)" }}>
           {/* Selected image thumbnail */}
           {selectedImageB64 && (
             <div style={{ flexShrink: 0, position: "relative" as const }}>
               <img src={`data:image/jpeg;base64,${selectedImageB64}`} alt="Selected key visual"
                 style={{ width: 48, height: 48, objectFit: "cover" as const, borderRadius: 8,
-                  border: "2px solid #ede9fe", display: "block" }} />
+                  border: "2px solid rgba(124,58,237,0.35)", display: "block" }} />
               <div style={{ position: "absolute" as const, top: -4, right: -4, width: 15, height: 15,
-                borderRadius: "50%", background: "#7c3aed", border: "2px solid white",
+                borderRadius: "50%", background: "#7c3aed", border: "2px solid #07070f",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 8, color: "white", fontWeight: 800, lineHeight: 1 }}>✓</div>
             </div>
           )}
           {selected.has("email") && (
             <input type="email" placeholder="Recipient email address" value={email} onChange={e => setEmail(e.target.value)}
-              style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: "1.5px solid #ddd6fe",
-                background: "#faf5ff", color: "#374151", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+              style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: "1.5px solid rgba(124,58,237,0.30)",
+                background: "rgba(255,255,255,0.05)", color: "#f1f5f9", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
           )}
           {selected.size === 0 ? (
-            <div style={{ flex: 1, fontSize: 13, color: "#9ca3af", fontStyle: "italic" }}>
+            <div style={{ flex: 1, fontSize: 13, color: "#475569", fontStyle: "italic" }}>
               Select channels above to enable launch
             </div>
           ) : (
-            <div style={{ flex: 1, fontSize: 13, color: "#7c3aed", fontWeight: 500 }}>
+            <div style={{ flex: 1, fontSize: 13, color: "#a78bfa", fontWeight: 500 }}>
               {selected.size} channel{selected.size > 1 ? "s" : ""} selected
             </div>
           )}
@@ -1891,11 +2051,11 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
             style={{ padding: "12px 28px", borderRadius: 12, border: "none",
               cursor: selected.size === 0 ? "not-allowed" : "pointer",
               background: selected.size === 0
-                ? "#f5f3ff"
+                ? "rgba(255,255,255,0.05)"
                 : ORB_BG,
-              color: selected.size === 0 ? "#9ca3af" : "white",
+              color: selected.size === 0 ? "#475569" : "white",
               fontSize: 13, fontWeight: 800, letterSpacing: "0.02em", transition: "all 0.2s",
-              boxShadow: selected.size > 0 ? "0 4px 20px rgba(124,58,237,0.35)" : "none" }}>
+              boxShadow: selected.size > 0 ? "0 4px 20px rgba(124,58,237,0.40)" : "none" }}>
             {loading ? "Launching…" : selected.size === 0 ? "Select Channels" : `🚀 Launch to ${selected.size} Channel${selected.size > 1 ? "s" : ""}`}
           </button>
         </div>
@@ -1904,29 +2064,30 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
       {/* Published results */}
       {/* Persistent landing page URL banner — always visible once created */}
       {landingUrl && (
-        <div style={{ padding: "16px 40px", background: "linear-gradient(90deg,#ecfdf5,#f0fdf4)", borderTop: "1.5px solid #86efac", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div style={{ padding: "16px 40px", background: "rgba(16,185,129,0.08)", borderTop: "1.5px solid rgba(52,211,153,0.25)", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 20 }}>🌐</span>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 800, color: "#065f46", letterSpacing: "0.08em", textTransform: "uppercase" }}>Landing Page Live</div>
-              <div style={{ fontSize: 12, color: "#475569", marginTop: 2, wordBreak: "break-all" }}>{landingUrl}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: "#34d399", letterSpacing: "0.08em", textTransform: "uppercase" }}>Landing Page Live</div>
+              <div style={{ fontSize: 12, color: "#64748b", marginTop: 2, wordBreak: "break-all" }}>{landingUrl}</div>
             </div>
           </div>
           <a href={landingUrl} target="_blank" rel="noreferrer"
-            style={{ background: "#059669", color: "white", padding: "10px 24px", borderRadius: 99, fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", textDecoration: "none" }}>
+            style={{ background: "linear-gradient(135deg,#059669,#047857)", color: "white", padding: "10px 24px", borderRadius: 99, fontWeight: 700, fontSize: 13, whiteSpace: "nowrap", textDecoration: "none" }}>
             Open Website →
           </a>
         </div>
       )}
 
       {published && results && (
-        <div style={{ padding: "24px 40px", background: "#f0fdf4", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
+        <div style={{ padding: "24px 40px", background: "rgba(16,185,129,0.05)", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
           {Object.entries(results).map(([key, r]: [string, any]) => {
             const isDone = r.status !== "skipped" && r.status !== "error";
             return (
-              <div key={key} style={{ padding: "14px 16px", borderRadius: 12, background: isDone ? "white" : "#f8fafc",
-                border: `1.5px solid ${isDone ? "#86efac" : "#e2e8f0"}` }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: isDone ? "#065f46" : "#94a3b8", marginBottom: 4 }}>
+              <div key={key} style={{ padding: "14px 16px", borderRadius: 12,
+                background: isDone ? "rgba(16,185,129,0.10)" : "rgba(255,255,255,0.03)",
+                border: `1.5px solid ${isDone ? "rgba(52,211,153,0.30)" : "rgba(255,255,255,0.07)"}` }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: isDone ? "#34d399" : "#475569", marginBottom: 4 }}>
                   {isDone ? "✅" : "⏭"} {key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}
                 </div>
                 {key === "email" && r.to && <div style={{ fontSize: 10, color: "#64748b" }}>Sent to {r.to}</div>}
@@ -1938,455 +2099,506 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
       )}
 
       {error && (
-        <div style={{ padding: "12px 40px", background: "#fef2f2", fontSize: 12, color: "#991b1b",
-          borderTop: "1px solid #fecaca" }}>{error}</div>
+        <div style={{ padding: "12px 40px", background: "rgba(239,68,68,0.08)", fontSize: 12, color: "#fca5a5",
+          borderTop: "1px solid rgba(239,68,68,0.20)" }}>{error}</div>
       )}
     </div>
   );
 }
 // ── Results view ─────────────────────────────────────────────
+
+// Stage card — defined outside ResultsView so React reconciler sees a stable type
+function StageCard({ step, label, color, children }: {
+  step: number; label: string; color: string; children: React.ReactNode;
+}) {
+  return (
+    <div style={{
+      marginBottom: 24, borderRadius: 20, overflow: "hidden",
+      border: `1px solid ${color}28`,
+      boxShadow: `0 0 48px ${color}0d, 0 8px 40px rgba(0,0,0,0.5)`,
+      background: "rgba(8,8,20,0.90)",
+    }}>
+      <div style={{
+        padding: "13px 22px",
+        background: `linear-gradient(135deg, ${color}20 0%, ${color}07 100%)`,
+        borderBottom: `1px solid ${color}1e`,
+        display: "flex", alignItems: "center", gap: 12,
+      }}>
+        <div style={{
+          width: 26, height: 26, borderRadius: "50%",
+          background: `linear-gradient(135deg, ${color}, ${color}aa)`,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 11, fontWeight: 900, color: "white", flexShrink: 0,
+          boxShadow: `0 2px 10px ${color}55`,
+        }}>{step}</div>
+        <span style={{
+          fontSize: 10, fontWeight: 800, color: color,
+          letterSpacing: "0.18em", textTransform: "uppercase" as const,
+        }}>{label}</span>
+        <div style={{ flex: 1 }} />
+        <div style={{ width: 5, height: 5, borderRadius: "50%", background: color, opacity: 0.7 }} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function ResultsView({ output, campaignId }: {
   output: Record<string, unknown> | null;
   campaignId: string | null;
 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded,   setExpanded]   = useState(false);
   const [selectedKV, setSelectedKV] = useState(0);
+  const [copyTab,    setCopyTab]    = useState<"short" | "medium" | "long" | "channels">("short");
+
   const brief    = output as any;
   const strategy = output?.creative_strategy as any;
   const copy     = output?.campaign_copy as any;
   const cp       = (output as any)?.creative_pipeline;
-  // CDP audience insights
   const cdpLines = output?.audience_insights
-    ? String(output.audience_insights).split("\n").filter((l: string) => l.trim())
-    : [];
+    ? String(output.audience_insights).split("\n").filter((l: string) => l.trim()) : [];
 
   const imagesB64: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
-  const videoB64: string = cp?.video_b64 ? String(cp.video_b64) : "";
-  const videoUri: string = cp?.video_uri
-    ? String(cp.video_uri).replace(/^gs:\/\/([^/]+)\/(.+)$/, "https://storage.googleapis.com/$1/$2")
-    : "";
-  const videoSrc: string = videoB64 ? `data:video/mp4;base64,${videoB64}` : videoUri;
-  const adaptations = cp?.channel_adaptations as Record<string, {label: string; image_b64: string; ratio: string}> | undefined;
+  const videoB64: string    = cp?.video_b64 ? String(cp.video_b64) : "";
+  const videoUri: string    = cp?.video_uri
+    ? String(cp.video_uri).replace(/^gs:\/\/([^/]+)\/(.+)$/, "https://storage.googleapis.com/$1/$2") : "";
+  const videoSrc: string    = videoB64 ? `data:video/mp4;base64,${videoB64}` : videoUri;
+  const adaptations = cp?.channel_adaptations as Record<string, { label: string; image_b64: string; ratio: string }> | undefined;
   const perfForecast = (output as any)?.performance_forecast as Record<string, unknown> | undefined;
 
   const CHANNEL_ICONS: Record<string, string> = {
     instagram_feed: "📸", instagram_stories: "📱", tiktok: "🎵",
-    youtube: "▶️", google_ads: "🔍", meta_ads: "📘",
-    email: "📧", ooh: "🏙️", website: "🌐",
+    youtube: "▶️", google_ads: "🔍", meta_ads: "📘", email: "📧", ooh: "🏙️", website: "🌐",
+  };
+  const COPY_CH: Record<string, { icon: string; label: string; color: string }> = {
+    instagram_caption: { icon: "📸", label: "Instagram", color: "#c084fc" },
+    tiktok_hook:       { icon: "🎵", label: "TikTok",    color: "#f472b6" },
+    youtube_script:    { icon: "▶️", label: "YouTube",   color: "#f87171" },
+    google_headline:   { icon: "🔍", label: "Google",    color: "#60a5fa" },
+    meta_caption:      { icon: "📘", label: "Meta",      color: "#60a5fa" },
+    ooh_headline:      { icon: "🏙️", label: "OOH",      color: "#fbbf24" },
+    web_headline:      { icon: "🌐", label: "Website",   color: "#34d399" },
+    email_subject:     { icon: "📧", label: "Email",     color: "#38bdf8" },
   };
 
-  // Timeline entry wrapper
-  const TL = ({ step, label, children }: { step: number; icon?: string; color?: string; label: string; children: React.ReactNode }) => (
-    <div style={{ display: "flex", gap: 20, marginBottom: 32 }}>
-      {/* Left: A2A orb + connector */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flexShrink: 0 }}>
-        <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0,
-          background: ORB_BG,
-          boxShadow: "0 4px 14px rgba(124,58,237,0.35), 0 0 0 4px rgba(124,58,237,0.1)",
-          display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-            <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
-          </svg>
-        </div>
-        <div style={{ width: 2, flex: 1, minHeight: 24,
-          background: "linear-gradient(rgba(124,58,237,0.25), transparent)", margin: "6px 0" }} />
-      </div>
-      {/* Right: content */}
-      <div style={{ flex: 1, paddingBottom: 8 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.12em",
-          textTransform: "uppercase", marginBottom: 10 }}>Step {step} — {label}</div>
-        {children}
-      </div>
-    </div>
-  );
+  // Sequential step counter — increments only for present stages
+  let stepN = 0;
+  const S = () => ++stepN;
 
   return (
-    <div style={{ ...styles.resultsPage,
-      background: "linear-gradient(180deg, #faf5ff 0%, #f5f3ff 80px, #ffffff 260px)" }}>
-      {/* Slim campaign ID banner */}
+    <div style={{ flex: 1, overflowY: "auto", background: "linear-gradient(180deg, #0d0920 0%, #07070f 220px)" }}>
+
+      {/* Sticky campaign banner */}
       {campaignId && (
-        <div style={{ padding: "10px 28px", borderBottom: "1px solid #ede9fe",
-          display: "flex", alignItems: "center", gap: 10, background: "rgba(250,245,255,0.9)", flexShrink: 0 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 12px", borderRadius: 99,
-            background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed" }}>
-            ✅ Campaign Ready
-          </span>
-          <span style={{ fontSize: 11, color: "#9ca3af", fontFamily: "monospace", letterSpacing: "0.04em" }}>
-            #{campaignId}
-          </span>
+        <div style={{
+          padding: "10px 28px", borderBottom: "1px solid rgba(255,255,255,0.07)",
+          display: "flex", alignItems: "center", gap: 10,
+          background: "rgba(8,8,20,0.97)", backdropFilter: "blur(16px)",
+          position: "sticky", top: 0, zIndex: 20,
+        }}>
+          <span style={{
+            fontSize: 11, fontWeight: 700, padding: "3px 12px", borderRadius: 99,
+            background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.3)", color: "#34d399",
+          }}>✅ Campaign Ready</span>
+          <span style={{ fontSize: 11, color: "#334155", fontFamily: "monospace" }}>#{campaignId}</span>
         </div>
       )}
 
-      {/* Timeline */}
-      <div style={{ maxWidth: 860, margin: "0 auto", padding: "40px 24px 24px" }}>
+      <div style={{ maxWidth: 960, margin: "0 auto", padding: "36px 24px 24px" }}>
 
-        {/* Step 1: Brief Validation */}
-        {brief && (
-          <TL step={1} icon="📋" color="#7c3aed" label="Brief Validation">
-            <div style={{ background: "white", borderRadius: 16, border: "1px solid #e9d5ff",
-              overflow: "hidden", boxShadow: "0 2px 12px rgba(124,58,237,0.08)" }}>
-              {brief.fan_truth && (
-                <div style={{ padding: "16px 20px", borderBottom: "1px solid #f3e8ff" }}>
-                  <ScoreGauge score={brief.fan_truth.overall ?? 0} verdict={brief.fan_truth.verdict ?? "FAIL"} />
-                  {brief.fan_truth.statement && (
-                    <div style={{ padding: "10px 14px", borderRadius: 10, background: "#fdf4ff", border: "1px solid #e9d5ff", fontSize: 14, color: "#1a2332", fontStyle: "italic" }}>
-                      "{brief.fan_truth.statement}"
+        {/* ── 1. Brief Validation ────────────────────────────────────────── */}
+        {brief && (() => {
+          const n = S();
+          const score   = brief.fan_truth?.overall ?? 0;
+          const verdict = brief.fan_truth?.verdict ?? "FAIL";
+          const sc = score >= 75 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444";
+          const r = 46; const circ = 2 * Math.PI * r; const dash = circ * Math.min(score, 100) / 100;
+          return (
+            <StageCard step={n} label="Brief Validation" color="#7c3aed">
+              {/* Score + statement row */}
+              <div style={{ display: "grid", gridTemplateColumns: "180px 1fr" }}>
+                {/* Left: big ring */}
+                <div style={{
+                  display: "flex", flexDirection: "column" as const, alignItems: "center",
+                  justifyContent: "center", gap: 10, padding: "28px 16px",
+                  borderRight: "1px solid rgba(255,255,255,0.07)",
+                  background: "rgba(124,58,237,0.05)",
+                }}>
+                  <svg width="110" height="110" viewBox="0 0 110 110">
+                    <circle cx="55" cy="55" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
+                    <circle cx="55" cy="55" r={r} fill="none" stroke={sc} strokeWidth="8"
+                      strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+                      transform="rotate(-90 55 55)"
+                      style={{ transition: "stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)", filter: `drop-shadow(0 0 7px ${sc}88)` }} />
+                    <text x="55" y="50" textAnchor="middle" fill={sc} fontSize="22" fontWeight="800" fontFamily="Inter,sans-serif">{score}</text>
+                    <text x="55" y="67" textAnchor="middle" fill="#334155" fontSize="11" fontFamily="Inter,sans-serif">/100</text>
+                  </svg>
+                  <div style={{ textAlign: "center" as const }}>
+                    <div style={{ fontSize: 9, color: "#334155", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, marginBottom: 5 }}>Fan Truth</div>
+                    <span style={{
+                      fontSize: 11, fontWeight: 800, padding: "3px 14px", borderRadius: 99,
+                      background: verdict === "PASS" ? "rgba(16,185,129,0.14)" : "rgba(239,68,68,0.14)",
+                      color: verdict === "PASS" ? "#10b981" : "#ef4444",
+                      border: `1px solid ${verdict === "PASS" ? "rgba(16,185,129,0.3)" : "rgba(239,68,68,0.3)"}`,
+                    }}>{verdict}</span>
+                  </div>
+                </div>
+                {/* Right: statement + KPIs */}
+                <div style={{ padding: "22px 22px 18px" }}>
+                  {brief.fan_truth?.statement && (
+                    <div style={{
+                      padding: "12px 16px", borderRadius: 12, marginBottom: 14,
+                      background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.20)",
+                      fontSize: 14, color: "#c4b5fd", fontStyle: "italic", lineHeight: 1.6,
+                    }}>"{brief.fan_truth.statement}"</div>
+                  )}
+                  {brief.kpis?.length > 0 && (
+                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                      {brief.kpis.slice(0, 4).map((k: any, i: number) => {
+                        const CF: Record<string, { bg: string; color: string; border: string; icon: string }> = {
+                          OK:          { bg: "rgba(16,185,129,0.07)",  color: "#10b981", border: "rgba(16,185,129,0.20)",  icon: "✓" },
+                          AMBITIOUS:   { bg: "rgba(245,158,11,0.07)",  color: "#f59e0b", border: "rgba(245,158,11,0.20)",  icon: "↑" },
+                          UNREALISTIC: { bg: "rgba(239,68,68,0.07)",   color: "#ef4444", border: "rgba(239,68,68,0.20)",   icon: "✗" },
+                        };
+                        const c = CF[k.flag] ?? CF.OK;
+                        return (
+                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}` }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: c.color, width: 18, textAlign: "center" as const }}>{c.icon}</span>
+                            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{k.metric}</span>
+                            <span style={{ fontSize: 11, color: "#475569" }}>— {k.target}</span>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: c.color, padding: "2px 8px", background: `${c.color}18`, borderRadius: 8 }}>{k.flag}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
-              )}
-              {brief.kpis?.length > 0 && (
-                <div style={{ padding: "14px 20px", borderBottom: brief.validation_notes ? "1px solid #f3e8ff" : "none" }}>
-                  {brief.kpis.slice(0, 4).map((k: any, i: number) => (
-                    <KPIRow key={i} metric={k.metric} target={k.target} flag={k.flag} />
-                  ))}
-                </div>
-              )}
+              </div>
+              {/* Validation notes */}
               {brief.validation_notes && (
-                <div style={{ padding: "12px 20px", fontSize: 12, color: "#64748b", lineHeight: 1.6, borderBottom: cdpLines.length > 0 ? "1px solid #f3e8ff" : "none" }}>
+                <div style={{ padding: "12px 22px", fontSize: 12, color: "#475569", lineHeight: 1.7, borderTop: "1px solid rgba(255,255,255,0.06)", background: "rgba(0,0,0,0.15)" }}>
                   {brief.validation_notes}
                 </div>
               )}
-              {/* CDP Audience Intelligence */}
+              {/* CDP strip */}
               {cdpLines.length > 0 && (() => {
                 const g = (k: string) => { const l = cdpLines.find((x: string) => x.toLowerCase().includes(k)); return l ? l.split(":").slice(1).join(":").trim() : null; };
-                const cnt  = cdpLines.find((l: string) => l.includes("profiles"))?.match(/(\d[\d,]+)\s+\w+\s+profiles/)?.[1] ?? null;
-                const match = cdpLines.find((l: string) => l.includes("matched"));
-                const income = g("household income"); const channels = g("top channels");
+                const cnt    = cdpLines.find((l: string) => l.includes("profiles"))?.match(/(\d[\d,]+)\s+\w+\s+profiles/)?.[1] ?? null;
+                const income = g("household income"); const chans = g("top channels");
                 const crmIdx = cdpLines.findIndex((l: string) => l.includes("CRM notes"));
-                const crm = crmIdx >= 0 ? cdpLines.slice(crmIdx + 1).join(" ").slice(0, 160) : null;
+                const crm    = crmIdx >= 0 ? cdpLines.slice(crmIdx + 1).join(" ").slice(0, 160) : null;
                 return (
-                  <div style={{ padding: "14px 20px", background: "#faf5ff" }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 10, display: "flex", justifyContent: "space-between" }}>
-                      <span>👥 CDP Audience Intelligence</span>
-                      <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 99, background: "#ede9fe", color: "#7c3aed" }}>KAGGLE CDP</span>
+                  <div style={{ padding: "14px 22px", background: "rgba(124,58,237,0.06)", borderTop: "1px solid rgba(124,58,237,0.14)" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: "#a78bfa", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>👥 CDP Audience Intelligence</span>
+                      <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 99, background: "rgba(124,58,237,0.18)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.28)" }}>KAGGLE CDP</span>
                     </div>
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: crm ? 10 : 0 }}>
-                      {cnt && <div style={{ padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #ede9fe", textAlign: "center" }}>
-                        <div style={{ fontSize: 20, fontWeight: 900, color: "#7c3aed" }}>{cnt}</div>
-                        <div style={{ fontSize: 9, color: "#64748b" }}>profiles matched</div>
+                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
+                      {cnt && <div style={{ padding: "8px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(124,58,237,0.2)", textAlign: "center" as const }}>
+                        <div style={{ fontSize: 18, fontWeight: 900, color: "#a78bfa" }}>{cnt}</div>
+                        <div style={{ fontSize: 9, color: "#475569" }}>profiles</div>
                       </div>}
-                      {income && <div style={{ flex: 1, padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #ede9fe" }}>
-                        <div style={{ fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase", marginBottom: 3 }}>Avg Income</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "#7c3aed" }}>{income}</div>
+                      {income && <div style={{ flex: 1, padding: "8px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(124,58,237,0.2)" }}>
+                        <div style={{ fontSize: 9, color: "#475569", fontWeight: 600, textTransform: "uppercase" as const, marginBottom: 2 }}>Avg Income</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa" }}>{income}</div>
                       </div>}
-                      {channels && <div style={{ flex: 2, padding: "8px 12px", borderRadius: 10, background: "white", border: "1px solid #ede9fe" }}>
-                        <div style={{ fontSize: 9, color: "#64748b", fontWeight: 600, textTransform: "uppercase", marginBottom: 3 }}>Top Channels</div>
-                        <div style={{ fontSize: 12, color: "#7c3aed" }}>{channels}</div>
+                      {chans && <div style={{ flex: 2, padding: "8px 14px", borderRadius: 10, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(124,58,237,0.2)" }}>
+                        <div style={{ fontSize: 9, color: "#475569", fontWeight: 600, textTransform: "uppercase" as const, marginBottom: 2 }}>Top Channels</div>
+                        <div style={{ fontSize: 12, color: "#a78bfa" }}>{chans}</div>
                       </div>}
                     </div>
-                    {match && <div style={{ fontSize: 11, color: "#475569", marginBottom: crm ? 6 : 0 }}>{match}</div>}
-                    {crm && <div style={{ fontSize: 11, color: "#64748b", fontStyle: "italic", lineHeight: 1.5 }}>"{crm}…"</div>}
+                    {crm && <div style={{ marginTop: 8, fontSize: 11, color: "#475569", fontStyle: "italic", lineHeight: 1.5 }}>"{crm}…"</div>}
                   </div>
                 );
               })()}
-            </div>
-          </TL>
-        )}
+            </StageCard>
+          );
+        })()}
 
-        {/* Step 2: Creative Strategy */}
-        {strategy?.hero_message && (
-          <TL step={2} icon="💡" color="#7c3aed" label="Creative Strategy">
-            <div style={{ background: "white", borderRadius: 16, border: "1px solid #ede9fe",
-              overflow: "hidden", boxShadow: "0 2px 12px rgba(124,58,237,0.08)" }}>
-              <div style={{ background: "linear-gradient(135deg, #7c3aed, #6d28d9)", padding: "20px 24px" }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 6 }}>
-                  {strategy.big_idea || "Campaign Concept"}
+        {/* ── 2. Creative Strategy ───────────────────────────────────────── */}
+        {strategy?.hero_message && (() => {
+          const n = S();
+          return (
+            <StageCard step={n} label="Creative Strategy" color="#6366f1">
+              {/* Bold gradient hero */}
+              <div style={{
+                padding: "36px 32px", position: "relative" as const, overflow: "hidden",
+                background: "linear-gradient(135deg, #312e81 0%, #3730a3 40%, #4338ca 70%, #4f46e5 100%)",
+              }}>
+                <div style={{ position: "absolute" as const, inset: 0, background: "radial-gradient(ellipse 90% 80% at 15% 50%, rgba(255,255,255,0.07) 0%, transparent 65%)", pointerEvents: "none" }} />
+                <div style={{ position: "relative" as const }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", letterSpacing: "0.18em", textTransform: "uppercase" as const, marginBottom: 10 }}>
+                    {strategy.big_idea || "Campaign Concept"}
+                  </div>
+                  <div style={{ fontSize: 30, fontWeight: 900, color: "white", lineHeight: 1.18, letterSpacing: "-0.01em", marginBottom: 8 }}>
+                    "{strategy.hero_message}"
+                  </div>
+                  {strategy.tagline && (
+                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.65)", fontStyle: "italic" }}>{strategy.tagline}</div>
+                  )}
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.25 }}>
-                  "{strategy.hero_message}"
-                </div>
-                {strategy.tagline && <div style={{ fontSize: 12, color: "rgba(255,255,255,0.75)", marginTop: 6 }}>{strategy.tagline}</div>}
               </div>
               {strategy.strategic_framework && (
-                <div style={{ padding: "14px 20px", fontSize: 13, color: "#374151", lineHeight: 1.6, background: "#faf5ff" }}>
-                  {strategy.strategic_framework.slice(0, 280)}{strategy.strategic_framework.length > 280 ? "…" : ""}
+                <div style={{ padding: "16px 24px", fontSize: 13, color: "#94a3b8", lineHeight: 1.75, background: "rgba(99,102,241,0.05)", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                  {strategy.strategic_framework.slice(0, 340)}{strategy.strategic_framework.length > 340 ? "…" : ""}
                 </div>
               )}
               {strategy.messaging_pillars?.length > 0 && (
-                <div style={{ padding: "10px 20px", borderTop: "1px solid #ede9fe", display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {strategy.messaging_pillars.slice(0, 3).map((p: string, i: number) => (
-                    <span key={i} style={{ fontSize: 11, padding: "3px 12px", borderRadius: 99, background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed", fontWeight: 600 }}>
-                      {String(p).slice(0, 40)}
+                <div style={{ padding: "14px 20px", display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                  {strategy.messaging_pillars.slice(0, 4).map((p: string, i: number) => (
+                    <span key={i} style={{ fontSize: 11, padding: "5px 16px", borderRadius: 99, background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.28)", color: "#a5b4fc", fontWeight: 600 }}>
+                      {String(p).slice(0, 50)}
                     </span>
                   ))}
                 </div>
               )}
-            </div>
-          </TL>
-        )}
+            </StageCard>
+          );
+        })()}
 
-        {/* Step 3: Campaign Copy */}
-        {copy?.short?.headline && (
-          <TL step={3} icon="✍️" color="#7c3aed" label="Campaign Copy">
-            <div style={{ background: "white", borderRadius: 16, border: "1px solid #ede9fe",
-              overflow: "hidden", boxShadow: "0 2px 12px rgba(124,58,237,0.08)" }}>
-              <div style={{ background: "linear-gradient(135deg, #7c3aed, #6d28d9)", padding: "16px 24px", textAlign: "center" }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.55)", letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: 6 }}>Short Headline</div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: "white" }}>"{copy.short.headline}"</div>
+        {/* ── 3. Campaign Copy ───────────────────────────────────────────── */}
+        {copy?.short?.headline && (() => {
+          const n = S();
+          const hasMedium   = !!copy.medium?.headline;
+          const hasLong     = !!copy.long?.body;
+          const hasChannels = copy.channel_copy && Object.keys(copy.channel_copy as object).length > 0;
+          return (
+            <StageCard step={n} label="Campaign Copy" color="#a855f7">
+              {/* Tab bar */}
+              <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", background: "rgba(0,0,0,0.25)" }}>
+                {([
+                  { key: "short",    label: "Short"    },
+                  ...(hasMedium   ? [{ key: "medium",   label: "Medium"   }] : []),
+                  ...(hasLong     ? [{ key: "long",     label: "Long"     }] : []),
+                  ...(hasChannels ? [{ key: "channels", label: "Channels" }] : []),
+                ] as { key: typeof copyTab; label: string }[]).map(({ key, label }) => (
+                  <button key={key} onClick={() => setCopyTab(key)} style={{
+                    padding: "11px 22px", border: "none", cursor: "pointer", background: "transparent",
+                    fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const,
+                    color: copyTab === key ? "#d8b4fe" : "#334155",
+                    borderBottom: `2px solid ${copyTab === key ? "#a855f7" : "transparent"}`,
+                    transition: "color 0.15s",
+                  }}>{label}</button>
+                ))}
               </div>
-              {copy.cta && (
-                <div style={{ background: "#6d28d9", padding: "8px", textAlign: "center" }}>
-                  <span style={{ display: "inline-block", padding: "5px 20px", borderRadius: 99, background: "white", color: "#7c3aed", fontSize: 12, fontWeight: 800 }}>{copy.cta}</span>
-                </div>
-              )}
-              {copy.medium?.headline && (
-                <div style={{ padding: "12px 20px", borderBottom: "1px solid #ede9fe" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 4 }}>Medium</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: "#0f172a" }}>"{copy.medium.headline}"</div>
-                </div>
-              )}
-              {copy.long?.body && (
-                <div style={{ padding: "12px 20px", borderBottom: "1px solid #ede9fe", fontSize: 13, color: "#475569", lineHeight: 1.6 }}>
-                  {copy.long.body.slice(0, 150)}…
-                </div>
-              )}
-              {/* Channel-specific copy */}
-              {copy.channel_copy && Object.keys(copy.channel_copy as object).length > 0 && (() => {
-                const COPY_CH: Record<string, { icon: string; label: string; color: string; bg: string; border: string }> = {
-                  instagram_caption: { icon: "📸", label: "Instagram", color: "#7c3aed", bg: "#fdf4ff", border: "#e9d5ff" },
-                  tiktok_hook:       { icon: "🎵", label: "TikTok",    color: "#be185d", bg: "#fff0f6", border: "#ffd6e7" },
-                  youtube_script:    { icon: "▶️", label: "YouTube",   color: "#dc2626", bg: "#fff1f2", border: "#fecdd3" },
-                  google_headline:   { icon: "🔍", label: "Google",    color: "#1967d2", bg: "#eff6ff", border: "#bfdbfe" },
-                  meta_caption:      { icon: "📘", label: "Meta",      color: "#1877f2", bg: "#eff6ff", border: "#dbeafe" },
-                  ooh_headline:      { icon: "🏙️", label: "OOH",      color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-                  web_headline:      { icon: "🌐", label: "Website",   color: "#059669", bg: "#f0fdf4", border: "#86efac" },
-                  email_subject:     { icon: "📧", label: "Email",     color: "#0369a1", bg: "#f0f9ff", border: "#bae6fd" },
-                };
-                const entries = Object.entries(copy.channel_copy as Record<string, string>);
-                return (
-                  <div style={{ padding: "12px 20px", display: "grid", gridTemplateColumns: entries.length > 2 ? "1fr 1fr" : "1fr", gap: 8 }}>
-                    {entries.map(([key, val]) => {
-                      const cfg = COPY_CH[key] ?? { icon: "📢", label: key, color: "#64748b", bg: "#f8fafc", border: "#e2e8f0" };
+              <div style={{ padding: "24px" }}>
+                {copyTab === "short" && (
+                  <div>
+                    <div style={{ padding: "28px 24px", borderRadius: 14, textAlign: "center" as const, marginBottom: 14, background: "linear-gradient(135deg, rgba(168,85,247,0.14), rgba(168,85,247,0.05))", border: "1px solid rgba(168,85,247,0.22)" }}>
+                      <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Short Headline</div>
+                      <div style={{ fontSize: 28, fontWeight: 900, color: "#f1f5f9", lineHeight: 1.2 }}>"{copy.short.headline}"</div>
+                    </div>
+                    {copy.cta && (
+                      <div style={{ textAlign: "center" as const }}>
+                        <span style={{ display: "inline-block", padding: "9px 28px", borderRadius: 99, background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "white", fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", boxShadow: "0 4px 16px rgba(168,85,247,0.35)" }}>{copy.cta}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {copyTab === "medium" && (
+                  <div style={{ padding: "22px 24px", borderRadius: 14, background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.18)" }}>
+                    <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Medium Headline</div>
+                    {copy.medium?.headline && <div style={{ fontSize: 20, fontWeight: 800, color: "#f1f5f9", lineHeight: 1.3, marginBottom: 10 }}>"{copy.medium.headline}"</div>}
+                    {copy.medium?.body && <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>{copy.medium.body.slice(0, 220)}{copy.medium.body.length > 220 ? "…" : ""}</div>}
+                  </div>
+                )}
+                {copyTab === "long" && (
+                  <div style={{ padding: "22px 24px", borderRadius: 14, background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.18)" }}>
+                    <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Long Copy</div>
+                    {copy.long?.headline && <div style={{ fontSize: 18, fontWeight: 800, color: "#f1f5f9", marginBottom: 10 }}>"{copy.long.headline}"</div>}
+                    {copy.long?.body && <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.75 }}>{copy.long.body.slice(0, 320)}{copy.long.body.length > 320 ? "…" : ""}</div>}
+                  </div>
+                )}
+                {copyTab === "channels" && hasChannels && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    {Object.entries(copy.channel_copy as Record<string, string>).map(([key, val]) => {
+                      const cfg = COPY_CH[key] ?? { icon: "📢", label: key, color: "#64748b" };
                       return (
-                        <div key={key} style={{ padding: "9px 12px", borderRadius: 10, background: cfg.bg, border: `1px solid ${cfg.border}` }}>
-                          <div style={{ fontSize: 9, fontWeight: 700, color: cfg.color, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 3 }}>{cfg.icon} {cfg.label}</div>
-                          <div style={{ fontSize: 12, color: cfg.color, lineHeight: 1.4 }}>{val.slice(0, 90)}{val.length > 90 ? "…" : ""}</div>
+                        <div key={key} style={{ padding: "12px 14px", borderRadius: 12, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: cfg.color, textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 5 }}>{cfg.icon} {cfg.label}</div>
+                          <div style={{ fontSize: 12, color: "#cbd5e1", lineHeight: 1.5 }}>{val.slice(0, 100)}{val.length > 100 ? "…" : ""}</div>
                         </div>
                       );
                     })}
                   </div>
-                );
-              })()}
-            </div>
-          </TL>
-        )}
+                )}
+              </div>
+            </StageCard>
+          );
+        })()}
 
-        {/* Step 4: Cultural Intelligence */}
-        {cp?.culture_brief && (
-          <TL step={4} icon="🌍" color="#7c3aed" label="Cultural Intelligence">
-            <div style={{ background: "white", borderRadius: 16, border: "1px solid #99f6e4",
-              padding: "16px 20px", boxShadow: "0 2px 12px rgba(13,148,136,0.08)" }}>
-              {cp.culture_brief.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/^#+\s*/gm, "").split(/(?<=[.!?])\s+/).filter((s: string) => s.length > 25).slice(0, 4).map((s: string, i: number) => (
-                <div key={i} style={{ display: "flex", gap: 10, marginBottom: 10, padding: "10px 12px", borderRadius: 10, background: i === 0 ? "#f0fdfa" : "#f8fafc", border: `1px solid ${i === 0 ? "#99f6e4" : "#e2e8f0"}` }}>
-                  <span style={{ fontSize: 16, flexShrink: 0 }}>{["🌍", "💫", "🎯", "⚡"][i]}</span>
-                  <span style={{ fontSize: 13, color: "#1a2332", lineHeight: 1.5 }}>{s}</span>
-                </div>
-              ))}
-            </div>
-          </TL>
-        )}
-
-        {/* Step 5: Key Visual */}
-        {imagesB64.length > 0 && (
-          <TL step={5} icon="🎨" color="#7c3aed" label={`Key Visual${imagesB64.length > 1 ? ` — ${imagesB64.length} Variations` : ""}`}>
-            <div style={{ background: "white", borderRadius: 16, border: "1px solid #fecdd3",
-              overflow: "hidden", boxShadow: "0 2px 12px rgba(190,18,60,0.1)" }}>
-              <img src={`data:image/jpeg;base64,${imagesB64[selectedKV]}`} alt="Key visual"
-                style={{ width: "100%", display: "block" }} />
-              {imagesB64.length > 1 && (
-                <div style={{ padding: "12px 16px", borderTop: "1px solid #fecdd3", background: "#fff8f8" }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "#be123c", letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 8 }}>
-                    Pick Your Variation
+        {/* ── 4. Cultural Intelligence ───────────────────────────────────── */}
+        {cp?.culture_brief && (() => {
+          const n = S();
+          const sentences = cp.culture_brief.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/^#+\s*/gm, "").split(/(?<=[.!?])\s+/).filter((s: string) => s.length > 25).slice(0, 4);
+          const icons  = ["🌍", "💫", "🎯", "⚡"];
+          return (
+            <StageCard step={n} label="Cultural Intelligence" color="#0d9488">
+              <div style={{ padding: "20px 22px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {sentences.map((s: string, i: number) => (
+                  <div key={i} style={{ padding: "14px 16px", borderRadius: 14, display: "flex", gap: 10, alignItems: "flex-start", background: i % 2 === 0 ? "rgba(13,148,136,0.09)" : "rgba(13,148,136,0.05)", border: "1px solid rgba(13,148,136,0.18)" }}>
+                    <span style={{ fontSize: 18, flexShrink: 0, marginTop: 1 }}>{icons[i] ?? "✦"}</span>
+                    <span style={{ fontSize: 12, color: "#cbd5e1", lineHeight: 1.6 }}>{s}</span>
                   </div>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    {imagesB64.map((img, idx) => (
-                      <div key={idx} onClick={() => setSelectedKV(idx)}
-                        style={{ flex: 1, cursor: "pointer", borderRadius: 8, overflow: "hidden",
-                          border: `3px solid ${idx === selectedKV ? "#be123c" : "transparent"}`,
-                          opacity: idx === selectedKV ? 1 : 0.55, transition: "all 0.2s",
-                          boxShadow: idx === selectedKV ? "0 0 0 2px rgba(190,18,60,0.2)" : "none" }}>
-                        <img src={`data:image/jpeg;base64,${img}`} alt={`V${idx + 1}`}
-                          style={{ width: "100%", display: "block" }} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {cp?.image_prompt && (
-                <div style={{ padding: "10px 16px", borderTop: "1px solid #fecdd3", fontSize: 10, color: "#94a3b8", lineHeight: 1.5, fontFamily: "monospace", background: "#fff8f8" }}>
-                  {cp.image_prompt.slice(0, 200)}…
-                </div>
-              )}
-            </div>
-          </TL>
-        )}
+                ))}
+              </div>
+            </StageCard>
+          );
+        })()}
 
-        {/* Step 6: Campaign Reel */}
-        {videoSrc && (
-          <TL step={6} icon="🎬" color="#7c3aed" label="Campaign Reel — 6s Veo">
-            <div style={{ background: "#0f172a", borderRadius: 12, overflow: "hidden" }}>
-              <video controls autoPlay loop muted playsInline
-                style={{ width: "100%", display: "block" }}
-                src={videoSrc} />
-              <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 11, color: "#94a3b8" }}>6s · 16:9 · Veo 3</span>
-                <a href={videoSrc} download="campaign-reel.mp4"
-                  style={{ fontSize: 11, fontWeight: 700, color: "#f59e0b", textDecoration: "none" }}>
-                  ⬇ Download mp4
+        {/* ── 5. Key Visual ─────────────────────────────────────────────── */}
+        {imagesB64.length > 0 && (() => {
+          const n = S();
+          return (
+            <StageCard step={n} label={`Key Visual${imagesB64.length > 1 ? ` — ${imagesB64.length} Variations` : ""}`} color="#e11d48">
+              {/* Full-bleed image */}
+              <div style={{ position: "relative" as const }}>
+                <img src={`data:image/jpeg;base64,${imagesB64[selectedKV]}`} alt="Key visual"
+                  style={{ width: "100%", display: "block", maxHeight: 580, objectFit: "cover" }} />
+                <a href={`data:image/jpeg;base64,${imagesB64[selectedKV]}`} download={`kv-${selectedKV + 1}.jpg`}
+                  style={{ position: "absolute" as const, top: 12, right: 12, padding: "6px 14px", borderRadius: 99, background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.18)", color: "white", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
+                  ⬇ Download
                 </a>
               </div>
-            </div>
-          </TL>
-        )}
-
-        {/* Step 7: Channel Adaptations */}
-        {adaptations && Object.keys(adaptations).length > 0 && (
-          <TL step={6} icon="📐" color="#7c3aed" label={`Channel Adaptations — ${Object.keys(adaptations).length} formats`}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12, alignItems: "start" }}>
-              {Object.entries(adaptations).map(([key, val]) => (
-                <div key={key} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid #e0e7ff", boxShadow: "0 2px 8px rgba(67,56,202,0.08)", alignSelf: "start" }}>
-                  <div style={{ background: "#eef2ff", padding: "6px 12px", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid #e0e7ff" }}>
-                    <span style={{ fontSize: 13 }}>{CHANNEL_ICONS[key] ?? "📺"}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: "#4338ca" }}>{val.label}</span>
-                    <span style={{ marginLeft: "auto", fontSize: 9, color: "#94a3b8", fontFamily: "monospace" }}>{val.ratio}</span>
-                  </div>
-                  <img src={`data:image/jpeg;base64,${val.image_b64}`} alt={val.label} style={{ width: "100%", display: "block" }} />
-                </div>
-              ))}
-            </div>
-          </TL>
-        )}
-
-        {/* Step 7: Performance Forecast */}
-        {perfForecast && (
-          <TL step={7} icon="📊" color="#f43f5e" label="Performance Forecast — Nexus">
-            {(() => {
-              const pf = perfForecast as any;
-              const ROSE = "#f43f5e";
-              const ROSE_BORDER = "#fecdd3";
-              const ROSE_LIGHT  = "#fff1f3";
-              const confColor = (c: string) =>
-                c === "HIGH" ? "#059669" : c === "MEDIUM" ? "#d97706" : "#dc2626";
-              const confBg = (c: string) =>
-                c === "HIGH" ? "#f0fdf4" : c === "MEDIUM" ? "#fffbeb" : "#fff1f2";
-              const confBorderColor = (c: string) =>
-                c === "HIGH" ? "#bbf7d0" : c === "MEDIUM" ? "#fde68a" : "#fecdd3";
-              const channelForecasts: any[] = Array.isArray(pf.channel_forecasts) ? pf.channel_forecasts : [];
-              const conf = String(pf.overall_confidence ?? "—");
-              return (
-                <div style={{ background: "white", borderRadius: 16, border: `1px solid ${ROSE_BORDER}`,
-                  overflow: "hidden", boxShadow: "0 2px 12px rgba(244,63,94,0.08)" }}>
-                  {/* Headline */}
-                  {pf.headline_prediction && (
-                    <div style={{ padding: "16px 20px", background: ROSE_LIGHT,
-                      borderBottom: `1px solid ${ROSE_BORDER}` }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
-                        textTransform: "uppercase" as const, marginBottom: 6 }}>Forecast Headline</div>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: "#111827", fontStyle: "italic",
-                        lineHeight: 1.4 }}>"{pf.headline_prediction}"</div>
-                    </div>
-                  )}
-                  {/* KPI strip */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: `1px solid ${ROSE_BORDER}` }}>
-                    {[
-                      { label: "Predicted Reach",  value: pf.predicted_total_reach  ?? "—" },
-                      { label: "Blended ROAS",      value: pf.predicted_blended_roas ?? "—" },
-                      { label: "Confidence",         value: conf },
-                    ].map(({ label, value }, i) => (
-                      <div key={label} style={{ padding: "14px 18px", textAlign: "center" as const,
-                        borderRight: i < 2 ? `1px solid ${ROSE_BORDER}` : undefined }}>
-                        <div style={{ fontSize: 20, fontWeight: 800,
-                          color: label === "Confidence" ? confColor(value) : "#111827" }}>{value}</div>
-                        <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, marginTop: 3,
-                          textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</div>
+              {imagesB64.length > 1 && (
+                <div style={{ padding: "14px 18px", background: "rgba(0,0,0,0.3)", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#f43f5e", letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 10 }}>Variations</div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {imagesB64.map((img, idx) => (
+                      <div key={idx} onClick={() => setSelectedKV(idx)} style={{ flex: 1, cursor: "pointer", borderRadius: 8, overflow: "hidden", border: `2px solid ${idx === selectedKV ? "#e11d48" : "rgba(255,255,255,0.1)"}`, opacity: idx === selectedKV ? 1 : 0.45, transition: "all 0.2s", boxShadow: idx === selectedKV ? "0 0 0 1px rgba(225,29,72,0.4), 0 4px 14px rgba(225,29,72,0.2)" : "none" }}>
+                        <img src={`data:image/jpeg;base64,${img}`} alt={`V${idx + 1}`} style={{ width: "100%", display: "block" }} />
                       </div>
                     ))}
                   </div>
-                  {/* Channel forecasts */}
-                  {channelForecasts.length > 0 && (
-                    <div style={{ padding: "16px 20px", borderBottom: `1px solid ${ROSE_BORDER}` }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
-                        textTransform: "uppercase" as const, marginBottom: 12 }}>Channel Forecasts</div>
-                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
-                        {channelForecasts.map((cf: any, i: number) => (
-                          <div key={i} style={{ display: "grid",
-                            gridTemplateColumns: "140px 1fr 1fr 1fr 1fr auto",
-                            alignItems: "center", gap: 10, padding: "10px 14px",
-                            background: ROSE_LIGHT, borderRadius: 10, border: `1px solid ${ROSE_BORDER}` }}>
-                            <div style={{ fontWeight: 700, fontSize: 12, color: "#111827" }}>{cf.channel}</div>
-                            {[
-                              { v: cf.predicted_reach,      l: "Reach" },
-                              { v: cf.predicted_ctr,        l: "CTR" },
-                              { v: cf.predicted_roas,       l: "ROAS" },
-                              { v: cf.predicted_engagement, l: "Eng." },
-                            ].map(({ v, l }) => (
-                              <div key={l} style={{ textAlign: "center" as const }}>
-                                <div style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>{v ?? "—"}</div>
-                                <div style={{ fontSize: 9, color: "#9ca3af", fontWeight: 600,
-                                  textTransform: "uppercase" as const }}>{l}</div>
-                              </div>
-                            ))}
-                            <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
-                              background: confBg(cf.confidence), color: confColor(cf.confidence),
-                              border: `1px solid ${confBorderColor(cf.confidence)}`,
-                              textTransform: "uppercase" as const, whiteSpace: "nowrap" as const }}>
-                              {cf.confidence}
-                            </span>
+                </div>
+              )}
+            </StageCard>
+          );
+        })()}
+
+        {/* ── 6. Campaign Reel ──────────────────────────────────────────── */}
+        {videoSrc && (() => {
+          const n = S();
+          return (
+            <StageCard step={n} label="Campaign Reel — Veo 3" color="#d97706">
+              <div style={{ background: "#000" }}>
+                <video controls autoPlay loop muted playsInline style={{ width: "100%", display: "block", maxHeight: 500 }} src={videoSrc} />
+              </div>
+              <div style={{ padding: "10px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(0,0,0,0.3)" }}>
+                <span style={{ fontSize: 11, color: "#475569" }}>6s · 16:9 · Veo 3</span>
+                <a href={videoSrc} download="campaign-reel.mp4" style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", textDecoration: "none" }}>⬇ Download mp4</a>
+              </div>
+            </StageCard>
+          );
+        })()}
+
+        {/* ── 7. Channel Adaptations ────────────────────────────────────── */}
+        {adaptations && Object.keys(adaptations).length > 0 && (() => {
+          const n = S();
+          return (
+            <StageCard step={n} label={`Channel Adaptations — ${Object.keys(adaptations).length} formats`} color="#3b82f6">
+              <div style={{ padding: "16px", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(215px, 1fr))", gap: 10, alignItems: "start" }}>
+                {Object.entries(adaptations).map(([key, val]) => (
+                  <div key={key} style={{ borderRadius: 12, overflow: "hidden", border: "1px solid rgba(59,130,246,0.2)", background: "rgba(59,130,246,0.04)", alignSelf: "start" }}>
+                    <div style={{ padding: "7px 12px", display: "flex", alignItems: "center", gap: 6, borderBottom: "1px solid rgba(59,130,246,0.14)" }}>
+                      <span style={{ fontSize: 13 }}>{CHANNEL_ICONS[key] ?? "📺"}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#60a5fa" }}>{val.label}</span>
+                      <span style={{ marginLeft: "auto", fontSize: 9, color: "#334155", fontFamily: "monospace" }}>{val.ratio}</span>
+                    </div>
+                    <img src={`data:image/jpeg;base64,${val.image_b64}`} alt={val.label} style={{ width: "100%", display: "block" }} />
+                  </div>
+                ))}
+              </div>
+            </StageCard>
+          );
+        })()}
+
+        {/* ── 8. Performance Forecast ───────────────────────────────────── */}
+        {perfForecast && (() => {
+          const n  = S();
+          const pf = perfForecast as any;
+          const ROSE        = "#fb7185";
+          const ROSE_BORDER = "rgba(251,113,133,0.22)";
+          const ROSE_LIGHT  = "rgba(251,113,133,0.06)";
+          const cC = (c: string) => c === "HIGH" ? "#34d399" : c === "MEDIUM" ? "#fbbf24" : "#f87171";
+          const cB = (c: string) => c === "HIGH" ? "rgba(52,211,153,0.12)" : c === "MEDIUM" ? "rgba(251,191,36,0.12)" : "rgba(248,113,113,0.12)";
+          const cD = (c: string) => c === "HIGH" ? "rgba(52,211,153,0.28)" : c === "MEDIUM" ? "rgba(251,191,36,0.28)" : "rgba(248,113,113,0.28)";
+          const channelForecasts: any[] = Array.isArray(pf.channel_forecasts) ? pf.channel_forecasts : [];
+          const conf = String(pf.overall_confidence ?? "—");
+          return (
+            <StageCard step={n} label="Performance Forecast" color="#fb7185">
+              {pf.headline_prediction && (
+                <div style={{ padding: "20px 24px", background: ROSE_LIGHT, borderBottom: `1px solid ${ROSE_BORDER}` }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: ROSE, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 6 }}>Forecast Headline</div>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", fontStyle: "italic", lineHeight: 1.45 }}>"{pf.headline_prediction}"</div>
+                </div>
+              )}
+              {/* 3 hero KPI tiles */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: `1px solid ${ROSE_BORDER}` }}>
+                {[
+                  { label: "Predicted Reach", value: pf.predicted_total_reach  ?? "—" },
+                  { label: "Blended ROAS",    value: pf.predicted_blended_roas ?? "—" },
+                  { label: "Confidence",      value: conf },
+                ].map(({ label, value }, i) => (
+                  <div key={label} style={{ padding: "22px 18px", textAlign: "center" as const, borderRight: i < 2 ? `1px solid ${ROSE_BORDER}` : "none", background: i === 2 ? cB(value) : "transparent" }}>
+                    <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-0.02em", color: label === "Confidence" ? cC(value) : "#f1f5f9" }}>{value}</div>
+                    <div style={{ fontSize: 9, color: "#334155", fontWeight: 700, marginTop: 5, textTransform: "uppercase" as const, letterSpacing: "0.08em" }}>{label}</div>
+                  </div>
+                ))}
+              </div>
+              {channelForecasts.length > 0 && (
+                <div style={{ padding: "16px 20px", borderBottom: `1px solid ${ROSE_BORDER}` }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: ROSE, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 12 }}>Channel Forecasts</div>
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                    {channelForecasts.map((cf: any, i: number) => (
+                      <div key={i} style={{ display: "grid", gridTemplateColumns: "140px 1fr 1fr 1fr 1fr auto", alignItems: "center", gap: 10, padding: "10px 14px", background: ROSE_LIGHT, borderRadius: 10, border: `1px solid ${ROSE_BORDER}` }}>
+                        <div style={{ fontWeight: 700, fontSize: 12, color: "#f1f5f9" }}>{cf.channel}</div>
+                        {[{ v: cf.predicted_reach, l: "Reach" }, { v: cf.predicted_ctr, l: "CTR" }, { v: cf.predicted_roas, l: "ROAS" }, { v: cf.predicted_engagement, l: "Eng." }].map(({ v, l }) => (
+                          <div key={l} style={{ textAlign: "center" as const }}>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: "#f1f5f9" }}>{v ?? "—"}</div>
+                            <div style={{ fontSize: 9, color: "#334155", fontWeight: 600, textTransform: "uppercase" as const }}>{l}</div>
                           </div>
                         ))}
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99, background: cB(cf.confidence), color: cC(cf.confidence), border: `1px solid ${cD(cf.confidence)}`, textTransform: "uppercase" as const, whiteSpace: "nowrap" as const }}>{cf.confidence}</span>
                       </div>
-                    </div>
-                  )}
-                  {/* Risk / Opportunity */}
-                  {(pf.top_risk || pf.top_opportunity) && (
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr",
-                      borderBottom: `1px solid ${ROSE_BORDER}` }}>
-                      {pf.top_risk && (
-                        <div style={{ padding: "14px 18px", borderRight: `1px solid ${ROSE_BORDER}` }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", letterSpacing: "0.1em",
-                            textTransform: "uppercase" as const, marginBottom: 6 }}>⚠ Top Risk</div>
-                          <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.6 }}>{pf.top_risk}</div>
-                        </div>
-                      )}
-                      {pf.top_opportunity && (
-                        <div style={{ padding: "14px 18px" }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "#059669", letterSpacing: "0.1em",
-                            textTransform: "uppercase" as const, marginBottom: 6 }}>✦ Top Opportunity</div>
-                          <div style={{ fontSize: 12, color: "#374151", lineHeight: 1.6 }}>{pf.top_opportunity}</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {/* 48h watchlist */}
-                  {Array.isArray(pf.first_48h_watchlist) && pf.first_48h_watchlist.length > 0 && (
-                    <div style={{ padding: "14px 18px" }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
-                        textTransform: "uppercase" as const, marginBottom: 8 }}>First 48h Watchlist</div>
-                      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
-                        {(pf.first_48h_watchlist as string[]).map((item: string, i: number) => (
-                          <span key={i} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99,
-                            background: ROSE_LIGHT, border: `1px solid ${ROSE_BORDER}`,
-                            color: ROSE, fontWeight: 600 }}>⏱ {item}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              );
-            })()}
-          </TL>
-        )}
+              )}
+              {(pf.top_risk || pf.top_opportunity) && (
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: `1px solid ${ROSE_BORDER}` }}>
+                  {pf.top_risk && <div style={{ padding: "14px 18px", borderRight: `1px solid ${ROSE_BORDER}` }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#f87171", letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 6 }}>⚠ Top Risk</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6 }}>{pf.top_risk}</div>
+                  </div>}
+                  {pf.top_opportunity && <div style={{ padding: "14px 18px" }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#34d399", letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 6 }}>✦ Top Opportunity</div>
+                    <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.6 }}>{pf.top_opportunity}</div>
+                  </div>}
+                </div>
+              )}
+              {Array.isArray(pf.first_48h_watchlist) && pf.first_48h_watchlist.length > 0 && (
+                <div style={{ padding: "14px 18px" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: ROSE, letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>First 48h Watchlist</div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                    {(pf.first_48h_watchlist as string[]).map((item: string, i: number) => (
+                      <span key={i} style={{ fontSize: 11, padding: "4px 10px", borderRadius: 99, background: ROSE_LIGHT, border: `1px solid ${ROSE_BORDER}`, color: ROSE, fontWeight: 600 }}>⏱ {item}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </StageCard>
+          );
+        })()}
 
-        {/* Step 8: Launch */}
-        <TL step={perfForecast ? 8 : 7} icon="🚀" color="#7c3aed" label="Launch Campaign">
-          <DistributePanel output={output} campaignId={campaignId}
-            selectedImageB64={imagesB64[selectedKV] ?? undefined} />
-        </TL>
+        {/* ── Launch ────────────────────────────────────────────────────── */}
+        <StageCard step={S()} label="Launch Campaign" color="#10b981">
+          <DistributePanel output={output} campaignId={campaignId} selectedImageB64={imagesB64[selectedKV] ?? undefined} />
+        </StageCard>
 
-        {/* Raw output toggle */}
+        {/* Raw JSON toggle */}
         {output && (
-          <div style={{ marginTop: 16, padding: "12px 16px", borderRadius: 12, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
+          <div style={{ marginTop: 8, padding: "12px 16px", borderRadius: 12, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <button style={styles.expandBtn} onClick={() => setExpanded(e => !e)}>
               {expanded ? "▲ Hide" : "▼ Show"} full pipeline output (JSON)
             </button>
@@ -2394,7 +2606,6 @@ function ResultsView({ output, campaignId }: {
           </div>
         )}
       </div>
-
       <div style={{ height: 60 }} />
     </div>
   );
@@ -2444,17 +2655,27 @@ function AgentNetworkWakeUp() {
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
-      background: "linear-gradient(145deg, #faf5ff 0%, #f5f3ff 40%, #ede9fe 100%)",
+      background: "linear-gradient(145deg, #07070f 0%, #0d0920 45%, #07070f 100%)",
       overflow: "hidden", position: "relative" as const }}>
 
       {/* Subtle grid */}
-      <div style={{ position: "absolute" as const, inset: 0, opacity: 0.03,
-        backgroundImage: "linear-gradient(#7c3aed 1px,transparent 1px),linear-gradient(90deg,#7c3aed 1px,transparent 1px)",
+      <div style={{ position: "absolute" as const, inset: 0, opacity: 1,
+        backgroundImage: "linear-gradient(rgba(124,58,237,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.04) 1px,transparent 1px)",
         backgroundSize: "44px 44px", pointerEvents: "none" as const }} />
+
+      {/* Ambient blobs */}
+      <div style={{ position: "absolute" as const, top: "-20%", right: "-10%",
+        width: 500, height: 500, borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%)",
+        pointerEvents: "none" as const }} />
+      <div style={{ position: "absolute" as const, bottom: "-20%", left: "-10%",
+        width: 400, height: 400, borderRadius: "50%",
+        background: "radial-gradient(circle, rgba(99,102,241,0.10) 0%, transparent 70%)",
+        pointerEvents: "none" as const }} />
 
       {/* Title */}
       <div style={{ textAlign: "center" as const, padding: "24px 24px 0", position: "relative", zIndex: 10 }}>
-        <h2 style={{ fontSize: 24, fontWeight: 800, color: "#1a0040",
+        <h2 style={{ fontSize: 24, fontWeight: 800, color: "#f1f5f9",
           letterSpacing: "-0.02em", marginBottom: 6, lineHeight: 1.3 }}>
           Seven AI Agents.{" "}
           <span style={{ background: ORB_BG, WebkitBackgroundClip: "text",
@@ -2462,7 +2683,7 @@ function AgentNetworkWakeUp() {
             One Powerful Campaign.
           </span>
         </h2>
-        <p style={{ fontSize: 12, color: "#6b7280", lineHeight: 1.6, maxWidth: 460, margin: "0 auto" }}>
+        <p style={{ fontSize: 12, color: "#475569", lineHeight: 1.6, maxWidth: 460, margin: "0 auto" }}>
           From strategy to content, visuals to videos, and channel-optimised publishing —
           our AI agents collaborate to launch campaigns that perform.
         </p>
@@ -2531,16 +2752,16 @@ function AgentNetworkWakeUp() {
               <div style={{ position: "absolute" as const,
                 left: n.co[0], top: n.co[1],
                 width: 170, padding: "9px 12px",
-                background: "rgba(255,255,255,0.88)",
-                backdropFilter: "blur(10px)",
-                border: `1px solid ${n.color}30`,
+                background: "rgba(10,8,28,0.88)",
+                backdropFilter: "blur(12px)",
+                border: `1px solid ${n.color}35`,
                 borderRadius: 10,
-                boxShadow: `0 2px 16px rgba(0,0,0,0.06), 0 0 10px ${n.color}15`,
+                boxShadow: `0 4px 20px rgba(0,0,0,0.4), 0 0 12px ${n.color}18`,
                 textAlign: i === 0 ? "center" as const : n.co[0] < 0 ? "right" as const : "left" as const }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: n.color, marginBottom: 3 }}>
                   {n.label}
                 </div>
-                <div style={{ fontSize: 9.5, color: "#6b7280", lineHeight: 1.5 }}>{n.desc}</div>
+                <div style={{ fontSize: 9.5, color: "#64748b", lineHeight: 1.5 }}>{n.desc}</div>
               </div>
             </div>
           ))}
@@ -2551,7 +2772,7 @@ function AgentNetworkWakeUp() {
       <div style={{ padding: "8px 24px 12px",
         borderTop: "1px solid rgba(124,58,237,0.12)",
         display: "flex", alignItems: "center", gap: 6, flexShrink: 0,
-        background: "rgba(255,255,255,0.5)" }}>
+        background: "rgba(8,8,20,0.95)" }}>
         <div style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed",
           letterSpacing: "0.04em", marginRight: 8, lineHeight: 1.4,
           whiteSpace: "nowrap" as const }}>Working<br/>Together</div>
@@ -2559,14 +2780,14 @@ function AgentNetworkWakeUp() {
           <Fragment key={s.key}>
             <div style={{ display: "flex", alignItems: "center", gap: 4,
               padding: "3px 9px", borderRadius: 6,
-              background: "rgba(124,58,237,0.07)",
-              border: "1px solid rgba(124,58,237,0.15)" }}>
+              background: "rgba(124,58,237,0.10)",
+              border: "1px solid rgba(124,58,237,0.22)" }}>
               <span style={{ fontSize: 10 }}>{s.icon}</span>
-              <span style={{ fontSize: 9.5, color: "#6d28d9", fontWeight: 600,
+              <span style={{ fontSize: 9.5, color: "#a78bfa", fontWeight: 600,
                 whiteSpace: "nowrap" as const }}>{s.label}</span>
             </div>
             {i < HARNESS_STAGES.length - 1 && (
-              <span style={{ color: "#a78bfa", fontSize: 10, flexShrink: 0 }}>→</span>
+              <span style={{ color: "#7c3aed", fontSize: 10, flexShrink: 0 }}>→</span>
             )}
           </Fragment>
         ))}
@@ -2595,7 +2816,7 @@ function OrbHeader({ done }: { done: boolean }) {
           color: "#7c3aed", textTransform: "uppercase" as const, marginBottom: 3 }}>
           LOGOS · {done ? "COMPLETE ✓" : "RUNNING"}
         </div>
-        <div style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>Validating Brief</div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9" }}>Validating Brief</div>
       </div>
     </div>
   );
@@ -2661,7 +2882,7 @@ function BriefIntakeView({
     return (
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
         padding: "40px 48px", overflowY: "auto" as const,
-        background: "linear-gradient(135deg, #faf5ff 0%, #f5f3ff 50%, #faf5ff 100%)" }}>
+        background: "linear-gradient(135deg, #07070f 0%, #0d0920 50%, #07070f 100%)" }}>
         <div style={{ width: "100%", maxWidth: 680 }}>
           <OrbHeader done={false} />
 
@@ -2677,21 +2898,22 @@ function BriefIntakeView({
                 <div key={src.id} style={{
                   display: "flex", alignItems: "center", gap: 16,
                   padding: "20px 22px", borderRadius: 16,
-                  background: done ? "rgba(124,58,237,0.06)" : "white",
-                  border: `1.5px solid ${done ? "rgba(124,58,237,0.3)" : "#e5e7eb"}`,
-                  boxShadow: done ? "0 2px 12px rgba(124,58,237,0.08)" : "0 1px 6px rgba(0,0,0,0.04)",
+                  background: done ? "rgba(124,58,237,0.14)" : "rgba(255,255,255,0.04)",
+                  border: `1.5px solid ${done ? "rgba(124,58,237,0.40)" : "rgba(255,255,255,0.08)"}`,
+                  boxShadow: done ? "0 4px 20px rgba(124,58,237,0.14)" : "0 2px 8px rgba(0,0,0,0.3)",
+                  backdropFilter: "blur(8px)",
                   transition: "all 0.4s ease",
                 }}>
                   <div style={{ width: 48, height: 48, borderRadius: 12, flexShrink: 0,
-                    background: done ? "rgba(124,58,237,0.12)" : "#f9fafb",
+                    background: done ? "rgba(124,58,237,0.20)" : "rgba(255,255,255,0.06)",
                     display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
                     {src.icon}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#111827", marginBottom: 3 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", marginBottom: 3 }}>
                       {src.label}
                     </div>
-                    <div style={{ fontSize: 12, color: "#9ca3af" }}>← {src.from}</div>
+                    <div style={{ fontSize: 12, color: "#475569" }}>← {src.from}</div>
                   </div>
                   {done
                     ? <span style={{ fontSize: 16, color: "#7c3aed", fontWeight: 800, flexShrink: 0 }}>✓</span>
@@ -2719,8 +2941,8 @@ function BriefIntakeView({
           {/* Fan Truth preview when it arrives */}
           {ft?.overall !== undefined && (
             <div style={{ marginTop: 16, padding: "16px 18px", borderRadius: 12,
-              background: "white", border: "1.5px solid rgba(124,58,237,0.2)" }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed",
+              background: "rgba(124,58,237,0.10)", border: "1.5px solid rgba(124,58,237,0.28)" }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#a78bfa",
                 letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 10 }}>
                 Fan Truth Score
               </div>
@@ -2730,13 +2952,13 @@ function BriefIntakeView({
                   {ft.overall}/100
                 </span>
                 <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 12px", borderRadius: 99,
-                  background: ft.verdict === "PASS" ? "#dcfce7" : "#fee2e2",
-                  color: ft.verdict === "PASS" ? "#065f46" : "#991b1b" }}>
+                  background: ft.verdict === "PASS" ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)",
+                  color: ft.verdict === "PASS" ? "#34d399" : "#f87171" }}>
                   {ft.verdict}
                 </span>
               </div>
               {ft.statement && (
-                <div style={{ marginTop: 8, fontSize: 12, color: "#6b7280", fontStyle: "italic" }}>
+                <div style={{ marginTop: 8, fontSize: 12, color: "#64748b", fontStyle: "italic" }}>
                   "{String(ft.statement).slice(0, 110)}…"
                 </div>
               )}
@@ -2750,11 +2972,12 @@ function BriefIntakeView({
   // ── Phase 3: Brief summary cards ────────────────────────────
   const Card = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
     <div style={{
-      background: "white", border: "1px solid #ede9fe", borderRadius: 14,
+      background: "rgba(255,255,255,0.04)", border: "1px solid rgba(124,58,237,0.18)", borderRadius: 14,
       padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
-      boxShadow: "0 1px 8px rgba(124,58,237,0.06)",
+      backdropFilter: "blur(8px)",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
     }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa", letterSpacing: "0.1em",
         textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
@@ -2768,14 +2991,14 @@ function BriefIntakeView({
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 200px)" }}>
+      background: "linear-gradient(180deg, #0d0920 0%, #07070f 200px)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <OrbHeader done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
 
         {/* Brand */}
         <Card title="Brand">
-          <div style={{ fontSize: 26, fontWeight: 800, color: "#111827", lineHeight: 1.1, marginBottom: 6 }}>
+          <div style={{ fontSize: 26, fontWeight: 800, color: "#f1f5f9", lineHeight: 1.1, marginBottom: 6 }}>
             {brief?.brand ?? "—"}
           </div>
           <div style={{ fontSize: 14, color: "#6b7280" }}>{brief?.product ?? ""}</div>
@@ -2783,31 +3006,31 @@ function BriefIntakeView({
 
         {/* Objective */}
         <Card title="Objective">
-          <div style={{ fontSize: 15, color: "#111827", lineHeight: 1.6 }}>
+          <div style={{ fontSize: 15, color: "#cbd5e1", lineHeight: 1.6 }}>
             {brief?.goal ?? "—"}
           </div>
         </Card>
 
         {/* Target Audience */}
         <Card title="Target Audience">
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#111827", marginBottom: 4 }}>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", marginBottom: 4 }}>
             {brief?.audience?.segment || "General Audience"}
           </div>
           {brief?.audience?.age_range && (
-            <div style={{ fontSize: 14, color: "#6b7280", marginBottom: 10 }}>
+            <div style={{ fontSize: 14, color: "#64748b", marginBottom: 10 }}>
               {brief.audience.age_range}
             </div>
           )}
           <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
             {interestTags.map((t, i) => (
               <span key={i} style={{ fontSize: 12, padding: "3px 10px", borderRadius: 99,
-                background: "#f9fafb", border: "1px solid #e5e7eb", color: "#374151" }}>
+                background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)", color: "#94a3b8" }}>
                 {t}
               </span>
             ))}
             {brief?.market && (
               <span style={{ fontSize: 12, padding: "3px 10px", borderRadius: 99,
-                background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed" }}>
+                background: "rgba(124,58,237,0.14)", border: "1px solid rgba(124,58,237,0.30)", color: "#a78bfa" }}>
                 {brief.market}
               </span>
             )}
@@ -2819,7 +3042,7 @@ function BriefIntakeView({
           <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
             {(brief?.channels ?? []).map((ch, i) => (
               <span key={i} style={{ fontSize: 13, padding: "5px 14px", borderRadius: 99,
-                background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed", fontWeight: 500 }}>
+                background: "rgba(124,58,237,0.14)", border: "1px solid rgba(124,58,237,0.28)", color: "#a78bfa", fontWeight: 500 }}>
                 {ch}
               </span>
             ))}
@@ -2831,16 +3054,16 @@ function BriefIntakeView({
           {kpis.length > 0 ? (
             kpis.slice(0, 4).map((k: any, i: number) => (
               <div key={i} style={{ display: "flex", alignItems: "center", gap: 8,
-                marginBottom: 8, fontSize: 14, color: "#111827" }}>
-                <span style={{ color: "#7c3aed", fontWeight: 700 }}>→</span>
+                marginBottom: 8, fontSize: 14, color: "#e2e8f0" }}>
+                <span style={{ color: "#a78bfa", fontWeight: 700 }}>→</span>
                 <span style={{ fontWeight: 600 }}>{k.metric}</span>
-                {k.target && <span style={{ color: "#6b7280" }}>— {k.target}</span>}
+                {k.target && <span style={{ color: "#64748b" }}>— {k.target}</span>}
               </div>
             ))
           ) : (brief?.kpis ? brief.kpis.split(", ").map((k, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center", gap: 8,
-              marginBottom: 8, fontSize: 14, color: "#111827" }}>
-              <span style={{ color: "#7c3aed", fontWeight: 700 }}>→</span> {k}
+              marginBottom: 8, fontSize: 14, color: "#e2e8f0" }}>
+              <span style={{ color: "#a78bfa", fontWeight: 700 }}>→</span> {k}
             </div>
           )) : null)}
         </Card>
@@ -2854,18 +3077,18 @@ function BriefIntakeView({
                   {ft.overall}/100
                 </span>
                 <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
-                  background: ft.verdict === "PASS" ? "#dcfce7" : "#fee2e2",
-                  color: ft.verdict === "PASS" ? "#065f46" : "#991b1b" }}>
+                  background: ft.verdict === "PASS" ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)",
+                  color: ft.verdict === "PASS" ? "#34d399" : "#f87171" }}>
                   {ft.verdict}
                 </span>
               </div>
               {ft.statement && (
-                <div style={{ fontSize: 13, color: "#6b7280", fontStyle: "italic", lineHeight: 1.5 }}>
+                <div style={{ fontSize: 13, color: "#64748b", fontStyle: "italic", lineHeight: 1.5 }}>
                   "{String(ft.statement).slice(0, 100)}{String(ft.statement).length > 100 ? "…" : ""}"
                 </div>
               )}
               {aud?.count && (
-                <div style={{ marginTop: 8, fontSize: 12, color: "#7c3aed" }}>
+                <div style={{ marginTop: 8, fontSize: 12, color: "#a78bfa" }}>
                   👥 {String(aud.count).replace(/\D.*/, "")} profiles matched
                   {aud.income ? ` · ${aud.income}` : ""}
                 </div>
@@ -2878,7 +3101,7 @@ function BriefIntakeView({
 
         {/* Tone of Voice — full width */}
         <Card title="Tone of Voice" full>
-          <div style={{ fontSize: 22, fontWeight: 700, color: "#111827", fontStyle: "italic" }}>
+          <div style={{ fontSize: 22, fontWeight: 700, color: "#f1f5f9", fontStyle: "italic" }}>
             "{brief?.tone || "Bold, warm, unapologetically confident"}"
           </div>
         </Card>
@@ -2912,7 +3135,7 @@ function AgentIntakeHeader({ label, title, done }: {
           color: "#7c3aed", textTransform: "uppercase" as const, marginBottom: 3 }}>
           {label} · {done ? "COMPLETE ✓" : "RUNNING"}
         </div>
-        <div style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>{title}</div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9" }}>{title}</div>
       </div>
     </div>
   );
@@ -2933,11 +3156,11 @@ function AgentGeneratingView({ liveMsg }: { liveMsg?: string | null }) {
           <path d="M12 2L13.8 10.2L22 12L13.8 13.8L12 22L10.2 13.8L2 12L10.2 10.2Z" fill="white" />
         </svg>
       </div>
-      <div style={{ fontSize: 20, fontWeight: 600, color: "#374151", letterSpacing: "-0.01em" }}>
+      <div style={{ fontSize: 20, fontWeight: 600, color: "#94a3b8", letterSpacing: "-0.01em" }}>
         Generating ...
       </div>
       {liveMsg && (
-        <div style={{ fontSize: 12, color: "#9ca3af", fontStyle: "italic", maxWidth: 340,
+        <div style={{ fontSize: 12, color: "#475569", fontStyle: "italic", maxWidth: 340,
           textAlign: "center" as const, lineHeight: 1.5, padding: "0 24px" }}>
           {liveMsg}
         </div>
@@ -2957,10 +3180,10 @@ function StrategyIntakeView({ milestone, liveMsg }: {
   if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
 
   const SCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
-    <div style={{ background: "white", border: "1px solid #ede9fe", borderRadius: 14,
+    <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(124,58,237,0.18)", borderRadius: 14,
       padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
-      boxShadow: "0 1px 8px rgba(124,58,237,0.06)" }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
+      backdropFilter: "blur(8px)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa", letterSpacing: "0.1em",
         textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
@@ -2968,23 +3191,23 @@ function StrategyIntakeView({ milestone, liveMsg }: {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
+      background: "linear-gradient(180deg, #0d0920 0%, #07070f 180px)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <AgentIntakeHeader label="HELIA" title="Creative Strategy" done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {m.big_idea && (
             <SCard title="Big Idea" full>
               <div style={{ fontSize: 22, fontWeight: 800, fontStyle: "italic",
-                color: "#7c3aed", lineHeight: 1.3 }}>"{m.big_idea}"</div>
+                color: "#a78bfa", lineHeight: 1.3 }}>"{m.big_idea}"</div>
             </SCard>
           )}
           {m.hero_message && (
             <SCard title="Hero Message" full>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "#111827", lineHeight: 1.4 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.4 }}>
                 "{m.hero_message}"
               </div>
               {m.tagline && (
-                <div style={{ marginTop: 8, fontSize: 14, color: "#6b7280", fontStyle: "italic" }}>
+                <div style={{ marginTop: 8, fontSize: 14, color: "#64748b", fontStyle: "italic" }}>
                   {m.tagline}
                 </div>
               )}
@@ -2992,7 +3215,7 @@ function StrategyIntakeView({ milestone, liveMsg }: {
           )}
           {m.strategic_framework && (
             <SCard title="Strategic Framework">
-              <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>
+              <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>
                 {String(m.strategic_framework).slice(0, 260)}
                 {String(m.strategic_framework).length > 260 ? "…" : ""}
               </div>
@@ -3003,7 +3226,7 @@ function StrategyIntakeView({ milestone, liveMsg }: {
               <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
                 {(m.messaging_pillars as string[]).slice(0, 4).map((p: string, i: number) => (
                   <span key={i} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 99,
-                    background: "#f5f3ff", border: "1px solid #ddd6fe", color: "#7c3aed", fontWeight: 600 }}>
+                    background: "rgba(124,58,237,0.14)", border: "1px solid rgba(124,58,237,0.28)", color: "#a78bfa", fontWeight: 600 }}>
                     {String(p).slice(0, 40)}
                   </span>
                 ))}
@@ -3027,10 +3250,10 @@ function CopyIntakeView({ milestone, liveMsg }: {
   if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
 
   const CCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
-    <div style={{ background: "white", border: "1px solid #ede9fe", borderRadius: 14,
+    <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(124,58,237,0.18)", borderRadius: 14,
       padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
-      boxShadow: "0 1px 8px rgba(124,58,237,0.06)" }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
+      backdropFilter: "blur(8px)", boxShadow: "0 4px 20px rgba(0,0,0,0.4)" }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa", letterSpacing: "0.1em",
         textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
       {children}
     </div>
@@ -3050,7 +3273,7 @@ function CopyIntakeView({ milestone, liveMsg }: {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
+      background: "linear-gradient(180deg, #0d0920 0%, #07070f 180px)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <AgentIntakeHeader label="IDEON" title="Campaign Copy" done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -3073,14 +3296,14 @@ function CopyIntakeView({ milestone, liveMsg }: {
           )}
           {m.medium_headline && (
             <CCard title="Medium Headline">
-              <div style={{ fontSize: 16, fontWeight: 700, color: "#111827", lineHeight: 1.4 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.4 }}>
                 "{m.medium_headline}"
               </div>
             </CCard>
           )}
           {m.body && (
             <CCard title="Body Copy">
-              <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>
+              <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>
                 {String(m.body).slice(0, 200)}{String(m.body).length > 200 ? "…" : ""}
               </div>
             </CCard>
@@ -3092,12 +3315,12 @@ function CopyIntakeView({ milestone, liveMsg }: {
                   const cfg = COPY_CFG[key] ?? { icon: "📢", label: key, color: "#64748b", bg: "#f8fafc" };
                   return (
                     <div key={key} style={{ padding: "10px 12px", borderRadius: 10,
-                      background: cfg.bg, border: `1px solid ${cfg.color}20` }}>
+                      background: "rgba(255,255,255,0.04)", border: `1px solid rgba(255,255,255,0.09)` }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: cfg.color,
                         textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 5 }}>
                         {cfg.icon} {cfg.label}
                       </div>
-                      <div style={{ fontSize: 12, color: cfg.color, lineHeight: 1.4 }}>
+                      <div style={{ fontSize: 12, color: "#94a3b8", lineHeight: 1.4 }}>
                         {val.slice(0, 90)}{val.length > 90 ? "…" : ""}
                       </div>
                     </div>
@@ -3129,18 +3352,19 @@ function CultureIntakeView({ milestone, liveMsg }: {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
+      background: "linear-gradient(180deg, #0d0920 0%, #07070f 180px)" }}>
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <AgentIntakeHeader label="AETHER" title="Cultural Intelligence" done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
           {sentences.map((s, i) => (
             <div key={i} style={{ display: "flex", gap: 14, padding: "18px 20px",
-              borderRadius: 14, background: "white",
-              border: `1px solid ${i === 0 ? "rgba(124,58,237,0.25)" : "#e5e7eb"}`,
-              boxShadow: `0 1px 8px rgba(124,58,237,${i === 0 ? "0.08" : "0.03"})`,
+              borderRadius: 14, background: "rgba(255,255,255,0.04)",
+              border: `1px solid ${i === 0 ? "rgba(124,58,237,0.30)" : "rgba(255,255,255,0.08)"}`,
+              backdropFilter: "blur(8px)",
+              boxShadow: `0 4px 20px rgba(0,0,0,0.4)`,
               gridColumn: i === 0 ? "1 / -1" : undefined }}>
               <span style={{ fontSize: 22, flexShrink: 0, marginTop: 2 }}>{ICONS[i]}</span>
-              <span style={{ fontSize: i === 0 ? 15 : 13, color: "#1a2332", lineHeight: 1.6,
+              <span style={{ fontSize: i === 0 ? 15 : 13, color: "#cbd5e1", lineHeight: 1.6,
                 fontWeight: i === 0 ? 600 : 400 }}>
                 {s}
               </span>
@@ -3163,7 +3387,7 @@ function KVIntakeView({ milestone, liveMsg, reelMilestone, agentDone }: {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const,
-      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
+      background: "linear-gradient(180deg, #0d0920 0%, #07070f 180px)" }}>
       <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" as const,
         justifyContent: "center", padding: "32px 36px" }}>
         <div style={{ maxWidth: 800, margin: "0 auto", width: "100%" }}>
@@ -3190,11 +3414,11 @@ function ReelIntakeView({ milestone, liveMsg }: {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
+      background: "linear-gradient(180deg, #0d0920 0%, #07070f 180px)" }}>
       <div style={{ maxWidth: 720, margin: "0 auto" }}>
         <AgentIntakeHeader label="KINETIK" title="Campaign Reel" done={true} />
         {videoSrc ? (
-          <div style={{ background: "#0f172a", borderRadius: 16, padding: "20px 24px" }}>
+          <div style={{ background: "rgba(8,8,20,0.95)", borderRadius: 16, padding: "20px 24px", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div style={{ fontSize: 11, fontWeight: 800, color: "#f59e0b",
               letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 12 }}>
               🎬 Campaign Reel · 6s
@@ -3225,7 +3449,7 @@ function ChannelAdapterIntakeView({ milestone, liveMsg }: {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "linear-gradient(180deg, #faf5ff 0%, #ffffff 180px)" }}>
+      background: "linear-gradient(180deg, #0d0920 0%, #07070f 180px)" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
         <AgentIntakeHeader label="POLY" title="Publishing to Channels" done={true} />
         <ChannelPanel m={milestone} liveMsg={liveMsg} />
@@ -3244,22 +3468,22 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
   const m = milestone as any;
   const channelForecasts: any[] = Array.isArray(m.channel_forecasts) ? m.channel_forecasts : [];
 
-  const ROSE = "#f43f5e";
-  const ROSE_LIGHT = "#fff1f3";
-  const ROSE_BORDER = "#fecdd3";
+  const ROSE = "#fb7185";
+  const ROSE_LIGHT = "rgba(251,113,133,0.08)";
+  const ROSE_BORDER = "rgba(251,113,133,0.25)";
 
   const confColor = (c: string) =>
-    c === "HIGH" ? "#059669" : c === "MEDIUM" ? "#d97706" : "#dc2626";
+    c === "HIGH" ? "#34d399" : c === "MEDIUM" ? "#fbbf24" : "#f87171";
   const confBg    = (c: string) =>
-    c === "HIGH" ? "#f0fdf4" : c === "MEDIUM" ? "#fffbeb" : "#fff1f2";
+    c === "HIGH" ? "rgba(52,211,153,0.12)" : c === "MEDIUM" ? "rgba(251,191,36,0.12)" : "rgba(248,113,113,0.12)";
   const confBorder = (c: string) =>
-    c === "HIGH" ? "#bbf7d0" : c === "MEDIUM" ? "#fde68a" : "#fecdd3";
+    c === "HIGH" ? "rgba(52,211,153,0.30)" : c === "MEDIUM" ? "rgba(251,191,36,0.30)" : "rgba(248,113,113,0.30)";
 
   const FCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
     <div style={{
-      background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 14,
+      background: "rgba(255,255,255,0.04)", border: `1px solid ${ROSE_BORDER}`, borderRadius: 14,
       padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
-      boxShadow: "0 1px 8px rgba(244,63,94,0.06)",
+      boxShadow: "0 4px 16px rgba(0,0,0,0.4)", backdropFilter: "blur(8px)",
     }}>
       <div style={{ fontSize: 11, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
         textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
@@ -3269,7 +3493,7 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "linear-gradient(180deg, #fff1f3 0%, #ffffff 180px)" }}>
+      background: "linear-gradient(180deg, #0d0920 0%, #07070f 180px)" }}>
       <div style={{ maxWidth: 920, margin: "0 auto" }}>
 
         {/* Header */}
@@ -3277,7 +3501,7 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
           <div style={{
             width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
             background: `linear-gradient(135deg, ${ROSE} 0%, #be123c 100%)`,
-            boxShadow: "0 4px 20px rgba(244,63,94,0.32)",
+            boxShadow: "0 4px 20px rgba(251,113,133,0.32)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <span style={{ fontSize: 22 }}>📊</span>
@@ -3287,7 +3511,7 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
               color: ROSE, textTransform: "uppercase" as const, marginBottom: 3 }}>
               NEXUS · COMPLETE ✓
             </div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: "#111827" }}>Pre-Launch Performance Forecast</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9" }}>Pre-Launch Performance Forecast</div>
           </div>
         </div>
 
@@ -3299,13 +3523,13 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
             { label: "Confidence",        value: m.overall_confidence,     icon: "🎯" },
           ].map(({ label, value, icon }) => (
             <div key={label} style={{
-              background: "white", border: `1px solid ${ROSE_BORDER}`, borderRadius: 12,
+              background: "rgba(255,255,255,0.04)", border: `1px solid ${ROSE_BORDER}`, borderRadius: 12,
               padding: "16px 20px", textAlign: "center" as const,
-              boxShadow: "0 1px 6px rgba(244,63,94,0.06)",
+              boxShadow: "0 4px 16px rgba(0,0,0,0.4)", backdropFilter: "blur(8px)",
             }}>
               <div style={{ fontSize: 20, marginBottom: 6 }}>{icon}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "#111827" }}>{value ?? "—"}</div>
-              <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600, marginTop: 3,
+              <div style={{ fontSize: 20, fontWeight: 800, color: "#f1f5f9" }}>{value ?? "—"}</div>
+              <div style={{ fontSize: 11, color: "#475569", fontWeight: 600, marginTop: 3,
                 textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</div>
             </div>
           ))}
@@ -3316,7 +3540,7 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
           {/* Headline prediction */}
           {m.headline_prediction && (
             <FCard title="Forecast Headline" full>
-              <div style={{ fontSize: 17, fontWeight: 700, color: "#111827", lineHeight: 1.45,
+              <div style={{ fontSize: 17, fontWeight: 700, color: "#f1f5f9", lineHeight: 1.45,
                 fontStyle: "italic" }}>
                 "{m.headline_prediction}"
               </div>
@@ -3326,14 +3550,14 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
           {/* Fan Truth impact */}
           {m.fan_truth_impact && (
             <FCard title="Fan Truth Impact">
-              <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{m.fan_truth_impact}</div>
+              <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>{m.fan_truth_impact}</div>
             </FCard>
           )}
 
           {/* Benchmark comparison */}
           {m.benchmark_comparison && (
             <FCard title="vs. Benchmarks">
-              <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{m.benchmark_comparison}</div>
+              <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>{m.benchmark_comparison}</div>
             </FCard>
           )}
 
@@ -3348,24 +3572,24 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
                     background: ROSE_LIGHT, borderRadius: 10, padding: "14px 16px",
                     border: `1px solid ${ROSE_BORDER}`,
                   }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: "#111827" }}>
+                    <div style={{ fontWeight: 700, fontSize: 13, color: "#f1f5f9" }}>
                       {cf.channel}
                     </div>
                     <div style={{ textAlign: "center" as const }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{cf.predicted_reach}</div>
-                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" as const }}>Reach</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9" }}>{cf.predicted_reach}</div>
+                      <div style={{ fontSize: 10, color: "#475569", fontWeight: 600, textTransform: "uppercase" as const }}>Reach</div>
                     </div>
                     <div style={{ textAlign: "center" as const }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{cf.predicted_ctr}</div>
-                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" as const }}>CTR</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9" }}>{cf.predicted_ctr}</div>
+                      <div style={{ fontSize: 10, color: "#475569", fontWeight: 600, textTransform: "uppercase" as const }}>CTR</div>
                     </div>
                     <div style={{ textAlign: "center" as const }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{cf.predicted_roas}</div>
-                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" as const }}>ROAS</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9" }}>{cf.predicted_roas}</div>
+                      <div style={{ fontSize: 10, color: "#475569", fontWeight: 600, textTransform: "uppercase" as const }}>ROAS</div>
                     </div>
                     <div style={{ textAlign: "center" as const }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "#111827" }}>{cf.predicted_engagement}</div>
-                      <div style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, textTransform: "uppercase" as const }}>Eng.</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9" }}>{cf.predicted_engagement}</div>
+                      <div style={{ fontSize: 10, color: "#475569", fontWeight: 600, textTransform: "uppercase" as const }}>Eng.</div>
                     </div>
                     <div>
                       <span style={{
@@ -3386,12 +3610,12 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
             <>
               {m.top_risk && (
                 <FCard title="Top Risk">
-                  <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{m.top_risk}</div>
+                  <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>{m.top_risk}</div>
                 </FCard>
               )}
               {m.top_opportunity && (
                 <FCard title="Top Opportunity">
-                  <div style={{ fontSize: 13, color: "#374151", lineHeight: 1.7 }}>{m.top_opportunity}</div>
+                  <div style={{ fontSize: 13, color: "#94a3b8", lineHeight: 1.7 }}>{m.top_opportunity}</div>
                 </FCard>
               )}
             </>
@@ -3422,7 +3646,7 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
                     background: ROSE_LIGHT, border: `1px solid ${ROSE_BORDER}`,
                     borderRadius: 10, padding: "8px 14px",
                   }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>{ch}</span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "#cbd5e1" }}>{ch}</span>
                     <span style={{ fontSize: 15, fontWeight: 800, color: ROSE }}>{(pct * 100).toFixed(0)}%</span>
                   </div>
                 ))}
@@ -3489,53 +3713,126 @@ function GradientOrb({ size = 40 }: { size?: number }) {
   );
 }
 
+// Background reels — Veo 3 outputs from previous campaigns
 // ── Home screen ───────────────────────────────────────────────
 function HomeScreen({ onStart }: { onStart: () => void }) {
   const [input, setInput] = useState("");
+  const [reelIdx, setReelIdx] = useState(0);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Crossfade to next reel when one ends
+  const handleVideoEnded = () => {
+    setReelIdx(i => (i + 1) % BG_REELS.length);
+  };
+
   return (
-    <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "0 32px" }}>
-      <div style={{ maxWidth: 680, width: "100%", textAlign: "center" as const }}>
-        <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
-          <GradientOrb size={80} />
+    <div style={{ flex: 1, position: "relative" as const, overflow: "hidden", display: "flex",
+      alignItems: "center", justifyContent: "center" }}>
+
+      {/* Background video */}
+      <video
+        ref={videoRef}
+        key={BG_REELS[reelIdx]}
+        autoPlay
+        muted
+        playsInline
+        onEnded={handleVideoEnded}
+        style={{
+          position: "absolute" as const, inset: 0,
+          width: "100%", height: "100%",
+          objectFit: "cover" as const,
+          zIndex: 0,
+          filter: "brightness(0.55) saturate(1.2)",
+        }}
+      >
+        <source src={BG_REELS[reelIdx]} type="video/mp4" />
+      </video>
+
+      {/* Dark overlay + purple vignette */}
+      <div style={{
+        position: "absolute" as const, inset: 0, zIndex: 1,
+        background: "linear-gradient(135deg, rgba(7,7,15,0.82) 0%, rgba(13,9,32,0.70) 50%, rgba(7,7,15,0.88) 100%)",
+      }} />
+
+      {/* Radial purple glow from center */}
+      <div style={{
+        position: "absolute" as const, inset: 0, zIndex: 1,
+        background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(124,58,237,0.12) 0%, transparent 70%)",
+        pointerEvents: "none" as const,
+      }} />
+
+      {/* Content */}
+      <div style={{ position: "relative" as const, zIndex: 2,
+        padding: "0 32px", maxWidth: 680, width: "100%", textAlign: "center" as const }}>
+
+        <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
+          <GradientOrb size={72} />
         </div>
-        <h1 style={{ fontSize: 40, fontWeight: 800, color: "#111827", lineHeight: 1.2,
-          marginBottom: 20, letterSpacing: "-0.03em", fontFamily: "inherit" }}>
+
+        {/* Label chip */}
+        <div style={{ display: "inline-flex", alignItems: "center", gap: 6,
+          background: "rgba(124,58,237,0.18)", border: "1px solid rgba(124,58,237,0.35)",
+          borderRadius: 99, padding: "5px 14px", marginBottom: 20 }}>
+          <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#a78bfa",
+            display: "inline-block", boxShadow: "0 0 8px #a78bfa" }} />
+          <span style={{ fontSize: 11, fontWeight: 700, color: "#a78bfa", letterSpacing: "0.12em",
+            textTransform: "uppercase" as const }}>Powered by Veo 3 · 8 AI Agents</span>
+        </div>
+
+        <h1 style={{ fontSize: 44, fontWeight: 900, color: "#f1f5f9", lineHeight: 1.15,
+          marginBottom: 18, letterSpacing: "-0.04em", fontFamily: "inherit" }}>
           Campaign Intelligence,{" "}
           <span style={{
-            background: ORB_BG,
+            background: "linear-gradient(135deg, #c084fc 0%, #a78bfa 40%, #818cf8 100%)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
           }}>Creative Excellence</span>
         </h1>
-        <p style={{ fontSize: 15, color: "#6b7280", lineHeight: 1.8, marginBottom: 40,
-          maxWidth: 560, margin: "0 auto 40px" }}>
-          Deploy a coordinated team of AI agents that analyze culture, develop strategy, generate creative assets,
-          and prepare content for every marketing channel — all from a single campaign brief.
+
+        <p style={{ fontSize: 15, color: "rgba(241,245,249,0.65)", lineHeight: 1.8,
+          maxWidth: 520, margin: "0 auto 36px" }}>
+          Deploy a coordinated team of AI agents that analyze culture, develop strategy,
+          generate creative assets, and prepare content for every marketing channel — all from
+          a single campaign brief.
         </p>
 
-        <div style={{ background: "white", border: "1.5px solid #e5e7eb", borderRadius: 16,
-          padding: "20px 24px", boxShadow: "0 4px 24px rgba(0,0,0,0.06)", textAlign: "left" as const }}>
+        {/* Prompt input */}
+        <div style={{ background: "rgba(255,255,255,0.06)", border: "1.5px solid rgba(124,58,237,0.30)",
+          borderRadius: 18, padding: "18px 22px",
+          boxShadow: "0 8px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(124,58,237,0.08)",
+          textAlign: "left" as const, backdropFilter: "blur(16px)" }}>
           <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-            <span style={{ fontSize: 15, marginTop: 3, color: "#9ca3af" }}>✦</span>
+            <span style={{ fontSize: 16, marginTop: 2, color: "#7c3aed" }}>✦</span>
             <textarea
-              style={{ flex: 1, border: "none", outline: "none", fontSize: 15, color: "#111827",
-                resize: "none" as const, background: "transparent", minHeight: 56,
+              style={{ flex: 1, border: "none", outline: "none", fontSize: 15, color: "#f1f5f9",
+                resize: "none" as const, background: "transparent", minHeight: 52,
                 fontFamily: "inherit", lineHeight: 1.6 }}
-              placeholder="e.g. Summer hair care campaign for Gen Z UK audience..."
+              placeholder="e.g. Glenfiddich 12 Year — Diwali gifting for affluent UK audiences..."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onStart(); }}}
             />
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
-            <div style={{ fontSize: 12, color: "#9ca3af" }}>Press → or Enter to start</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
+            <div style={{ fontSize: 11, color: "rgba(241,245,249,0.35)" }}>⏎ Enter to start · Shift+Enter for newline</div>
             <button onClick={onStart} style={{
-              width: 42, height: 42, borderRadius: "50%",
-              background: ORB_BG,
-              border: "none", cursor: "pointer", color: "white", fontSize: 18,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 4px 12px rgba(124,58,237,0.4)",
-            }}>→</button>
+              height: 38, padding: "0 20px", borderRadius: 99,
+              background: "linear-gradient(135deg, #7c3aed, #6366f1)",
+              border: "none", cursor: "pointer", color: "white", fontSize: 13, fontWeight: 700,
+              display: "flex", alignItems: "center", gap: 6,
+              boxShadow: "0 4px 16px rgba(124,58,237,0.45)",
+              transition: "all 0.2s",
+            }}>Launch →</button>
           </div>
+        </div>
+
+        {/* Reel indicator dots */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 20 }}>
+          {BG_REELS.map((_, i) => (
+            <div key={i} onClick={() => setReelIdx(i)}
+              style={{ width: i === reelIdx ? 20 : 6, height: 6, borderRadius: 99, cursor: "pointer",
+                background: i === reelIdx ? "#a78bfa" : "rgba(255,255,255,0.22)",
+                transition: "all 0.3s", boxShadow: i === reelIdx ? "0 0 8px #a78bfa" : "none" }} />
+          ))}
         </div>
       </div>
     </div>
@@ -3547,8 +3844,8 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 function Sidebar() {
   return (
     <div style={{ width: 260, flexShrink: 0, height: "100vh",
-      background: "#fafafa",
-      borderRight: "1px solid #e5e7eb",
+      background: "rgba(8,8,20,0.98)",
+      borderRight: "1px solid rgba(255,255,255,0.07)",
       display: "flex", flexDirection: "column" as const,
       position: "relative" as const, overflow: "hidden" }}>
 
@@ -3617,7 +3914,7 @@ function Sidebar() {
       </div>
 
       {/* Powered by Infosys Aster */}
-      <div style={{ padding: "14px 20px", borderTop: "1px solid #f3f4f6",
+      <div style={{ padding: "14px 20px", borderTop: "1px solid rgba(255,255,255,0.07)",
         position: "relative" as const, zIndex: 2 }}>
         <AsterLogo size={0.62} />
       </div>
@@ -3654,29 +3951,30 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
     [...liveLog].reverse().find(e => e.agent === key && e.status === "running")?.message ?? null;
 
   return (
-    <div style={{ width: 260, flexShrink: 0, height: "100vh", background: "white",
-      borderRight: "1px solid #e5e7eb", display: "flex", flexDirection: "column" as const }}>
+    <div style={{ width: 260, flexShrink: 0, height: "100vh", background: "rgba(8,8,20,0.98)",
+      borderRight: "1px solid rgba(255,255,255,0.07)", display: "flex", flexDirection: "column" as const }}>
 
       {/* Campaign name header */}
-      <div style={{ padding: "18px 18px 14px", borderBottom: "1px solid #f3f4f6",
+      <div style={{ padding: "18px 18px 14px", borderBottom: "1px solid rgba(255,255,255,0.07)",
         display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 26, height: 26, borderRadius: 6, background: "#f3f4f6", flexShrink: 0,
-          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13 }}>□</div>
+        <div style={{ width: 26, height: 26, borderRadius: 6, background: "rgba(255,255,255,0.06)", flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, color: "#475569" }}>□</div>
         {editing ? (
           <input autoFocus value={nameVal} onChange={e => setNameVal(e.target.value)}
             onBlur={() => { onEditName(); setEditing(false); }}
             onKeyDown={e => { if (e.key === "Enter") { onEditName(); setEditing(false); }}}
             style={{ flex: 1, fontSize: 13, fontWeight: 600, border: "none",
-              outline: "1.5px solid #7c3aed", borderRadius: 6, padding: "2px 6px", fontFamily: "inherit" }} />
+              outline: "1.5px solid #7c3aed", borderRadius: 6, padding: "2px 6px", fontFamily: "inherit",
+              background: "rgba(255,255,255,0.06)", color: "#f1f5f9" }} />
         ) : (
-          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#111827",
+          <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: "#f1f5f9",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
             {campaignName}
           </span>
         )}
         <button onClick={() => setEditing(true)}
           style={{ background: "none", border: "none", cursor: "pointer",
-            color: "#9ca3af", fontSize: 13, padding: 2, flexShrink: 0 }}>✎</button>
+            color: "#475569", fontSize: 13, padding: 2, flexShrink: 0 }}>✎</button>
       </div>
 
       {/* Workflow stages — timeline layout */}
@@ -3699,9 +3997,9 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
                   fontSize: 10, fontWeight: 700,
                   background: (isDone || isActive)
                     ? ORB_BG
-                    : "white",
-                  color: (isDone || isActive) ? "white" : "#9ca3af",
-                  border: (isDone || isActive) ? "none" : "1.5px solid #d1d5db",
+                    : "rgba(255,255,255,0.04)",
+                  color: (isDone || isActive) ? "white" : "#475569",
+                  border: (isDone || isActive) ? "none" : "1.5px solid rgba(255,255,255,0.12)",
                   boxShadow: isActive ? "0 0 0 4px rgba(124,58,237,0.15)" : "none",
                   transition: "all 0.3s",
                 }}>
@@ -3713,7 +4011,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
                     width: 1.5, flex: 1, minHeight: 20, marginTop: 2,
                     background: isDone
                       ? "linear-gradient(rgba(167,139,250,0.6), rgba(196,132,252,0.3))"
-                      : "#e5e7eb",
+                      : "rgba(255,255,255,0.08)",
                     transition: "background 0.4s",
                   }} />
                 )}
@@ -3724,7 +4022,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
                 {/* Stage label */}
                 <div style={{
                   fontSize: 13, fontWeight: isActive ? 700 : 500, paddingTop: 3,
-                  color: isActive ? "#111827" : isDone ? "#374151" : "#9ca3af",
+                  color: isActive ? "#f1f5f9" : isDone ? "#94a3b8" : "#475569",
                   marginBottom: (isDone || isActive) && stageAgents.length > 0 ? 10 : 0,
                 }}>
                   {stage.label}
@@ -3750,7 +4048,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
                             <span style={{
                               fontSize: 12, flex: 1, lineHeight: 1.3,
                               fontWeight: isRun ? 600 : 400,
-                              color: isDoneA ? "#6b7280" : isRun ? "#7c3aed" : "#9ca3af",
+                              color: isDoneA ? "#475569" : isRun ? "#a78bfa" : "#475569",
                             }}>
                               {s.label}
                             </span>
@@ -3771,7 +4069,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
                           {isRun && msg && (
                             <div style={{
                               marginTop: 4, marginLeft: 20, fontSize: 11,
-                              color: "#6b7280", lineHeight: 1.55,
+                              color: "#475569", lineHeight: 1.55,
                               display: "-webkit-box", WebkitLineClamp: 3,
                               WebkitBoxOrient: "vertical" as const, overflow: "hidden",
                             }}>
@@ -3790,8 +4088,8 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
                     {stageAgents.map(s => (
                       <div key={s.key} style={{ display: "flex", alignItems: "center", gap: 6, padding: "3px 0" }}>
                         <span style={{ fontSize: 11, width: 14, textAlign: "center" as const,
-                          color: "#e5e7eb", fontWeight: 700, flexShrink: 0 }}>✦</span>
-                        <span style={{ fontSize: 12, color: "#d1d5db" }}>{s.label}</span>
+                          color: "rgba(255,255,255,0.15)", fontWeight: 700, flexShrink: 0 }}>✦</span>
+                        <span style={{ fontSize: 12, color: "#334155" }}>{s.label}</span>
                       </div>
                     ))}
                   </div>
@@ -3803,20 +4101,20 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
       </div>
 
       {/* Request input */}
-      <div style={{ padding: "12px 14px", borderTop: "1px solid #f3f4f6" }}>
-        <div style={{ background: "#f9fafb", border: "1px solid #e5e7eb", borderRadius: 12, padding: "10px 12px" }}>
+      <div style={{ padding: "12px 14px", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
+        <div style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", borderRadius: 12, padding: "10px 12px" }}>
           <textarea placeholder="Describe your request..." value={request}
             onChange={e => setRequest(e.target.value)}
             style={{ width: "100%", border: "none", outline: "none", background: "transparent",
-              fontSize: 12, color: "#374151", resize: "none" as const,
+              fontSize: 12, color: "#94a3b8", resize: "none" as const,
               fontFamily: "inherit", lineHeight: 1.5, minHeight: 36, maxHeight: 72 }} />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6 }}>
-            <div style={{ width: 24, height: 24, borderRadius: "50%", border: "1.5px solid #e5e7eb",
-              background: "white", display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 13, cursor: "pointer", color: "#9ca3af" }}>+</div>
+            <div style={{ width: 24, height: 24, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,0.10)",
+              background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 13, cursor: "pointer", color: "#475569" }}>+</div>
             <button style={{
               width: 30, height: 30, borderRadius: "50%",
-              background: request.trim() ? "#7c3aed" : "#e5e7eb",
+              background: request.trim() ? "#7c3aed" : "rgba(255,255,255,0.06)",
               border: "none", cursor: request.trim() ? "pointer" : "default",
               color: "white", fontSize: 14,
               display: "flex", alignItems: "center", justifyContent: "center",
@@ -3885,15 +4183,16 @@ export default function App() {
 
         {/* Right: Content area */}
         <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
-          overflow: "hidden", background: "#ffffff" }}>
+          overflow: "hidden", background: "#07070f" }}>
 
           {/* Top bar — sidebar toggle on home, breadcrumb during pipeline */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "12px 20px", borderBottom: "1px solid #f3f4f6", flexShrink: 0, minHeight: 52 }}>
+            padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.07)", flexShrink: 0, minHeight: 52,
+            background: "rgba(8,8,20,0.95)", backdropFilter: "blur(12px)" }}>
             {/* Left: sidebar toggle icon */}
-            <button style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #e5e7eb",
-              background: "white", cursor: "pointer", display: "flex", alignItems: "center",
-              justifyContent: "center", color: "#6b7280", flexShrink: 0 }}>
+            <button style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid rgba(255,255,255,0.10)",
+              background: "rgba(255,255,255,0.04)", cursor: "pointer", display: "flex", alignItems: "center",
+              justifyContent: "center", color: "#64748b", flexShrink: 0 }}>
               <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
                 <rect x={3} y={3} width={7} height={18} rx={1}/><rect x={14} y={3} width={7} height={18} rx={1}/>
               </svg>
@@ -4061,15 +4360,15 @@ const styles: Record<string, React.CSSProperties> = {
 
   runningPage: {
     minHeight: "100vh", display: "flex", flexDirection: "column" as const,
-    alignItems: "center", background: "#f4f6f9", padding: 0,
+    alignItems: "center", background: "#07070f", padding: 0,
   },
   runningCard: {
-    background: "#ffffff", border: "1px solid #e2e8f0",
+    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
     borderRadius: 16, padding: "40px 48px", maxWidth: 560, width: "100%",
-    boxShadow: "0 4px 24px rgba(0,0,0,0.08)", marginTop: 40,
+    boxShadow: "0 4px 24px rgba(0,0,0,0.4)", backdropFilter: "blur(8px)", marginTop: 40,
   },
   runningTitle: {
-    fontSize: 22, fontWeight: 700, color: "#173563", marginBottom: 8,
+    fontSize: 22, fontWeight: 700, color: "#f1f5f9", marginBottom: 8,
   },
   runningSubtitle: {
     fontSize: 14, color: "#64748b", marginBottom: 32, lineHeight: 1.6,
@@ -4077,26 +4376,27 @@ const styles: Record<string, React.CSSProperties> = {
   stageList: { display: "flex", flexDirection: "column", gap: 12 },
   stageIcon: { fontSize: 20, width: 32, flexShrink: 0 },
   stageInfo: { flex: 1 },
-  stageName: { fontSize: 13, fontWeight: 600, color: "#1a2332" },
-  stageDesc: { fontSize: 12, color: "#94a3b8", marginTop: 2 },
+  stageName: { fontSize: 13, fontWeight: 600, color: "#cbd5e1" },
+  stageDesc: { fontSize: 12, color: "#475569", marginTop: 2 },
 
   // Results
   resultsPage: {
-    minHeight: "100vh", background: "#f4f6f9",
+    minHeight: "100vh", background: "#07070f",
   },
   resultsHero: {
-    background: "#ffffff",
-    borderBottom: "1px solid #e2e8f0",
+    background: "rgba(8,8,20,0.95)",
+    borderBottom: "1px solid rgba(255,255,255,0.07)",
     padding: "20px 32px",
-    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.4)",
+    backdropFilter: "blur(12px)",
   },
   resultsHeroInner: {
     display: "flex", alignItems: "center", justifyContent: "space-between",
     maxWidth: 1200, margin: "0 auto",
   },
-  resultsTitle: { fontSize: 18, fontWeight: 700, color: "#173563" },
+  resultsTitle: { fontSize: 18, fontWeight: 700, color: "#f1f5f9" },
   campaignIdTag: {
-    fontSize: 11, color: "#94a3b8", marginTop: 3, fontFamily: "monospace",
+    fontSize: 11, color: "#475569", marginTop: 3, fontFamily: "monospace",
     letterSpacing: "0.05em",
   },
   resultsGrid: {
@@ -4108,34 +4408,35 @@ const styles: Record<string, React.CSSProperties> = {
     padding: "0 32px",
   },
   resultCard: {
-    background: "#ffffff", border: "1px solid #e2e8f0",
+    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)",
     borderRadius: 14, padding: 22,
-    boxShadow: "0 1px 4px rgba(0,0,0,0.06)",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+    backdropFilter: "blur(8px)",
   },
-  cardHeader: { fontSize: 14, fontWeight: 700, color: "#173563", marginBottom: 14 },
+  cardHeader: { fontSize: 14, fontWeight: 700, color: "#f1f5f9", marginBottom: 14 },
   cardRow: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
-  cardLabel: { fontSize: 11, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.06em" },
-  cardValue: { fontSize: 13, color: "#1a2332" },
-  cardText: { fontSize: 13, color: "#4a5568", lineHeight: 1.6, marginTop: 12 },
+  cardLabel: { fontSize: 11, color: "#475569", fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: "0.06em" },
+  cardValue: { fontSize: 13, color: "#cbd5e1" },
+  cardText: { fontSize: 13, color: "#94a3b8", lineHeight: 1.6, marginTop: 12 },
   badge: {
     fontSize: 11, fontWeight: 700, padding: "3px 10px",
     borderRadius: 20, textTransform: "uppercase" as const,
   },
   bigIdea: {
-    fontSize: 20, fontWeight: 700, color: "#0055A4",
+    fontSize: 20, fontWeight: 700, color: "#a78bfa",
     fontStyle: "italic", lineHeight: 1.5, marginBottom: 16,
   },
   copyGrid: { display: "flex", flexDirection: "column" as const, gap: 16 },
   copyBlock: {},
-  copyLabel: { fontSize: 10, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase" as const, marginBottom: 6, letterSpacing: "0.08em" },
-  copyText: { fontSize: 14, color: "#1a2332", lineHeight: 1.6 },
+  copyLabel: { fontSize: 10, fontWeight: 700, color: "#475569", textTransform: "uppercase" as const, marginBottom: 6, letterSpacing: "0.08em" },
+  copyText: { fontSize: 14, color: "#cbd5e1", lineHeight: 1.6 },
   expandBtn: {
-    background: "none", border: "none", color: "#94a3b8", fontSize: 12,
+    background: "none", border: "none", color: "#475569", fontSize: 12,
     cursor: "pointer", padding: 0, marginBottom: 12,
   },
   jsonPre: {
-    fontSize: 11, color: "#4a5568", background: "#f8fafc",
-    border: "1px solid #e2e8f0",
+    fontSize: 11, color: "#94a3b8", background: "rgba(255,255,255,0.03)",
+    border: "1px solid rgba(255,255,255,0.07)",
     borderRadius: 8, padding: 16, overflowX: "auto" as const,
     whiteSpace: "pre-wrap" as const, maxHeight: 400, overflowY: "auto" as const,
   },
@@ -4143,15 +4444,15 @@ const styles: Record<string, React.CSSProperties> = {
   // Error
   errorPage: {
     minHeight: "100vh", display: "flex", alignItems: "center",
-    justifyContent: "center", background: "#f4f6f9",
+    justifyContent: "center", background: "#07070f",
   },
   errorCard: {
-    background: "#ffffff", border: "1px solid #fecaca",
+    background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.25)",
     borderRadius: 16, padding: 40, maxWidth: 480, textAlign: "center" as const,
-    boxShadow: "0 4px 24px rgba(239,68,68,0.08)",
+    boxShadow: "0 4px 24px rgba(239,68,68,0.12)", backdropFilter: "blur(8px)",
   },
-  errorTitle: { fontSize: 20, fontWeight: 700, color: "#dc2626", marginBottom: 12 },
-  errorMsg: { fontSize: 14, color: "#ef4444", lineHeight: 1.6 },
-  authHint: { marginTop: 16, fontSize: 13, color: "#64748b", lineHeight: 1.6, textAlign: "left" as const },
-  authCmd: { marginTop: 8, background: "#f1f5f9", border: "1px solid #e2e8f0", padding: "10px 14px", borderRadius: 8, fontSize: 12, color: "#0055A4", fontFamily: "monospace" },
+  errorTitle: { fontSize: 20, fontWeight: 700, color: "#f87171", marginBottom: 12 },
+  errorMsg: { fontSize: 14, color: "#fca5a5", lineHeight: 1.6 },
+  authHint: { marginTop: 16, fontSize: 13, color: "#94a3b8", lineHeight: 1.6, textAlign: "left" as const },
+  authCmd: { marginTop: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", padding: "10px 14px", borderRadius: 8, fontSize: 12, color: "#a78bfa", fontFamily: "monospace" },
 };

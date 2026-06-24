@@ -45,6 +45,7 @@ from app.instructions import (
     AGGREGATION_AGENT_INSTRUCTIONS,
     PERFORMANCE_AGENT_INSTRUCTIONS,
 )
+from app.nodes import FanTruthGateAgent
 from app.tools import generate_and_save_kv_image
 
 settings = get_settings()
@@ -58,6 +59,12 @@ briefing_agent = Agent(
     instruction   = BRIEFING_AGENT_INSTRUCTIONS,
     output_key    = "machine_brief",
     mode          = "single_turn",
+)
+
+fan_truth_gate = FanTruthGateAgent(
+    name        = "fan_truth_gate",
+    description = "Quality gate: escalates on PASS (≥70), writes retry feedback to state on FAIL.",
+    sub_agents  = [],
 )
 
 hitl_brief_approval = Agent(

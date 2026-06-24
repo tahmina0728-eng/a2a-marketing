@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CampaignOS — Demo Script</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.7;
+    color: #1a2332;
+    background: #f5f6fa;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 40px auto;
+    background: white;
+    padding: 60px 72px;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.10);
+    border-radius: 4px;
+  }
+
+  /* ── Header ── */
+  .doc-header {
+    border-bottom: 3px solid #0055A4;
+    padding-bottom: 24px;
+    margin-bottom: 36px;
+  }
+  .doc-header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    color: #0055A4;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .doc-header .subtitle {
+    font-size: 12px;
+    color: #64748b;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .meta-item {
+    background: #f0f6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    padding: 10px 14px;
+  }
+  .meta-item .label { font-size: 9px; font-weight: 700; color: #0055A4; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 3px; }
+  .meta-item .value { font-size: 12px; font-weight: 600; color: #1a2332; }
+
+  /* ── Checklist ── */
+  .checklist {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #10b981;
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin-bottom: 32px;
+  }
+  .checklist h3 { font-size: 11px; font-weight: 700; color: #065f46; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
+  .checklist ul { list-style: none; }
+  .checklist li { padding: 3px 0; font-size: 12px; color: #374151; }
+  .checklist li::before { content: '☐  '; font-size: 13px; }
+
+  /* ── Scene ── */
+  .scene {
+    margin-bottom: 44px;
+    page-break-inside: avoid;
+  }
+  .scene-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .scene-number {
+    background: #0055A4;
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 99px;
+    letter-spacing: 0.08em;
+    white-space: nowrap;
+  }
+  .scene-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.01em;
+  }
+  .scene-duration {
+    margin-left: auto;
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ── Stage direction ── */
+  .stage {
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    font-size: 11.5px;
+    color: #78350f;
+    font-style: italic;
+  }
+  .stage strong { font-style: normal; color: #92400e; }
+
+  /* ── Speech ── */
+  .speech {
+    background: #f8f9ff;
+    border: 1px solid #e0e7ff;
+    border-left: 4px solid #6366f1;
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin-bottom: 12px;
+  }
+  .speech p {
+    font-size: 13px;
+    color: #1e293b;
+    line-height: 1.8;
+    margin-bottom: 10px;
+  }
+  .speech p:last-child { margin-bottom: 0; }
+  .speech em { color: #0055A4; font-style: normal; font-weight: 600; }
+  .speech strong { color: #1a2332; }
+
+  /* ── Sub-section ── */
+  .sub-section {
+    margin: 16px 0;
+    padding-left: 20px;
+    border-left: 2px solid #c7d2fe;
+  }
+  .sub-section h4 {
+    font-size: 11px;
+    font-weight: 700;
+    color: #4338ca;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  /* ── Divider ── */
+  .divider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 40px 0;
+  }
+  .divider-thick {
+    border: none;
+    border-top: 3px solid #0055A4;
+    margin: 48px 0 36px;
+  }
+
+  /* ── Section heading ── */
+  .section-heading {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0055A4;
+    letter-spacing: -0.01em;
+    margin-bottom: 24px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #bfdbfe;
+  }
+
+  /* ── Q&A table ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 32px;
+    font-size: 12px;
+  }
+  th {
+    background: #0055A4;
+    color: white;
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  th:first-child { border-radius: 6px 0 0 0; width: 32%; }
+  th:last-child { border-radius: 0 6px 0 0; }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+    line-height: 1.6;
+  }
+  tr:nth-child(even) td { background: #f8fafc; }
+  tr:last-child td { border-bottom: none; }
+  td:first-child { font-weight: 600; color: #0055A4; }
+
+  /* ── Tech table ── */
+  .tech-table th { background: #1e293b; }
+  .tech-table td:first-child { color: #7c3aed; }
+  .tech-table td:nth-child(2) { font-weight: 600; color: #0f172a; }
+
+  /* ── Footer ── */
+  .doc-footer {
+    margin-top: 48px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .doc-footer .brand { font-size: 11px; font-weight: 700; color: #0055A4; }
+  .doc-footer .page-note { font-size: 10px; color: #94a3b8; }
+
+  /* ── Print ── */
+  @media print {
+    body { background: white; }
+    .page { box-shadow: none; margin: 0; padding: 40px 56px; }
+    .scene { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <h1>CampaignOS — Live Demo Script</h1>
+    <div class="subtitle">Multi-Agent AI Campaign Platform · Infosys Aster × Google Cloud × Gemini</div>
+    <div class="meta-grid">
+      <div class="meta-item">
+        <div class="label">Demo Duration</div>
+        <div class="value">12 – 15 minutes</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Brand Used</div>
+        <div class="value">Boozt (Energy Drinks)</div>
+      </div>
+      <div class="meta-item">
+        <div class="label">Platform</div>
+        <div class="value">Google Cloud Run</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHECKLIST -->
+  <div class="checklist">
+    <h3>Pre-Demo Checklist</h3>
+    <ul>
+      <li>Browser open on CampaignOS — agent network screen visible</li>
+      <li>Harness running on Cloud Run (or locally on port 8080)</li>
+      <li>Boozt selected as the default brand</li>
+      <li>BigQuery console open in a second tab (for technical audience)</li>
+      <li>GCS bucket open in a third tab (optional)</li>
+      <li>Microphone on · Screen sharing active · Notes hidden</li>
+    </ul>
+  </div>
+
+  <!-- SCENE 1 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 1</span>
+      <span class="scene-title">Opening</span>
+      <span class="scene-duration">30 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Agent network diagram visible on screen. Pause 3 seconds before speaking. Make eye contact with the audience first.</div>
+    <div class="speech">
+      <p>"Thank you. What I'm going to show you today is not a prototype. This is a live, production system — running on Google Cloud — that takes a raw campaign brief and produces a complete, publish-ready campaign package in under three minutes.</p>
+      <p>We call it <em>CampaignOS</em>. It is a multi-agent AI platform built on Google's Agent Development Kit, powered by Gemini, and grounded in real brand data.</p>
+      <p>Every output you see today is generated live. Nothing is pre-loaded. Nothing is scripted. Let me start with what you're looking at right now."</p>
+    </div>
+  </div>
+
+  <!-- SCENE 2 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 2</span>
+      <span class="scene-title">The Agent Network</span>
+      <span class="scene-duration">90 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Move cursor to each agent node as you name it. Slow down — let the audience absorb the diagram.</div>
+    <div class="speech">
+      <p>"This is the <em>Agent Network</em> — seven specialist AI agents, each built for a specific creative role, all connected together in a live orchestration pipeline.</p>
+      <p>At the top — <strong>Logos</strong>. The briefing intelligence. Logos reads your campaign brief, pulls brand knowledge, retrieves audience truths, and packages everything the other agents need to do their jobs.</p>
+      <p>On the upper right — <strong>Helia</strong>. The strategy agent. Helia builds the creative territory — the big idea the entire campaign is anchored to.</p>
+      <p>Below Helia — <strong>Ideon</strong>. The copy agent. Ideon writes the actual words — headlines, body copy, scripts, CTAs — all in the brand's voice.</p>
+      <p>Bottom right — <strong>Aether</strong>. Cultural intelligence. Aether analyses what is happening in the world right now and makes sure the campaign is culturally relevant, not just brand-correct.</p>
+      <p>On the left — <strong>Morphis</strong>. The visual agent. Morphis generates key visual concepts and actual images using Gemini's image generation.</p>
+      <p>Above Morphis — <strong>Kinetik</strong>. The video agent. Kinetik produces a short-form campaign reel, optimised for TikTok and Instagram Reels.</p>
+      <p>And finally — <strong>Poly</strong>. The channel agent. Poly takes everything the other agents have built and adapts it for every platform — Instagram, TikTok, Google Ads, Email — with the right format, right length, and right tone for each.</p>
+      <p>These seven agents run as a <em>directed workflow graph</em> — each node's output feeds the next, in parallel where possible — all orchestrated by Google's Agent Development Kit."</p>
+    </div>
+  </div>
+
+  <!-- SCENE 3 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 3</span>
+      <span class="scene-title">Selecting the Brand</span>
+      <span class="scene-duration">45 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Click the brand selector. Choose Boozt. Speak while clicking — keep momentum.</div>
+    <div class="speech">
+      <p>"To run a campaign, I select a brand. Today — <em>Boozt</em>. An energy drink brand targeting gym-goers, festival crowds, and gamers across the UK.</p>
+      <p>The moment I select this brand, the system knows exactly where to find its knowledge. Boozt's brand guidelines, product information, tone of voice, forbidden terms — all of it — are stored in Google Cloud Storage, indexed in Vertex AI Search, and embedded as vectors in Cloud SQL with pgvector.</p>
+      <p>I'll show you exactly what that means when the pipeline runs. Now — the brief."</p>
+    </div>
+  </div>
+
+  <!-- SCENE 4 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 4</span>
+      <span class="scene-title">Entering the Brief</span>
+      <span class="scene-duration">45 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Click the brief input field. Type slowly so the audience can read along. Then click Generate and pause.</div>
+    <div class="speech">
+      <p>"I'm going to type a very simple brief. In the real world this comes from your account team, your client, your planning document. Here — one paragraph is enough."</p>
+    </div>
+    <div class="stage"><strong>[Type this into the brief field:]</strong> "Summer festival campaign. Target audience: 18 to 28 year olds, UK. Product: Boozt Original Energy. Campaign goal: brand awareness and trial at live events."</div>
+    <div class="speech">
+      <p>"That's it. No brand deck attached. No guidelines document uploaded. No 40-page briefing template filled in. The system already has all of that — it has been reading Boozt's world and building a knowledge base around it for months. I'll hit Generate."</p>
+    </div>
+    <div class="stage"><strong>[Click Generate. Pause 3 seconds. Let the pipeline visibly start before speaking again.]</strong></div>
+  </div>
+
+  <!-- SCENE 5 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 5</span>
+      <span class="scene-title">UI to Harness — How They Connect</span>
+      <span class="scene-duration">60 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Agent pipeline cards starting to animate. First card lighting up.</div>
+    <div class="speech">
+      <p>"The moment I hit Generate, the frontend makes a single HTTP POST request to the Harness — our Python backend, running on Cloud Run.</p>
+      <p>But this is not a standard request and response. The frontend opens a <em>Server-Sent Events</em> connection — a real-time, one-way stream from the server to the browser. Every update you see on screen — every agent card lighting up, every piece of content appearing — is being pushed live from the backend as it happens. There is no polling. There is no page refresh. It is a genuine live feed.</p>
+      <p>The Harness receives the brief, identifies Boozt as the brand, and immediately kicks off the agent pipeline — running as a <em>Google ADK Workflow</em> — a directed acyclic graph of agent nodes, each with its own tools, its own instructions, and its own role."</p>
+    </div>
+  </div>
+
+  <!-- SCENE 6 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 6</span>
+      <span class="scene-title">Logos — The Briefing Agent &amp; Data Infrastructure</span>
+      <span class="scene-duration">2 min</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Logos card highlighted. Loading indicator visible. This is your longest scene — take your time, this is where the tech story lives.</div>
+    <div class="speech">
+      <p>"The first node to execute is <em>Logos</em> — but before Logos even starts reasoning, a deterministic function node called <strong>load_brand_context</strong> runs first. This function does three simultaneous data pulls — and this is where the infrastructure really matters."</p>
+    </div>
+
+    <div class="sub-section">
+      <h4>Data Pull 1 — Brand Guidelines (GCS + Cloud SQL + pgvector)</h4>
+      <div class="speech">
+        <p>"Boozt's brand guidelines document lives in a <em>Google Cloud Storage bucket</em>. It has also been chunked into 58 text segments, and each segment has been embedded using <em>Gemini Embedding 2</em> — Google's latest embedding model — producing a 768-dimensional vector for every chunk. Those 58 vectors are stored in <em>Cloud SQL</em> — a managed PostgreSQL instance — with the <em>pgvector extension</em> installed.</p>
+        <p>When Logos needs brand context, it doesn't do a keyword search. It takes your brief, embeds it using the same Gemini model, and runs a <em>cosine similarity search</em> across all 58 brand guideline chunks. It retrieves the most semantically relevant sections — positioning, tone of voice, forbidden terms — even when the exact words don't match."</p>
+      </div>
+    </div>
+
+    <div class="sub-section">
+      <h4>Data Pull 2 — Fan Truths (pgvector)</h4>
+      <div class="speech">
+        <p>"Fan Truths are validated consumer beliefs — real things that people in the target audience genuinely feel about energy drinks and the Boozt brand. For example: <em>'That first sip when you need to switch on — that's a Boozt moment.'</em> These truths are also stored as vectors in pgvector and retrieved by semantic similarity to your brief."</p>
+      </div>
+    </div>
+
+    <div class="sub-section">
+      <h4>Data Pull 3 — Campaign Benchmarks (Cloud SQL)</h4>
+      <div class="speech">
+        <p>"Finally — historical performance data from past Boozt campaigns. Click-through rates. ROAS. Engagement rates. Reach figures. Budget ranges. All pulled from Cloud SQL. This grounds the strategy in what has actually worked — not what sounds good on paper.</p>
+        <p>All three data pulls happen before Logos writes a single word. Then Logos packages everything into a structured typed object — a BriefingContext — and passes it to the next agent in the graph."</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCENE 7 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 7</span>
+      <span class="scene-title">Helia — Strategy &amp; Fan Truth Score</span>
+      <span class="scene-duration">60 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Helia card lights up. Fan Truth gauge appears. Point to the score — pause and let the audience read it.</div>
+    <div class="speech">
+      <p>"<em>Helia</em> — the strategy agent — receives Logos's briefing package and builds the creative territory.</p>
+      <p>But watch this number appearing on screen. This is the <em>Fan Truth Score</em>. It is our quality gate. Helia evaluates its proposed creative strategy against the Fan Truth database and produces a score out of 100. We're sitting at 84 — and the verdict is <strong>PASS</strong>."</p>
+    </div>
+    <div class="stage"><strong>[Pause. Let the audience absorb the score. 3 seconds of silence.]</strong></div>
+    <div class="speech">
+      <p>"What does PASS mean? It means the campaign idea — the territory, the language, the emotional angle — resonates with something the target audience genuinely believes. Not what Boozt wants them to believe. What 18 to 28 year olds who drink energy drinks at festivals actually feel.</p>
+      <p>If this had come back as FAIL — if the strategy was too generic, too feature-focused, or contradicted real audience sentiment — the system would flag it. The campaign does not progress until the idea is strong enough. This is AI working as a <em>creative quality filter</em> — not just a content generator."</p>
+    </div>
+  </div>
+
+  <!-- SCENE 8 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 8</span>
+      <span class="scene-title">Ideon, Aether, Morphis</span>
+      <span class="scene-duration">90 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Cards light up in sequence. Scroll to show each output panel as the agent finishes.</div>
+    <div class="speech">
+      <p>"<em>Ideon</em> writes the copy. It has the brand guidelines — including Boozt's forbidden terms. No generic energy-drink clichés. No 'boost your day.' Ideon knows what it cannot say — and that shapes what it does say. The headline: <strong>'Zero limits. Pure energy.'</strong> Short. Punchy. Emotionally true to the brand."</p>
+      <p>"<em>Aether</em> runs cultural intelligence. Festival culture is peaking. Performance lifestyle content is dominating Gen Z feeds. The boundary between working hard and living hard is dissolving — and Boozt sits exactly in that gap. Aether's insight gets woven into the strategy, the copy brief, and the visual direction. This is what stops campaigns from feeling generic."</p>
+      <p>"<em>Morphis</em> generates the key visual. It takes the creative territory, the copy direction, the cultural context — and sends a detailed image generation prompt to Gemini's image model. The result — you can see it loading now — a festival crowd, golden hour, Boozt can front and centre. Athletes, energy, movement. Not stock photography. A proper campaign visual, generated from your brief, in real time."</p>
+    </div>
+  </div>
+
+  <!-- SCENE 9 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 9</span>
+      <span class="scene-title">Kinetik &amp; Poly</span>
+      <span class="scene-duration">60 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Kinetik card lights up. Video player appears — press Play. Then Poly card lights up.</div>
+    <div class="speech">
+      <p>"<em>Kinetik</em> produces the campaign reel. A six-second video — live generated, streamed back from the backend, embedded directly in the browser. Fast cuts. High energy. Designed to land before the thumb scrolls past. The entire video was generated from the same brief — no storyboard, no brief to a video team."</p>
+      <p>"Finally — <em>Poly</em>. This is where the campaign gets deployed across platforms. Poly adapts everything for four channels simultaneously. Instagram caption with hashtags. TikTok hook and script. Google Ads — headline in 30 characters, Poly counts characters and won't exceed the limit. Email — subject line for open rate, body copy for click-through. Every adaptation follows the platform's format rules. All of it. Automatically."</p>
+    </div>
+  </div>
+
+  <!-- SCENE 10 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 10</span>
+      <span class="scene-title">BigQuery — The Data Layer</span>
+      <span class="scene-duration">30 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Pipeline complete. Optionally switch to BigQuery console tab briefly to show the dataset.</div>
+    <div class="speech">
+      <p>"While that entire pipeline was running — silently, in the background — every event was being logged to <em>BigQuery</em>. The brief. The brand. Which agents ran. The Fan Truth score. The model used. Latency per agent. Output token counts. All landing in real time.</p>
+      <p>This means we can answer questions no campaign platform has ever been able to answer: Which creative territories score highest for Boozt — consistently, over time? What is the average Fan Truth score by brand, by season, by channel? The data is there. Queryable. Immediately."</p>
+    </div>
+  </div>
+
+  <!-- SCENE 11 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 11</span>
+      <span class="scene-title">The Results Walkthrough</span>
+      <span class="scene-duration">60 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Scroll through the full results panel slowly. Pause at each section — give the audience time to read.</div>
+    <div class="speech">
+      <p>"Let me show you what we have — in full.</p>
+      <p><em>Fan Truth Score — 84. PASS.</em> The idea is grounded in real audience belief.</p>
+      <p><em>Creative strategy</em> — positioning, territory, pillars. Built by Helia, validated by audience data.</p>
+      <p><em>Headlines and copy</em> — short, medium, long. Written by Ideon. Brand-correct, brief-correct, human-quality.</p>
+      <p><em>Key visual</em> — generated by Morphis using Gemini. One prompt. One image. Campaign-ready.</p>
+      <p><em>Campaign reel</em> — six seconds. Generated by Kinetik. Press play. That is your TikTok ad.</p>
+      <p><em>Channel adaptations</em> — Instagram, TikTok, Google Ads, Email. Adapted by Poly. Ready to publish."</p>
+    </div>
+  </div>
+
+  <!-- SCENE 12 -->
+  <div class="scene">
+    <div class="scene-header">
+      <span class="scene-number">SCENE 12</span>
+      <span class="scene-title">The Close</span>
+      <span class="scene-duration">45 sec</span>
+    </div>
+    <div class="stage"><strong>[Action]</strong> Full results visible. Speak slowly. Deliberate pause after each bullet. This is the memorable moment.</div>
+    <div class="speech">
+      <p>"In under three minutes — seven AI agents produced a complete campaign package. From one paragraph of brief.</p>
+      <p>But here is what I want you to take away — what did <strong>not</strong> happen today.</p>
+      <p>Nobody uploaded a brand deck. Nobody filled out a creative brief template. Nobody told the system that Boozt is an energy drink. Nobody manually wrote a Google Ads headline that fits in 30 characters. Nobody checked that the copy avoided forbidden terms.</p>
+      <p>The system knew. Because the knowledge was already there — in GCS, in Cloud SQL, in Vertex AI Search. Embedded. Indexed. Ready.</p>
+      <p>CampaignOS is not a chatbot. It is not a prompt-and-response tool. It is a multi-agent, knowledge-grounded, enterprise-grade campaign intelligence platform. Built on Google Cloud. Powered by Gemini. Orchestrated by ADK.</p>
+      <p>And what you just saw is the beginning. Thank you."</p>
+    </div>
+  </div>
+
+  <hr class="divider-thick">
+
+  <!-- Q&A -->
+  <div class="section-heading">Anticipated Q&amp;A — Quick Answers</div>
+  <table>
+    <tr>
+      <th>Question</th>
+      <th>Answer</th>
+    </tr>
+    <tr>
+      <td>"What if brand guidelines change?"</td>
+      <td>Upload the new file to GCS, re-run the embedding indexer — next campaign reflects the update instantly. Zero code change required.</td>
+    </tr>
+    <tr>
+      <td>"How is this different from ChatGPT?"</td>
+      <td>ChatGPT has no brand memory, no Fan Truth validation, no campaign benchmarks, no channel rules. CampaignOS is grounded in your specific brand data — it cannot go off-brand.</td>
+    </tr>
+    <tr>
+      <td>"Can we add our own brand?"</td>
+      <td>Yes. Drop the guidelines document in GCS, run the embedding script, and the brand is indexed and live. Takes about ten minutes.</td>
+    </tr>
+    <tr>
+      <td>"What AI models does it use?"</td>
+      <td>Gemini 2.0 Flash for generation, Gemini Embedding 2 for semantic vectors, with Groq / LLaMA 3.3 as a cost-optimised fallback route via LiteLLM.</td>
+    </tr>
+    <tr>
+      <td>"Is the data secure?"</td>
+      <td>All data stays within your GCP project. Brand guidelines never leave Google Cloud. Nothing goes to a third-party API without explicit configuration.</td>
+    </tr>
+    <tr>
+      <td>"What is the Fan Truth score based on?"</td>
+      <td>A curated library of validated consumer beliefs stored as 768-dimensional vectors in pgvector. Strategy is scored by cosine similarity to truths the audience actually holds — not brand claims.</td>
+    </tr>
+    <tr>
+      <td>"Can it handle multiple brands?"</td>
+      <td>Yes. Each brand has its own namespace in GCS and its own vector space in Cloud SQL. The architecture is fully brand-agnostic.</td>
+    </tr>
+    <tr>
+      <td>"What's next for the platform?"</td>
+      <td>The same architecture extends to media planning, social listening, performance prediction, localisation, and legal review — additional nodes in the same workflow graph.</td>
+    </tr>
+  </table>
+
+  <hr class="divider">
+
+  <!-- TECH TABLE -->
+  <div class="section-heading">Technical Infrastructure Reference</div>
+  <table class="tech-table">
+    <tr>
+      <th>Component</th>
+      <th>Technology</th>
+      <th>Role in CampaignOS</th>
+    </tr>
+    <tr>
+      <td>Frontend</td>
+      <td>React + TypeScript + Vite</td>
+      <td>Campaign brief input, live SSE pipeline streaming, results display</td>
+    </tr>
+    <tr>
+      <td>Backend (Harness)</td>
+      <td>Python + Google ADK</td>
+      <td>Workflow orchestration, agent execution, tool calls</td>
+    </tr>
+    <tr>
+      <td>Deployment</td>
+      <td>Google Cloud Run</td>
+      <td>Serverless, auto-scaling containers for both frontend and harness</td>
+    </tr>
+    <tr>
+      <td>CI/CD</td>
+      <td>Google Cloud Build</td>
+      <td>Build, push to Container Registry, deploy on commit</td>
+    </tr>
+    <tr>
+      <td>Brand Storage</td>
+      <td>Google Cloud Storage</td>
+      <td>Brand guidelines, product images, campaign assets (source of truth)</td>
+    </tr>
+    <tr>
+      <td>Vector Database</td>
+      <td>Cloud SQL + pgvector</td>
+      <td>Brand guideline chunks, fan truths, benchmarks as 768-dim vectors</td>
+    </tr>
+    <tr>
+      <td>Embedding Model</td>
+      <td>Gemini Embedding 2</td>
+      <td>768-dimensional semantic vectors for RAG retrieval</td>
+    </tr>
+    <tr>
+      <td>Live Search</td>
+      <td>Vertex AI Search</td>
+      <td>Managed brand rules and fan truth retrieval in production</td>
+    </tr>
+    <tr>
+      <td>Analytics</td>
+      <td>BigQuery</td>
+      <td>Real-time pipeline event logging, campaign performance data</td>
+    </tr>
+    <tr>
+      <td>Image Generation</td>
+      <td>Gemini Image Model</td>
+      <td>Key visual generation from campaign brief and creative territory</td>
+    </tr>
+    <tr>
+      <td>LLM (primary)</td>
+      <td>Gemini 2.0 Flash</td>
+      <td>All agent reasoning and content generation</td>
+    </tr>
+    <tr>
+      <td>LLM (fallback)</td>
+      <td>Groq / LLaMA 3.3 70B</td>
+      <td>Cost-optimised fallback route via LiteLLM</td>
+    </tr>
+    <tr>
+      <td>Secrets</td>
+      <td>Google Secret Manager</td>
+      <td>API keys, database credentials, secure environment variables</td>
+    </tr>
+  </table>
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <div class="brand">CampaignOS · Infosys Aster · Google Cloud</div>
+    <div class="page-note">Confidential — Demo Use Only</div>
+  </div>
+
+</div>
+</body>
+</html>

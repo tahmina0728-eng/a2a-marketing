@@ -1,0 +1,49 @@
+# Glenfiddich Brand Asset Manifest
+# Source: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/
+
+## LOGOS
+- logo_aston-martin-f1_dark.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_aston-martin-f1_dark.png
+- logo_aston-martin-f1_glenfiddich_dark.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_aston-martin-f1_glenfiddich_dark.png
+- logo_aston-martin-f1_glenfiddich_green.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_aston-martin-f1_glenfiddich_green.png
+- logo_aston-martin-f1_glenfiddich_vertical_dark.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_aston-martin-f1_glenfiddich_vertical_dark.png
+- logo_aston-martin-f1_glenfiddich_vertical_green.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_aston-martin-f1_glenfiddich_vertical_green.png
+- logo_aston-martin-f1_glenfiddich_vertical_white.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_aston-martin-f1_glenfiddich_vertical_white.png
+- logo_aston-martin-f1_glenfiddich_white.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_aston-martin-f1_glenfiddich_white.png
+- logo_aston-martin-f1_green.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_aston-martin-f1_green.png
+- logo_aston-martin-f1_white.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_aston-martin-f1_white.png
+- logo_glenfiddich_dark.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_glenfiddich_dark.png
+- logo_glenfiddich_green.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_glenfiddich_green.png
+- logo_glenfiddich_white.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Logos/logo_glenfiddich_white.png
+
+## PRODUCT IMAGES
+- Product1 (.DS_Store): gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Products/.DS_Store
+- Product2 (.DS_Store): gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Products/PNG/.DS_Store
+- Product3 (Product1.png): gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Products/PNG/Product1.png
+- Product4 (Product11.png): gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Products/PNG/Product11.png
+- Product5 (Product2.png): gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Products/PNG/Product2.png
+- Product6 (Product3.png): gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Products/PNG/Product3.png
+- Product7 (product1.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Products/product1.jpg
+- Product8 (product11.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Products/product11.jpg
+- Product9 (product2.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Products/product2.jpg
+- Product10 (product3.jpg): gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Products/product3.jpg
+
+## FONTS
+- .DS_Store: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Font/.DS_Store
+- Agrandir_Regular.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Font/Agrandir_Regular.ttf
+- Aston Martin Flare Bold.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Font/Aston Martin Flare Bold.ttf
+- Aston Martin Flare Medium.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Font/Aston Martin Flare Medium.ttf
+- Aston Martin Flare Regular.ttf: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Font/Aston Martin Flare Regular.ttf
+
+## CAMPAIGN ASSETS / BANNERS
+- .DS_Store: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Assets/.DS_Store
+- image1.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Assets/image1.jpg
+- image2.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Assets/image2.jpg
+- image3.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Assets/image3.jpg
+- image4.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Assets/image4.jpg
+- image5.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Assets/image5.jpg
+- image6.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Assets/image6.jpg
+- image7.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Assets/image7.jpg
+- image8.jpg: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Assets/image8.jpg
+
+## COLOUR SWATCHES
+- Colour.png: gs://dauntless-karma-497108-b0-campaignos/brands/Glenfiddich/Colours/Colour.png

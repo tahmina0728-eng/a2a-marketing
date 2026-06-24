@@ -83,6 +83,8 @@ class BriefRequest(BaseModel):
     legal_claims:     Optional[str]    = None
     guardrails:       Optional[str]    = None
     notes:            Optional[str]    = None
+    mode:             str              = Field(default="new", description="'new' = full pipeline, 'adapt' = adaptation pipeline")
+    uploaded_assets:  list[str]        = Field(default_factory=list, description="Object URLs or GCS URIs of uploaded existing assets")
 
 
 # ── BRAND LOCKS ───────────────────────────────────────────────────────────
