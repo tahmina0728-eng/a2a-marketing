@@ -2538,7 +2538,7 @@ function ResultsView({ output, campaignId }: {
                   { label: "Confidence",      value: conf },
                 ].map(({ label, value }, i) => (
                   <div key={label} style={{ padding: "22px 18px", textAlign: "center" as const, borderRight: i < 2 ? `1px solid ${ROSE_BORDER}` : "none", background: i === 2 ? cB(value) : "transparent" }}>
-                    <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-0.02em", color: label === "Confidence" ? cC(value) : "#f1f5f9" }}>{value}</div>
+                    <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: "-0.02em", color: label === "Confidence" ? cC(value) : "#111827" }}>{value}</div>
                     <div style={{ fontSize: 9, color: "#334155", fontWeight: 700, marginTop: 5, textTransform: "uppercase" as const, letterSpacing: "0.08em" }}>{label}</div>
                   </div>
                 ))}
@@ -2630,7 +2630,7 @@ const RIGHT_X = 60;
 const LEFT_X  = -176;
 
 const CARD_OFF: [number, number][] = [
-  [-58, -90],      // 0 Logos — centred above avatar: co[0]=(54-170)/2, co[1]=-(card_h+gap)
+  [-58, 16],       // 0 Logos — centred below avatar (avoids overlapping title on laptop screens)
   [RIGHT_X, -10],  // 1 Helia
   [RIGHT_X, -12],  // 2 Ideon
   [RIGHT_X,   6],  // 3 Aether
