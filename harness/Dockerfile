@@ -34,7 +34,6 @@ COPY bucket/brands/Sunglow/Guidelines/         ./bucket/brands/Sunglow/Guideline
 COPY bucket/brands/Boozt/Guidelines/           ./bucket/brands/Boozt/Guidelines/
 COPY bucket/brands/Glenfiddich/Guidelines/     ./bucket/brands/Glenfiddich/Guidelines/
 COPY ["bucket/brands/UBS Bank/Guidelines/", "./bucket/brands/UBS Bank/Guidelines/"]
-COPY ["bucket/brands/UBS Bank/Logos/",      "./bucket/brands/UBS Bank/Logos/"]
 
 # Copy brand fonts (used by Pillow for KV image overlay at runtime)
 COPY bucket/brands/Sunglow/Font/       ./bucket/brands/Sunglow/Font/
