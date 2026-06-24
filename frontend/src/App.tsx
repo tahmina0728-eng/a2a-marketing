@@ -3903,8 +3903,8 @@ const WORKFLOW_STAGES = [
   { id: "brief",    label: "Brief Intake",        agents: ["briefing"] },
   { id: "creative", label: "Creative Direction",  agents: ["culture", "strategy", "copy", "kv", "reel"] },
   { id: "channel",  label: "Channel Adoption",    agents: ["channel"] },
-  { id: "perform",  label: "Performance",         agents: ["performance"] },
   { id: "activate", label: "Activation",          agents: [] as string[] },
+  { id: "perform",  label: "Performance",         agents: ["performance"] },
 ];
 
 function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditName }: {
