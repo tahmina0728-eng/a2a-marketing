@@ -583,7 +583,7 @@ def _apply_ubs_overlay(
         hl_clean  = (headline or "UBS Bank").strip()
         red_x     = margin
         text_x    = red_x + 14           # 4px line + 10px gap
-        max_txt_w = int(W * 0.62) - text_x
+        max_txt_w = int(W * 0.38) - text_x
 
         _tmp = Image.new("RGBA", (1, 1))
         _td  = ImageDraw.Draw(_tmp)
@@ -619,13 +619,22 @@ def _apply_ubs_overlay(
         sub_h    = (int(head_sz * 0.4) + sub_gap) if product_name else 0
         total_h  = block_h + sub_h
 
-        # Semi-transparent white wash behind the entire text block
-        wash_pad_r = int(W * 0.04)
+        # Horizontal gradient wash: full opacity at left edge, fades to transparent at right
+        # so the model's face on the right side of frame remains unobscured
+        wash_pad_r = int(W * 0.06)
         wash_pad_b = int(H * 0.04)
         wash_x2 = text_x + max_txt_w + wash_pad_r
         wash_y1 = max(0, text_y - int(H * 0.04))
         wash_y2 = text_y + total_h + wash_pad_b
-        wash = Image.new("RGBA", (wash_x2, wash_y2 - wash_y1), (255, 255, 255, 185))
+        wash_h  = wash_y2 - wash_y1
+        wash = Image.new("RGBA", (wash_x2, wash_h), (255, 255, 255, 0))
+        _wd = ImageDraw.Draw(wash)
+        _steps = 32
+        for _s in range(_steps):
+            _xa = (_s * wash_x2) // _steps
+            _xb = ((_s + 1) * wash_x2) // _steps
+            _a  = int(190 * (1.0 - _s / _steps) ** 0.6)
+            _wd.rectangle([_xa, 0, _xb, wash_h], fill=(255, 255, 255, _a))
         canvas.alpha_composite(wash, (0, wash_y1))
 
         draw = ImageDraw.Draw(canvas)
@@ -824,8 +833,8 @@ def _apply_brand_overlay(
 
         block_w = max(ld[3] for ld in line_data)
 
-        # Place text vertically centred, left-aligned with margin
-        text_y_start = max(margin, (H - block_h) // 2)
+        # Place text in the lower third — keeps model faces clear in the upper/mid frame
+        text_y_start = max(margin, min(int(H * 0.58), H - block_h - margin))
         text_x       = margin
 
         # ── 2. No vignette ────────────────────────────────────────────────────
@@ -1090,8 +1099,9 @@ Output the prompt only.""",
     veo_model = os.getenv("VEO_MODEL", "veo-3.1-generate-001")
 
     async def _veo_generate(prompt: str, out_uri: str):
-        """Call generate_videos; on 429 wait 60 s and retry once."""
-        for _attempt in range(2):
+        """Call generate_videos; on 429/RESOURCE_EXHAUSTED retry up to 3× with backoff."""
+        _waits = [60, 120, 180]
+        for _attempt in range(4):
             try:
                 return await loop.run_in_executor(None, lambda: _gc.models.generate_videos(
                     model=veo_model,
@@ -1105,9 +1115,10 @@ Output the prompt only.""",
                     ),
                 ))
             except Exception as _ve:
-                if _attempt == 0 and ("429" in str(_ve) or "RESOURCE_EXHAUSTED" in str(_ve)):
-                    log.warning("veo_rate_limited_retrying", error=str(_ve)[:120], wait_s=60)
-                    await asyncio.sleep(60)
+                if _attempt < 3 and ("429" in str(_ve) or "RESOURCE_EXHAUSTED" in str(_ve)):
+                    _w = _waits[_attempt]
+                    log.warning("veo_rate_limited_retrying", attempt=_attempt + 1, wait_s=_w, error=str(_ve)[:120])
+                    await asyncio.sleep(_w)
                 else:
                     raise
         raise RuntimeError("unreachable")  # pragma: no cover
@@ -1801,31 +1812,51 @@ Output EXACTLY this format (nothing else):
             "boozt":   "NOT 'Monster', NOT 'Red Bull', NOT 'Lucozade', NOT any real energy drink brand",
         }
         _real_brand_warn = _REAL_BRAND_WARNINGS.get(brand.lower(), "NOT any real-world brand")
-        _no_text_rule = (
-            f"CRITICAL BRAND + PRODUCT RULE:\n"
-            f"Brand name spelled exactly: {_brand_spelled}  ← copy this spelling letter-for-letter onto every product label.\n"
-            f"Selected product: '{_product_ctx}'\n"
-            f"Show 2-3 '{brand}' product packages/bottles prominently in the scene. "
-            f"Match the packaging SHAPE and COLOURS from the reference product images. "
-            f"The label on EVERY product MUST display '{brand}' (spelled {_brand_spelled}) and '{_product_ctx}' in large, clear, readable text.\n"
-            f"This is a completely fictional brand — {_real_brand_warn}.\n\n"
-            "TYPOGRAPHY RULE: No text anywhere in the image EXCEPT on the product packaging labels themselves. "
-            "Zero headlines, zero slogans, zero copy on backgrounds — all added in post-production.\n\n"
-        )
+        if brand == "UBS Bank":
+            # UBS is a financial services brand — no product packaging.
+            # Pure lifestyle/scene imagery matching their cinematic ad style.
+            _no_text_rule = (
+                "TYPOGRAPHY RULE: Absolutely NO text, logos, numbers, or words anywhere in the image. "
+                "Zero headlines, zero slogans — all copy is added in post-production.\n\n"
+            )
+        else:
+            _no_text_rule = (
+                f"CRITICAL BRAND + PRODUCT RULE:\n"
+                f"Brand name spelled exactly: {_brand_spelled}  ← copy this spelling letter-for-letter onto every product label.\n"
+                f"Selected product: '{_product_ctx}'\n"
+                f"Show 2-3 '{brand}' product packages/bottles prominently in the scene. "
+                f"Match the packaging SHAPE and COLOURS from the reference product images. "
+                f"The label on EVERY product MUST display '{brand}' (spelled {_brand_spelled}) and '{_product_ctx}' in large, clear, readable text.\n"
+                f"This is a completely fictional brand — {_real_brand_warn}.\n\n"
+                "TYPOGRAPHY RULE: No text anywhere in the image EXCEPT on the product packaging labels themselves. "
+                "Zero headlines, zero slogans, zero copy on backgrounds — all added in post-production.\n\n"
+            )
         _style_suffix = (
             f"\n\nBRAND VISUAL STYLE (match this aesthetic):\n{style_analysis}"
             if style_analysis else ""
         )
+        # UBS composition: cinematic wide scenes matching their actual ad reference images —
+        # aerial/overhead perspectives, groups in environments, action metaphors, NOT portraits.
+        _composition_rule = (
+            "\n\nCOMPOSITION RULE (UBS Bank visual style): "
+            "Create a CINEMATIC, wide-angle scene — NOT a portrait or close-up of one person. "
+            "Use an unexpected perspective: aerial/overhead view, low angle, wide establishing shot, or dramatic crop. "
+            "The subject(s) should be SMALL within a large environment — a landscape, arena, rooftop, coastline, city skyline, or stadium. "
+            "Groups of 2-4 people are welcome — athletes, professionals, families. "
+            "People can be in motion (running, skating, swimming, climbing) or contemplative (sitting on a cliff, overlooking a view). "
+            "Dramatic lighting: deep shadows with strong highlights, golden hour warmth, or bold architectural contrast. "
+            "The LEFT THIRD of the frame must stay relatively open — sky, horizon, or soft negative space — to allow headline text overlay in post-production."
+        ) if brand == "UBS Bank" else ""
         enriched_concepts = [
-            f"{_no_text_rule}{p}{_style_suffix}" for p in concept_prompts
+            f"{_no_text_rule}{p}{_style_suffix}{_composition_rule}" for p in concept_prompts
         ]
 
         # -- Step C: Load reference images (logo + colour palette + products) ------
         SUPPORTED_MIME = {"image/jpeg", "image/png", "image/gif", "image/webp"}
         _ref_parts: list = []
 
-        # Colour swatch FIRST — sets the exact palette Gemini must honour
-        for _c_uri in (colour_uris or [])[:2]:
+        # Colour swatch — 1 only to reduce quota cost per request
+        for _c_uri in (colour_uris or [])[:1]:
             _c_mime = _mime_for(_c_uri)
             if _c_mime in SUPPORTED_MIME:
                 _c_data = _load_bytes(_c_uri)
@@ -1836,21 +1867,23 @@ Output EXACTLY this format (nothing else):
                     )
                     _ref_parts.append(_gtypes.Part.from_bytes(data=_c_data, mime_type=_c_mime))
 
-        # Logo — most important brand identity anchor
+        # Logo — colour/identity reference only; Pillow composites it in post-production
         if logo_uri:
             _logo_mime = _mime_for(logo_uri)
             if _logo_mime in SUPPORTED_MIME:
                 _logo_data = _load_bytes(logo_uri)
                 if _logo_data:
                     _ref_parts.append(
-                        f"BRAND LOGO — reproduce this exact {brand} logo shape, colours, and design "
-                        f"on every product label and packaging in the scene:"
+                        f"BRAND IDENTITY REFERENCE — this is the {brand} logo. "
+                        f"DO NOT render or place this logo anywhere in the image — "
+                        f"it will be composited programmatically after generation. "
+                        f"Use it ONLY as a reference for the brand's color palette and graphic style."
                     )
                     _ref_parts.append(_gtypes.Part.from_bytes(data=_logo_data, mime_type=_logo_mime))
                     log.info("p2_logo_ref_loaded", uri=logo_uri)
 
-        # Product images — up to 5 (PNG preferred for transparent bg)
-        for _uri in (product_uris or [])[:5]:
+        # Product images — 1 only to reduce quota cost per request
+        for _uri in (product_uris or [])[:1]:
             _pmime = _mime_for(_uri)
             if _pmime not in SUPPORTED_MIME:
                 continue
@@ -1872,43 +1905,58 @@ Output EXACTLY this format (nothing else):
         log.info("p2_generate_image_start", model=image_model, n=len(enriched_concepts))
         await _emit("kv", "running", f"Generating {len(enriched_concepts)} campaign visuals with brand references…")
 
-        async def _gen_one_image(prompt: str, delay: float = 0.0) -> bytes | None:
-            if delay:
-                await asyncio.sleep(delay)
+        _fallback_image_model = os.getenv("FALLBACK_IMAGE_MODEL", "gemini-2.0-flash-exp")
+        _image_models = (
+            [image_model, _fallback_image_model]
+            if _fallback_image_model and _fallback_image_model != image_model
+            else [image_model]
+        )
+
+        async def _gen_one_image(prompt: str) -> bytes | None:
             loop = asyncio.get_event_loop()
-            # Build multimodal contents: reference images first, then prompt
             contents: list = []
             if _ref_parts:
                 contents.extend(_ref_parts)
             contents.append(prompt)
-            for attempt in range(4):
-                try:
-                    resp = await loop.run_in_executor(None, lambda: client.models.generate_content(
-                        model    = image_model,
-                        contents = contents,
-                        config   = _gtypes.GenerateContentConfig(
-                            response_modalities = ["IMAGE", "TEXT"],
-                            image_config        = _gtypes.ImageConfig(aspect_ratio="16:9"),
-                        ),
-                    ))
-                    for part in resp.candidates[0].content.parts:
-                        if hasattr(part, "inline_data") and part.inline_data is not None:
-                            return part.inline_data.data
-                    return None
-                except Exception as _e:
-                    if "429" in str(_e) and attempt < 3:
-                        wait = 20 * (2 ** attempt)  # 20s, 40s, 80s
-                        log.warning("p2_image_rate_limit", attempt=attempt + 1, wait_s=wait)
-                        await asyncio.sleep(wait)
-                    else:
-                        log.warning("p2_gen_one_image_failed", error=str(_e))
+            _img_waits = [60, 90, 120]  # Vertex AI quota windows are ~60s
+
+            for _mi, _cur_model in enumerate(_image_models):
+                _max_attempts = 4 if _mi == 0 else 2  # fewer retries on fallback
+                for attempt in range(_max_attempts):
+                    try:
+                        resp = await loop.run_in_executor(None, lambda m=_cur_model: client.models.generate_content(
+                            model    = m,
+                            contents = contents,
+                            config   = _gtypes.GenerateContentConfig(
+                                response_modalities = ["IMAGE", "TEXT"],
+                                image_config        = _gtypes.ImageConfig(aspect_ratio="16:9"),
+                            ),
+                        ))
+                        for part in resp.candidates[0].content.parts:
+                            if hasattr(part, "inline_data") and part.inline_data is not None:
+                                if _mi > 0:
+                                    log.info("p2_image_fallback_succeeded", model=_cur_model)
+                                return part.inline_data.data
                         return None
+                    except Exception as _e:
+                        is_429 = "429" in str(_e) or "RESOURCE_EXHAUSTED" in str(_e)
+                        if is_429 and attempt < _max_attempts - 1:
+                            wait = _img_waits[min(attempt, len(_img_waits) - 1)]
+                            log.warning("p2_image_rate_limit", model=_cur_model, attempt=attempt + 1, wait_s=wait)
+                            await asyncio.sleep(wait)
+                        elif is_429 and _mi < len(_image_models) - 1:
+                            log.warning("p2_image_quota_switching", from_model=_cur_model, to_model=_image_models[_mi + 1])
+                            break  # move to next model
+                        else:
+                            log.warning("p2_gen_one_image_failed", model=_cur_model, error=str(_e))
+                            return None
             return None
 
-        # Stagger 15s per concept to avoid competing for the same QPM window
-        _img_results = await asyncio.gather(*[
-            _gen_one_image(p, delay=i * 15) for i, p in enumerate(enriched_concepts)
-        ])
+        # Sequential — one concept at a time so they never compete for the same quota window
+        _img_results = []
+        for _i, _p in enumerate(enriched_concepts):
+            log.info("p2_generate_concept", concept=_i + 1, total=len(enriched_concepts))
+            _img_results.append(await _gen_one_image(_p))
         generated_bytes_list = [r for r in _img_results if r is not None]
         if not generated_bytes_list:
             raise ValueError("Gemini Pro Image returned no images")

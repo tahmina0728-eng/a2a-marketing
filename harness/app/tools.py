@@ -546,13 +546,15 @@ async def generate_and_save_kv_image(
                     contents.append(part)
                     logger.info("colour_swatch_included", uri=cp)
 
-        # ── 4. Brand logo — strict identity lock ──────────────────────────────────────
+        # ── 4. Brand logo — colour/style reference only; NOT reproduced in image ────
         logo_paths   = loader.list_logos(brand)
         primary_logo = _pick_primary_logo(logo_paths)
         if primary_logo:
             contents.append(
-                "BRAND LOGO: This is the official brand logo. "
-                "Use it as a visual identity reference — match its colors and graphic style."
+                "BRAND IDENTITY REFERENCE: This is the official brand logo. "
+                "DO NOT render or place this logo anywhere in the generated image — "
+                "it will be composited programmatically after generation. "
+                "Use it ONLY as a reference for the brand's color palette and graphic style."
             )
             part = _part_for_uri(primary_logo)
             if part:

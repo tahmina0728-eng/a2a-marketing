@@ -316,67 +316,28 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
     """Background task: run the full pipeline and push SSE events at each stage."""
     t_start = time.time()
     try:
-        # ── Stage 1a: Brief validation (auto-retry up to 2x if quality is low) ──
+        # ── Stage 1a: Brief validation ──────────────────────────────────────
         await push_event(campaign_id, "briefing", "running", "Loading brand guidelines & audience data…")
         logger.info("campaign_stage1_start", campaign_id=campaign_id)
 
-        MAX_BRIEF_RETRIES = 2
-        FAN_TRUTH_MIN     = 55   # retry if Fan Truth overall score below this
-        machine_brief     = {}
-        ms1               = 0
+        hb1 = asyncio.create_task(_heartbeat(campaign_id, "briefing", [
+            "Querying Fan Truth benchmarks from CDP…",
+            "Scoring campaign KPIs against historical data…",
+            "Gemini 3.5 Flash is validating your brief…",
+            "Cross-checking audience insights & channel data…",
+            "Almost there — scoring Fan Truth quality…",
+        ], interval=22))
+        try:
+            machine_brief, ms1 = await run_agent(
+                agent       = briefing_pipeline,
+                input_data  = brief.model_dump(),
+                campaign_id = campaign_id,
+            )
+        finally:
+            hb1.cancel()
 
-        for _attempt in range(MAX_BRIEF_RETRIES + 1):
-            hb1 = asyncio.create_task(_heartbeat(campaign_id, "briefing", [
-                "Querying Fan Truth benchmarks from CDP…",
-                "Scoring campaign KPIs against historical data…",
-                "Gemini 3.5 Flash is validating your brief…",
-                "Cross-checking audience insights & channel data…",
-                "Almost there — scoring Fan Truth quality…",
-            ], interval=22))
-            try:
-                machine_brief, ms1 = await run_agent(
-                    agent       = briefing_pipeline,
-                    input_data  = brief.model_dump(),
-                    campaign_id = campaign_id,
-                )
-            finally:
-                hb1.cancel()
-
-            machine_brief.setdefault("campaign_id", campaign_id)
-            machine_brief.setdefault("brand", brief.brand)
-
-            # ── Quality check ──────────────────────────────────────────────
-            _ft_chk    = machine_brief.get("fan_truth", {})
-            _ft_score  = _ft_chk.get("overall", 0) if isinstance(_ft_chk, dict) else 0
-            _ft_verdict= _ft_chk.get("verdict", "") if isinstance(_ft_chk, dict) else ""
-            _val_status= machine_brief.get("validation_status", "")
-            _is_good   = _ft_score >= FAN_TRUTH_MIN and _val_status != "rejected"
-
-            logger.info("brief_quality_check",
-                        attempt=_attempt + 1,
-                        ft_score=_ft_score,
-                        ft_verdict=_ft_verdict,
-                        validation_status=_val_status,
-                        is_good=_is_good)
-
-            if _is_good:
-                break   # quality is acceptable — continue pipeline
-
-            if _attempt < MAX_BRIEF_RETRIES:
-                _retry_msg = (
-                    f"Brief quality low (Fan Truth {_ft_score}/100) — "
-                    f"refining automatically… (attempt {_attempt + 2} of {MAX_BRIEF_RETRIES + 1})"
-                )
-                await push_event(campaign_id, "briefing", "running", _retry_msg)
-                logger.warning("brief_auto_retry", attempt=_attempt + 1,
-                               ft_score=_ft_score, reason=_val_status)
-                await asyncio.sleep(2)
-            else:
-                # All retries exhausted — proceed with best result and warn
-                logger.warning("brief_retry_exhausted", final_ft_score=_ft_score,
-                               final_status=_val_status)
-                await push_event(campaign_id, "briefing", "running",
-                    f"Proceeding with best available brief (Fan Truth {_ft_score}/100)")
+        machine_brief.setdefault("campaign_id", campaign_id)
+        machine_brief.setdefault("brand", brief.brand)
 
         # ── Extract context fields from final machine_brief ────────────────
         brand_guidelines  = machine_brief.pop("brand_guidelines", "")
