@@ -761,14 +761,14 @@ function BriefForm({ onFullCampaign }: {
 
       {/* Background video — all wizard steps until pipeline starts */}
       <>
-        <BgVideoPlayer fixed brightness={0.45} />
+        <BgVideoPlayer fixed brightness={0.55} saturate={0.9} />
         <div style={{
           position: "fixed" as const, inset: 0, zIndex: 1, pointerEvents: "none" as const,
-          background: "linear-gradient(135deg, rgba(7,7,15,0.80) 0%, rgba(13,9,32,0.65) 50%, rgba(7,7,15,0.85) 100%)",
+          background: "rgba(248,250,252,0.45)",
         }} />
         <div style={{
           position: "fixed" as const, inset: 0, zIndex: 1, pointerEvents: "none" as const,
-          background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(124,58,237,0.10) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse 70% 60% at 50% 50%, rgba(124,58,237,0.06) 0%, transparent 70%)",
         }} />
       </>
 
@@ -3845,7 +3845,7 @@ function Sidebar() {
             fontSize: 30, fontWeight: 900, letterSpacing: "-0.05em", lineHeight: 1,
             background: ORB_BG,
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
-            filter: "drop-shadow(0 0 10px rgba(240,40,204,0.5))",
+            filter: "drop-shadow(0 0 6px rgba(124,58,237,0.25))",
           }}>A2A</span>
         </div>
         {/* Tagline — each word on its own line */}
@@ -3853,7 +3853,7 @@ function Sidebar() {
           {["Marketing", "Advertising", "Media"].map(word => (
             <span key={word} style={{
               fontSize: 9, fontWeight: 700, letterSpacing: "0.16em",
-              textTransform: "uppercase" as const, color: "#94a3b8", lineHeight: 1,
+              textTransform: "uppercase" as const, color: "#64748b", lineHeight: 1,
             }}>{word}</span>
           ))}
         </div>
