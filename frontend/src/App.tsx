@@ -188,7 +188,7 @@ const BUDGETS = [
 interface WizardData {
   campaignName: string;
   brand: string;
-  mode: "new" | "adapt";
+  mode: "new" | "adapt" | "";
   goal: GoalId | "";
   goalCustom: string;
   product: string;
@@ -308,16 +308,16 @@ function BriefForm({ onFullCampaign }: {
   const [step, setStep] = useState(0);
   const [d, setD] = useState<WizardData>({
     campaignName: "",
-    brand: "Rnorr",
-    mode: "new",
+    brand: "",
+    mode: "",
     goal: "", goalCustom: "",
     product: "", productCustom: "",
     fanTruth: "", fanTruthCustom: "",
     audienceAge: [], audienceInterests: [], audienceRegions: [],
-    season: "Summer", momentType: "Day-to-Day",
-    channels: ["Instagram", "TikTok"],
-    kpis: ["reach", "ctr", "roas"],
-    budget: "£500,000", budgetCustom: "",
+    season: "", momentType: "",
+    channels: [],
+    kpis: [],
+    budget: "", budgetCustom: "",
     uploadedAssets: [],
     uploadedFileNames: [],
   });
@@ -369,7 +369,7 @@ function BriefForm({ onFullCampaign }: {
         interests: d.audienceInterests.join(", ") || undefined,
       },
       tone: "Warm & friendly",
-      mode: d.mode,
+      mode: d.mode as "new" | "adapt",
       uploaded_assets: d.uploadedAssets,
     };
     onFullCampaign(brief);
@@ -764,7 +764,7 @@ function BriefForm({ onFullCampaign }: {
         <BgVideoPlayer fixed brightness={0.55} saturate={0.9} />
         <div style={{
           position: "fixed" as const, inset: 0, zIndex: 1, pointerEvents: "none" as const,
-          background: "rgba(248,250,252,0.45)",
+          background: "rgba(248,250,252,0.72)",
         }} />
         <div style={{
           position: "fixed" as const, inset: 0, zIndex: 1, pointerEvents: "none" as const,
@@ -2630,7 +2630,7 @@ const RIGHT_X = 60;
 const LEFT_X  = -176;
 
 const CARD_OFF: [number, number][] = [
-  [-58, 16],       // 0 Logos — centred below avatar (avoids overlapping title on laptop screens)
+  [-58, -90],      // 0 Logos — centred above avatar: co[0]=(54-170)/2, co[1]=-(card_h+gap)
   [RIGHT_X, -10],  // 1 Helia
   [RIGHT_X, -12],  // 2 Ideon
   [RIGHT_X,   6],  // 3 Aether
@@ -2687,7 +2687,7 @@ function AgentNetworkWakeUp() {
       </div>
 
       {/* Network diagram */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 110, overflow: "hidden" }}>
         <div style={{ position: "relative" as const, width: W, height: H, overflow: "visible" }}>
 
           {/* SVG: rings + connecting lines + travelling dots */}
@@ -2749,16 +2749,16 @@ function AgentNetworkWakeUp() {
               <div style={{ position: "absolute" as const,
                 left: n.co[0], top: n.co[1],
                 width: 170, padding: "9px 12px",
-                background: "rgba(10,8,28,0.88)",
+                background: "rgba(255,255,255,0.96)",
                 backdropFilter: "blur(12px)",
                 border: `1px solid ${n.color}35`,
                 borderRadius: 10,
-                boxShadow: `0 4px 16px rgba(0,0,0,0.08), 0 0 12px ${n.color}22`,
+                boxShadow: `0 4px 16px rgba(15,23,42,0.08), 0 0 12px ${n.color}22`,
                 textAlign: i === 0 ? "center" as const : n.co[0] < 0 ? "right" as const : "left" as const }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: n.color, marginBottom: 3 }}>
                   {n.label}
                 </div>
-                <div style={{ fontSize: 9.5, color: "#64748b", lineHeight: 1.5 }}>{n.desc}</div>
+                <div style={{ fontSize: 9.5, color: "#475569", lineHeight: 1.5 }}>{n.desc}</div>
               </div>
             </div>
           ))}
