@@ -1782,7 +1782,7 @@ Output EXACTLY this format (nothing else):
                     vision_contents.extend(colour_parts)
                 vision_contents.append(
                     f"You are analysing {brand} brand visual assets. "
-                    "Describe in 6-7 sentences: "
+                    "Describe in 7-8 sentences: "
                     "1) exact background colours, gradients, and glow effects from the campaign ads "
                     "   — name the specific colours with hex codes from the palette swatch if visible, "
                     "2) model energy — pose, expression, movement, and hair treatment specific to this brand, "
@@ -1790,7 +1790,13 @@ Output EXACTLY this format (nothing else):
                     "   that are signature to this brand, "
                     "4) product placement — how the product is staged, lit, and scaled relative to the model, "
                     "5) typography style — any text treatment visible in the ads (font weight, size, positioning), "
-                    "6) overall mood, emotional tone, and brand personality. "
+                    "6) overall mood, emotional tone, and brand personality, "
+                    "7) COMPOSITION — look across all the reference images together and describe the typical "
+                    "   framing and camera angle (close-up portrait vs wide establishing shot vs aerial/overhead), "
+                    "   the usual number of people in frame (solo subject vs small group vs crowd), and whether "
+                    "   scenes read as intimate/personal or expansive/environmental. If the references show "
+                    "   variety (not always one person, not always a close-up), call that out explicitly so the "
+                    "   generated image doesn't default to a single static portrait. "
                     "Be precise with colour values and visual specifics — this will directly instruct AI image generation."
                 )
                 vision_resp = client.models.generate_content(
