@@ -1,0 +1,21 @@
+services:
+  harness:
+    build:
+      context: ./harness
+    env_file:
+      - ./harness/.env
+    ports:
+      - "8080:8080"
+    volumes:
+      # Local GCP Application Default Credentials (needed for Vertex AI / GCS / BigQuery calls)
+      - ${USERPROFILE}/.config/gcloud:/root/.config/gcloud:ro
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: http://localhost:8080
+    ports:
+      - "3000:8080"
+    depends_on:
+      - harness
