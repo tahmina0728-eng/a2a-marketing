@@ -1134,6 +1134,66 @@ async def serve_brand_website(brand_name: str):
     return HTMLResponse(content=html)
 
 
+class ContentHubSaveRequest(_BaseModel):
+    kind: str              # "kv" | "reel"
+    brand: str
+    campaign_name: str = ""
+    campaign_id: str = ""
+    headline: str = ""
+    asset_b64: str
+    content_type: str     # "image/jpeg" | "image/png" | "video/mp4"
+
+
+@app.post("/content-hub/items")
+async def content_hub_save(req: ContentHubSaveRequest):
+    """Save a generated KV image or reel into the persistent Content Hub library."""
+    from app import content_hub
+    try:
+        item = await asyncio.to_thread(
+            content_hub.save_item,
+            kind=req.kind, brand=req.brand, campaign_name=req.campaign_name,
+            campaign_id=req.campaign_id, headline=req.headline,
+            asset_b64=req.asset_b64, content_type=req.content_type,
+        )
+        return item
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Save failed: {e}")
+
+
+@app.get("/content-hub/items")
+async def content_hub_list():
+    """List all saved Content Hub items, newest first."""
+    from app import content_hub
+    try:
+        items = await asyncio.to_thread(content_hub.list_items)
+        return {"items": items}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"List failed: {e}")
+
+
+@app.get("/content-hub/items/{item_id}/asset")
+async def content_hub_asset(item_id: str):
+    """Stream the actual image/video bytes for a saved Content Hub item."""
+    from fastapi.responses import Response
+    from app import content_hub
+    result = await asyncio.to_thread(content_hub.get_asset, item_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Item not found")
+    data, content_type = result
+    return Response(content=data, media_type=content_type,
+                     headers={"Cache-Control": "public, max-age=3600"})
+
+
+@app.delete("/content-hub/items/{item_id}")
+async def content_hub_delete(item_id: str):
+    """Delete a saved Content Hub item (metadata + asset)."""
+    from app import content_hub
+    found = await asyncio.to_thread(content_hub.delete_item, item_id)
+    if not found:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"status": "deleted", "id": item_id}
+
+
 @app.post("/refresh")
 async def refresh():
     """

@@ -22,6 +22,8 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: string |
 import "./App.css";
 import { usePipeline } from "./hooks/usePipeline";
 import { useTheme } from "./hooks/useTheme";
+import { saveToContentHub } from "./hooks/useContentHub";
+import ContentHub from "./ContentHub";
 import type { HarnessBriefRequest, AgentEvent } from "./types/pipeline";
 
 // ── Infosys Aster logo — top-left header (small, with "Powered by") ──
@@ -2148,6 +2150,8 @@ function ResultsView({ output, campaignId }: {
   const [expanded,   setExpanded]   = useState(false);
   const [selectedKV, setSelectedKV] = useState(0);
   const [copyTab,    setCopyTab]    = useState<"short" | "medium" | "long" | "channels">("short");
+  const [kvSaveState,   setKvSaveState]   = useState<"idle" | "saving" | "saved">("idle");
+  const [reelSaveState, setReelSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
   const brief    = output as any;
   const strategy = output?.creative_strategy as any;
@@ -2163,6 +2167,40 @@ function ResultsView({ output, campaignId }: {
   const videoSrc: string    = videoB64 ? `data:video/mp4;base64,${videoB64}` : videoUri;
   const adaptations = cp?.channel_adaptations as Record<string, { label: string; image_b64: string; ratio: string }> | undefined;
   const perfForecast = (output as any)?.performance_forecast as Record<string, unknown> | undefined;
+
+  const resultHeadline = copy?.short?.headline ?? strategy?.hero_message ?? "";
+
+  const handleSaveKV = async () => {
+    setKvSaveState("saving");
+    try {
+      await saveToContentHub({
+        kind: "kv", brand: brief?.brand ?? "", campaignName: brief?.campaign_name ?? "",
+        campaignId: campaignId ?? "", headline: resultHeadline,
+        assetDataUrl: `data:image/jpeg;base64,${imagesB64[selectedKV]}`,
+      });
+      setKvSaveState("saved");
+      setTimeout(() => setKvSaveState("idle"), 2500);
+    } catch (e) {
+      console.error("content_hub_save_kv_failed", e);
+      setKvSaveState("idle");
+    }
+  };
+
+  const handleSaveReel = async () => {
+    setReelSaveState("saving");
+    try {
+      await saveToContentHub({
+        kind: "reel", brand: brief?.brand ?? "", campaignName: brief?.campaign_name ?? "",
+        campaignId: campaignId ?? "", headline: resultHeadline,
+        assetDataUrl: videoSrc,
+      });
+      setReelSaveState("saved");
+      setTimeout(() => setReelSaveState("idle"), 2500);
+    } catch (e) {
+      console.error("content_hub_save_reel_failed", e);
+      setReelSaveState("idle");
+    }
+  };
 
   const CHANNEL_ICONS: Record<string, string> = {
     instagram_feed: "📸", instagram_stories: "📱", tiktok: "🎵",
@@ -2454,7 +2492,14 @@ function ResultsView({ output, campaignId }: {
               <div>
                 <img src={`data:image/jpeg;base64,${imagesB64[selectedKV]}`} alt="Key visual"
                   style={{ width: "100%", display: "block", maxHeight: 580, objectFit: "cover" }} />
-                <div style={{ padding: "10px 16px", background: "rgba(15,23,42,0.04)", borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ padding: "10px 16px", background: "rgba(15,23,42,0.04)", borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "flex-end", gap: 8 }}>
+                  <button onClick={handleSaveKV} disabled={kvSaveState === "saving"}
+                    style={{ padding: "5px 14px", borderRadius: 99, background: kvSaveState === "saved" ? "rgba(16,185,129,0.15)" : "rgba(124,58,237,0.15)",
+                      border: `1px solid ${kvSaveState === "saved" ? "rgba(16,185,129,0.35)" : "rgba(124,58,237,0.35)"}`,
+                      color: kvSaveState === "saved" ? "#10b981" : "#7c3aed", fontSize: 11, fontWeight: 700,
+                      cursor: kvSaveState === "saving" ? "default" : "pointer", fontFamily: "inherit" }}>
+                    {kvSaveState === "saved" ? "✓ Saved" : kvSaveState === "saving" ? "Saving…" : "💾 Save to Content Hub"}
+                  </button>
                   <a href={`data:image/jpeg;base64,${imagesB64[selectedKV]}`} download={`kv-${selectedKV + 1}.jpg`}
                     style={{ padding: "5px 14px", borderRadius: 99, background: "rgba(225,29,72,0.15)", border: "1px solid rgba(225,29,72,0.35)", color: "#f43f5e", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
                     ⬇ Download
@@ -2485,9 +2530,18 @@ function ResultsView({ output, campaignId }: {
               <div style={{ background: "#000" }}>
                 <video controls autoPlay loop muted playsInline style={{ width: "100%", display: "block", maxHeight: 500 }} src={videoSrc} />
               </div>
-              <div style={{ padding: "10px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15,23,42,0.04)" }}>
+              <div style={{ padding: "10px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15,23,42,0.04)", gap: 8 }}>
                 <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>6s · 16:9 · Veo 3</span>
-                <a href={videoSrc} download="campaign-reel.mp4" style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", textDecoration: "none" }}>⬇ Download mp4</a>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={handleSaveReel} disabled={reelSaveState === "saving"}
+                    style={{ padding: "4px 12px", borderRadius: 99, background: reelSaveState === "saved" ? "rgba(16,185,129,0.15)" : "rgba(124,58,237,0.15)",
+                      border: `1px solid ${reelSaveState === "saved" ? "rgba(16,185,129,0.35)" : "rgba(124,58,237,0.35)"}`,
+                      color: reelSaveState === "saved" ? "#10b981" : "#7c3aed", fontSize: 11, fontWeight: 700,
+                      cursor: reelSaveState === "saving" ? "default" : "pointer", fontFamily: "inherit" }}>
+                    {reelSaveState === "saved" ? "✓ Saved" : reelSaveState === "saving" ? "Saving…" : "💾 Save to Content Hub"}
+                  </button>
+                  <a href={videoSrc} download="campaign-reel.mp4" style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", textDecoration: "none" }}>⬇ Download mp4</a>
+                </div>
               </div>
             </StageCard>
           );
@@ -3820,7 +3874,10 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 
 // ── Sidebar ───────────────────────────────────────────────────
 
-function Sidebar({ theme, onToggleTheme }: { theme: "light" | "dark"; onToggleTheme: () => void }) {
+function Sidebar({ theme, onToggleTheme, view, onNavigate }: {
+  theme: "light" | "dark"; onToggleTheme: () => void;
+  view: "app" | "hub"; onNavigate: (v: "app" | "hub") => void;
+}) {
   return (
     <div style={{ width: 260, flexShrink: 0, height: "100vh",
       background: "var(--card-bg)",
@@ -3868,12 +3925,32 @@ function Sidebar({ theme, onToggleTheme }: { theme: "light" | "dark"; onToggleTh
         background: "linear-gradient(90deg, transparent, rgba(124,58,237,0.2), transparent)",
         position: "relative" as const, zIndex: 2 }} />
 
+      {/* Navigation */}
+      <div style={{ padding: "16px 16px 0", display: "flex", flexDirection: "column" as const, gap: 4,
+        position: "relative" as const, zIndex: 2 }}>
+        {([
+          { id: "app" as const,  icon: "🏠", label: "Home" },
+          { id: "hub" as const,  icon: "📚", label: "Content Hub" },
+        ]).map((nav) => (
+          <button key={nav.id} onClick={() => onNavigate(nav.id)} style={{
+            display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
+            borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "inherit",
+            fontSize: 13, fontWeight: 600, textAlign: "left" as const,
+            background: view === nav.id ? "var(--sel-bg)" : "transparent",
+            color: view === nav.id ? "var(--sel-brd)" : "var(--text-secondary)",
+          }}>
+            <span style={{ fontSize: 15 }}>{nav.icon}</span>
+            {nav.label}
+          </button>
+        ))}
+      </div>
+
       {/* Decorative ring element — lower area */}
       <div style={{ flex: 1, display: "flex", alignItems: "center",
         justifyContent: "center", position: "relative" as const, zIndex: 2 }}>
         {/* Outer ring */}
         <div style={{
-          width: 190, height: 190, borderRadius: "50%",
+          width: 150, height: 150, borderRadius: "50%",
           border: "1.5px solid rgba(124,58,237,0.13)",
           display: "flex", alignItems: "center", justifyContent: "center",
           background: "radial-gradient(circle, rgba(167,139,250,0.06) 0%, transparent 70%)",
@@ -3881,13 +3958,13 @@ function Sidebar({ theme, onToggleTheme }: { theme: "light" | "dark"; onToggleTh
         }}>
           {/* Inner ring */}
           <div style={{
-            width: 124, height: 124, borderRadius: "50%",
+            width: 98, height: 98, borderRadius: "50%",
             border: "1px solid rgba(240,40,204,0.11)",
             display: "flex", alignItems: "center", justifyContent: "center",
             background: "radial-gradient(circle, rgba(240,40,204,0.05) 0%, transparent 70%)",
             animation: "hub-beat 3s 0.8s ease-in-out infinite",
           }}>
-            <GradientOrb size={48} />
+            <GradientOrb size={40} />
           </div>
         </div>
       </div>
@@ -4124,6 +4201,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
   const { theme, toggleTheme } = useTheme();
+  const [view, setView] = useState<"app" | "hub">("app");
 
   const [wizardStarted, setWizardStarted]   = useState(true);
   const [campaignName,  setCampaignName]    = useState("New Campaign");
@@ -4161,8 +4239,12 @@ export default function App() {
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
         {/* Left: Sidebar */}
-        <Sidebar theme={theme} onToggleTheme={toggleTheme} />
+        <Sidebar theme={theme} onToggleTheme={toggleTheme} view={view} onNavigate={setView} />
 
+        {view === "hub" ? (
+          <ContentHub onStartCampaign={() => setView("app")} />
+        ) : (
+        <>
         {/* Middle: Steps panel — hidden during wakeup (before any agent starts) */}
         {(state.status === "running" || state.status === "done") &&
           !(state.status === "running" && !state.agentStatus["briefing"]) && (
@@ -4342,6 +4424,8 @@ export default function App() {
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
     </ErrorBoundary>
   );
