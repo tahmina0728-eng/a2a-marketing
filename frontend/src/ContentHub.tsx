@@ -123,14 +123,21 @@ function EmptyState({ onStartCampaign }: { onStartCampaign?: () => void }) {
 export default function ContentHub({ onStartCampaign }: { onStartCampaign?: () => void }) {
   const { items, loading, error, remove } = useContentHub();
 
+  const isEmpty = !loading && items.length === 0 && !error;
+
   return (
-    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 40px", background: "var(--page-bg)" }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-        <h2 style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", margin: "0 0 6px" }}>
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 40px", background: "var(--page-bg)",
+      display: "flex", flexDirection: "column" as const,
+      alignItems: isEmpty ? "center" as const : "stretch" as const,
+      justifyContent: isEmpty ? "center" as const : "flex-start" as const }}>
+      <div style={{ maxWidth: 1200, width: "100%", margin: "0 auto" }}>
+        <h2 style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", margin: "0 0 6px",
+          textAlign: isEmpty ? "center" as const : "left" as const }}>
           Content <span style={{ background: "linear-gradient(135deg,#7c3aed,#a78bfa)",
             WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Hub</span>
         </h2>
-        <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: "0 0 28px" }}>
+        <p style={{ fontSize: 14, color: "var(--text-secondary)", margin: "0 0 14px",
+          textAlign: isEmpty ? "center" as const : "left" as const }}>
           {items.length > 0
             ? `${items.length} saved asset${items.length === 1 ? "" : "s"} — your campaign library.`
             : "Every key visual and reel you've saved, in one library."}
@@ -142,15 +149,15 @@ export default function ContentHub({ onStartCampaign }: { onStartCampaign?: () =
         {error && (
           <div style={{ color: "#ef4444", fontSize: 13, marginBottom: 16 }}>Couldn't load Content Hub: {error}</div>
         )}
-        {!loading && items.length === 0 && !error && (
-          <EmptyState onStartCampaign={onStartCampaign} />
-        )}
+        {isEmpty && <EmptyState onStartCampaign={onStartCampaign} />}
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 18 }}>
-          {items.map((item) => (
-            <ContentHubCard key={item.id} item={item} onDelete={remove} />
-          ))}
-        </div>
+        {!isEmpty && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 18 }}>
+            {items.map((item) => (
+              <ContentHubCard key={item.id} item={item} onDelete={remove} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
