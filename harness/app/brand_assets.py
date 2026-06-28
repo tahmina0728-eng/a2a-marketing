@@ -57,6 +57,25 @@ class BrandAssetLoader:
 
     # ── Public API ────────────────────────────────────────────────────────
 
+    def list_brands(self) -> list[str]:
+        """Return every brand name that has a folder under brands/, local or GCS."""
+        if self._mode == "gcs":
+            try:
+                from google.cloud import storage  # type: ignore
+                client = storage.Client(project=settings.gcp_project)
+                names: set[str] = set()
+                for blob in client.bucket(settings.gcs_bucket).list_blobs(prefix="brands/"):
+                    parts = blob.name.split("/")
+                    if len(parts) > 1 and parts[1]:
+                        names.add(parts[1])
+                return sorted(names)
+            except Exception as e:
+                logger.warning("gcs_list_brands_failed", error=str(e))
+                return []
+        if not self._local_root.is_dir():
+            return []
+        return sorted(p.name for p in self._local_root.iterdir() if p.is_dir())
+
     def load_guidelines(self, brand: str) -> str:
         """Return the full text of brand_guidelines.md. Empty string if not found."""
         if self._mode == "gcs":
