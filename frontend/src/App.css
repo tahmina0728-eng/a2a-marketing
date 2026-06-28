@@ -6,6 +6,7 @@
   --card-bg:        #ffffff;
   --card-bg-soft:   #f8fafc;
   --card-bg-translucent: rgba(255,255,255,0.95);
+  --sidebar-bg-translucent: rgba(255,255,255,0.45);
   --video-wash:     rgba(248,250,252,0.72);
   --input-bg:       #f8fafc;
   --card-border:    rgba(15, 23, 42, 0.08);
@@ -31,6 +32,7 @@
   --card-bg:        #14141f;
   --card-bg-soft:   #1a1a28;
   --card-bg-translucent: rgba(20,20,31,0.92);
+  --sidebar-bg-translucent: rgba(20,20,31,0.45);
   --video-wash:     rgba(10,10,19,0.74);
   --input-bg:       #1a1a28;
   --card-border:    rgba(255, 255, 255, 0.08);

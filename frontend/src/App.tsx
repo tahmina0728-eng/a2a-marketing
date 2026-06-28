@@ -304,6 +304,283 @@ const HARNESS_STAGES = [
   { key: "performance",  icon: "📊", label: "Nexus",    desc: "Forecasting reach, ROAS & channel performance" },
 ];
 
+// First 7 agents shown as individual nav entries in the sidebar (Nexus/Performance excluded —
+// it's a forecasting stage, not a content-producing creative agent like the other seven).
+const SIDEBAR_AGENT_KEYS = ["briefing", "strategy", "copy", "culture", "kv", "reel", "channel"];
+
+const AGENT_MODEL: Record<string, string> = {
+  briefing:    "Gemini 3.5 Flash",
+  strategy:    "Gemini 3.5 Flash",
+  copy:        "Gemini 3.5 Flash",
+  culture:     "Gemini 3.5 Flash + Vertex AI Search",
+  kv:          "Gemini 3 Pro Image",
+  reel:        "Veo 3.1",
+  channel:     "Gemini 3.5 Flash",
+  performance: "Gemini 3.5 Flash",
+};
+
+// ── Individual agent profile page (static — sidebar nav) ──────
+// ── Brand onboarding upload panel (Logos agent only) ───────────
+function BrandUploadPanel() {
+  const [brandName, setBrandName] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [status, setStatus] = useState<"idle" | "uploading" | "done" | "error">("idle");
+  const [uploaded, setUploaded] = useState<Record<string, number>>({});
+  const [skipped, setSkipped] = useState<string[]>([]);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleUpload = async () => {
+    if (!brandName.trim() || !file) return;
+    setStatus("uploading");
+    setErrorMsg(""); setUploaded({}); setSkipped([]);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`${API_BASE_PUB}/brands/${encodeURIComponent(brandName.trim())}/upload`, {
+        method: "POST", body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || `Upload failed (${res.status})`);
+      setUploaded(data.uploaded ?? {});
+      setSkipped(data.skipped ?? []);
+      setStatus("done");
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : String(e));
+      setStatus("error");
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--card-border)" }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>
+        📁 Onboard a new brand
+      </div>
+      <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 14px" }}>
+        Upload a .zip with <code>Guidelines/</code>, <code>Logos/</code>, <code>Font/</code>,{" "}
+        <code>Colours/</code> and <code>Assets/</code> subfolders. Logos will re-index its search
+        index so it can immediately retrieve the new brand's guidelines.
+      </p>
+
+      <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
+        <input value={brandName} onChange={(e) => setBrandName(e.target.value)}
+          placeholder="Brand name (e.g. Acme Corp)"
+          style={{ flex: 1, padding: "8px 12px", borderRadius: 8, fontSize: 13,
+            border: "1px solid var(--card-border)", background: "var(--input-bg)",
+            color: "var(--text-primary)", fontFamily: "inherit", outline: "none" }} />
+        <label style={{ padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600,
+          border: "1px solid var(--card-border)", background: "var(--card-bg-soft)",
+          color: "var(--text-secondary)", cursor: "pointer", whiteSpace: "nowrap" as const }}>
+          {file ? file.name.slice(0, 22) : "Choose .zip"}
+          <input type="file" accept=".zip" style={{ display: "none" }}
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+        </label>
+      </div>
+
+      <button onClick={handleUpload} disabled={!brandName.trim() || !file || status === "uploading"}
+        style={{ padding: "9px 18px", borderRadius: 10, border: "none", fontFamily: "inherit",
+          fontSize: 13, fontWeight: 700, color: "white", cursor: (!brandName.trim() || !file) ? "default" : "pointer",
+          opacity: (!brandName.trim() || !file) ? 0.4 : 1,
+          background: "linear-gradient(135deg, #7c3aed, #6366f1)" }}>
+        {status === "uploading" ? "Uploading & indexing…" : "Upload & index"}
+      </button>
+
+      {status === "error" && (
+        <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.5, color: "#ef4444" }}>⚠ {errorMsg}</div>
+      )}
+
+      {status === "done" && (
+        <div style={{ marginTop: 14, padding: "14px 16px", borderRadius: 12,
+          background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)" }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#10b981", marginBottom: 6 }}>
+            ✓ "{brandName.trim()}" indexed and searchable
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6, marginBottom: skipped.length ? 8 : 0 }}>
+            {Object.entries(uploaded).map(([cat, n]) => (
+              <span key={cat} style={{ fontSize: 11, fontWeight: 600, padding: "3px 9px", borderRadius: 99,
+                background: "var(--card-bg-soft)", border: "1px solid var(--card-border)",
+                color: "var(--text-secondary)" }}>{n} {cat}</span>
+            ))}
+            {Object.keys(uploaded).length === 0 && (
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>No files matched a known category.</span>
+            )}
+          </div>
+          {skipped.length > 0 && (
+            <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
+              {skipped.length} file{skipped.length > 1 ? "s" : ""} skipped (not inside a recognised subfolder):{" "}
+              {skipped.slice(0, 3).join(", ")}{skipped.length > 3 ? `, +${skipped.length - 3} more` : ""}
+            </div>
+          )}
+          <div style={{ fontSize: 11.5, color: "var(--text-tertiary)", lineHeight: 1.55,
+            borderTop: "1px solid rgba(16,185,129,0.18)", paddingTop: 8 }}>
+            Logos can now retrieve this brand's guidelines for brief validation. It's <strong>not yet</strong>{" "}
+            selectable in the campaign wizard's brand picker — that list is still a fixed set and needs a
+            separate code change (logo asset, product list, fan truths) to add a new brand there.
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Standalone single-agent run panel ──────────────────────────
+const STANDALONE_SUPPORTED = ["briefing", "strategy", "copy", "culture", "channel"];
+
+function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: {
+  agentKey: string; agentLabel: string; color: string;
+  prompt: string; onPromptChange: (v: string) => void;
+}) {
+  const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [result, setResult] = useState<Record<string, any> | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const supported = STANDALONE_SUPPORTED.includes(agentKey);
+
+  const handleRun = async () => {
+    if (!prompt.trim()) return;
+    setStatus("running"); setErrorMsg(""); setResult(null);
+    try {
+      const res = await fetch(`${API_BASE_PUB}/agents/${agentKey}/run`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: prompt.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || `Run failed (${res.status})`);
+      setResult(data);
+      setStatus("done");
+    } catch (e) {
+      setErrorMsg(e instanceof Error ? e.message : String(e));
+      setStatus("error");
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--card-border)" }}>
+      <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>
+        ▶ Run {agentLabel} standalone
+      </div>
+      <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 14px" }}>
+        {supported
+          ? "Write a brand + a one-line creative direction — Logos will pick out the brand automatically."
+          : `${agentLabel} generates ${agentKey === "kv" ? "an image" : "a video"} — standalone support for this agent is coming in a follow-up.`}
+      </p>
+
+      <input value={prompt} onChange={(e) => onPromptChange(e.target.value)}
+        placeholder='e.g. "UBS Bank for UK market, festive: christmas"'
+        style={{ width: "100%", padding: "10px 14px", borderRadius: 10, fontSize: 14, marginBottom: 12,
+          border: "1px solid var(--card-border)", background: "var(--input-bg)",
+          color: "var(--text-primary)", fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }} />
+
+      <button onClick={handleRun} disabled={!supported || !prompt.trim() || status === "running"}
+        style={{ padding: "9px 18px", borderRadius: 10, border: "none", fontFamily: "inherit",
+          fontSize: 13, fontWeight: 700, color: "white",
+          cursor: (!supported || !prompt.trim()) ? "default" : "pointer",
+          opacity: (!supported || !prompt.trim()) ? 0.4 : 1,
+          background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
+        {status === "running" ? "Running…" : `Run ${agentLabel}`}
+      </button>
+
+      {status === "error" && (
+        <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.5, color: "#ef4444" }}>⚠ {errorMsg}</div>
+      )}
+
+      {status === "done" && result && (
+        <div style={{ marginTop: 14, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
+          {Object.entries(result).filter(([k]) => k !== "agent").map(([key, val]) => (
+            <div key={key} style={{ marginBottom: 8 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.06em",
+                textTransform: "uppercase" as const, marginBottom: 2 }}>{key.replace(/_/g, " ")}</div>
+              {Array.isArray(val) ? (
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--text-primary)" }}>
+                  {val.map((item, i) => <li key={i}>{String(item)}</li>)}
+                </ul>
+              ) : (
+                <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.5 }}>{String(val)}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgentProfile({ agentKey, prompt, onPromptChange }: {
+  agentKey: string;
+  prompt: string; onPromptChange: (v: string) => void;
+}) {
+  const idx   = HARNESS_STAGES.findIndex((s) => s.key === agentKey);
+  const stage = HARNESS_STAGES[idx];
+  if (!stage) return null;
+
+  const color    = AGENT_COLORS[idx] ?? "#7c3aed";
+  const longDesc = AGENT_DESCS[idx] ?? stage.desc;
+  const avatar   = avatarUrl(stage.label, idx);
+  const model    = AGENT_MODEL[agentKey] ?? "Gemini 3.5 Flash";
+  const workflowStage = WORKFLOW_STAGES.find((w) => w.agents.includes(agentKey))?.label ?? "";
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "40px 48px",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      position: "relative" as const, background: "transparent" }}>
+      <div style={{ position: "absolute" as const, inset: 0, zIndex: 0, pointerEvents: "none" as const,
+        background: `radial-gradient(ellipse 70% 55% at 50% 40%, ${color}14 0%, transparent 70%)` }} />
+
+      <div style={{ maxWidth: 720, width: "100%", position: "relative" as const, zIndex: 1 }}>
+        <div style={{ position: "relative" as const, overflow: "hidden", padding: "8px 4px 28px" }}>
+          <div style={{ position: "absolute" as const, top: "-40%", right: "-10%", width: 320, height: 320,
+            borderRadius: "50%", pointerEvents: "none" as const,
+            background: `radial-gradient(circle, ${color}22 0%, transparent 70%)` }} />
+
+          <div style={{ position: "relative" as const, zIndex: 1, display: "flex", alignItems: "center", gap: 20, marginBottom: 24 }}>
+            <div style={{
+              width: 76, height: 76, borderRadius: "50%", flexShrink: 0, position: "relative" as const,
+              border: `3px solid ${color}80`, boxShadow: `0 0 28px ${color}40`, overflow: "hidden",
+            }}>
+              <img src={avatar} alt={stage.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.1 }}>
+                {stage.icon} {stage.label}
+              </div>
+              {workflowStage && (
+                <span style={{
+                  display: "inline-block", marginTop: 6, fontSize: 11, fontWeight: 700,
+                  padding: "3px 10px", borderRadius: 99, letterSpacing: "0.04em",
+                  background: `${color}18`, color,
+                }}>{workflowStage}</span>
+              )}
+            </div>
+          </div>
+
+          <p style={{ position: "relative" as const, zIndex: 1, fontSize: 16, color: "var(--text-secondary)",
+            lineHeight: 1.6, margin: "0 0 24px" }}>
+            {longDesc}
+          </p>
+
+          <div style={{ position: "relative" as const, zIndex: 1, display: "flex", gap: 28 }}>
+            <div style={{ flex: 1, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em",
+                textTransform: "uppercase" as const, marginBottom: 4 }}>In this pipeline</div>
+              <div style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>{stage.desc}</div>
+            </div>
+            <div style={{ flex: 1, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em",
+                textTransform: "uppercase" as const, marginBottom: 4 }}>Powered by</div>
+              <div style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>{model}</div>
+            </div>
+          </div>
+        </div>
+
+        {agentKey === "briefing" && <BrandUploadPanel />}
+
+        {agentKey !== "performance" && (
+          <AgentRunPanel agentKey={agentKey} agentLabel={stage.label} color={color}
+            prompt={prompt} onPromptChange={onPromptChange} />
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Brief Form (6-step wizard) ───────────────────────────────
 function BriefForm({ onFullCampaign }: {
   onFullCampaign: (brief: HarnessBriefRequest) => void;
@@ -3874,16 +4151,16 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 
 // ── Sidebar ───────────────────────────────────────────────────
 
-function Sidebar({ theme, onToggleTheme, view, onNavigate }: {
+function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSelectAgent }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
-  view: "app" | "hub"; onNavigate: (v: "app" | "hub") => void;
+  view: "app" | "hub" | "agent"; onNavigate: (v: "app" | "hub") => void;
+  activeAgentKey: string | null; onSelectAgent: (key: string) => void;
 }) {
   return (
     <div style={{ width: 260, flexShrink: 0, height: "100vh",
-      background: "var(--card-bg)",
-      borderRight: "1px solid var(--card-border)",
+      background: "transparent",
       display: "flex", flexDirection: "column" as const,
-      position: "relative" as const, overflow: "hidden" }}>
+      position: "relative" as const, zIndex: 10, overflow: "hidden" }}>
 
       {/* Subtle aurora blob — top (light purple on white) */}
       <div style={{ position: "absolute" as const, top: -60, left: -50,
@@ -3945,28 +4222,30 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate }: {
         ))}
       </div>
 
-      {/* Decorative ring element — lower area */}
-      <div style={{ flex: 1, display: "flex", alignItems: "center",
-        justifyContent: "center", position: "relative" as const, zIndex: 2 }}>
-        {/* Outer ring */}
-        <div style={{
-          width: 150, height: 150, borderRadius: "50%",
-          border: "1.5px solid rgba(124,58,237,0.13)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          background: "radial-gradient(circle, rgba(167,139,250,0.06) 0%, transparent 70%)",
-          animation: "hub-beat 4s ease-in-out infinite",
-        }}>
-          {/* Inner ring */}
-          <div style={{
-            width: 98, height: 98, borderRadius: "50%",
-            border: "1px solid rgba(240,40,204,0.11)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            background: "radial-gradient(circle, rgba(240,40,204,0.05) 0%, transparent 70%)",
-            animation: "hub-beat 3s 0.8s ease-in-out infinite",
-          }}>
-            <GradientOrb size={40} />
-          </div>
-        </div>
+      {/* Agents — flat list, always visible */}
+      <div style={{ padding: "4px 16px 0", position: "relative" as const, zIndex: 2 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.1em",
+          textTransform: "uppercase" as const, padding: "10px 12px 6px" }}>Agents</div>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto" as const, display: "flex", flexDirection: "column" as const,
+        gap: 2, padding: "0 16px", position: "relative" as const, zIndex: 2 }}>
+        {SIDEBAR_AGENT_KEYS.map((key) => {
+          const idx   = HARNESS_STAGES.findIndex((s) => s.key === key);
+          const stage = HARNESS_STAGES[idx];
+          const isActive = view === "agent" && activeAgentKey === key;
+          return (
+            <button key={key} onClick={() => onSelectAgent(key)} style={{
+              display: "flex", alignItems: "center", gap: 10, padding: "8px 12px",
+              borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "inherit",
+              fontSize: 13, fontWeight: 600, textAlign: "left" as const,
+              background: isActive ? "var(--sel-bg)" : "transparent",
+              color: isActive ? "var(--sel-brd)" : "var(--text-secondary)",
+            }}>
+              <span style={{ fontSize: 14 }}>{stage.icon}</span>
+              {stage.label}
+            </button>
+          );
+        })}
       </div>
 
       {/* Theme toggle */}
@@ -4201,7 +4480,9 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<"app" | "hub">("app");
+  const [view, setView] = useState<"app" | "hub" | "agent">("app");
+  const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
+  const [campaignPrompt, setCampaignPrompt] = useState("");
 
   const [wizardStarted, setWizardStarted]   = useState(true);
   const [campaignName,  setCampaignName]    = useState("New Campaign");
@@ -4235,14 +4516,27 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      {view === "agent" && (
+        <>
+          <BgVideoPlayer fixed brightness={0.6} saturate={1.05} />
+          <div style={{ position: "fixed" as const, inset: 0, zIndex: 0, pointerEvents: "none" as const,
+            background: "var(--video-wash)" }} />
+        </>
+      )}
       <div style={{ display: "flex", height: "100vh", overflow: "hidden",
+        position: "relative" as const, zIndex: 1,
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}>
 
         {/* Left: Sidebar */}
-        <Sidebar theme={theme} onToggleTheme={toggleTheme} view={view} onNavigate={setView} />
+        <Sidebar theme={theme} onToggleTheme={toggleTheme} view={view} onNavigate={setView}
+          activeAgentKey={activeAgentKey}
+          onSelectAgent={(key) => { setActiveAgentKey(key); setView("agent"); }} />
 
         {view === "hub" ? (
           <ContentHub onStartCampaign={() => setView("app")} />
+        ) : view === "agent" && activeAgentKey ? (
+          <AgentProfile key={activeAgentKey} agentKey={activeAgentKey}
+            prompt={campaignPrompt} onPromptChange={setCampaignPrompt} />
         ) : (
         <>
         {/* Middle: Steps panel — hidden during wakeup (before any agent starts) */}
