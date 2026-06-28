@@ -26,7 +26,7 @@ from dotenv import load_dotenv
 load_dotenv()
 if os.getenv("GROQ_API_KEY"):
     os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel as _BaseModel  # avoid clash with app.models
@@ -1192,6 +1192,57 @@ async def content_hub_delete(item_id: str):
     if not found:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"status": "deleted", "id": item_id}
+
+
+@app.post("/brands/{brand_name}/upload")
+async def upload_brand(brand_name: str, file: UploadFile = File(...)):
+    """
+    Upload a new brand's asset folder as a .zip (Guidelines/Logos/Font/Colours/Assets/Products)
+    and re-index it into Vertex AI Search so Logos (the briefing agent) can retrieve it.
+    """
+    import zipfile
+    from app import brand_onboarding
+    if not (file.filename or "").lower().endswith(".zip"):
+        raise HTTPException(status_code=400, detail="Please upload a .zip file")
+    data = await file.read()
+    try:
+        result = await asyncio.to_thread(brand_onboarding.ingest_brand_zip, brand_name, data)
+        if not result["uploaded"]:
+            raise HTTPException(status_code=400, detail=(
+                "No recognised files found. Zip must contain Guidelines/, Logos/, Font/, "
+                "Colours/, and/or Assets/ subfolders."
+            ))
+        reindex = await asyncio.to_thread(brand_onboarding.reindex_brand, brand_name)
+        return {**result, "reindex": reindex}
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="Invalid zip file")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
+
+
+class AgentStandaloneRequest(_BaseModel):
+    prompt: str   # e.g. "UBS Bank for UK market, festive: christmas" — brand is detected from this
+
+
+@app.post("/agents/{agent_key}/run")
+async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
+    """
+    Run a single creative agent in isolation (no upstream pipeline context) —
+    given one free-text prompt that names the brand + creative direction.
+    See app/agent_standalone.py.
+    """
+    from app import agent_standalone
+    try:
+        result = await asyncio.to_thread(
+            agent_standalone.run_agent_standalone, agent_key, req.prompt,
+        )
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Agent run failed: {e}")
 
 
 @app.post("/refresh")
