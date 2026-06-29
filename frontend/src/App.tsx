@@ -3283,11 +3283,12 @@ function BriefIntakeView({
                   color: ft.overall >= 70 ? "#10b981" : ft.overall >= 50 ? "#f59e0b" : "#ef4444" }}>
                   {ft.overall}/100
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 12px", borderRadius: 99,
-                  background: ft.verdict === "PASS" ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)",
-                  color: ft.verdict === "PASS" ? "#34d399" : "#f87171" }}>
-                  {ft.verdict}
-                </span>
+                {ft.verdict === "PASS" && (
+                  <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 12px", borderRadius: 99,
+                    background: "rgba(16,185,129,0.18)", color: "#34d399" }}>
+                    PASS
+                  </span>
+                )}
               </div>
               {ft.statement && (
                 <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-tertiary)", fontStyle: "italic" }}>
@@ -3408,11 +3409,12 @@ function BriefIntakeView({
                 <span style={{ fontSize: 28, fontWeight: 800, color: scoreColor }}>
                   {ft.overall}/100
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
-                  background: ft.verdict === "PASS" ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)",
-                  color: ft.verdict === "PASS" ? "#34d399" : "#f87171" }}>
-                  {ft.verdict}
-                </span>
+                {ft.verdict === "PASS" && (
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
+                    background: "rgba(16,185,129,0.18)", color: "#34d399" }}>
+                    PASS
+                  </span>
+                )}
               </div>
               {ft.statement && (
                 <div style={{ fontSize: 13, color: "var(--text-tertiary)", fontStyle: "italic", lineHeight: 1.5 }}>

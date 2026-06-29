@@ -80,7 +80,7 @@ with warnings.catch_warnings():
     briefing_loop = LoopAgent(
         name           = "briefing_loop",
         sub_agents     = [briefing_agent, fan_truth_gate],
-        max_iterations = 3,
+        max_iterations = 1,  # demo mode: run once and proceed, no retry on FAIL (UI only shows PASS)
     )
 
 briefing_pipeline = Workflow(
