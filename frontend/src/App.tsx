@@ -423,7 +423,16 @@ function BrandUploadPanel() {
 }
 
 // ── Standalone single-agent run panel ──────────────────────────
-const STANDALONE_SUPPORTED = ["briefing", "strategy", "copy", "culture", "channel"];
+const STANDALONE_SUPPORTED = ["briefing", "strategy", "copy", "culture", "channel", "kv", "reel"];
+
+// Card styling for Poly's per-channel results — distinct accent colors so each
+// channel reads like its own platform, not a generic key/value list.
+const POLY_CHANNEL_CFG: Record<string, { icon: string; label: string; color: string }> = {
+  instagram:     { icon: "📸", label: "Instagram",     color: "#c026d3" },
+  tiktok:        { icon: "🎵", label: "TikTok",         color: "#0f172a" },
+  email_subject: { icon: "📧", label: "Email Subject",  color: "#0369a1" },
+  ooh:           { icon: "🏙️", label: "OOH Billboard",  color: "#d97706" },
+};
 
 function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: {
   agentKey: string; agentLabel: string; color: string;
@@ -432,11 +441,54 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [result, setResult] = useState<Record<string, any> | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
+  const [activeChannel, setActiveChannel] = useState<string | null>(null);
+  const [channelEmail, setChannelEmail] = useState("");
+  const [channelStatus, setChannelStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
+  const [channelResult, setChannelResult] = useState<Record<string, any> | null>(null);
+  const [kvSaveState, setKvSaveState] = useState<"idle" | "saving" | "saved">("idle");
   const supported = STANDALONE_SUPPORTED.includes(agentKey);
+
+  const handleSaveKvToHub = async () => {
+    if (!result?.image_b64) return;
+    setKvSaveState("saving");
+    try {
+      await saveToContentHub({
+        kind: "kv", brand: result.brand ?? "", campaignName: "", campaignId: "",
+        headline: result.headline ?? "",
+        assetDataUrl: `data:image/jpeg;base64,${result.image_b64}`,
+      });
+      setKvSaveState("saved");
+      setTimeout(() => setKvSaveState("idle"), 2500);
+    } catch (e) {
+      console.error("standalone_kv_save_failed", e);
+      setKvSaveState("idle");
+    }
+  };
+
+  const [reelSaveState, setReelSaveState] = useState<"idle" | "saving" | "saved">("idle");
+
+  const handleSaveReelToHub = async () => {
+    if (!result?.video_b64) return;
+    setReelSaveState("saving");
+    try {
+      await saveToContentHub({
+        kind: "reel", brand: result.brand ?? "", campaignName: "", campaignId: "",
+        headline: result.headline ?? "",
+        assetDataUrl: `data:video/mp4;base64,${result.video_b64}`,
+      });
+      setReelSaveState("saved");
+      setTimeout(() => setReelSaveState("idle"), 2500);
+    } catch (e) {
+      console.error("standalone_reel_save_failed", e);
+      setReelSaveState("idle");
+    }
+  };
 
   const handleRun = async () => {
     if (!prompt.trim()) return;
     setStatus("running"); setErrorMsg(""); setResult(null);
+    setKvSaveState("idle"); setReelSaveState("idle");
+    setActiveChannel(null); setChannelStatus("idle"); setChannelResult(null);
     try {
       const res = await fetch(`${API_BASE_PUB}/agents/${agentKey}/run`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -452,15 +504,33 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
     }
   };
 
+  const handlePublishChannel = async (channel: string) => {
+    if (!result?.landing_page_id) return;
+    if (channel === "email" && !channelEmail.trim()) return;
+    setChannelStatus("sending"); setChannelResult(null);
+    try {
+      const res = await fetch(`${API_BASE_PUB}/agents/channel/publish`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_id: result.landing_page_id, channel, to_email: channelEmail.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.detail || `Publish failed (${res.status})`);
+      setChannelResult(data);
+      setChannelStatus(data?.status === "error" ? "error" : "done");
+    } catch (e) {
+      setChannelResult({ error: e instanceof Error ? e.message : String(e) });
+      setChannelStatus("error");
+    }
+  };
+
   return (
     <div style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--card-border)" }}>
       <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>
         ▶ Run {agentLabel} standalone
       </div>
       <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 14px" }}>
-        {supported
-          ? "Write a brand + a one-line creative direction — Logos will pick out the brand automatically."
-          : `${agentLabel} generates ${agentKey === "kv" ? "an image" : "a video"} — standalone support for this agent is coming in a follow-up.`}
+        Write a brand + a one-line creative direction — Logos will pick out the brand automatically.
+        {agentKey === "reel" && " Veo video generation is slow — this can take 2-5 minutes."}
       </p>
 
       <input value={prompt} onChange={(e) => onPromptChange(e.target.value)}
@@ -475,14 +545,192 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
           cursor: (!supported || !prompt.trim()) ? "default" : "pointer",
           opacity: (!supported || !prompt.trim()) ? 0.4 : 1,
           background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
-        {status === "running" ? "Running…" : `Run ${agentLabel}`}
+        {status === "running"
+          ? (agentKey === "reel" ? "Generating video (2-5 min)…" : "Running…")
+          : `Run ${agentLabel}`}
       </button>
 
       {status === "error" && (
         <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.5, color: "#ef4444" }}>⚠ {errorMsg}</div>
       )}
 
-      {status === "done" && result && (
+      {agentKey === "channel" && status === "done" && result?.landing_page_id && (
+        <div style={{ marginTop: 16, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.06em",
+            textTransform: "uppercase" as const, marginBottom: 8 }}>Publish to a channel</div>
+
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, marginBottom: 10 }}>
+            {[
+              { key: "landing_page", icon: "🌐", label: "Website" },
+              { key: "email",        icon: "📧", label: "Email" },
+              { key: "google_ads",   icon: "🔍", label: "Google Ads" },
+            ].map((ch) => (
+              <button key={ch.key} onClick={() => setActiveChannel(ch.key)}
+                style={{
+                  display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10,
+                  border: `1.5px solid ${activeChannel === ch.key ? color : "var(--card-border)"}`,
+                  background: activeChannel === ch.key ? `${color}18` : "var(--card-bg-soft)",
+                  color: activeChannel === ch.key ? color : "var(--text-secondary)",
+                  fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit",
+                }}>
+                <span>{ch.icon}</span>{ch.label}
+              </button>
+            ))}
+            {[
+              { icon: "📸", label: "Instagram" }, { icon: "🎵", label: "TikTok" },
+              { icon: "▶️", label: "YouTube" }, { icon: "🏙️", label: "OOH" }, { icon: "📘", label: "Meta Ads" },
+            ].map((ch) => (
+              <span key={ch.label} title="Not available for standalone runs" style={{
+                display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 10,
+                border: "1.5px solid var(--card-border)", background: "transparent",
+                color: "var(--text-muted)", fontSize: 12, fontWeight: 600, opacity: 0.45, cursor: "not-allowed",
+              }}>
+                <span>{ch.icon}</span>{ch.label}
+              </span>
+            ))}
+          </div>
+
+          {activeChannel === "landing_page" && (
+            <a href={`${API_BASE_PUB}/agents/landing/${result.landing_page_id}`} target="_blank" rel="noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px",
+                borderRadius: 9, fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: "white",
+                textDecoration: "none", background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
+              🌐 Open landing page ↗
+            </a>
+          )}
+
+          {activeChannel === "email" && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <input value={channelEmail} onChange={(e) => setChannelEmail(e.target.value)}
+                placeholder="recipient@email.com" type="email"
+                style={{ flex: 1, padding: "8px 12px", borderRadius: 9, fontSize: 13,
+                  border: "1px solid var(--card-border)", background: "var(--input-bg)",
+                  color: "var(--text-primary)", fontFamily: "inherit", outline: "none" }} />
+              <button onClick={() => handlePublishChannel("email")}
+                disabled={!channelEmail.trim() || channelStatus === "sending"}
+                style={{ padding: "8px 16px", borderRadius: 9, border: "none", fontFamily: "inherit",
+                  fontSize: 12, fontWeight: 700, color: "white",
+                  cursor: !channelEmail.trim() ? "default" : "pointer",
+                  opacity: !channelEmail.trim() ? 0.4 : 1,
+                  background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
+                {channelStatus === "sending" ? "Sending…" : "Send"}
+              </button>
+            </div>
+          )}
+
+          {activeChannel === "google_ads" && (
+            <button onClick={() => handlePublishChannel("google_ads")} disabled={channelStatus === "sending"}
+              style={{ padding: "8px 16px", borderRadius: 9, border: "none", fontFamily: "inherit",
+                fontSize: 12, fontWeight: 700, color: "white", cursor: "pointer",
+                background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
+              {channelStatus === "sending" ? "Submitting…" : "Submit mock ad"}
+            </button>
+          )}
+
+          {channelStatus === "done" && channelResult && (
+            <div style={{ marginTop: 10, fontSize: 12, lineHeight: 1.6, color: "#10b981" }}>
+              ✓ {channelResult.status === "skipped" ? channelResult.reason :
+                  channelResult.public_url ? <>Live at <a href={channelResult.public_url} target="_blank" rel="noreferrer" style={{ color: "#10b981" }}>{channelResult.public_url}</a></> :
+                  channelResult.ad_id ? `Mock ad submitted — ${channelResult.ad_id} (${channelResult.headline_1 ?? ""})` :
+                  channelResult.status === "sent" ? `Email sent to ${channelResult.to}` :
+                  "Done."}
+            </div>
+          )}
+          {channelStatus === "error" && channelResult && (
+            <div style={{ marginTop: 10, fontSize: 12, color: "#ef4444" }}>
+              ⚠ {channelResult.error ?? channelResult.reason ?? "Publish failed."}
+            </div>
+          )}
+        </div>
+      )}
+
+      {status === "done" && result && agentKey === "channel" && (
+        <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+          {Object.entries(POLY_CHANNEL_CFG).filter(([key]) => result[key]).map(([key, cfg]) => (
+            <div key={key} style={{
+              borderRadius: 14, overflow: "hidden", background: "var(--card-bg-soft)",
+              border: `1px solid ${cfg.color}30`,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
+                background: `${cfg.color}16`, borderBottom: `1px solid ${cfg.color}25` }}>
+                <span style={{ fontSize: 15 }}>{cfg.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, color: cfg.color, letterSpacing: "0.04em",
+                  textTransform: "uppercase" as const }}>{cfg.label}</span>
+              </div>
+              <div style={{ padding: "14px 16px", fontSize: 13, color: "var(--text-primary)", lineHeight: 1.55 }}>
+                {String(result[key])}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {status === "done" && result && agentKey === "kv" && (
+        <div style={{ marginTop: 16, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
+          {result.image_b64 ? (
+            <>
+              <img src={`data:image/jpeg;base64,${result.image_b64}`} alt={result.headline || "Key visual"}
+                style={{ width: "100%", borderRadius: 14, display: "block",
+                  boxShadow: "var(--shadow-md)" }} />
+              {result.headline && (
+                <div style={{ marginTop: 10, fontSize: 14, fontWeight: 700, color: "var(--text-primary)",
+                  fontStyle: "italic" }}>"{result.headline}"</div>
+              )}
+              <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
+                <a href={`data:image/jpeg;base64,${result.image_b64}`} download="key-visual.jpg"
+                  style={{ fontSize: 12, fontWeight: 700, color }}>
+                  ⬇ Download
+                </a>
+                <button onClick={handleSaveKvToHub} disabled={kvSaveState === "saving"}
+                  style={{ fontSize: 12, fontWeight: 700, background: "none", border: "none",
+                    cursor: kvSaveState === "saving" ? "default" : "pointer", fontFamily: "inherit", padding: 0,
+                    color: kvSaveState === "saved" ? "#10b981" : color }}>
+                  {kvSaveState === "saved" ? "✓ Saved" : kvSaveState === "saving" ? "Saving…" : "💾 Save to Content Hub"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
+              Headline generated ("{result.headline}") but image generation failed — try again.
+            </div>
+          )}
+        </div>
+      )}
+
+      {status === "done" && result && agentKey === "reel" && (
+        <div style={{ marginTop: 16, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
+          {result.video_b64 ? (
+            <>
+              <video controls autoPlay loop muted playsInline
+                src={`data:video/mp4;base64,${result.video_b64}`}
+                style={{ width: "100%", borderRadius: 14, display: "block",
+                  boxShadow: "var(--shadow-md)" }} />
+              {result.headline && (
+                <div style={{ marginTop: 10, fontSize: 14, fontWeight: 700, color: "var(--text-primary)",
+                  fontStyle: "italic" }}>"{result.headline}"</div>
+              )}
+              <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
+                <a href={`data:video/mp4;base64,${result.video_b64}`} download="campaign-reel.mp4"
+                  style={{ fontSize: 12, fontWeight: 700, color }}>
+                  ⬇ Download
+                </a>
+                <button onClick={handleSaveReelToHub} disabled={reelSaveState === "saving"}
+                  style={{ fontSize: 12, fontWeight: 700, background: "none", border: "none",
+                    cursor: reelSaveState === "saving" ? "default" : "pointer", fontFamily: "inherit", padding: 0,
+                    color: reelSaveState === "saved" ? "#10b981" : color }}>
+                  {reelSaveState === "saved" ? "✓ Saved" : reelSaveState === "saving" ? "Saving…" : "💾 Save to Content Hub"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 13, color: "var(--text-tertiary)" }}>
+              Headline generated ("{result.headline}") but video generation failed — try again.
+            </div>
+          )}
+        </div>
+      )}
+
+      {status === "done" && result && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && (
         <div style={{ marginTop: 14, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
           {Object.entries(result).filter(([k]) => k !== "agent").map(([key, val]) => (
             <div key={key} style={{ marginBottom: 8 }}>
