@@ -308,16 +308,6 @@ const HARNESS_STAGES = [
 // it's a forecasting stage, not a content-producing creative agent like the other seven).
 const SIDEBAR_AGENT_KEYS = ["briefing", "strategy", "copy", "culture", "kv", "reel", "channel"];
 
-const AGENT_MODEL: Record<string, string> = {
-  briefing:    "Gemini 3.5 Flash",
-  strategy:    "Gemini 3.5 Flash",
-  copy:        "Gemini 3.5 Flash",
-  culture:     "Gemini 3.5 Flash + Vertex AI Search",
-  kv:          "Gemini 3 Pro Image",
-  reel:        "Veo 3.1",
-  channel:     "Gemini 3.5 Flash",
-  performance: "Gemini 3.5 Flash",
-};
 
 // ── Individual agent profile page (static — sidebar nav) ──────
 // ── Brand onboarding upload panel (Logos agent only) ───────────
@@ -351,7 +341,7 @@ function BrandUploadPanel() {
   };
 
   return (
-    <div style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--card-border)" }}>
+    <div style={{ marginTop: 12, paddingTop: 16, borderTop: "1px solid var(--card-border)" }}>
       <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>
         📁 Onboard a new brand
       </div>
@@ -523,32 +513,107 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
     }
   };
 
+  const AGENT_AGENDA: Record<string, string> = {
+    briefing: "What campaign should I brief and validate?",
+    strategy: "What campaign strategy should I build?",
+    copy:     "What headlines and copy should I write?",
+    culture:  "What cultural insights should I research?",
+    kv:       "What key visual should I create?",
+    reel:     "What campaign reel should I generate?",
+    channel:  "How should I adapt this campaign for channels?",
+  };
+
+  const AGENT_RUNNING_MSG: Record<string, string> = {
+    briefing: "Logos is validating your brief and scoring the Fan Truth…",
+    strategy: "Helia is building your campaign strategy and big idea…",
+    copy:     "Ideon is writing headlines and copy for your campaign…",
+    culture:  "Aether is researching cultural trends and audience insights…",
+    kv:       "Morphis is generating your key visual with Gemini 3 Pro Image…",
+    reel:     "Kinetik is generating your 6-second reel with Veo — this can take 2-5 minutes…",
+    channel:  "Poly is adapting your campaign across channels and building the landing page…",
+  };
+
   return (
-    <div style={{ marginTop: 28, paddingTop: 24, borderTop: "1px solid var(--card-border)" }}>
-      <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>
-        ▶ Run {agentLabel} standalone
-      </div>
-      <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, margin: "0 0 14px" }}>
-        Write a brand + a one-line creative direction — Logos will pick out the brand automatically.
-        {agentKey === "reel" && " Veo video generation is slow — this can take 2-5 minutes."}
-      </p>
+    <div style={{ marginTop: 20 }}>
+      {status === "running" ? (
+        /* ── Running state — replaces the prompt card ── */
+        <div style={{ textAlign: "center" as const, padding: "32px 16px" }}>
+          <div style={{
+            width: 72, height: 72, borderRadius: "50%", margin: "0 auto 20px",
+            border: `3px solid ${color}80`, overflow: "hidden",
+            boxShadow: `0 0 0 8px ${color}18, 0 0 40px ${color}30`,
+            animation: "icon-breathe 2s ease-in-out infinite",
+          }}>
+            <img src={AGENT_AVATARS[HARNESS_STAGES.findIndex(s => s.key === agentKey)]}
+              alt={agentLabel} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+          </div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+            {agentLabel} is working…
+          </div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: 320, margin: "0 auto 20px" }}>
+            {AGENT_RUNNING_MSG[agentKey] ?? `${agentLabel} is processing your request…`}
+          </div>
+          <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{
+                width: 8, height: 8, borderRadius: "50%", background: color,
+                animation: `pulse-glow 1.2s ${i * 0.2}s ease-in-out infinite`,
+              }} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Greeting — left-aligned, close to prompt */}
+          <h3 style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 10px", lineHeight: 1.3 }}>
+            <span style={{ background: `linear-gradient(135deg, ${color}, #6366f1)`,
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+              Hello!
+            </span>{" "}
+            {AGENT_AGENDA[agentKey] ?? `What would you like ${agentLabel} to do?`}
+          </h3>
 
-      <input value={prompt} onChange={(e) => onPromptChange(e.target.value)}
-        placeholder='e.g. "UBS Bank for UK market, festive: christmas"'
-        style={{ width: "100%", padding: "10px 14px", borderRadius: 10, fontSize: 14, marginBottom: 12,
-          border: "1px solid var(--card-border)", background: "var(--input-bg)",
-          color: "var(--text-primary)", fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }} />
+          {/* Chat-style prompt card */}
+          <div style={{
+            borderRadius: 16, border: "1px solid var(--card-border)", background: "var(--card-bg)",
+            boxShadow: "var(--shadow-sm)", overflow: "hidden",
+          }}>
+            <textarea value={prompt} onChange={(e) => onPromptChange(e.target.value)}
+              rows={1}
+              placeholder="Describe your brand, market, and campaign direction — I'll help you move it forward"
+              style={{ width: "100%", padding: "18px 16px", border: "none", resize: "none" as const,
+                background: "transparent", color: "var(--text-primary)", fontFamily: "inherit",
+                fontSize: 13, lineHeight: 1.6, outline: "none", boxSizing: "border-box" as const,
+                display: "block", minHeight: 58 }} />
 
-      <button onClick={handleRun} disabled={!supported || !prompt.trim() || status === "running"}
-        style={{ padding: "9px 18px", borderRadius: 10, border: "none", fontFamily: "inherit",
-          fontSize: 13, fontWeight: 700, color: "white",
-          cursor: (!supported || !prompt.trim()) ? "default" : "pointer",
-          opacity: (!supported || !prompt.trim()) ? 0.4 : 1,
-          background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
-        {status === "running"
-          ? (agentKey === "reel" ? "Generating video (2-5 min)…" : "Running…")
-          : `Run ${agentLabel}`}
-      </button>
+            {/* Action row */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "8px 12px", borderTop: "1px solid var(--card-border)" }}>
+              <button style={{ width: 28, height: 28, borderRadius: "50%", border: "1px solid var(--card-border)",
+                background: "var(--card-bg-soft)", color: "var(--text-tertiary)", cursor: "pointer",
+                display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 400 }}>
+                +
+              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button style={{ width: 32, height: 32, borderRadius: "50%", border: "1px solid var(--card-border)",
+                  background: "var(--card-bg-soft)", color: "var(--text-tertiary)", cursor: "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>
+                  🎤
+                </button>
+                <button onClick={handleRun} disabled={!supported || !prompt.trim()}
+                  style={{
+                    width: 32, height: 32, borderRadius: "50%", border: "none",
+                    cursor: (!supported || !prompt.trim()) ? "default" : "pointer",
+                    opacity: (!supported || !prompt.trim()) ? 0.4 : 1, fontFamily: "inherit",
+                    background: `linear-gradient(135deg, ${color}, #6366f1)`,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color: "white", fontSize: 14, fontWeight: 700,
+                  }}>→</button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {status === "error" && (
         <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.5, color: "#ef4444" }}>⚠ {errorMsg}</div>
@@ -762,7 +827,6 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
   const color    = AGENT_COLORS[idx] ?? "#7c3aed";
   const longDesc = AGENT_DESCS[idx] ?? stage.desc;
   const avatar   = avatarUrl(stage.label, idx);
-  const model    = AGENT_MODEL[agentKey] ?? "Gemini 3.5 Flash";
   const workflowStage = WORKFLOW_STAGES.find((w) => w.agents.includes(agentKey))?.label ?? "";
 
   return (
@@ -773,7 +837,7 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
         background: `radial-gradient(ellipse 70% 55% at 50% 40%, ${color}14 0%, transparent 70%)` }} />
 
       <div style={{ maxWidth: 720, width: "100%", position: "relative" as const, zIndex: 1 }}>
-        <div style={{ position: "relative" as const, overflow: "hidden", padding: "8px 4px 28px" }}>
+        <div style={{ position: "relative" as const, overflow: "hidden", padding: "8px 4px 10px" }}>
           <div style={{ position: "absolute" as const, top: "-40%", right: "-10%", width: 320, height: 320,
             borderRadius: "50%", pointerEvents: "none" as const,
             background: `radial-gradient(circle, ${color}22 0%, transparent 70%)` }} />
@@ -787,7 +851,7 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
             </div>
             <div>
               <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.1 }}>
-                {stage.icon} {stage.label}
+                {stage.label}
               </div>
               {workflowStage && (
                 <span style={{
@@ -804,18 +868,6 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
             {longDesc}
           </p>
 
-          <div style={{ position: "relative" as const, zIndex: 1, display: "flex", gap: 28 }}>
-            <div style={{ flex: 1, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em",
-                textTransform: "uppercase" as const, marginBottom: 4 }}>In this pipeline</div>
-              <div style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>{stage.desc}</div>
-            </div>
-            <div style={{ flex: 1, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em",
-                textTransform: "uppercase" as const, marginBottom: 4 }}>Powered by</div>
-              <div style={{ fontSize: 13, color: "var(--text-primary)", fontWeight: 600 }}>{model}</div>
-            </div>
-          </div>
         </div>
 
         {agentKey === "briefing" && <BrandUploadPanel />}
@@ -2138,10 +2190,12 @@ function RunningView({
                   {isDone ? "✓" : isOn ? "⋯" : i + 1}
                 </div>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
+                  <img src={AGENT_AVATARS[i]} alt={s.label}
+                    style={{ width: 22, height: 22, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
                   <div style={{ fontSize: 12, fontWeight: 700,
                     color: isOn ? vis.g1 : isDone ? "#34d399" : "var(--text-tertiary)" }}>
-                    {s.icon} {s.label}
+                    {s.label}
                   </div>
                   <div style={{ fontSize: 11, marginTop: 1,
                     color: isOn ? vis.g1 + "cc" : isDone ? "#6ee7b780" : "var(--text-secondary)" }}>
@@ -2229,13 +2283,20 @@ function RunningView({
                   width: 22, height: 22, borderRadius: "50%", background: "#10b981",
                   border: "2px solid white", display: "flex", alignItems: "center",
                   justifyContent: "center", fontSize: 12, color: "white", fontWeight: 800 }}>✓</div>}
-                <div style={{ width: 72, height: 72, borderRadius: "50%",
-                  background: `linear-gradient(135deg, ${v.g1}22, ${v.g2}14)`,
-                  border: `2px solid ${v.g1}35`, display: "flex", alignItems: "center",
-                  justifyContent: "center", fontSize: 36,
+                <div style={{ width: 72, height: 72, borderRadius: "50%", overflow: "hidden",
+                  border: `2px solid ${v.g1}60`,
                   boxShadow: `0 0 36px ${v.g1}28`,
                   animation: displayMode === "running" ? "icon-breathe 2.5s ease-in-out infinite" : "none",
-                }}>{stage?.icon ?? "🤖"}</div>
+                }}>
+                  {stage ? (
+                    <img src={AGENT_AVATARS[HARNESS_STAGES.findIndex(s => s.key === displayKey)]}
+                      alt={stage.label}
+                      style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", background: `${v.g1}22`,
+                      display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28 }}>🤖</div>
+                  )}
+                </div>
               </div>
               <div>
                 {displayMode === "done" && (
@@ -2332,13 +2393,13 @@ function RunningView({
                     {/* Node circle */}
                     <div style={{
                       width: 46, height: 46, borderRadius: "50%",
-                      background: `linear-gradient(135deg, ${vis.g1}22, ${vis.g2}14)`,
-                      border: `2px solid ${vis.g1}45`,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                      fontSize: 20,
+                      border: `2px solid ${vis.g1}60`, overflow: "hidden",
                       boxShadow: `0 0 16px ${vis.g1}28`,
                       animation: `node-glow 2.4s ${i * 0.35}s ease-in-out infinite`,
-                    }}>{s.icon}</div>
+                    }}>
+                      <img src={AGENT_AVATARS[i]} alt={s.label}
+                        style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    </div>
                     {/* Label */}
                     <div style={{
                       position: "absolute" as const,
@@ -3203,9 +3264,20 @@ const AGENT_DESCS  = [
   "Forecasts reach, ROAS and performance before launch",
 ];
 // Real-looking photo headshots — one consistent photo per agent (pravatar.cc)
-const AGENT_AVATAR_IMGS = [12, 5, 32, 47, 23, 68, 17, 55];
-const avatarUrl = (_label: string, idx: number) =>
-  `https://i.pravatar.cc/150?img=${AGENT_AVATAR_IMGS[idx]}`;
+// Local agent logo PNGs downloaded from GCS bucket (agent-logo/).
+// Keyed by HARNESS_STAGES index (0=Logos,1=Helia,...,7=Nexus).
+// "Kinetic.png" is the filename in the bucket for the Kinetik agent.
+const AGENT_AVATARS: Record<number, string> = {
+  0: "/agent-logo/Logo 2.png",   // Logos
+  1: "/agent-logo/Helia.png",    // Helia
+  2: "/agent-logo/Ideon.png",    // Ideon
+  3: "/agent-logo/Aether.png",   // Aether
+  4: "/agent-logo/Morphis.png",  // Morphis
+  5: "/agent-logo/Kinetic.png",  // Kinetik
+  6: "/agent-logo/Poly.png",     // Poly
+};
+const avatarUrl = (_label: string, idx: number): string =>
+  AGENT_AVATARS[idx] ?? `https://i.pravatar.cc/150?img=${[12,5,32,47,23,68,17,55][idx] ?? 1}`;
 
 // Card left is relative to outer div layout pos (n.x), transform shifts visual by -27.
 // Right gap = RIGHT_X - 54; Left gap = -170 - LEFT_X. Set both to 6px for clean spacing.
@@ -3362,7 +3434,8 @@ function AgentNetworkWakeUp() {
               padding: "3px 9px", borderRadius: 6,
               background: "rgba(124,58,237,0.10)",
               border: "1px solid rgba(124,58,237,0.22)" }}>
-              <span style={{ fontSize: 10 }}>{s.icon}</span>
+              <img src={AGENT_AVATARS[i]} alt={s.label}
+                style={{ width: 14, height: 14, borderRadius: 3, objectFit: "cover", flexShrink: 0 }} />
               <span style={{ fontSize: 9.5, color: "#a78bfa", fontWeight: 600,
                 whiteSpace: "nowrap" as const }}>{s.label}</span>
             </div>
@@ -4491,7 +4564,8 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
               background: isActive ? "var(--sel-bg)" : "transparent",
               color: isActive ? "var(--sel-brd)" : "var(--text-secondary)",
             }}>
-              <span style={{ fontSize: 14 }}>{stage.icon}</span>
+              <img src={AGENT_AVATARS[idx] ?? stage.icon} alt={stage.label}
+                style={{ width: 22, height: 22, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
               {stage.label}
             </button>
           );
