@@ -550,7 +550,8 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
           <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
             {agentLabel} is working…
           </div>
-          <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: 320, margin: "0 auto 20px" }}>
+          <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6, maxWidth: 320, margin: "0 auto 20px",
+            textShadow: "0 1px 4px rgba(255,255,255,0.2)" }}>
             {AGENT_RUNNING_MSG[agentKey] ?? `${agentLabel} is processing your request…`}
           </div>
           <div style={{ display: "flex", justifyContent: "center", gap: 6 }}>
@@ -863,8 +864,8 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
             </div>
           </div>
 
-          <p style={{ position: "relative" as const, zIndex: 1, fontSize: 16, color: "var(--text-secondary)",
-            lineHeight: 1.6, margin: "0 0 24px" }}>
+          <p style={{ position: "relative" as const, zIndex: 1, fontSize: 16, color: "var(--text-primary)",
+            lineHeight: 1.6, margin: "0 0 24px", textShadow: "0 1px 6px rgba(255,255,255,0.25)" }}>
             {longDesc}
           </p>
 
@@ -3335,7 +3336,8 @@ function AgentNetworkWakeUp() {
             One Powerful Campaign.
           </span>
         </h2>
-        <p style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: 460, margin: "0 auto" }}>
+        <p style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.6, maxWidth: 460, margin: "0 auto",
+          textShadow: "0 1px 4px rgba(255,255,255,0.2)" }}>
           From strategy to content, visuals to videos, and channel-optimised publishing —
           our AI agents collaborate to launch campaigns that perform.
         </p>

@@ -7,7 +7,7 @@
   --card-bg-soft:   #f8fafc;
   --card-bg-translucent: rgba(255,255,255,0.95);
   --sidebar-bg-translucent: rgba(255,255,255,0.45);
-  --video-wash:     rgba(248,250,252,0.72);
+  --video-wash:     rgba(248,250,252,0.84);
   --input-bg:       #f8fafc;
   --card-border:    rgba(15, 23, 42, 0.08);
   --card-hover-bg:  rgba(124, 58, 237, 0.05);
@@ -33,7 +33,7 @@
   --card-bg-soft:   #1a1a28;
   --card-bg-translucent: rgba(20,20,31,0.92);
   --sidebar-bg-translucent: rgba(20,20,31,0.45);
-  --video-wash:     rgba(10,10,19,0.74);
+  --video-wash:     rgba(10,10,19,0.86);
   --input-bg:       #1a1a28;
   --card-border:    rgba(255, 255, 255, 0.08);
   --card-hover-bg:  rgba(124, 58, 237, 0.14);
@@ -308,11 +308,13 @@ body {
 .wizard-heading {
   font-size: 38px; font-weight: 900; color: var(--text-primary);
   margin: 0 0 12px; line-height: 1.15; letter-spacing: -0.025em;
+  text-shadow: 0 1px 8px rgba(255,255,255,0.4);
 }
 
 .wizard-subheading {
-  font-size: 15px; color: var(--text-tertiary);
+  font-size: 15px; color: var(--text-secondary);
   margin: 0 0 40px; line-height: 1.6;
+  text-shadow: 0 1px 4px rgba(255,255,255,0.3);
 }
 
 .gradient-text {
@@ -322,7 +324,7 @@ body {
 }
 
 .section-label {
-  font-size: 10px; font-weight: 700; color: var(--text-secondary);
+  font-size: 10px; font-weight: 700; color: var(--text-primary);
   text-transform: uppercase; letter-spacing: 0.14em;
   margin-bottom: 10px; margin-top: 22px;
 }
