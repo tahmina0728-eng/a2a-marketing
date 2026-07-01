@@ -24,6 +24,7 @@ import { usePipeline } from "./hooks/usePipeline";
 import { useTheme } from "./hooks/useTheme";
 import { saveToContentHub } from "./hooks/useContentHub";
 import ContentHub from "./ContentHub";
+import CampaignForm from "./components/CampaignForm";
 import type { HarnessBriefRequest, AgentEvent } from "./types/pipeline";
 
 // ── Infosys Aster logo — top-left header (small, with "Powered by") ──
@@ -882,7 +883,8 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
   );
 }
 
-// ── Brief Form (6-step wizard) ───────────────────────────────
+// ── Brief Form (legacy multi-step wizard — replaced by CampaignForm) ────────
+// @ts-expect-error: kept for reference, replaced by CampaignForm
 function BriefForm({ onFullCampaign }: {
   onFullCampaign: (brief: HarnessBriefRequest) => void;
 }) {
@@ -4930,7 +4932,15 @@ export default function App() {
             )}
 
             {state.status === "idle" && wizardStarted && (
-              <BriefForm onFullCampaign={handleLaunch} />
+              <>
+                <BgVideoPlayer fixed brightness={0.55} saturate={0.9} />
+                <div style={{ position: "fixed" as const, inset: 0, zIndex: 1,
+                  pointerEvents: "none" as const, background: "var(--video-wash)" }} />
+                <div style={{ position: "relative" as const, zIndex: 2, flex: 1, display: "flex",
+                  flexDirection: "column" as const, overflow: "hidden" }}>
+                  <CampaignForm onFullCampaign={handleLaunch} />
+                </div>
+              </>
             )}
 
             {/* Agent network wakeup — shown immediately after launch, before Logos starts */}
