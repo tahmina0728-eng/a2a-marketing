@@ -519,6 +519,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             big_idea_seed    = strategy.get("hero_message", ""),
             copy_headline    = short_hl or medium_hl,
             copy_headlines   = [short_hl or medium_hl, medium_hl or short_hl],
+            copy_cta         = copy.get("cta", ""),
             product_name     = brief.product if hasattr(brief, "product") else "",
             fan_truth        = str(machine_brief.get("fan_truth", {}).get("statement", "")),
             season           = brief.season if hasattr(brief, "season") else "",

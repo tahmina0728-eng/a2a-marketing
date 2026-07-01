@@ -959,6 +959,111 @@ def _apply_brand_overlay(
         return img_data
 
 
+# ── Copy text lower-third overlay for Veo reels ──────────────────────────────
+
+def _overlay_copy_text_on_video(
+    video_bytes: bytes,
+    brand: str,
+    headline: str,
+    cta: str = "",
+) -> bytes:
+    """
+    Burn the copy agent's headline (and optional CTA) as a lower-third onto the
+    reel using FFmpeg.  Text fades in at t=3.5s and is visible to the end of the
+    6-second clip — matching how real brand ads close on the campaign line.
+
+    Falls back gracefully (returns original bytes untouched) if:
+    - FFmpeg is not installed (dev machines), or
+    - Any encoding error occurs.
+    """
+    import shutil, subprocess, tempfile, re as _re
+    from pathlib import Path as _P
+
+    if not shutil.which("ffmpeg"):
+        logger.warning("reel_text_overlay_skipped", reason="ffmpeg not found")
+        return video_bytes
+    if not headline:
+        return video_bytes
+
+    # ── Pick brand font (TTF) ────────────────────────────────────────────────
+    _font_dir = _P(__file__).parent.parent / "bucket" / "brands" / brand / "Font"
+    _ttf = None
+    if _font_dir.is_dir():
+        # Prefer regular/non-italic, non-bold first for headline readability
+        _ttf = next((str(f) for f in sorted(_font_dir.glob("*.ttf"))
+                     if "italic" not in f.name.lower() and "bold" not in f.name.lower()), None)
+        if not _ttf:  # any TTF is fine as fallback
+            _ttf = next((str(f) for f in sorted(_font_dir.glob("*.ttf"))), None)
+    # Final fallback: Liberation Sans installed via fonts-liberation in Docker
+    if not _ttf:
+        for _sys_font in [
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        ]:
+            if _P(_sys_font).exists():
+                _ttf = _sys_font
+                break
+
+    if not _ttf:
+        logger.warning("reel_text_overlay_no_font", brand=brand)
+        return video_bytes
+
+    def _esc(text: str) -> str:
+        """Escape text for FFmpeg drawtext: colon, single quote, backslash."""
+        return (text.replace("\\", "\\\\")
+                    .replace("'", "'\\''")
+                    .replace(":", "\\:"))
+
+    _hl  = _esc(headline[:80])   # truncate long headlines
+    _cta = _esc(cta[:40]) if cta else ""
+
+    # ── Build filter chain ───────────────────────────────────────────────────
+    # Headline: fades in at t=3.5, stays to end. Positioned at bottom-left.
+    _headline_filter = (
+        f"drawtext=fontfile='{_ttf}':text='{_hl}':"
+        f"fontsize=40:fontcolor=white:"
+        f"x=60:y=H-{140 if _cta else 100}:"
+        f"enable='between(t,3.5,6)':"
+        f"alpha='if(lt(t,4),(t-3.5)/0.5,1)':"
+        f"box=1:boxcolor=black@0.55:boxborderw=18"
+    )
+    _filters = _headline_filter
+
+    if _cta:
+        _cta_filter = (
+            f"drawtext=fontfile='{_ttf}':text='{_cta}':"
+            f"fontsize=26:fontcolor=rgba(255\\,255\\,255\\,0.85):"
+            f"x=60:y=H-85:"
+            f"enable='between(t,4,6)':"
+            f"alpha='if(lt(t,4.3),(t-4)/0.3,1)':"
+            f"box=1:boxcolor=black@0.40:boxborderw=12"
+        )
+        _filters = f"{_headline_filter},{_cta_filter}"
+
+    try:
+        with tempfile.TemporaryDirectory() as _tmp:
+            _in  = _P(_tmp) / "input.mp4"
+            _out = _P(_tmp) / "output.mp4"
+            _in.write_bytes(video_bytes)
+
+            _result = subprocess.run(
+                ["ffmpeg", "-y", "-i", str(_in),
+                 "-vf", _filters,
+                 "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                 "-c:a", "copy",
+                 str(_out)],
+                capture_output=True, timeout=120,
+            )
+            if _result.returncode != 0 or not _out.exists():
+                logger.warning("reel_text_overlay_failed", brand=brand,
+                               stderr=_result.stderr.decode(errors="ignore")[-400:])
+                return video_bytes
+            logger.info("reel_text_overlay_applied", brand=brand, headline=headline[:40])
+            return _out.read_bytes()
+    except Exception as e:
+        logger.warning("reel_text_overlay_error", brand=brand, error=str(e))
+        return video_bytes
+
 
 async def generate_campaign_reel(
     brand: str,
@@ -972,6 +1077,7 @@ async def generate_campaign_reel(
     gcp_region: str,
     campaign_id: str,
     copy_headline: str = "",
+    copy_cta: str = "",
     reasoning_model: str = "gemini-3.5-flash",
 ) -> tuple[str, str]:
     """
@@ -1179,12 +1285,16 @@ Output the prompt only.""",
                 None,
                 lambda: _gcs2.Client().bucket(bucket_name2).blob(blob_path2).download_as_bytes()
             )
+            video_bytes2 = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: _overlay_copy_text_on_video(video_bytes2, brand, copy_headline, copy_cta),
+            )
             return base64.b64encode(video_bytes2).decode("utf-8"), video_gcs
 
         video_gcs = operation.result.generated_videos[0].video.uri
         log.info("veo_done", uri=video_gcs)
 
-        # ── Download from GCS and return as base64 ────────────────────────────
+        # ── Download from GCS ─────────────────────────────────────────────────
         from google.cloud import storage as _gcs
         without = video_gcs[5:]  # strip gs://
         bucket_name, _, blob_path = without.partition("/")
@@ -1192,6 +1302,13 @@ Output the prompt only.""",
             None,
             lambda: _gcs.Client().bucket(bucket_name).blob(blob_path).download_as_bytes()
         )
+
+        # ── Burn copy text lower-third (headline + CTA) onto the reel ────────
+        video_bytes = await asyncio.get_event_loop().run_in_executor(
+            None,
+            lambda: _overlay_copy_text_on_video(video_bytes, brand, copy_headline, copy_cta),
+        )
+
         return base64.b64encode(video_bytes).decode("utf-8"), video_gcs
 
     except Exception as e:
@@ -1210,6 +1327,7 @@ async def run_creative_pipeline_direct(
     big_idea_seed: str = "",
     copy_headline: str = "",
     copy_headlines: list = None,
+    copy_cta: str = "",
     product_name: str = "",
     fan_truth: str = "",
     season: str = "",
@@ -2075,6 +2193,7 @@ Output EXACTLY this format (nothing else):
                 gcp_region      = _settings_r.gcp_region,
                 campaign_id     = campaign_id,
                 copy_headline   = copy_headline,
+                copy_cta        = copy_cta,
                 reasoning_model = _settings_r.gemini_model_reasoning,
             )
             if video_b64:

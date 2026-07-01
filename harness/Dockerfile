@@ -2,12 +2,14 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# System deps — Pillow needs libjpeg/zlib for brand image overlay
+# System deps — Pillow needs libjpeg/zlib; ffmpeg burns copy text into reels
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     libjpeg-dev \
     zlib1g-dev \
     libfreetype6-dev \
+    ffmpeg \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
