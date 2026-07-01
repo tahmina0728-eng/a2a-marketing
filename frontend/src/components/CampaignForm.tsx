@@ -25,6 +25,21 @@ interface FD {
 const INIT: FD = { brand:"", objective:"", market:"", budget:"", channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"" };
 const toggle = <T,>(arr: T[], v: T): T[] => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
+/** Detect a seasonal/festive moment from free-text objective so Kinetik/Morphis can use it. */
+function detectSeason(text: string): string {
+  const t = text.toLowerCase();
+  if (/christmas|xmas|festive|advent/.test(t)) return "Christmas";
+  if (/diwali|deepavali/.test(t))             return "Diwali";
+  if (/valentine/.test(t))                    return "Valentine's Day";
+  if (/easter/.test(t))                       return "Easter";
+  if (/new.?year/.test(t))                    return "New Year";
+  if (/spring/.test(t))                       return "Spring";
+  if (/summer/.test(t))                       return "Summer";
+  if (/autumn|fall/.test(t))                  return "Autumn";
+  if (/winter/.test(t))                       return "Winter";
+  return "";
+}
+
 /* ── Brand gradient — matches the A2A logo / sidebar orb ──────── */
 const BRAND_GRADIENT = "linear-gradient(135deg, #7c3aed 0%, #a855f7 55%, #6366f1 100%)";
 const BRAND_COLOR     = "#7c3aed";
@@ -246,6 +261,15 @@ export default function CampaignForm({ onFullCampaign }: {
     setData(d => ({...d, [k]: toggle(d[k] as string[], v)}));
 
   const handleLaunch = () => {
+    // Resolve season: explicit dropdown pick wins; else infer from objective text
+    const resolvedSeason = data.season || detectSeason(data.objective) || "Evergreen";
+    const brandLabel     = BRANDS.find(b => b.id === data.brand)?.label ?? data.brand;
+    // fan_truth = consumer insight; goal = business objective. Keep them separate
+    // so briefing agent, Morphis and Kinetik all receive the right context.
+    const fanTruth = `${brandLabel} customers in ${data.market} seek authentic value`
+      + (resolvedSeason !== "Evergreen" ? ` during ${resolvedSeason}` : " in everyday moments")
+      + `, and reward brands that understand their lives, not just their wallets.`;
+
     onFullCampaign({
       campaign_name:    data.campaignName.trim(),
       brand:            data.brand,
@@ -253,11 +277,11 @@ export default function CampaignForm({ onFullCampaign }: {
       budget:           data.budget,
       kpis:             "reach, ctr, roas",
       product:          "",
-      product_category: BRANDS.find(b => b.id === data.brand)?.label ?? "",
-      fan_truth:        data.objective,
+      product_category: brandLabel,
+      fan_truth:        fanTruth,
       channels:         data.channels,
       market:           data.market,
-      season:           data.season || "Evergreen",
+      season:           resolvedSeason,
       moment_type:      data.moment as any,
       audience: {
         segment:   data.age.join(", ") || "General audience",

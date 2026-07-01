@@ -1014,31 +1014,8 @@ def _overlay_copy_text_on_video(
                     .replace("'", "'\\''")
                     .replace(":", "\\:"))
 
-    _hl  = _esc(headline[:80])   # truncate long headlines
+    _hl  = _esc(headline[:80])
     _cta = _esc(cta[:40]) if cta else ""
-
-    # ── Build filter chain ───────────────────────────────────────────────────
-    # Headline: fades in at t=3.5, stays to end. Positioned at bottom-left.
-    _headline_filter = (
-        f"drawtext=fontfile='{_ttf}':text='{_hl}':"
-        f"fontsize=40:fontcolor=white:"
-        f"x=60:y=H-{140 if _cta else 100}:"
-        f"enable='between(t,3.5,6)':"
-        f"alpha='if(lt(t,4),(t-3.5)/0.5,1)':"
-        f"box=1:boxcolor=black@0.55:boxborderw=18"
-    )
-    _filters = _headline_filter
-
-    if _cta:
-        _cta_filter = (
-            f"drawtext=fontfile='{_ttf}':text='{_cta}':"
-            f"fontsize=26:fontcolor=rgba(255\\,255\\,255\\,0.85):"
-            f"x=60:y=H-85:"
-            f"enable='between(t,4,6)':"
-            f"alpha='if(lt(t,4.3),(t-4)/0.3,1)':"
-            f"box=1:boxcolor=black@0.40:boxborderw=12"
-        )
-        _filters = f"{_headline_filter},{_cta_filter}"
 
     try:
         with tempfile.TemporaryDirectory() as _tmp:
@@ -1046,12 +1023,44 @@ def _overlay_copy_text_on_video(
             _out = _P(_tmp) / "output.mp4"
             _in.write_bytes(video_bytes)
 
+            # Copy font to a space-free name in the temp dir — paths with
+            # spaces (e.g. "UBS Bank/Font/Frutiger.ttf") break the drawtext
+            # filter even when quoted.  Also convert to forward slashes so
+            # FFmpeg parses the filter correctly on Windows.
+            _font_tmp = _P(_tmp) / "font.ttf"
+            _font_tmp.write_bytes(_P(_ttf).read_bytes())
+            _font_path = str(_font_tmp).replace("\\", "/")
+            _in_str    = str(_in).replace("\\", "/")
+            _out_str   = str(_out).replace("\\", "/")
+
+            # ── Build filter chain ───────────────────────────────────────
+            _headline_filter = (
+                f"drawtext=fontfile='{_font_path}':text='{_hl}':"
+                f"fontsize=40:fontcolor=white:"
+                f"x=60:y=H-{140 if _cta else 100}:"
+                f"enable='between(t,3.5,6)':"
+                f"alpha='if(lt(t,4),(t-3.5)/0.5,1)':"
+                f"box=1:boxcolor=black@0.55:boxborderw=18"
+            )
+            _filters = _headline_filter
+
+            if _cta:
+                _cta_filter = (
+                    f"drawtext=fontfile='{_font_path}':text='{_cta}':"
+                    f"fontsize=26:fontcolor=white@0.85:"
+                    f"x=60:y=H-85:"
+                    f"enable='between(t,4,6)':"
+                    f"alpha='if(lt(t,4.3),(t-4)/0.3,1)':"
+                    f"box=1:boxcolor=black@0.40:boxborderw=12"
+                )
+                _filters = f"{_headline_filter},{_cta_filter}"
+
             _result = subprocess.run(
-                ["ffmpeg", "-y", "-i", str(_in),
+                ["ffmpeg", "-y", "-i", _in_str,
                  "-vf", _filters,
                  "-c:v", "libx264", "-preset", "fast", "-crf", "20",
                  "-c:a", "copy",
-                 str(_out)],
+                 _out_str],
                 capture_output=True, timeout=120,
             )
             if _result.returncode != 0 or not _out.exists():
@@ -1171,6 +1180,52 @@ async def generate_campaign_reel(
     brand_scene = _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN \
         else f"A premium advertising scene featuring {_prod} with dynamic energy and brand colours."
 
+    # ── Season/occasion visual overlay ────────────────────────────────────────
+    # Appended to brand_scene so every brand gets the right festive/seasonal
+    # ambiance regardless of whether it has a bespoke scene template above.
+    def _season_mod(s: str) -> str:
+        _s = s.lower()
+        if any(k in _s for k in ("christmas", "xmas", "festive", "advent")):
+            return (
+                "Set within a warm Christmas ambiance: soft golden fairy lights "
+                "draped in the background, delicate snowflakes catching the light, "
+                "subtle holly and red-ribbon accents — premium and elegant, never kitschy. "
+                "The colour palette blends the brand's own hues with deep crimson and gold."
+            )
+        if any(k in _s for k in ("diwali", "deepavali")):
+            return (
+                "Diwali setting: glowing diyas in the background, golden rangoli patterns "
+                "on the surface, rich jewel-toned fabric — vibrant, celebratory, premium."
+            )
+        if "valentine" in _s:
+            return (
+                "Valentine's Day mood: warm soft-focus rose petals, gentle pink and "
+                "rose-gold accents, romantic candlelight glow in the background."
+            )
+        if "easter" in _s:
+            return (
+                "Easter spring setting: pastel colour palette, soft natural morning light, "
+                "delicate blossoms and fresh greenery in the background."
+            )
+        if "new year" in _s:
+            return (
+                "New Year celebration: golden confetti trails, champagne bubble bokeh, "
+                "midnight countdown energy — joyful, dynamic, aspirational."
+            )
+        if "spring" in _s:
+            return "Spring golden-hour light, fresh blossoms, vibrant greens, renewal energy."
+        if "summer" in _s:
+            return "Bright summer sunlight, vivid saturated colours, outdoor warmth, sun-kissed atmosphere."
+        if "autumn" in _s or "fall" in _s:
+            return "Rich autumn palette: warm amber and copper tones, drifting leaves, cosy golden light."
+        if "winter" in _s:
+            return "Crisp winter atmosphere: cool blue tones, frosted surfaces, warm contrast accent lighting."
+        return ""
+
+    _mod = _season_mod(season)
+    if _mod:
+        brand_scene = f"{brand_scene} {_mod}"
+
     _gc = _veo_genai.Client(vertexai=True, project=gcp_project, location=gcp_region)
     _voiceover_line = (
         f'A warm confident voiceover says: "{copy_headline}"' if copy_headline
@@ -1184,14 +1239,15 @@ Brand: {brand}
 Product: {product_name}
 Campaign Big Idea: {big_idea}
 Fan Truth: {fan_truth}
-Season: {season}
+Season / Occasion: {season}  ← CRITICAL: make the seasonal/festive atmosphere visually central throughout the reel
 Audience: {audience}
 Campaign Headline (voiceover text): "{copy_headline or big_idea}"
 
-Base visual direction: {brand_scene}
+Base visual direction (FOLLOW THIS CLOSELY): {brand_scene}
 
 Rules:
 - Photorealistic, premium FMCG ad quality, dynamic motion, brand colours prominent
+- The {season} atmosphere must be unmistakably present in the visuals — lighting, props, colour grading
 - AUDIO: upbeat brand-appropriate background music + {_voiceover_line}
 - The voiceover should be delivered confidently and warmly over the music
 - No text or typography in the image
@@ -1541,6 +1597,104 @@ Create a Big Idea for this campaign. Output:
         "Concept 2 — INTIMATE GLOW: Model is closer to camera, intense eye contact, softer but deeply saturated. Background glows behind them. Products at their side.",
     ))
 
+    # ── Scene variety: season + objective drive people count and scene type ──
+    # When a campaign is festive, social, or family-oriented the images should
+    # reflect that — not always a lone hero. C1 and C2 are also deliberately
+    # structurally different (people-hero vs product/lifestyle-hero).
+    def _scene_variety_override(
+        _season: str, _objective: str, _brand: str, _product: str
+    ) -> tuple[str | None, str | None, str | None]:
+        """
+        Returns (c1_override, c2_override, model_override) or (None,None,None)
+        when no override is warranted. Only c1/c2 that are non-None are applied.
+        """
+        _sl = _season.lower()
+        _ol = (_objective or "").lower()
+
+        # ── Social/group signal from objective text ────────────────────────
+        _is_group_obj = any(k in _ol for k in (
+            "family", "families", "friends", "together", "community",
+            "gathering", "celebration", "group", "crowd", "party",
+            "social", "bonding", "sharing", "reunion", "festive",
+        ))
+
+        # ── Festive seasons always trigger group/celebration scenes ───────
+        _is_christmas  = any(k in _sl for k in ("christmas", "xmas", "festive", "advent"))
+        _is_diwali     = any(k in _sl for k in ("diwali", "deepavali"))
+        _is_newyear    = "new year" in _sl
+        _is_valentines = "valentine" in _sl
+        _is_easter     = "easter" in _sl
+        _is_festive    = _is_christmas or _is_diwali or _is_newyear or _is_easter
+
+        if not (_is_festive or _is_group_obj or _is_valentines):
+            return None, None, None
+
+        # ── Brand-specific festive/group concept directions ────────────────
+        if _is_christmas or _is_group_obj:
+            _XMAS_DIRS = {
+                "Rnorr": (
+                    f"Concept 1 — FESTIVE GATHERING: A family of 3-5 people (multi-generational) around a beautifully set Christmas dinner table. The hero parent is serving a steaming dish made with {_product}, faces lit with joy and anticipation. Golden fairy lights, holly centrepiece, festive crockery. Warm amber kitchen light. {_product} pack visible on the table.",
+                    f"Concept 2 — MOMENT OF MAGIC: Close-up on two hands (parent and child) adding {_product} to a bubbling pot together. Steam rises dramatically in golden Christmas kitchen light. Soft focus of Christmas decorations behind. The shared cooking moment IS the story — product prominent in frame.",
+                    f"family of 3-5 people, warm and multicultural, celebrating Christmas together in the kitchen — the hero parent is the centrepiece, surrounded by children and/or grandparents, all filled with festive joy",
+                ),
+                "Sunglow": (
+                    f"Concept 1 — FESTIVE GLAM SQUAD: Three women (20-35, diverse) getting ready together for a Christmas party, doing each other's hair — laughing, hair FLYING, the whole room glowing with fairy lights and Sunglow magic. {_product} bottles placed prominently on the vanity. Pure euphoria and sisterhood.",
+                    f"Concept 2 — CHRISTMAS GLOW PORTRAIT: One woman (25-38) in gorgeous Christmas-night glam, her perfect shining hair draped over a festive red/gold off-shoulder dress, looking directly into camera with magnetic confidence. {_product} bottle gleaming beside her. Warm Christmas bokeh fairy lights behind.",
+                    f"three diverse women (20-38) laughing and getting glamorous together in a warm Christmas setting, hair the absolute HERO across all three — sisterhood, joy, festive energy",
+                ),
+                "Boozt": (
+                    f"Concept 1 — FESTIVE CROWD ENERGY: A group of 4-6 young people (20-30, mixed gender) at a Christmas/New Year party — Boozt cans raised high, laughing, confetti falling, electric blue stage lighting and Christmas lights mixing. Pure electric celebration. Cans PROMINENT, glistening in the light.",
+                    f"Concept 2 — MIDNIGHT TOAST: Two or three friends at a rooftop party, city lights behind them, countdown energy — Boozt cans clinked together, droplets flying in slow motion under electric blue and golden Christmas bokeh light. Can labels sharp and prominent.",
+                    f"group of 4-6 young diverse people (20-30), celebrating together at a festive party — electric energy, Boozt cans raised, joy and momentum, every face alive with celebration",
+                ),
+                "Glenfiddich": (
+                    f"Concept 1 — FESTIVE GATHERING: Three or four sophisticated adults (30-55) in a warmly lit dining room on Christmas evening — crystal whisky glasses raised in a toast, {_product} bottle prominent on the table, amber liquid catching the candlelight. Fireplace glow behind. Elegant, intimate, premium.",
+                    f"Concept 2 — THE GIFT: A single beautifully wrapped {_product} bottle sits as the centrepiece of a Christmas gift arrangement — velvet ribbon, sprigs of holly, warm candlelight and fairy lights casting golden reflections off the bottle. Premium, aspirational, the ultimate Christmas gift.",
+                    f"a sophisticated group of 3-4 adults in a premium Christmas setting — candlelit, warm, exclusive — raising Glenfiddich glasses in a toast, embodying the pinnacle of festive sophistication",
+                ),
+            }
+            _dirs = _XMAS_DIRS.get(_brand)
+            if _dirs:
+                return _dirs
+            # Generic festive group fallback for other brands (e.g. UBS Bank)
+            return (
+                f"Concept 1 — FESTIVE CELEBRATION: A group of 3-5 diverse people celebrating the {_season} season together, the {_product} featured prominently in a warm, joyful, richly decorated festive scene. Golden fairy lights, seasonal decorations, genuine happiness — brand colours woven throughout.",
+                f"Concept 2 — FESTIVE WARMTH: Two people (couple or friends) sharing a meaningful festive moment with {_product} as the centrepiece. Warm intimate Christmas/festive light, bokeh decorations behind, deep emotional connection — premium and aspirational.",
+                f"a warm group of 3-5 diverse people celebrating the {_season} season — inclusive, joyful, multicultural — the brand is at the heart of their moment together",
+            )
+
+        if _is_diwali:
+            return (
+                f"Concept 1 — DIWALI FEAST: A family of 4-6 people (South Asian, multi-generational) gathered around a Diwali spread — diyas glowing everywhere, rangoli on the floor, the mother serving a dish made with {_product} to an excited family. Jewel-toned fabrics, warm golden diya light, genuine joy.",
+                f"Concept 2 — DIYA MOMENT: Two women (mother and adult daughter) cooking together in a Diwali kitchen — {_product} being added to a bubbling pot, diyas reflected in the steam, saris or festive salwars, warm amber light. Generational bond, shared recipe, festive spirit.",
+                f"South Asian family of 4-6 (multi-generational) celebrating Diwali together — the mother is the hero, surrounded by family in festive traditional attire, warmth and joy filling every face",
+            )
+
+        if _is_valentines:
+            return (
+                f"Concept 1 — ROMANTIC MOMENT: A couple (25-40) sharing a beautiful moment with {_product} — an intimate Valentine's dinner, rose-gold candlelight, soft red and pink floral accents. One partner presenting the product, the other's face lit with joy and love. Premium and romantic.",
+                f"Concept 2 — PRODUCT AS LOVE: {_product} presented beautifully as a Valentine's gift — rose petals, soft pink bokeh, warm candlelight catching the packaging. Minimalist product hero shot with maximum romantic atmosphere. Aspirational and desirable.",
+                f"a couple in their 25-40s sharing a warm, loving Valentine's moment — natural, genuine affection, the product at the heart of the romantic occasion",
+            )
+
+        # Objective-only group signal (no specific season)
+        if _is_group_obj:
+            return (
+                f"Concept 1 — PEOPLE HERO: A group of 3-4 diverse people sharing a genuine moment with {_product} — dynamic, joyful, the brand connecting people. Multiple faces, real emotion, product prominent.",
+                f"Concept 2 — BRAND LIFESTYLE: The same group in a wider lifestyle shot — {_product} integrated naturally into a shared social moment (meal, outing, gathering). Warm and authentic, brand colours in the environment.",
+                f"a group of 3-4 diverse people (matching market demographics), genuinely sharing a moment with the brand — inclusive, warm, real",
+            )
+
+        return None, None, None
+
+    _c1_ov, _c2_ov, _model_ov = _scene_variety_override(
+        _season_ctx, big_idea_seed or fan_truth, brand, _product_ctx
+    )
+    if _c1_ov: _c1_dir = _c1_ov
+    if _c2_ov: _c2_dir = _c2_ov
+    if _model_ov:
+        _magic["model"] = _model_ov
+
     # ── Audience-driven persona override ─────────────────────────────────────
     # Keys match EXACT UI interest strings (lowercase) per brand.
     # Rnorr:   Home cooks | Families | Students | Budget shoppers | Food lovers | Meal preppers | Time-poor professionals
@@ -1750,14 +1904,14 @@ Create a Big Idea for this campaign. Output:
     _age_note = next((desc for key, desc in _AGE_OVERRIDES.items() if key in _aud_ctx), "")
     _brand_expr = _BRAND_EXPRESSION.get(brand, "confident genuine expression, dynamic and engaging")
 
-    if _matched_persona:
-        # Resolve brand-aware setting for this persona
+    if _matched_persona and not _model_ov:
+        # Scene variety override takes priority — only apply persona when no
+        # group/festive override was set (persona always describes a single person).
         _brand_settings = _BRAND_SETTING.get(brand, {})
         _resolved_setting = next(
             (_brand_settings[k] for k in _brand_settings if k in _aud_lower),
             _brand_settings.get("default", _matched_persona["setting"])
         )
-        # Market fully drives ethnicity — no exceptions
         _ethnicity_note = _market_demo
 
         _magic["model"] = (
@@ -1767,11 +1921,10 @@ Create a Big Idea for this campaign. Output:
             f"{_brand_expr}. "
             f"Setting: {_resolved_setting}"
         )
-        # Preserve brand effects/hair/bg — only blend energy and wardrobe
         _magic["energy"]   = f"{_matched_persona['energy']} — {_magic['energy']}"
         _magic["wardrobe"] = f"{_matched_persona['wardrobe']}, colours drawn from brand palette: {_brand_palette_str}"
-    elif _age_note or _market_demo:
-        # No matching segment — still apply age + market demographic to brand default
+    elif (not _model_ov) and (_age_note or _market_demo):
+        # No matching segment and no group override — apply age + market demo to brand default
         _magic["model"] = (
             _magic["model"]
             + (f" — {_age_note}" if _age_note else "")
@@ -1781,7 +1934,9 @@ Create a Big Idea for this campaign. Output:
     scene_concepts_raw = await _llm(f"""You are a world-class FMCG advertising creative director.
 Study these reference ad styles: Sunsilk (dynamic hair, sparkles, vibrant energy), Pantene (cinematic hair movement, golden glow), Knorr (warm kitchen magic, steam, real moments), L'Oréal (empowered model, bold colour, premium feel).
 
-Generate 2 DISTINCT, MAGICAL, HIGH-ENERGY advertising key visual prompts for this campaign.
+Generate 2 DISTINCT advertising key visual prompts for this campaign.
+CRITICAL: The two concepts MUST be structurally different — different number of people, different scene types, different emotional angles. NEVER produce two near-identical single-person shots.
+If Concept 1 is a group/crowd/family scene → Concept 2 must be an intimate 1-2 person or product-hero shot, and vice versa.
 
 ═══ CAMPAIGN BRIEF ═══
 Brand: {brand}
