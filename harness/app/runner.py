@@ -1023,45 +1023,48 @@ def _overlay_copy_text_on_video(
             _out = _P(_tmp) / "output.mp4"
             _in.write_bytes(video_bytes)
 
-            # Copy font to a space-free name in the temp dir — paths with
-            # spaces (e.g. "UBS Bank/Font/Frutiger.ttf") break the drawtext
-            # filter even when quoted.  Also convert to forward slashes so
-            # FFmpeg parses the filter correctly on Windows.
+            # Copy font to temp dir as "font.ttf" — a relative name with no
+            # path separators or Windows drive colon.  FFmpeg is launched with
+            # cwd=_tmp so "font.ttf" resolves correctly without any absolute
+            # path in the drawtext filter (Windows drive-letter colons such as
+            # "C:" are mis-parsed as option separators by FFmpeg's filtergraph
+            # parser even inside single-quoted values).
             _font_tmp = _P(_tmp) / "font.ttf"
             _font_tmp.write_bytes(_P(_ttf).read_bytes())
-            _font_path = str(_font_tmp).replace("\\", "/")
-            _in_str    = str(_in).replace("\\", "/")
-            _out_str   = str(_out).replace("\\", "/")
 
-            # ── Build filter chain ───────────────────────────────────────
+            # Commas inside FFmpeg expressions (enable=, alpha=) must be
+            # escaped as \, at the filtergraph level — single-quoting alone
+            # is unreliable on Windows FFmpeg builds.
+            # Input/output use plain relative filenames so no path issues.
             _headline_filter = (
-                f"drawtext=fontfile='{_font_path}':text='{_hl}':"
+                f"drawtext=fontfile=font.ttf:text='{_hl}':"
                 f"fontsize=40:fontcolor=white:"
                 f"x=60:y=H-{140 if _cta else 100}:"
-                f"enable='between(t,3.5,6)':"
-                f"alpha='if(lt(t,4),(t-3.5)/0.5,1)':"
+                f"enable=between(t\\,3.5\\,6):"
+                f"alpha=if(lt(t\\,4)\\,(t-3.5)/0.5\\,1):"
                 f"box=1:boxcolor=black@0.55:boxborderw=18"
             )
             _filters = _headline_filter
 
             if _cta:
                 _cta_filter = (
-                    f"drawtext=fontfile='{_font_path}':text='{_cta}':"
+                    f"drawtext=fontfile=font.ttf:text='{_cta}':"
                     f"fontsize=26:fontcolor=white@0.85:"
                     f"x=60:y=H-85:"
-                    f"enable='between(t,4,6)':"
-                    f"alpha='if(lt(t,4.3),(t-4)/0.3,1)':"
+                    f"enable=between(t\\,4\\,6):"
+                    f"alpha=if(lt(t\\,4.3)\\,(t-4)/0.3\\,1):"
                     f"box=1:boxcolor=black@0.40:boxborderw=12"
                 )
                 _filters = f"{_headline_filter},{_cta_filter}"
 
             _result = subprocess.run(
-                ["ffmpeg", "-y", "-i", _in_str,
+                ["ffmpeg", "-y", "-i", "input.mp4",
                  "-vf", _filters,
                  "-c:v", "libx264", "-preset", "fast", "-crf", "20",
                  "-c:a", "copy",
-                 _out_str],
+                 "output.mp4"],
                 capture_output=True, timeout=120,
+                cwd=_tmp,   # all relative paths resolve against the temp dir
             )
             if _result.returncode != 0 or not _out.exists():
                 logger.warning("reel_text_overlay_failed", brand=brand,
