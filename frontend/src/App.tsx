@@ -662,12 +662,42 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
           </div>
 
           {activeChannel === "landing_page" && (
-            <a href={`${API_BASE_PUB}/agents/landing/${result.landing_page_id}`} target="_blank" rel="noreferrer"
-              style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px",
-                borderRadius: 9, fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: "white",
-                textDecoration: "none", background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
-              🌐 Open landing page ↗
-            </a>
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+              {/* Landing page preview card */}
+              {result.image_b64 && (
+                <div style={{ borderRadius: 12, overflow: "hidden", position: "relative" as const,
+                  border: "1px solid var(--card-border)", boxShadow: "0 4px 16px rgba(0,0,0,0.12)" }}>
+                  <img src={`data:image/jpeg;base64,${result.image_b64}`} alt="Landing page hero"
+                    style={{ width: "100%", display: "block", maxHeight: 200,
+                      objectFit: "cover" as const }} />
+                  {result.logo_b64 && (
+                    <div style={{ position: "absolute" as const, top: 10, right: 10,
+                      background: "rgba(255,255,255,0.92)", backdropFilter: "blur(8px)",
+                      borderRadius: 8, padding: "5px 10px",
+                      border: "1px solid rgba(255,255,255,0.6)" }}>
+                      <img src={`data:image/png;base64,${result.logo_b64}`} alt="Brand logo"
+                        style={{ height: 24, objectFit: "contain" as const, display: "block" }} />
+                    </div>
+                  )}
+                  <div style={{ padding: "12px 14px", background: "var(--card-bg)" }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)",
+                      marginBottom: 4, lineHeight: 1.3 }}>
+                      {result.headline || ""}
+                    </div>
+                    <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                      {result.body ? String(result.body).slice(0, 100) + (String(result.body).length > 100 ? "…" : "") : ""}
+                    </div>
+                  </div>
+                </div>
+              )}
+              <a href={`${API_BASE_PUB}/agents/landing/${result.landing_page_id}`} target="_blank" rel="noreferrer"
+                style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px",
+                  borderRadius: 9, fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: "white",
+                  textDecoration: "none", background: `linear-gradient(135deg, ${color}, #6366f1)`,
+                  alignSelf: "flex-start" as const }}>
+                🌐 Open landing page ↗
+              </a>
+            </div>
           )}
 
           {activeChannel === "email" && (
