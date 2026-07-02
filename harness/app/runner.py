@@ -1193,6 +1193,159 @@ def _overlay_logo_end_card(
         return video_bytes
 
 
+def _overlay_reel(
+    video_bytes: bytes,
+    brand: str,
+    headline: str,
+    cta: str = "",
+    text_start_sec: float = 3.5,
+    logo_start_sec: float = 4.2,
+) -> bytes:
+    """
+    Single FFmpeg pass: text lower-third + brand logo end-card on the reel.
+
+    Combines what was previously two separate passes (_overlay_copy_text_on_video
+    + _overlay_logo_end_card) into one filter_complex call so neither operation
+    overwrites the other.  Logo card uses dark navy pill with pixel-level recolouring
+    (white bg → transparent, black symbol → white, coloured text → kept) so
+    brand logos look correct on the dark card regardless of source variant.
+    """
+    import shutil, subprocess, tempfile, os
+    from pathlib import Path as _P
+
+    if not shutil.which("ffmpeg") or not headline:
+        return video_bytes
+
+    try:
+        from io import BytesIO
+        from PIL import Image as _PIL, ImageDraw as _Draw
+        from app.brand_assets import get_asset_loader
+        from app.creative_pipeline import _load_bytes
+
+        # ── Font ─────────────────────────────────────────────────────────────
+        _font_dir = _P(__file__).resolve().parent.parent / "bucket" / "brands" / brand / "Font"
+        _ttf = None
+        if _font_dir.is_dir():
+            _ttf = next((str(f) for f in sorted(_font_dir.glob("*.ttf"))
+                         if "italic" not in f.name.lower() and "bold" not in f.name.lower()), None) \
+                or next((str(f) for f in sorted(_font_dir.glob("*.ttf"))), None)
+        if not _ttf:
+            for _wf in [r"C:\Windows\Fonts\arial.ttf",
+                        r"C:\Windows\Fonts\calibri.ttf",
+                        r"C:\Windows\Fonts\segoeui.ttf"]:
+                if os.path.exists(_wf):
+                    _ttf = _wf
+                    break
+
+        # ── Logo card ─────────────────────────────────────────────────────────
+        _logo_card = None
+        try:
+            loader = get_asset_loader()
+            logos  = loader.list_logos(brand)
+            if logos:
+                _wbg_uri   = next((p for p in logos if "whitebg" in p.lower()), logos[0])
+                _logo_bytes = _load_bytes(_wbg_uri)
+                if _logo_bytes:
+                    _cw, _ch   = 380, 110
+                    _card_bg   = (18, 18, 45)
+                    _card      = _PIL.new("RGBA", (_cw, _ch), (*_card_bg, 255))
+                    _Draw.Draw(_card).rounded_rectangle(
+                        [0, 0, _cw-1, _ch-1], radius=22,
+                        fill=(*_card_bg, 255), outline=(60, 60, 100, 255), width=2,
+                    )
+                    _lg = _PIL.open(BytesIO(_logo_bytes)).convert("RGBA")
+                    _px = list(_lg.getdata())
+                    _lg.putdata([
+                        (r, g, b, 0)          if r > 210 and g > 210 and b > 210 else
+                        (255, 255, 255, a)    if r < 60  and g < 60  and b < 60  else
+                        (r, g, b, a)
+                        for r, g, b, a in _px
+                    ])
+                    _sc = min((_cw-48)/max(1,_lg.width), (_ch-28)/max(1,_lg.height), 1.0)
+                    _lw = max(40, int(_lg.width*_sc))
+                    _lh = max(30, int(_lg.height*_sc))
+                    _lg = _lg.resize((_lw, _lh), _PIL.LANCZOS)
+                    _card.alpha_composite(_lg, ((_cw-_lw)//2, (_ch-_lh)//2))
+                    _logo_card = _card.convert("RGB")
+        except Exception as _le:
+            logger.warning("reel_logo_build_failed", brand=brand, error=str(_le))
+
+        def _esc(s: str) -> str:
+            return s.replace("\\","\\\\").replace("'","'\\''" ).replace(":","\\:")
+
+        with tempfile.TemporaryDirectory() as _tmp:
+            _in  = _P(_tmp) / "input.mp4"
+            _out = _P(_tmp) / "output.mp4"
+            _in.write_bytes(video_bytes)
+
+            _font_arg = None
+            if _ttf:
+                _ft = _P(_tmp) / "font.ttf"
+                _ft.write_bytes(_P(_ttf).read_bytes())
+                _font_arg = "font.ttf"
+
+            if _logo_card:
+                _lc = _P(_tmp) / "logo_card.png"
+                _logo_card.save(str(_lc), format="PNG")
+
+            # Build filters
+            _t0, _t1 = text_start_sec, round(text_start_sec + 0.5, 1)
+            _t2, _t3 = round(text_start_sec + 0.3, 1), round(text_start_sec + 0.6, 1)
+
+            _txt_f = None
+            if _font_arg:
+                _hl  = _esc(headline[:80])
+                _txt_f = (
+                    f"drawtext=fontfile={_font_arg}:text='{_hl}':"
+                    f"fontsize=40:fontcolor=white:x=60:y=H-{140 if cta else 100}:"
+                    f"enable=between(t\\,{_t0}\\,6):"
+                    f"alpha=if(lt(t\\,{_t1})\\,(t-{_t0})/0.5\\,1):"
+                    f"box=1:boxcolor=black@0.55:boxborderw=18"
+                )
+                if cta:
+                    _ct = _esc(cta[:40])
+                    _txt_f += (
+                        f",drawtext=fontfile={_font_arg}:text='{_ct}':"
+                        f"fontsize=26:fontcolor=white@0.85:x=60:y=H-85:"
+                        f"enable=between(t\\,{_t2}\\,6):"
+                        f"alpha=if(lt(t\\,{_t3})\\,(t-{_t2})/0.3\\,1):"
+                        f"box=1:boxcolor=black@0.40:boxborderw=12"
+                    )
+
+            if _logo_card and _txt_f:
+                _fc  = (f"[0:v]{_txt_f}[txt];"
+                        f"[1:v]scale={_cw}:{_ch}[logo];"
+                        f"[txt][logo]overlay=W-w-24:24:"
+                        f"enable=between(t\\,{logo_start_sec}\\,6)[vout]")
+                _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
+                        "-filter_complex",_fc,"-map","[vout]","-map","0:a?",
+                        "-c:v","libx264","-preset","fast","-crf","20","-c:a","copy","output.mp4"]
+            elif _logo_card:
+                _fc  = (f"[1:v]scale={_cw}:{_ch}[logo];"
+                        f"[0:v][logo]overlay=W-w-24:24:"
+                        f"enable=between(t\\,{logo_start_sec}\\,6)[vout]")
+                _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
+                        "-filter_complex",_fc,"-map","[vout]","-map","0:a?",
+                        "-c:v","libx264","-preset","fast","-crf","20","-c:a","copy","output.mp4"]
+            elif _txt_f:
+                _cmd = ["ffmpeg","-y","-i","input.mp4","-vf",_txt_f,
+                        "-c:v","libx264","-preset","fast","-crf","20","-c:a","copy","output.mp4"]
+            else:
+                return video_bytes
+
+            _r = subprocess.run(_cmd, capture_output=True, timeout=120, cwd=_tmp)
+            if _r.returncode == 0 and _out.exists():
+                logger.info("reel_overlay_applied", brand=brand)
+                return _out.read_bytes()
+            logger.warning("reel_overlay_failed", brand=brand,
+                           stderr=_r.stderr.decode(errors="ignore")[-400:])
+            return video_bytes
+
+    except Exception as e:
+        logger.warning("reel_overlay_error", brand=brand, error=str(e))
+        return video_bytes
+
+
 async def generate_campaign_reel(
     brand: str,
     big_idea: str,
@@ -1462,10 +1615,7 @@ Output the prompt only.""",
             )
             video_bytes2 = await asyncio.get_event_loop().run_in_executor(
                 None,
-                lambda: _overlay_copy_text_on_video(video_bytes2, brand, copy_headline, copy_cta),
-            )
-            video_bytes2 = await asyncio.get_event_loop().run_in_executor(
-                None, lambda: _overlay_logo_end_card(video_bytes2, brand),
+                lambda: _overlay_reel(video_bytes2, brand, copy_headline, copy_cta),
             )
             return base64.b64encode(video_bytes2).decode("utf-8"), video_gcs
 
@@ -1481,14 +1631,10 @@ Output the prompt only.""",
             lambda: _gcs.Client().bucket(bucket_name).blob(blob_path).download_as_bytes()
         )
 
-        # ── Burn copy text lower-third (headline + CTA) onto the reel ────────
+        # ── Text lower-third + logo end-card — single FFmpeg pass ────────────
         video_bytes = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: _overlay_copy_text_on_video(video_bytes, brand, copy_headline, copy_cta),
-        )
-        # ── Brand logo end-card (bottom-right, last ~1.8 s) ──────────────────
-        video_bytes = await asyncio.get_event_loop().run_in_executor(
-            None, lambda: _overlay_logo_end_card(video_bytes, brand),
+            lambda: _overlay_reel(video_bytes, brand, copy_headline, copy_cta),
         )
 
         return base64.b64encode(video_bytes).decode("utf-8"), video_gcs
