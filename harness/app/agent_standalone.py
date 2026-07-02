@@ -991,21 +991,20 @@ def run_reel(brand: str, prompt: str) -> dict:
                             _luri  = next((p for p in _logos if "whitebg" not in p.lower()), _logos[0])
                             _lbytes = _lb(_luri)
                             if _lbytes:
-                                _cw, _ch = 340, 100
-                                # Light grey fill so white-background logos (e.g. UBS)
-                                # are still visible; dark border for contrast on light video.
-                                _card = _PI.new("RGB", (_cw, _ch), (245, 245, 248))
+                                _cw, _ch = 380, 110
+                                # Dark navy card — works for ALL logo types:
+                                # white-bg logos (UBS) show as a white block on dark
+                                # which gives clear contrast; transparent logos render
+                                # their colours directly on the dark background.
+                                _card = _PI.new("RGB", (_cw, _ch), (12, 12, 30))
                                 _PD.Draw(_card).rounded_rectangle(
-                                    [0, 0, _cw-1, _ch-1], radius=20,
-                                    fill=(245, 245, 248), outline=(160, 160, 175), width=2,
+                                    [0, 0, _cw-1, _ch-1], radius=22,
+                                    fill=(18, 18, 45), outline=(60, 60, 100), width=2,
                                 )
-                                _lg = _PI.open(_BIO(_lbytes)).convert("RGBA")
-                                _wb = _PI.new("RGBA", _lg.size, (255, 255, 255, 255))
-                                _wb.alpha_composite(_lg)
-                                _lg = _wb.convert("RGB")
-                                _sc = min((_cw-40)/max(1,_lg.width), (_ch-28)/max(1,_lg.height), 1.0)
-                                _lw = max(32, int(_lg.width*_sc))
-                                _lh = max(32, int(_lg.height*_sc))
+                                _lg = _PI.open(_BIO(_lbytes)).convert("RGB")
+                                _sc = min((_cw-48)/max(1,_lg.width), (_ch-28)/max(1,_lg.height), 1.0)
+                                _lw = max(40, int(_lg.width*_sc))
+                                _lh = max(30, int(_lg.height*_sc))
                                 _lg = _lg.resize((_lw, _lh), _PI.LANCZOS)
                                 _card.paste(_lg, ((_cw-_lw)//2, (_ch-_lh)//2))
                                 _logo_card = _card
@@ -1045,7 +1044,7 @@ def run_reel(brand: str, prompt: str) -> dict:
                         if _has_logo and _txt_f:
                             _fc = (
                                 f"[0:v]{_txt_f}[txt];"
-                                f"[1:v]scale=340:100[logo];"
+                                f"[1:v]scale=380:110[logo];"
                                 f"[txt][logo]overlay=W-w-24:24:"
                                 f"enable=between(t\\,4.2\\,6)[vout]"
                             )
@@ -1056,7 +1055,7 @@ def run_reel(brand: str, prompt: str) -> dict:
                                     "-c:a","copy","output.mp4"]
                         elif _has_logo:
                             _fc = (
-                                f"[1:v]scale=340:100[logo];"
+                                f"[1:v]scale=380:110[logo];"
                                 f"[0:v][logo]overlay=W-w-24:24:"
                                 f"enable=between(t\\,4.2\\,6)[vout]"
                             )
