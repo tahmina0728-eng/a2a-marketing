@@ -1032,7 +1032,7 @@ def run_reel(brand: str, prompt: str) -> dict:
                             _fc = (
                                 f"[0:v]{_txt_f}[txt];"
                                 f"[1:v]scale=340:100[logo];"
-                                f"[txt][logo]overlay=W-w-24:H-h-90:"
+                                f"[txt][logo]overlay=W-w-24:24:"
                                 f"enable=between(t\\,4.2\\,6)[vout]"
                             )
                             _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
@@ -1043,7 +1043,7 @@ def run_reel(brand: str, prompt: str) -> dict:
                         elif _has_logo:
                             _fc = (
                                 f"[1:v]scale=340:100[logo];"
-                                f"[0:v][logo]overlay=W-w-24:H-h-90:"
+                                f"[0:v][logo]overlay=W-w-24:24:"
                                 f"enable=between(t\\,4.2\\,6)[vout]"
                             )
                             _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
