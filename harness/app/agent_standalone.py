@@ -785,7 +785,7 @@ def run_reel(brand: str, prompt: str) -> dict:
                     _clean_vo = _re_ov.sub(_fp, _fr, _clean_vo, flags=_re_ov.IGNORECASE)
                 from app.runner import _overlay_copy_text_on_video, _overlay_logo_end_card
                 video_bytes = _overlay_copy_text_on_video(
-                    video_bytes, brand, _clean_vo, "", start_sec=4.0
+                    video_bytes, brand, _clean_vo, "", start_sec=1.5
                 )
                 video_bytes = _overlay_logo_end_card(video_bytes, brand, start_sec=4.2)
             except Exception as _ov_err:
