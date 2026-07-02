@@ -437,6 +437,11 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
   const [channelStatus, setChannelStatus] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [channelResult, setChannelResult] = useState<Record<string, any> | null>(null);
   const [kvSaveState, setKvSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  // Standalone email preview modal
+  const [showStandaloneEmailPreview, setShowStandaloneEmailPreview] = useState(false);
+  const [saSubject,  setSaSubject]  = useState("");
+  const [saHeadline, setSaHeadline] = useState("");
+  const [saBody,     setSaBody]     = useState("");
   const supported = STANDALONE_SUPPORTED.includes(agentKey);
 
   const handleSaveKvToHub = async () => {
@@ -658,22 +663,106 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
           )}
 
           {activeChannel === "email" && (
-            <div style={{ display: "flex", gap: 8 }}>
-              <input value={channelEmail} onChange={(e) => setChannelEmail(e.target.value)}
-                placeholder="recipient@email.com" type="email"
-                style={{ flex: 1, padding: "8px 12px", borderRadius: 9, fontSize: 13,
-                  border: "1px solid var(--card-border)", background: "var(--input-bg)",
-                  color: "var(--text-primary)", fontFamily: "inherit", outline: "none" }} />
-              <button onClick={() => handlePublishChannel("email")}
-                disabled={!channelEmail.trim() || channelStatus === "sending"}
+            <>
+              {/* Standalone email preview modal */}
+              {showStandaloneEmailPreview && (
+                <div style={{ position: "fixed" as const, inset: 0, zIndex: 1000,
+                  background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center",
+                  justifyContent: "center", padding: 24 }}
+                  onClick={e => { if (e.target === e.currentTarget) setShowStandaloneEmailPreview(false); }}>
+                  <div style={{ width: "100%", maxWidth: 540, borderRadius: 20,
+                    background: "var(--card-bg)", border: "1px solid var(--card-border)",
+                    boxShadow: "0 24px 60px rgba(0,0,0,0.35)",
+                    display: "flex", flexDirection: "column" as const, maxHeight: "90vh" }}>
+
+                    {/* Sticky header */}
+                    <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--card-border)",
+                      display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)" }}>📧 Email Preview</div>
+                      <button onClick={() => setShowStandaloneEmailPreview(false)}
+                        style={{ background: "none", border: "none", cursor: "pointer",
+                          fontSize: 20, color: "var(--text-secondary)", lineHeight: 1, padding: 4 }}>✕</button>
+                    </div>
+                    <div style={{ padding: "14px 24px 0", flexShrink: 0 }}>
+                      <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+                        textTransform: "uppercase" as const, color: "var(--text-secondary)", display: "block", marginBottom: 5 }}>
+                        Subject line
+                      </label>
+                      <input value={saSubject} onChange={e => setSaSubject(e.target.value)}
+                        placeholder="Email subject…"
+                        style={{ width: "100%", padding: "9px 13px", borderRadius: 9,
+                          border: "1.5px solid var(--card-border)", background: "var(--page-bg)",
+                          color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit",
+                          outline: "none", boxSizing: "border-box" as const }}
+                        onFocus={e => e.currentTarget.style.borderColor = color}
+                        onBlur={e => e.currentTarget.style.borderColor = "var(--card-border)"} />
+                    </div>
+
+                    {/* Scrollable body */}
+                    <div style={{ overflowY: "auto", flex: 1 }}>
+                      <div style={{ margin: "14px 24px", borderRadius: 12, overflow: "hidden",
+                        border: "1px solid var(--card-border)", background: "#ffffff" }}>
+                        {result?.image_b64 && (
+                          <img src={`data:image/jpeg;base64,${result.image_b64}`} alt=""
+                            style={{ width: "100%", maxHeight: 200, objectFit: "cover" as const, display: "block" }} />
+                        )}
+                        <div style={{ padding: "18px 20px", fontFamily: "Georgia, serif" }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                            textTransform: "uppercase" as const, color: "#888", marginBottom: 4, fontFamily: "system-ui" }}>Headline</div>
+                          <textarea value={saHeadline} onChange={e => setSaHeadline(e.target.value)} rows={2}
+                            style={{ width: "100%", fontSize: 20, fontWeight: 700, color: "#0f172a",
+                              fontFamily: "Georgia, serif", border: "1.5px dashed #d0d0e0", borderRadius: 8,
+                              background: "#fafafa", padding: "7px 10px", resize: "none" as const,
+                              outline: "none", lineHeight: 1.3, boxSizing: "border-box" as const, marginBottom: 10 }}
+                            onFocus={e => e.currentTarget.style.borderColor = color}
+                            onBlur={e => e.currentTarget.style.borderColor = "#d0d0e0"} />
+                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                            textTransform: "uppercase" as const, color: "#888", marginBottom: 4, fontFamily: "system-ui" }}>Body copy</div>
+                          <textarea value={saBody} onChange={e => setSaBody(e.target.value)} rows={4}
+                            style={{ width: "100%", fontSize: 13, color: "#374151", lineHeight: 1.7,
+                              fontFamily: "Georgia, serif", border: "1.5px dashed #d0d0e0", borderRadius: 8,
+                              background: "#fafafa", padding: "7px 10px", resize: "none" as const,
+                              outline: "none", boxSizing: "border-box" as const }}
+                            onFocus={e => e.currentTarget.style.borderColor = color}
+                            onBlur={e => e.currentTarget.style.borderColor = "#d0d0e0"} />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sticky footer */}
+                    <div style={{ padding: "14px 24px", borderTop: "1px solid var(--card-border)",
+                      display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
+                      <input type="email" placeholder="recipient@email.com" value={channelEmail}
+                        onChange={e => setChannelEmail(e.target.value)}
+                        style={{ flex: 1, padding: "9px 13px", borderRadius: 9,
+                          border: "1.5px solid var(--card-border)", background: "var(--page-bg)",
+                          color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+                      <button onClick={() => { setShowStandaloneEmailPreview(false); handlePublishChannel("email"); }}
+                        disabled={!channelEmail.trim() || channelStatus === "sending"}
+                        style={{ padding: "9px 20px", borderRadius: 9, border: "none", fontWeight: 700,
+                          fontSize: 13, whiteSpace: "nowrap" as const,
+                          cursor: channelEmail.trim() ? "pointer" : "not-allowed",
+                          background: channelEmail.trim() ? `linear-gradient(135deg,${color},#6366f1)` : "rgba(124,58,237,0.15)",
+                          color: channelEmail.trim() ? "white" : "rgba(124,58,237,0.4)" }}>
+                        {channelStatus === "sending" ? "Sending…" : "Send Email →"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button onClick={() => {
+                setSaSubject(result?.headline ?? "");
+                setSaHeadline(result?.headline ?? "");
+                setSaBody(result?.body ?? result?.copy ?? result?.headline ?? "");
+                setShowStandaloneEmailPreview(true);
+              }}
                 style={{ padding: "8px 16px", borderRadius: 9, border: "none", fontFamily: "inherit",
-                  fontSize: 12, fontWeight: 700, color: "white",
-                  cursor: !channelEmail.trim() ? "default" : "pointer",
-                  opacity: !channelEmail.trim() ? 0.4 : 1,
+                  fontSize: 12, fontWeight: 700, color: "white", cursor: "pointer",
                   background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
-                {channelStatus === "sending" ? "Sending…" : "Send"}
+                👁 Preview & Edit Email
               </button>
-            </div>
+            </>
           )}
 
           {activeChannel === "google_ads" && (
@@ -2457,6 +2546,12 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
   const [published, setPublished] = useState(false);
   const [results,  setResults]  = useState<Record<string, any> | null>(null);
   const [error,    setError]    = useState("");
+
+  // ── Email preview modal state ──────────────────────────────────────────
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [previewSubject,   setPreviewSubject]   = useState("");
+  const [previewHeadline,  setPreviewHeadline]  = useState("");
+  const [previewBody,      setPreviewBody]      = useState("");
   const [landingUrl, setLandingUrl] = useState<string>(() => {
     // Restore persisted landing URL for this campaign on mount
     return campaignId ? localStorage.getItem(`landing_url_${campaignId}`) ?? "" : "";
@@ -2484,6 +2579,13 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
     : Object.keys(PUBLISH_CHANNEL_CFG);
 
   const toggle = (key: string) => setSelected(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
+
+  const openEmailPreview = () => {
+    setPreviewSubject((copy as any)?.channel_copy?.email_subject ?? copy?.short?.headline ?? strategy?.hero_message ?? "");
+    setPreviewHeadline(copy?.short?.headline ?? copy?.medium?.headline ?? strategy?.hero_message ?? "");
+    setPreviewBody(copy?.long?.body ?? copy?.medium?.headline ?? "");
+    setShowEmailPreview(true);
+  };
 
   const handlePublish = useCallback(async () => {
     if (selected.size === 0) return;
@@ -2597,6 +2699,122 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
         </div>
       </div>
 
+      {/* ── Email preview modal ─────────────────────────────────────────── */}
+      {showEmailPreview && (
+        <div style={{ position: "fixed" as const, inset: 0, zIndex: 1000,
+          background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center",
+          justifyContent: "center", padding: 24 }}
+          onClick={e => { if (e.target === e.currentTarget) setShowEmailPreview(false); }}>
+          <div style={{ width: "100%", maxWidth: 560, maxHeight: "90vh",
+            borderRadius: 20, background: "var(--card-bg)", border: "1px solid var(--card-border)",
+            boxShadow: "0 24px 60px rgba(0,0,0,0.35)", display: "flex", flexDirection: "column" }}>
+
+            {/* Sticky header — always visible */}
+            <div style={{ padding: "18px 24px", borderBottom: "1px solid var(--card-border)",
+              display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary)" }}>📧 Email Preview</div>
+              <button onClick={() => setShowEmailPreview(false)}
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20,
+                  color: "var(--text-secondary)", lineHeight: 1, padding: 4 }}>✕</button>
+            </div>
+            <div style={{ padding: "14px 24px 0", flexShrink: 0 }}>
+              <label style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+                textTransform: "uppercase" as const, color: "var(--text-secondary)", display: "block", marginBottom: 5 }}>
+                Subject line
+              </label>
+              <input value={previewSubject} onChange={e => setPreviewSubject(e.target.value)}
+                placeholder="Email subject…"
+                style={{ width: "100%", padding: "9px 13px", borderRadius: 9,
+                  border: "1.5px solid var(--card-border)", background: "var(--page-bg)",
+                  color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit",
+                  outline: "none", boxSizing: "border-box" as const }}
+                onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--card-border)"} />
+            </div>
+
+            {/* Scrollable email body */}
+            <div style={{ overflowY: "auto", flex: 1 }}>
+            <div style={{ margin: "14px 24px", borderRadius: 12, overflow: "hidden",
+              border: "1px solid var(--card-border)", background: "#ffffff" }}>
+
+              {/* Hero image */}
+              {(selectedImageB64 ?? (output as any)?.creative_pipeline?.image_b64) && (
+                <img
+                  src={`data:image/jpeg;base64,${selectedImageB64 ?? (output as any)?.creative_pipeline?.image_b64}`}
+                  alt="Campaign visual"
+                  style={{ width: "100%", maxHeight: 220, objectFit: "cover" as const, display: "block" }} />
+              )}
+
+              <div style={{ padding: "20px 24px", fontFamily: "Georgia, serif" }}>
+                {/* Editable headline */}
+                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                  textTransform: "uppercase" as const, color: "#888", display: "block", marginBottom: 4,
+                  fontFamily: "system-ui, sans-serif" }}>Headline</label>
+                <textarea value={previewHeadline} onChange={e => setPreviewHeadline(e.target.value)}
+                  rows={2}
+                  style={{ width: "100%", fontSize: 22, fontWeight: 700, color: "#0f172a",
+                    fontFamily: "Georgia, serif", border: "1.5px dashed #d0d0e0", borderRadius: 8,
+                    background: "#fafafa", padding: "8px 10px", resize: "none" as const,
+                    outline: "none", lineHeight: 1.3, boxSizing: "border-box" as const,
+                    marginBottom: 12, transition: "border-color 0.15s" }}
+                  onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                  onBlur={e => e.currentTarget.style.borderColor = "#d0d0e0"} />
+
+                {/* Editable body copy */}
+                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                  textTransform: "uppercase" as const, color: "#888", display: "block", marginBottom: 4,
+                  fontFamily: "system-ui, sans-serif" }}>Body copy</label>
+                <textarea value={previewBody} onChange={e => setPreviewBody(e.target.value)}
+                  rows={4}
+                  style={{ width: "100%", fontSize: 14, color: "#374151", lineHeight: 1.7,
+                    fontFamily: "Georgia, serif", border: "1.5px dashed #d0d0e0", borderRadius: 8,
+                    background: "#fafafa", padding: "8px 10px", resize: "none" as const,
+                    outline: "none", boxSizing: "border-box" as const,
+                    marginBottom: 16, transition: "border-color 0.15s" }}
+                  onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                  onBlur={e => e.currentTarget.style.borderColor = "#d0d0e0"} />
+
+                {/* CTA button preview */}
+                {(copy as any)?.cta && (
+                  <div style={{ textAlign: "center" as const }}>
+                    <div style={{ display: "inline-block", padding: "12px 28px",
+                      background: "linear-gradient(135deg,#7c3aed,#6366f1)",
+                      color: "white", borderRadius: 8, fontSize: 14, fontWeight: 700,
+                      fontFamily: "system-ui, sans-serif" }}>
+                      {(copy as any).cta}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            </div>{/* end scrollable body */}
+
+            {/* Sticky footer — always visible */}
+            <div style={{ padding: "14px 24px", borderTop: "1px solid var(--card-border)",
+              display: "flex", gap: 10, alignItems: "center", flexShrink: 0 }}>
+              <input type="email" placeholder="Recipient email address" value={email}
+                onChange={e => setEmail(e.target.value)}
+                style={{ flex: 1, padding: "9px 13px", borderRadius: 9,
+                  border: "1.5px solid var(--card-border)", background: "var(--page-bg)",
+                  color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit", outline: "none" }}
+                onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--card-border)"} />
+              <button disabled={!email.trim() || loading}
+                onClick={() => { setShowEmailPreview(false); handlePublish(); }}
+                style={{ padding: "9px 20px", borderRadius: 9, border: "none", fontWeight: 700,
+                  fontSize: 13, whiteSpace: "nowrap" as const,
+                  cursor: email.trim() ? "pointer" : "not-allowed",
+                  background: email.trim() ? ORB_BG : "rgba(124,58,237,0.15)",
+                  color: email.trim() ? "white" : "rgba(124,58,237,0.4)",
+                  boxShadow: email.trim() ? "0 4px 16px rgba(124,58,237,0.3)" : "none" }}>
+                {loading ? "Sending…" : "Send Email →"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Action bar */}
       {!published && (
         <div style={{ padding: "16px 36px", background: "var(--card-bg)", display: "flex",
@@ -2613,7 +2831,7 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
                 fontSize: 8, color: "white", fontWeight: 800, lineHeight: 1 }}>✓</div>
             </div>
           )}
-          {selected.has("email") && (
+          {selected.has("email") && !showEmailPreview && (
             <input type="email" placeholder="Recipient email address" value={email} onChange={e => setEmail(e.target.value)}
               style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: "1.5px solid rgba(124,58,237,0.30)",
                 background: "var(--page-bg)", color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
@@ -2627,17 +2845,29 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
               {selected.size} channel{selected.size > 1 ? "s" : ""} selected
             </div>
           )}
-          <button onClick={handlePublish} disabled={loading || selected.size === 0}
-            style={{ padding: "12px 28px", borderRadius: 12, border: "none",
-              cursor: selected.size === 0 ? "not-allowed" : "pointer",
-              background: selected.size === 0
-                ? "rgba(255,255,255,0.05)"
-                : ORB_BG,
-              color: selected.size === 0 ? "var(--text-secondary)" : "white",
-              fontSize: 13, fontWeight: 800, letterSpacing: "0.02em", transition: "all 0.2s",
-              boxShadow: selected.size > 0 ? "0 4px 20px rgba(124,58,237,0.40)" : "none" }}>
-            {loading ? "Launching…" : selected.size === 0 ? "Select Channels" : `🚀 Launch to ${selected.size} Channel${selected.size > 1 ? "s" : ""}`}
-          </button>
+          {/* If email is the only channel selected, show "Preview Email" button */}
+          {selected.size > 0 && selected.has("email") && selected.size === 1 ? (
+            <button onClick={openEmailPreview} disabled={loading}
+              style={{ padding: "12px 28px", borderRadius: 12, border: "none", cursor: "pointer",
+                background: ORB_BG, color: "white", fontSize: 13, fontWeight: 800,
+                letterSpacing: "0.02em", transition: "all 0.2s",
+                boxShadow: "0 4px 20px rgba(124,58,237,0.40)" }}>
+              👁 Preview & Edit Email
+            </button>
+          ) : (
+            <button onClick={selected.has("email") && selected.size > 1
+              ? () => { openEmailPreview(); }
+              : handlePublish}
+              disabled={loading || selected.size === 0}
+              style={{ padding: "12px 28px", borderRadius: 12, border: "none",
+                cursor: selected.size === 0 ? "not-allowed" : "pointer",
+                background: selected.size === 0 ? "rgba(255,255,255,0.05)" : ORB_BG,
+                color: selected.size === 0 ? "var(--text-secondary)" : "white",
+                fontSize: 13, fontWeight: 800, letterSpacing: "0.02em", transition: "all 0.2s",
+                boxShadow: selected.size > 0 ? "0 4px 20px rgba(124,58,237,0.40)" : "none" }}>
+              {loading ? "Launching…" : selected.size === 0 ? "Select Channels" : `🚀 Launch to ${selected.size} Channel${selected.size > 1 ? "s" : ""}`}
+            </button>
+          )}
         </div>
       )}
 
