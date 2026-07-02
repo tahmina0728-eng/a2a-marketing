@@ -1273,6 +1273,17 @@ def _overlay_reel(
                         (r, g, b, a)
                         for r, g, b, a in _px
                     ])
+                    # Card height scales with logo aspect ratio so tall logos
+                    # (e.g. Sunglow 777×636) aren't squashed to a tiny icon
+                    _logo_ar  = _lg.width / max(1, _lg.height)
+                    _ch_final = max(110, min(160, int(_cw / max(0.5, _logo_ar)) + 28))
+                    if _ch_final != _ch:
+                        _card = _PIL.new("RGBA", (_cw, _ch_final), (*_card_bg, 255))
+                        _Draw.Draw(_card).rounded_rectangle(
+                            [0, 0, _cw-1, _ch_final-1], radius=22,
+                            fill=(*_card_bg, 255), outline=(60, 60, 100, 255), width=2,
+                        )
+                        _ch = _ch_final
                     _sc = min((_cw-48)/max(1,_lg.width), (_ch-28)/max(1,_lg.height), 1.0)
                     _lw = max(40, int(_lg.width*_sc))
                     _lh = max(30, int(_lg.height*_sc))
@@ -1283,7 +1294,17 @@ def _overlay_reel(
             logger.warning("reel_logo_build_failed", brand=brand, error=str(_le))
 
         def _esc(s: str) -> str:
-            return s.replace("\\","\\\\").replace("'","'\\''" ).replace(":","\\:")
+            return s.replace("\\","\\\\").replace("'","\\'").replace(":","\\:")
+
+        def _wrap(text: str, max_chars: int = 40) -> tuple[str, str]:
+            """Split text into two lines at a word boundary near max_chars."""
+            text = text.strip()
+            if len(text) <= max_chars:
+                return text, ""
+            idx = text.rfind(" ", 0, max_chars)
+            if idx == -1:
+                idx = max_chars
+            return text[:idx].strip(), text[idx:].strip()
 
         with tempfile.TemporaryDirectory() as _tmp:
             _in  = _P(_tmp) / "input.mp4"
@@ -1300,25 +1321,41 @@ def _overlay_reel(
                 _lc = _P(_tmp) / "logo_card.png"
                 _logo_card.save(str(_lc), format="PNG")
 
-            # Build filters
+            # Build filters — headline wraps to 2 lines, CTA on third line
             _t0, _t1 = text_start_sec, round(text_start_sec + 0.5, 1)
             _t2, _t3 = round(text_start_sec + 0.3, 1), round(text_start_sec + 0.6, 1)
 
             _txt_f = None
             if _font_arg:
-                _hl  = _esc(headline[:80])
+                _line1, _line2 = _wrap(headline[:80])
+                _hl1 = _esc(_line1)
+                _has_two_lines = bool(_line2)
+                # y positions shift up when we have 2 headline lines
+                _y1 = "H-170" if (_has_two_lines and cta) else ("H-145" if _has_two_lines else ("H-120" if cta else "H-90"))
+                _y2 = "H-125" if cta else "H-90"
+                _yc = "H-80"
+
                 _txt_f = (
-                    f"drawtext=fontfile={_font_arg}:text='{_hl}':"
-                    f"fontsize=40:fontcolor=white:x=60:y=H-{140 if cta else 100}:"
+                    f"drawtext=fontfile={_font_arg}:text='{_hl1}':"
+                    f"fontsize=36:fontcolor=white:x=60:y={_y1}:"
                     f"enable=between(t\\,{_t0}\\,6):"
                     f"alpha=if(lt(t\\,{_t1})\\,(t-{_t0})/0.5\\,1):"
-                    f"box=1:boxcolor=black@0.55:boxborderw=18"
+                    f"box=1:boxcolor=black@0.55:boxborderw=16"
                 )
+                if _has_two_lines:
+                    _hl2 = _esc(_line2[:80])
+                    _txt_f += (
+                        f",drawtext=fontfile={_font_arg}:text='{_hl2}':"
+                        f"fontsize=36:fontcolor=white:x=60:y={_y2}:"
+                        f"enable=between(t\\,{_t0}\\,6):"
+                        f"alpha=if(lt(t\\,{_t1})\\,(t-{_t0})/0.5\\,1):"
+                        f"box=1:boxcolor=black@0.55:boxborderw=16"
+                    )
                 if cta:
-                    _ct = _esc(cta[:40])
+                    _ct = _esc(cta[:50])
                     _txt_f += (
                         f",drawtext=fontfile={_font_arg}:text='{_ct}':"
-                        f"fontsize=26:fontcolor=white@0.85:x=60:y=H-85:"
+                        f"fontsize=24:fontcolor=white@0.85:x=60:y={_yc}:"
                         f"enable=between(t\\,{_t2}\\,6):"
                         f"alpha=if(lt(t\\,{_t3})\\,(t-{_t2})/0.3\\,1):"
                         f"box=1:boxcolor=black@0.40:boxborderw=12"

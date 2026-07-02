@@ -1049,15 +1049,39 @@ def run_reel(brand: str, prompt: str) -> dict:
                             _logo_card.save(str(_lc_path), format="PNG")
 
                         # Build combined filter_complex ─────────────────────
+                        def _esc_s(s):
+                            return s.replace("\\","\\\\").replace("'","\\'").replace(":","\\:")
+
+                        def _wrap_s(text, max_chars=40):
+                            text = text.strip()
+                            if len(text) <= max_chars:
+                                return text, ""
+                            idx = text.rfind(" ", 0, max_chars)
+                            if idx == -1: idx = max_chars
+                            return text[:idx].strip(), text[idx:].strip()
+
                         if _font_arg and _burn_text.strip():
-                            _hl = _burn_text[:80].replace("\\","\\\\").replace("'","'\\''" ).replace(":","\\:")
+                            _l1, _l2 = _wrap_s(_burn_text[:80])
+                            _hl1 = _esc_s(_l1)
+                            _two = bool(_l2)
+                            _y1  = "H-145" if _two else "H-100"
+                            _y2  = "H-100"
                             _txt_f = (
-                                f"drawtext=fontfile={_font_arg}:text='{_hl}':"
-                                f"fontsize=38:fontcolor=white:x=60:y=H-110:"
+                                f"drawtext=fontfile={_font_arg}:text='{_hl1}':"
+                                f"fontsize=36:fontcolor=white:x=60:y={_y1}:"
                                 f"enable=between(t\\,1.5\\,6):"
                                 f"alpha=if(lt(t\\,2.0)\\,(t-1.5)/0.5\\,1):"
                                 f"box=1:boxcolor=black@0.55:boxborderw=16"
                             )
+                            if _two:
+                                _hl2 = _esc_s(_l2[:80])
+                                _txt_f += (
+                                    f",drawtext=fontfile={_font_arg}:text='{_hl2}':"
+                                    f"fontsize=36:fontcolor=white:x=60:y={_y2}:"
+                                    f"enable=between(t\\,1.5\\,6):"
+                                    f"alpha=if(lt(t\\,2.0)\\,(t-1.5)/0.5\\,1):"
+                                    f"box=1:boxcolor=black@0.55:boxborderw=16"
+                                )
                         else:
                             _txt_f = None
 
