@@ -961,12 +961,24 @@ def run_reel(brand: str, prompt: str) -> dict:
                 if _sh.which("ffmpeg"):
                     # ── Font ──────────────────────────────────────────────
                     from app.brand_assets import get_asset_loader as _gal
-                    _fdir = _PP(__file__).parent.parent / "bucket" / "brands" / brand / "Font"
+                    _fdir = _PP(__file__).resolve().parent.parent / "bucket" / "brands" / brand / "Font"
                     _ttf  = None
                     if _fdir.is_dir():
                         _ttf = next((str(f) for f in sorted(_fdir.glob("*.ttf"))
                                      if "italic" not in f.name.lower() and "bold" not in f.name.lower()), None) \
                             or next((str(f) for f in sorted(_fdir.glob("*.ttf"))), None)
+                    # Windows system font fallback — ensures text always renders
+                    if not _ttf:
+                        import os as _os
+                        for _wf in [
+                            r"C:\Windows\Fonts\arial.ttf",
+                            r"C:\Windows\Fonts\calibri.ttf",
+                            r"C:\Windows\Fonts\segoeui.ttf",
+                        ]:
+                            if _os.path.exists(_wf):
+                                _ttf = _wf
+                                break
+                    logger.debug("standalone_reel_font", brand=brand, ttf=str(_ttf))
 
                     # ── Logo card (340×100 white pill) ────────────────────
                     _logo_card = None
@@ -980,10 +992,12 @@ def run_reel(brand: str, prompt: str) -> dict:
                             _lbytes = _lb(_luri)
                             if _lbytes:
                                 _cw, _ch = 340, 100
-                                _card = _PI.new("RGB", (_cw, _ch), (255, 255, 255))
+                                # Light grey fill so white-background logos (e.g. UBS)
+                                # are still visible; dark border for contrast on light video.
+                                _card = _PI.new("RGB", (_cw, _ch), (245, 245, 248))
                                 _PD.Draw(_card).rounded_rectangle(
                                     [0, 0, _cw-1, _ch-1], radius=20,
-                                    fill=(255, 255, 255), outline=(210, 210, 220), width=2,
+                                    fill=(245, 245, 248), outline=(160, 160, 175), width=2,
                                 )
                                 _lg = _PI.open(_BIO(_lbytes)).convert("RGBA")
                                 _wb = _PI.new("RGBA", _lg.size, (255, 255, 255, 255))
