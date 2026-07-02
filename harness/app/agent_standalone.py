@@ -41,7 +41,10 @@ def get_standalone_page(page_id: str) -> str | None:
     return _standalone_pages.get(page_id)
 
 
-def publish_standalone_channel(page_id: str, channel: str, to_email: str = "") -> dict:
+def publish_standalone_channel(
+    page_id: str, channel: str, to_email: str = "",
+    override_subject: str = "", override_headline: str = "", override_body: str = "",
+) -> dict:
     """
     Act on what a standalone Poly run already generated — real actions, same
     underlying functions as the full pipeline's /publish route, just scoped
@@ -49,6 +52,9 @@ def publish_standalone_channel(page_id: str, channel: str, to_email: str = "") -
       "landing_page" -> confirm the already-generated preview URL
       "email"        -> actually send a branded email via SMTP
       "google_ads"   -> generate the same mocked Google Ads preview
+
+    override_* params carry the user's edits from the email preview modal
+    and take priority over the originally generated copy.
     """
     data = _standalone_channel_data.get(page_id)
     if not data:
@@ -56,8 +62,10 @@ def publish_standalone_channel(page_id: str, channel: str, to_email: str = "") -
 
     harness_base = os.getenv("HARNESS_URL", "http://localhost:8000").rstrip("/")
     brand    = data["brand"]
-    headline = data.get("headline", "")
-    body     = data.get("body", "")
+    # User edits from the preview modal take priority over the AI originals
+    headline = override_headline or data.get("headline", "")
+    body     = override_body     or data.get("body", "")
+    subject  = override_subject  or data.get("email_subject", "") or headline
     cta      = data.get("cta", "") or "Learn More"
 
     if channel == "landing_page":
@@ -76,7 +84,7 @@ def publish_standalone_channel(page_id: str, channel: str, to_email: str = "") -
             cta            = cta,
             landing_url    = f"{harness_base}/agents/landing/{page_id}",
             logo_url       = f"{harness_base}/brand-logo/{brand}",
-            email_subject  = data.get("email_subject", "") or headline,
+            email_subject  = subject,
             body_copy      = body,
         )
 
@@ -207,21 +215,103 @@ def run_channel(brand: str, prompt: str) -> dict:
         '"landing_cta": "2-3 word call-to-action button label"}',
     )
 
+    headline = data.get("landing_headline", "") or prompt
+
+    # ── Load brand assets from GCS bucket ────────────────────────────────────
+    import base64 as _b64
+    from app.brand_assets import get_asset_loader as _gal_c
+    from app.creative_pipeline import _load_bytes as _lb_c, _part_for_uri as _pfu
+
+    _loader   = _gal_c()
+    _bslug    = brand.split()[0].lower()
+
+    # Logo — prefer whitebg (has brand colours) over standalone dark variants
+    logo_b64 = ""
+    try:
+        _logos = _loader.list_logos(brand)
+        if _logos:
+            _luri = (
+                next((p for p in _logos if "whitebg" in p.lower()), None) or
+                next((p for p in _logos if _bslug in p.lower() and "_dark" not in p.lower()), None) or
+                next((p for p in _logos if _bslug in p.lower()), None) or
+                _logos[0]
+            )
+            _lb = _lb_c(_luri)
+            if _lb:
+                logo_b64 = _b64.b64encode(_lb).decode()
+    except Exception as _le:
+        logger.warning("poly_logo_load_failed", brand=brand, error=str(_le))
+
+    # Campaign image — try to generate a fresh KV via Imagen for best quality;
+    # fall back to an existing brand asset banner if image generation fails.
+    image_b64 = ""
+    try:
+        from google.genai import types as _gtypes
+        _scene_prompt = (
+            f"Photorealistic premium advertising campaign image for {brand}. "
+            f"Campaign concept: {headline}. "
+            f"16:9 aspect ratio, full-bleed, premium FMCG advertising photography, "
+            f"brand colours prominent, no text or typography in the image."
+        )
+        _contents: list = []
+        _products = _loader.list_products(brand)
+        if _products and (p := _pfu(_products[0])):
+            _contents.append(f"PRODUCT REFERENCE for {brand} — match product shape/colours if shown.")
+            _contents.append(p)
+        _logos2 = _loader.list_logos(brand)
+        if _logos2 and (lp := _pfu(_logos2[0])):
+            _contents.append(f"BRAND IDENTITY REFERENCE for {brand} — colour palette and style only.")
+            _contents.append(lp)
+        _contents.append(_scene_prompt)
+
+        _resp = _genai_client().models.generate_content(
+            model  = settings.gemini_model_image,
+            contents = _contents,
+            config = _gtypes.GenerateContentConfig(
+                response_modalities=["IMAGE","TEXT"],
+                image_config=_gtypes.ImageConfig(aspect_ratio="16:9"),
+            ),
+        )
+        for _part in _resp.candidates[0].content.parts:
+            if getattr(_part, "inline_data", None) is not None:
+                _raw = _part.inline_data.data
+                # Apply the same brand overlay as standalone Morphis
+                from app.runner import _apply_brand_overlay
+                _raw = _apply_brand_overlay(_raw, brand, headline, _products[:1], "")
+                image_b64 = _b64.b64encode(_raw).decode()
+                break
+    except Exception as _ie:
+        logger.warning("poly_kv_gen_failed", brand=brand, error=str(_ie))
+
+    # Fall back to a GCS brand asset banner if image generation failed
+    if not image_b64:
+        try:
+            _assets = _loader.list_assets(brand) or _loader.list_products(brand)
+            if _assets:
+                _ab = _lb_c(_assets[0])
+                if _ab:
+                    image_b64 = _b64.b64encode(_ab).decode()
+        except Exception:
+            pass
+
+    # ── Build landing page with brand assets ──────────────────────────────────
     landing_page_id = uuid.uuid4().hex[:12]
     html = ""
     try:
         from app.publisher import generate_brand_website
         html = generate_brand_website(
-            brand        = brand,
-            hero_message = data.get("landing_headline", "") or prompt,
-            body_copy    = data.get("landing_body", ""),
-            cta          = data.get("landing_cta", "") or "Learn More",
-            campaign_id  = f"standalone-{landing_page_id}",
+            brand              = brand,
+            hero_message       = headline,
+            body_copy          = data.get("landing_body", ""),
+            cta                = data.get("landing_cta", "") or "Learn More",
+            campaign_id        = f"standalone-{landing_page_id}",
+            campaign_image_b64 = image_b64,
+            hero_image_b64     = image_b64,
         )
         _standalone_pages[landing_page_id] = html
         _standalone_channel_data[landing_page_id] = {
             "brand":         brand,
-            "headline":      data.get("landing_headline", "") or prompt,
+            "headline":      headline,
             "body":          data.get("landing_body", ""),
             "cta":           data.get("landing_cta", "") or "Learn More",
             "email_subject": data.get("email_subject", ""),
@@ -230,12 +320,14 @@ def run_channel(brand: str, prompt: str) -> dict:
         logger.warning("standalone_landing_page_failed", brand=brand, error=str(e))
         landing_page_id = ""
 
-    # Drop the raw landing_* fields from the flat result — they're inputs to the
-    # generated page, not separate things to display alongside it.
     result = {k: v for k, v in data.items() if not k.startswith("landing_")}
+    result["image_b64"] = image_b64   # used by email preview + content hub
+    result["logo_b64"]  = logo_b64    # used for display in agent card
+    result["headline"]  = headline    # pre-fill email preview subject/headline
+    result["body"]      = data.get("landing_body", "")
     if landing_page_id:
         result["landing_page_id"]   = landing_page_id
-        result["landing_page_html"] = html  # for the "code typing in" reveal before showing the live preview
+        result["landing_page_html"] = html
     return {"agent": "channel", **result}
 
 

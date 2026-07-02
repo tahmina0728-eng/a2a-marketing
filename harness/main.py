@@ -1082,9 +1082,13 @@ async def serve_standalone_landing_page(page_id: str):
 
 
 class StandalonePublishRequest(_BaseModel):
-    page_id:  str
-    channel:  str   # "landing_page" | "email" | "google_ads"
-    to_email: str = ""
+    page_id:       str
+    channel:       str   # "landing_page" | "email" | "google_ads"
+    to_email:      str = ""
+    # Optional preview-edited overrides — when present, replace the original copy
+    email_subject: str = ""
+    headline:      str = ""
+    body:          str = ""
 
 
 @app.post("/agents/channel/publish")
@@ -1094,7 +1098,9 @@ async def publish_standalone_channel(req: StandalonePublishRequest):
     from app import agent_standalone
     try:
         result = await asyncio.to_thread(
-            agent_standalone.publish_standalone_channel, req.page_id, req.channel, req.to_email,
+            agent_standalone.publish_standalone_channel,
+            req.page_id, req.channel, req.to_email,
+            req.email_subject, req.headline, req.body,
         )
         return result
     except ValueError as e:

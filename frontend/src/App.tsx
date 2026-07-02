@@ -507,7 +507,15 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
     try {
       const res = await fetch(`${API_BASE_PUB}/agents/channel/publish`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ page_id: result.landing_page_id, channel, to_email: channelEmail.trim() }),
+        body: JSON.stringify({
+          page_id:       result.landing_page_id,
+          channel,
+          to_email:      channelEmail.trim(),
+          // Pass the preview-edited values so user edits reach the email
+          email_subject: saSubject  || undefined,
+          headline:      saHeadline || undefined,
+          body:          saBody     || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.detail || `Publish failed (${res.status})`);
@@ -704,7 +712,7 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
                         border: "1px solid var(--card-border)", background: "#ffffff" }}>
                         {result?.image_b64 && (
                           <img src={`data:image/jpeg;base64,${result.image_b64}`} alt=""
-                            style={{ width: "100%", maxHeight: 200, objectFit: "cover" as const, display: "block" }} />
+                            style={{ width: "100%", maxHeight: 260, objectFit: "contain" as const, display: "block", background: "#f8fafc" }} />
                         )}
                         <div style={{ padding: "18px 20px", fontFamily: "Georgia, serif" }}>
                           <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
@@ -752,9 +760,9 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
               )}
 
               <button onClick={() => {
-                setSaSubject(result?.headline ?? "");
+                setSaSubject(result?.email_subject ?? result?.headline ?? "");
                 setSaHeadline(result?.headline ?? "");
-                setSaBody(result?.body ?? result?.copy ?? result?.headline ?? "");
+                setSaBody(result?.body ?? result?.copy ?? result?.landing_body ?? result?.headline ?? "");
                 setShowStandaloneEmailPreview(true);
               }}
                 style={{ padding: "8px 16px", borderRadius: 9, border: "none", fontFamily: "inherit",
@@ -792,23 +800,45 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
       )}
 
       {status === "done" && result && agentKey === "channel" && (
-        <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
-          {Object.entries(POLY_CHANNEL_CFG).filter(([key]) => result[key]).map(([key, cfg]) => (
-            <div key={key} style={{
-              borderRadius: 14, overflow: "hidden", background: "var(--card-bg-soft)",
-              border: `1px solid ${cfg.color}30`,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
-                background: `${cfg.color}16`, borderBottom: `1px solid ${cfg.color}25` }}>
-                <span style={{ fontSize: 15 }}>{cfg.icon}</span>
-                <span style={{ fontSize: 11, fontWeight: 800, color: cfg.color, letterSpacing: "0.04em",
-                  textTransform: "uppercase" as const }}>{cfg.label}</span>
-              </div>
-              <div style={{ padding: "14px 16px", fontSize: 13, color: "var(--text-primary)", lineHeight: 1.55 }}>
-                {String(result[key])}
-              </div>
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column" as const, gap: 16 }}>
+
+          {/* Campaign visual from Morphis/GCS */}
+          {result.image_b64 && (
+            <div style={{ borderRadius: 14, overflow: "hidden", position: "relative" as const,
+              boxShadow: "var(--shadow-md)" }}>
+              <img src={`data:image/jpeg;base64,${result.image_b64}`} alt="Campaign visual"
+                style={{ width: "100%", display: "block", maxHeight: 280, objectFit: "cover" as const }} />
+              {result.logo_b64 && (
+                <div style={{ position: "absolute" as const, top: 12, right: 12,
+                  background: "rgba(255,255,255,0.92)", backdropFilter: "blur(8px)",
+                  borderRadius: 10, padding: "6px 10px",
+                  border: "1px solid rgba(255,255,255,0.6)" }}>
+                  <img src={`data:image/png;base64,${result.logo_b64}`} alt="Brand logo"
+                    style={{ height: 28, objectFit: "contain" as const, display: "block" }} />
+                </div>
+              )}
             </div>
-          ))}
+          )}
+
+          {/* Channel copy cards */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 12 }}>
+            {Object.entries(POLY_CHANNEL_CFG).filter(([key]) => result[key]).map(([key, cfg]) => (
+              <div key={key} style={{
+                borderRadius: 14, overflow: "hidden", background: "var(--card-bg-soft)",
+                border: `1px solid ${cfg.color}30`,
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px",
+                  background: `${cfg.color}16`, borderBottom: `1px solid ${cfg.color}25` }}>
+                  <span style={{ fontSize: 15 }}>{cfg.icon}</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: cfg.color, letterSpacing: "0.04em",
+                    textTransform: "uppercase" as const }}>{cfg.label}</span>
+                </div>
+                <div style={{ padding: "14px 16px", fontSize: 13, color: "var(--text-primary)", lineHeight: 1.55 }}>
+                  {String(result[key])}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -2597,13 +2627,14 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
         body: JSON.stringify({
           brand,
           hero_message:    strategy?.hero_message ?? "",
-          short_headline:  copy?.short?.headline  ?? "",
+          // Use preview-edited values when email channel is selected so the
+          // user's edits from the preview modal are included in the send
+          short_headline:  (selected.has("email") && previewHeadline) ? previewHeadline : (copy?.short?.headline  ?? ""),
           medium_headline: copy?.medium?.headline ?? "",
-          body:            copy?.long?.body       ?? "",
+          body:            (selected.has("email") && previewBody)     ? previewBody     : (copy?.long?.body       ?? ""),
           cta:             copy?.cta              ?? "",
           tagline:         strategy?.tagline      ?? "",
-          // Email-channel specific copy from copy agent
-          email_subject:   (copy as any)?.channel_copy?.email_subject ?? copy?.short?.headline ?? "",
+          email_subject:   (selected.has("email") && previewSubject)  ? previewSubject  : ((copy as any)?.channel_copy?.email_subject ?? copy?.short?.headline ?? ""),
           // Product name for email footer / product spotlight
           product_name:    String((output as any)?.product_name ?? brief?.structured_brief?.product ?? ""),
           // KV image — use explicitly selected variation first
@@ -2742,7 +2773,7 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
                 <img
                   src={`data:image/jpeg;base64,${selectedImageB64 ?? (output as any)?.creative_pipeline?.image_b64}`}
                   alt="Campaign visual"
-                  style={{ width: "100%", maxHeight: 220, objectFit: "cover" as const, display: "block" }} />
+                  style={{ width: "100%", maxHeight: 260, objectFit: "contain" as const, display: "block", background: "#f8fafc" }} />
               )}
 
               <div style={{ padding: "20px 24px", fontFamily: "Georgia, serif" }}>
