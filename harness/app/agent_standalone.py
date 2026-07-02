@@ -988,54 +988,24 @@ def run_reel(brand: str, prompt: str) -> dict:
                                 break
                     logger.debug("standalone_reel_font", brand=brand, ttf=str(_ttf))
 
-                    # ── Logo card (340×100 white pill) ────────────────────
-                    _logo_card = None
+                    # ── Raw logo PNG (no background card) ────────────────
+                    _logo_raw = None
+                    _logo_w   = 200   # target width; height scales proportionally
                     try:
-                        from PIL import Image as _PI, ImageDraw as _PD
                         from app.creative_pipeline import _load_bytes as _lb
                         _ldr   = _gal()
                         _logos = _ldr.list_logos(brand)
                         if _logos:
-                            # Selection priority for dark-card compositing:
-                            # 1. whitebg — coloured elements recoloured cleanly
-                            # 2. dark — dark elements turn white via recolouring
-                            # 3. green/coloured — brand colours show directly
-                            # 4. anything except pure-white (white → transparent = invisible)
+                            _bslug = brand.split()[0].lower()
                             def _pick(_ps):
                                 return (
-                                    next((p for p in _ps if "whitebg"  in p.lower()), None) or
-                                    next((p for p in _ps if "_dark"    in p.lower()), None) or
-                                    next((p for p in _ps if any(k in p.lower() for k in ("_green","_color","_colour","_rgb"))), None) or
-                                    next((p for p in _ps if not any(k in p.lower() for k in ("_white.","_white_","white.png"))), None) or
+                                    next((p for p in _ps if _bslug in p.lower() and "_dark" in p.lower()), None) or
+                                    next((p for p in _ps if _bslug in p.lower()
+                                          and not any(k in p.lower() for k in ("_white","_green","_red","_blue","_yellow"))), None) or
+                                    next((p for p in _ps if _bslug in p.lower()), None) or
                                     _ps[0]
                                 )
-                            _lbytes = _lb(_pick(_logos))
-                            if _lbytes:
-                                _cw, _ch = 380, 110
-                                _card_bg = (18, 18, 45)
-                                _card = _PI.new("RGBA", (_cw, _ch), (*_card_bg, 255))
-                                _PD.Draw(_card).rounded_rectangle(
-                                    [0, 0, _cw-1, _ch-1], radius=22,
-                                    fill=(*_card_bg, 255), outline=(60, 60, 100, 255), width=2,
-                                )
-                                _lg = _PI.open(_BIO(_lbytes)).convert("RGBA")
-                                # Recolour: white bg → transparent, black symbol → white, red text stays
-                                _px = list(_lg.getdata())
-                                _new_px = []
-                                for _r, _g, _b, _a in _px:
-                                    if _r > 210 and _g > 210 and _b > 210:  # white bg → transparent
-                                        _new_px.append((_r, _g, _b, 0))
-                                    elif _r < 60 and _g < 60 and _b < 60:   # black symbol → white
-                                        _new_px.append((255, 255, 255, _a))
-                                    else:                                     # red text → keep
-                                        _new_px.append((_r, _g, _b, _a))
-                                _lg.putdata(_new_px)
-                                _sc = min((_cw-48)/max(1,_lg.width), (_ch-28)/max(1,_lg.height), 1.0)
-                                _lw = max(40, int(_lg.width*_sc))
-                                _lh = max(30, int(_lg.height*_sc))
-                                _lg = _lg.resize((_lw, _lh), _PI.LANCZOS)
-                                _card.alpha_composite(_lg, ((_cw-_lw)//2, (_ch-_lh)//2))
-                                _logo_card = _card.convert("RGB")
+                            _logo_raw = _lb(_pick(_logos))
                     except Exception:
                         pass
 
@@ -1051,10 +1021,10 @@ def run_reel(brand: str, prompt: str) -> dict:
                             _ft.write_bytes(_PP(_ttf).read_bytes())
                             _font_arg = "font.ttf"
 
-                        _has_logo = _logo_card is not None
+                        _has_logo = _logo_raw is not None
                         if _has_logo:
-                            _lc_path = _PP(_td) / "logo_card.png"
-                            _logo_card.save(str(_lc_path), format="PNG")
+                            _lc_path = _PP(_td) / "logo.png"
+                            _lc_path.write_bytes(_logo_raw)
 
                         # Build combined filter_complex ─────────────────────
                         def _esc_s(s):
@@ -1093,25 +1063,26 @@ def run_reel(brand: str, prompt: str) -> dict:
                         else:
                             _txt_f = None
 
+                        # format=auto lets FFmpeg use the PNG alpha — no background card needed
                         if _has_logo and _txt_f:
                             _fc = (
                                 f"[0:v]{_txt_f}[txt];"
-                                f"[1:v]scale=380:110[logo];"
-                                f"[txt][logo]overlay=W-w-24:24:"
+                                f"[1:v]scale={_logo_w}:-1[logo];"
+                                f"[txt][logo]overlay=W-w-24:24:format=auto:"
                                 f"enable=between(t\\,4.2\\,6)[vout]"
                             )
-                            _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
+                            _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo.png",
                                     "-filter_complex",_fc,
                                     "-map","[vout]","-map","0:a?",
                                     "-c:v","libx264","-preset","fast","-crf","20",
                                     "-c:a","copy","output.mp4"]
                         elif _has_logo:
                             _fc = (
-                                f"[1:v]scale=380:110[logo];"
-                                f"[0:v][logo]overlay=W-w-24:24:"
+                                f"[1:v]scale={_logo_w}:-1[logo];"
+                                f"[0:v][logo]overlay=W-w-24:24:format=auto:"
                                 f"enable=between(t\\,4.2\\,6)[vout]"
                             )
-                            _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
+                            _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo.png",
                                     "-filter_complex",_fc,
                                     "-map","[vout]","-map","0:a?",
                                     "-c:v","libx264","-preset","fast","-crf","20",

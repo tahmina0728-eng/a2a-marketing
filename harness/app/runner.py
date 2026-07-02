@@ -790,6 +790,12 @@ def _apply_brand_overlay(
             mid = len(sentences) // 2
             sentences = [" ".join(sentences[:mid]), " ".join(sentences[mid:])]
 
+        # If still a single long sentence, split at the first comma so the
+        # headline always reads as two lines (e.g. "Summer flavor, zero kitchen sweat.")
+        if len(sentences) == 1 and "," in sentences[0]:
+            _parts = sentences[0].split(",", 1)
+            sentences = [_parts[0].strip() + ",", _parts[1].strip()]
+
         # Auto-fit each line: shrink font until it fits within 55% of image width
         _measure = Image.new("RGBA", (1, 1))
         _md      = ImageDraw.Draw(_measure)
@@ -1243,61 +1249,31 @@ def _overlay_reel(
                     _ttf = _wf
                     break
 
-        # ── Logo card ─────────────────────────────────────────────────────────
-        _logo_card = None
+        # ── Logo (no background card — overlay raw PNG directly with alpha) ──────
+        # The dark pill card was distracting. Brands like Rnorr/Sunglow/Boozt have
+        # transparent logos that look cleaner composited straight onto the video.
+        # FFmpeg overlay with format=auto handles the alpha channel correctly.
+        _logo_bytes_raw = None
+        _logo_w = 200   # target width on video; height scales proportionally
         try:
             loader = get_asset_loader()
             logos  = loader.list_logos(brand)
             if logos:
-                # Selection priority for dark-card compositing:
-                # 1. whitebg variant — has coloured elements on white bg (removed via recolouring)
-                # 2. dark variant — dark elements become white via recolouring
-                # 3. green/coloured variant — brand colours show directly on dark card
-                # 4. anything EXCEPT a pure-white variant (white pixels → transparent = invisible)
                 def _pick_logo(ps):
+                    _bslug = brand.split()[0].lower()
                     return (
-                        next((p for p in ps if "whitebg"  in p.lower()), None) or
-                        next((p for p in ps if "_dark"    in p.lower()), None) or
-                        next((p for p in ps if any(k in p.lower() for k in ("_green","_color","_colour","_rgb"))), None) or
-                        next((p for p in ps if not any(k in p.lower() for k in ("_white.","_white_","white.png"))), None) or
+                        next((p for p in ps if _bslug in p.lower() and "_dark" in p.lower()), None) or
+                        next((p for p in ps if _bslug in p.lower()
+                              and not any(k in p.lower() for k in ("_white","_green","_red","_blue","_yellow"))), None) or
+                        next((p for p in ps if _bslug in p.lower()), None) or
+                        next((p for p in ps if p.lower().endswith(".png")
+                              and not any(p.lower().rsplit(".",1)[0].endswith(s)
+                                          for s in {"green","red","yellow","orange","purple","blue"})), None) or
                         ps[0]
                     )
-                _logo_bytes = _load_bytes(_pick_logo(logos))
-                if _logo_bytes:
-                    _cw, _ch   = 380, 110
-                    _card_bg   = (18, 18, 45)
-                    _card      = _PIL.new("RGBA", (_cw, _ch), (*_card_bg, 255))
-                    _Draw.Draw(_card).rounded_rectangle(
-                        [0, 0, _cw-1, _ch-1], radius=22,
-                        fill=(*_card_bg, 255), outline=(60, 60, 100, 255), width=2,
-                    )
-                    _lg = _PIL.open(BytesIO(_logo_bytes)).convert("RGBA")
-                    _px = list(_lg.getdata())
-                    _lg.putdata([
-                        (r, g, b, 0)          if r > 210 and g > 210 and b > 210 else
-                        (255, 255, 255, a)    if r < 60  and g < 60  and b < 60  else
-                        (r, g, b, a)
-                        for r, g, b, a in _px
-                    ])
-                    # Card height scales with logo aspect ratio so tall logos
-                    # (e.g. Sunglow 777×636) aren't squashed to a tiny icon
-                    _logo_ar  = _lg.width / max(1, _lg.height)
-                    _ch_final = max(110, min(160, int(_cw / max(0.5, _logo_ar)) + 28))
-                    if _ch_final != _ch:
-                        _card = _PIL.new("RGBA", (_cw, _ch_final), (*_card_bg, 255))
-                        _Draw.Draw(_card).rounded_rectangle(
-                            [0, 0, _cw-1, _ch_final-1], radius=22,
-                            fill=(*_card_bg, 255), outline=(60, 60, 100, 255), width=2,
-                        )
-                        _ch = _ch_final
-                    _sc = min((_cw-48)/max(1,_lg.width), (_ch-28)/max(1,_lg.height), 1.0)
-                    _lw = max(40, int(_lg.width*_sc))
-                    _lh = max(30, int(_lg.height*_sc))
-                    _lg = _lg.resize((_lw, _lh), _PIL.LANCZOS)
-                    _card.alpha_composite(_lg, ((_cw-_lw)//2, (_ch-_lh)//2))
-                    _logo_card = _card.convert("RGB")
+                _logo_bytes_raw = _load_bytes(_pick_logo(logos))
         except Exception as _le:
-            logger.warning("reel_logo_build_failed", brand=brand, error=str(_le))
+            logger.warning("reel_logo_load_failed", brand=brand, error=str(_le))
 
         def _esc(s: str) -> str:
             return s.replace("\\","\\\\").replace("'","\\'").replace(":","\\:")
@@ -1323,9 +1299,9 @@ def _overlay_reel(
                 _ft.write_bytes(_P(_ttf).read_bytes())
                 _font_arg = "font.ttf"
 
-            if _logo_card:
-                _lc = _P(_tmp) / "logo_card.png"
-                _logo_card.save(str(_lc), format="PNG")
+            if _logo_bytes_raw:
+                _lc = _P(_tmp) / "logo.png"
+                _lc.write_bytes(_logo_bytes_raw)
 
             # Build filters — headline wraps to 2 lines, CTA on third line
             _t0, _t1 = text_start_sec, round(text_start_sec + 0.5, 1)
@@ -1367,19 +1343,21 @@ def _overlay_reel(
                         f"box=1:boxcolor=black@0.40:boxborderw=12"
                     )
 
-            if _logo_card and _txt_f:
+            # format=auto on overlay lets FFmpeg use the PNG alpha channel so
+            # the logo composites directly onto the video with no background card
+            if _logo_bytes_raw and _txt_f:
                 _fc  = (f"[0:v]{_txt_f}[txt];"
-                        f"[1:v]scale={_cw}:{_ch}[logo];"
-                        f"[txt][logo]overlay=W-w-24:24:"
+                        f"[1:v]scale={_logo_w}:-1[logo];"
+                        f"[txt][logo]overlay=W-w-24:24:format=auto:"
                         f"enable=between(t\\,{logo_start_sec}\\,6)[vout]")
-                _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
+                _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo.png",
                         "-filter_complex",_fc,"-map","[vout]","-map","0:a?",
                         "-c:v","libx264","-preset","fast","-crf","20","-c:a","copy","output.mp4"]
-            elif _logo_card:
-                _fc  = (f"[1:v]scale={_cw}:{_ch}[logo];"
-                        f"[0:v][logo]overlay=W-w-24:24:"
+            elif _logo_bytes_raw:
+                _fc  = (f"[1:v]scale={_logo_w}:-1[logo];"
+                        f"[0:v][logo]overlay=W-w-24:24:format=auto:"
                         f"enable=between(t\\,{logo_start_sec}\\,6)[vout]")
-                _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
+                _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo.png",
                         "-filter_complex",_fc,"-map","[vout]","-map","0:a?",
                         "-c:v","libx264","-preset","fast","-crf","20","-c:a","copy","output.mp4"]
             elif _txt_f:
