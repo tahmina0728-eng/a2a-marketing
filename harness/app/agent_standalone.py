@@ -953,13 +953,124 @@ def run_reel(brand: str, prompt: str) -> dict:
                     (r"\bwealth\b",     "life"),      (r"\baffluent\b", "accomplished"),
                 ]:
                     _clean_vo = _re_ov.sub(_fp, _fr, _clean_vo, flags=_re_ov.IGNORECASE)
-                from app.runner import _overlay_copy_text_on_video, _overlay_logo_end_card
-                video_bytes = _overlay_copy_text_on_video(
-                    video_bytes, brand, _clean_vo, "", start_sec=1.5
-                )
-                video_bytes = _overlay_logo_end_card(video_bytes, brand, start_sec=4.2)
+                # Single FFmpeg pass: text lower-third + logo end-card together.
+                # Two separate passes caused the second pass to silently drop
+                # everything from the first pass on Windows.
+                import shutil as _sh, subprocess as _sp, tempfile as _tf
+                from pathlib import Path as _PP
+                from io import BytesIO as _BIO
+
+                if _sh.which("ffmpeg"):
+                    # ── Font ──────────────────────────────────────────────
+                    from app.brand_assets import get_asset_loader as _gal
+                    _fdir = _PP(__file__).parent.parent / "bucket" / "brands" / brand / "Font"
+                    _ttf  = None
+                    if _fdir.is_dir():
+                        _ttf = next((str(f) for f in sorted(_fdir.glob("*.ttf"))
+                                     if "italic" not in f.name.lower() and "bold" not in f.name.lower()), None) \
+                            or next((str(f) for f in sorted(_fdir.glob("*.ttf"))), None)
+
+                    # ── Logo card (340×100 white pill) ────────────────────
+                    _logo_card = None
+                    try:
+                        from PIL import Image as _PI, ImageDraw as _PD
+                        from app.creative_pipeline import _load_bytes as _lb
+                        _ldr   = _gal()
+                        _logos = _ldr.list_logos(brand)
+                        if _logos:
+                            _luri  = next((p for p in _logos if "whitebg" not in p.lower()), _logos[0])
+                            _lbytes = _lb(_luri)
+                            if _lbytes:
+                                _cw, _ch = 340, 100
+                                _card = _PI.new("RGB", (_cw, _ch), (255, 255, 255))
+                                _PD.Draw(_card).rounded_rectangle(
+                                    [0, 0, _cw-1, _ch-1], radius=20,
+                                    fill=(255, 255, 255), outline=(210, 210, 220), width=2,
+                                )
+                                _lg = _PI.open(_BIO(_lbytes)).convert("RGBA")
+                                _wb = _PI.new("RGBA", _lg.size, (255, 255, 255, 255))
+                                _wb.alpha_composite(_lg)
+                                _lg = _wb.convert("RGB")
+                                _sc = min((_cw-40)/max(1,_lg.width), (_ch-28)/max(1,_lg.height), 1.0)
+                                _lw = max(32, int(_lg.width*_sc))
+                                _lh = max(32, int(_lg.height*_sc))
+                                _lg = _lg.resize((_lw, _lh), _PI.LANCZOS)
+                                _card.paste(_lg, ((_cw-_lw)//2, (_ch-_lh)//2))
+                                _logo_card = _card
+                    except Exception:
+                        pass
+
+                    with _tf.TemporaryDirectory() as _td:
+                        _vin  = _PP(_td) / "input.mp4"
+                        _vout = _PP(_td) / "output.mp4"
+                        _vin.write_bytes(video_bytes)
+
+                        # Copy font to temp dir (avoids Windows path/colon issues)
+                        _font_arg = None
+                        if _ttf:
+                            _ft = _PP(_td) / "font.ttf"
+                            _ft.write_bytes(_PP(_ttf).read_bytes())
+                            _font_arg = "font.ttf"
+
+                        _has_logo = _logo_card is not None
+                        if _has_logo:
+                            _lc_path = _PP(_td) / "logo_card.png"
+                            _logo_card.save(str(_lc_path), format="PNG")
+
+                        # Build combined filter_complex ─────────────────────
+                        if _font_arg and _clean_vo.strip():
+                            _hl = _clean_vo[:80].replace("\\","\\\\").replace("'","'\\''" ).replace(":","\\:")
+                            _txt_f = (
+                                f"drawtext=fontfile={_font_arg}:text='{_hl}':"
+                                f"fontsize=38:fontcolor=white:x=60:y=H-110:"
+                                f"enable=between(t\\,1.5\\,6):"
+                                f"alpha=if(lt(t\\,2.0)\\,(t-1.5)/0.5\\,1):"
+                                f"box=1:boxcolor=black@0.55:boxborderw=16"
+                            )
+                        else:
+                            _txt_f = None
+
+                        if _has_logo and _txt_f:
+                            _fc = (
+                                f"[0:v]{_txt_f}[txt];"
+                                f"[1:v]scale=340:100,fade=t=in:st=4.2:d=0.4[logo];"
+                                f"[txt][logo]overlay=W-w-24:H-h-24:"
+                                f"enable=between(t\\,4.2\\,6)[vout]"
+                            )
+                            _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
+                                    "-filter_complex",_fc,
+                                    "-map","[vout]","-map","0:a?",
+                                    "-c:v","libx264","-preset","fast","-crf","20",
+                                    "-c:a","copy","output.mp4"]
+                        elif _has_logo:
+                            _fc = (
+                                f"[1:v]scale=340:100,fade=t=in:st=4.2:d=0.4[logo];"
+                                f"[0:v][logo]overlay=W-w-24:H-h-24:"
+                                f"enable=between(t\\,4.2\\,6)[vout]"
+                            )
+                            _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
+                                    "-filter_complex",_fc,
+                                    "-map","[vout]","-map","0:a?",
+                                    "-c:v","libx264","-preset","fast","-crf","20",
+                                    "-c:a","copy","output.mp4"]
+                        elif _txt_f:
+                            _cmd = ["ffmpeg","-y","-i","input.mp4",
+                                    "-vf",_txt_f,
+                                    "-c:v","libx264","-preset","fast","-crf","20",
+                                    "-c:a","copy","output.mp4"]
+                        else:
+                            _cmd = None
+
+                        if _cmd:
+                            _r = _sp.run(_cmd, capture_output=True, timeout=120, cwd=_td)
+                            if _r.returncode == 0 and _vout.exists():
+                                video_bytes = _vout.read_bytes()
+                                logger.info("standalone_reel_overlay_applied", brand=brand)
+                            else:
+                                logger.warning("standalone_reel_overlay_failed", brand=brand,
+                                               stderr=_r.stderr.decode(errors="ignore")[-400:])
             except Exception as _ov_err:
-                logger.warning("standalone_reel_overlay_failed", brand=brand, error=str(_ov_err))
+                logger.warning("standalone_reel_overlay_error", brand=brand, error=str(_ov_err))
             video_b64 = base64.b64encode(video_bytes).decode("utf-8")
             logger.info("standalone_reel_succeeded", model=veo_model)
         else:
