@@ -476,10 +476,10 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
     .nav-shop:hover{{opacity:0.85}}
 
     /* ── Hero ── */
-    .hero{{position:relative;min-height:580px;display:flex;align-items:center;overflow:hidden}}
-    .hero-bg{{position:absolute;inset:0;{bg_section}filter:brightness(0.55)}}
-    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,{cfg["primary"]}dd 0%,{cfg["primary"]}44 60%,transparent 100%)}}
-    .hero-content{{position:relative;z-index:2;padding:80px 80px;max-width:640px}}
+    .hero{{position:relative;min-height:580px;display:flex;align-items:flex-end;overflow:hidden}}
+    .hero-bg{{position:absolute;inset:0;{bg_section.replace("background-position: center","background-position: center 30%")}filter:brightness(0.9)}}
+    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,{cfg["primary"]}22 0%,transparent 70%)}}
+    .hero-content{{position:relative;z-index:2;padding:48px 80px 56px;max-width:640px}}
     .hero-eyebrow{{display:inline-block;background:{cfg["accent"]};color:{cfg["primary"]};font-size:11px;font-weight:800;letter-spacing:0.14em;text-transform:uppercase;padding:5px 14px;border-radius:99px;margin-bottom:20px}}
     .hero-headline{{font-size:clamp(36px,4.5vw,56px);font-weight:900;color:white;line-height:1.08;letter-spacing:-0.03em;margin-bottom:18px}}
     .hero-sub{{font-size:18px;color:rgba(255,255,255,0.82);line-height:1.65;margin-bottom:36px;max-width:480px}}
@@ -551,7 +551,6 @@ def _generate_sunglow_website(brand: str, hero_message: str, tagline: str,
   <div class="hero-overlay"></div>
   <div class="hero-content">
     <div class="hero-eyebrow">{hero_tag}</div>
-    <h1 class="hero-headline">{hero_message}</h1>
     <p class="hero-sub">{brand_copy or tagline or cfg.get("tagline","")}</p>
     <div class="hero-btns">
       <a href="#cta" class="btn-primary">{cta or 'Shop Now'}</a>
