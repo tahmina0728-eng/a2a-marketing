@@ -1,6 +1,5 @@
 import { useState } from "react";
 import FormSelect from "./ui/FormSelect";
-import PromptCard from "./ui/PromptCard";
 import type { HarnessBriefRequest } from "../types/pipeline";
 
 /* ── Data ──────────────────────────────────────────────────────── */
@@ -63,19 +62,6 @@ const chipOn: React.CSSProperties = {
   boxShadow: "0 2px 12px rgba(124,58,237,0.35)",
 };
 
-function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div style={{
-      background: "rgba(255,255,255,0.82)", backdropFilter: "blur(16px)",
-      WebkitBackdropFilter: "blur(16px)", borderRadius: 20,
-      border: "1px solid rgba(255,255,255,0.6)",
-      boxShadow: "0 8px 32px rgba(0,0,0,0.08)", padding: 28,
-      display: "flex", flexDirection: "column", gap: 20,
-    }}>
-      {children}
-    </div>
-  );
-}
 
 /* ── Page 1 ────────────────────────────────────────────────────── */
 function Page1({ data, onChange, onNext }: {
@@ -92,22 +78,20 @@ function Page1({ data, onChange, onNext }: {
   return (
     <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column",
       alignItems:"center", justifyContent:"center", padding:"40px 40px 60px" }}>
-      <div style={{ width:"100%", maxWidth:620, display:"flex", flexDirection:"column", gap:24 }}>
+      <div style={{ width:"100%", maxWidth:620, display:"flex", flexDirection:"column", gap:20 }}>
 
         <div>
-          <h1 style={{ fontFamily:F, fontSize:38, fontWeight:600, lineHeight:1.2,
-            letterSpacing:"-0.02em", margin:0, color:"#0f0f0f" }}>
-            <span style={{ backgroundImage:"linear-gradient(175deg,#3343FF 13%,#FE9136 82%)",
-              WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-              backgroundClip:"text" }}>Hello!</span>
-            {" "}Set Campaign Objective
-          </h1>
-          <p style={{ fontFamily:F, fontSize:14, color:"#8c8ca1", marginTop:6, lineHeight:1.5 }}>
+          <h3 style={{ fontFamily:F, fontSize:22, fontWeight:800, lineHeight:1.3, margin:"0 0 6px", color:"var(--text-primary,#0f172a)" }}>
+            <span style={{ background:`linear-gradient(135deg,${BRAND_COLOR},#6366f1)`,
+              WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>Hello!</span>
+            {" "}What campaign should I set up?
+          </h3>
+          <p style={{ fontFamily:F, fontSize:13, color:"var(--text-secondary,#475569)", margin:0, lineHeight:1.5 }}>
             Fill in the details below and we'll build your AI-powered campaign.
           </p>
         </div>
 
-        <Card>
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div>
             <span style={label}>Brand</span>
             <FormSelect value={data.brand} onChange={v => onChange("brand", v)}
@@ -116,9 +100,22 @@ function Page1({ data, onChange, onNext }: {
 
           <div>
             <span style={label}>Campaign Objective</span>
-            <PromptCard value={data.objective} onChange={v => onChange("objective", v)}
-              placeholder="Drive 30% uplift in consideration among health-conscious women 25–40 in the UK during Spring 2025"
-              accentColor={BRAND_COLOR} />
+            <textarea
+              value={data.objective}
+              onChange={e => onChange("objective", e.target.value)}
+              placeholder="Describe your brand, market, and campaign direction — I'll help you move it forward"
+              rows={3}
+              style={{
+                width: "100%", borderRadius: 12, padding: "14px 16px",
+                border: "1px solid var(--card-border,rgba(15,23,42,0.08))",
+                background: "var(--card-bg,#ffffff)",
+                fontFamily: F, fontSize: 13, lineHeight: 1.6,
+                color: "var(--text-primary,#0f172a)", resize: "none", outline: "none",
+                boxSizing: "border-box" as const, transition: "border-color 0.15s",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = BRAND_COLOR}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--card-border,rgba(15,23,42,0.08))"}
+            />
           </div>
 
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
@@ -133,18 +130,18 @@ function Page1({ data, onChange, onNext }: {
                 placeholder="Select budget" options={BUDGETS} />
             </div>
           </div>
-        </Card>
+        </div>
 
         <button onClick={onNext} disabled={!ok}
-          style={{ width:"100%", height:52, borderRadius:14, border:"none", fontFamily:F,
-            fontWeight:600, fontSize:15, display:"flex", alignItems:"center",
-            justifyContent:"center", gap:8, cursor: ok ? "pointer" : "default",
-            background: ok ? BRAND_GRADIENT : "rgba(255,255,255,0.4)",
-            color: ok ? "#fff" : "#8c8ca1",
-            boxShadow: ok ? "0 4px 20px rgba(124,58,237,0.3)" : "none",
+          style={{ alignSelf:"flex-start", height:44, padding:"0 28px", borderRadius:12, border:"none",
+            fontFamily:F, fontWeight:600, fontSize:14, display:"flex", alignItems:"center",
+            gap:8, cursor: ok ? "pointer" : "not-allowed",
+            background: ok ? BRAND_GRADIENT : "rgba(124,58,237,0.15)",
+            color: ok ? "#fff" : "rgba(124,58,237,0.4)",
+            boxShadow: ok ? "0 4px 16px rgba(124,58,237,0.3)" : "none",
             transition:"all 0.2s" }}>
           Next: Campaign Brief
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M5 12h14M12 5l7 7-7 7"/>
           </svg>
@@ -165,22 +162,20 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
   return (
     <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column",
       alignItems:"center", justifyContent:"center", padding:"40px 40px 60px" }}>
-      <div style={{ width:"100%", maxWidth:620, display:"flex", flexDirection:"column", gap:24 }}>
+      <div style={{ width:"100%", maxWidth:620, display:"flex", flexDirection:"column", gap:20 }}>
 
         <div>
-          <h1 style={{ fontFamily:F, fontSize:38, fontWeight:600, lineHeight:1.2,
-            letterSpacing:"-0.02em", margin:0, color:"#0f0f0f" }}>
-            <span style={{ backgroundImage:"linear-gradient(175deg,#3343FF 13%,#FE9136 82%)",
-              WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent",
-              backgroundClip:"text" }}>Almost there!</span>
+          <h3 style={{ fontFamily:F, fontSize:22, fontWeight:800, lineHeight:1.3, margin:"0 0 6px", color:"var(--text-primary,#0f172a)" }}>
+            <span style={{ background:`linear-gradient(135deg,${BRAND_COLOR},#6366f1)`,
+              WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>Almost there!</span>
             {" "}Campaign Brief
-          </h1>
-          <p style={{ fontFamily:F, fontSize:14, color:"#8c8ca1", marginTop:6, lineHeight:1.5 }}>
+          </h3>
+          <p style={{ fontFamily:F, fontSize:13, color:"var(--text-secondary,#475569)", margin:0, lineHeight:1.5 }}>
             Choose your channels, audience and give your campaign a name.
           </p>
         </div>
 
-        <Card>
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div>
             <span style={label}>Channels</span>
             <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
@@ -223,23 +218,23 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
                 fontSize:13, fontFamily:F, color:"#0f0f0f", outline:"none",
                 boxSizing:"border-box" as const }} />
           </div>
-        </Card>
+        </div>
 
-        <div style={{ display:"flex", gap:12 }}>
+        <div style={{ display:"flex", gap:10 }}>
           <button onClick={onBack}
-            style={{ height:52, paddingLeft:24, paddingRight:24, borderRadius:14,
-              border:"1px solid #d0d0e0", background:"rgba(255,255,255,0.7)",
-              color: BRAND_COLOR, fontFamily:F, fontWeight:600, fontSize:14,
+            style={{ height:44, padding:"0 20px", borderRadius:12,
+              border:`1.5px solid ${BRAND_COLOR}`, background:"transparent",
+              color: BRAND_COLOR, fontFamily:F, fontWeight:600, fontSize:13,
               cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
             ← Back
           </button>
           <button onClick={onLaunch} disabled={!ok}
-            style={{ flex:1, height:52, borderRadius:14, border:"none", fontFamily:F,
-              fontWeight:600, fontSize:15, display:"flex", alignItems:"center",
-              justifyContent:"center", gap:8, cursor: ok ? "pointer" : "default",
-              background: ok ? BRAND_GRADIENT : "rgba(255,255,255,0.4)",
-              color: ok ? "#fff" : "#8c8ca1",
-              boxShadow: ok ? "0 4px 24px rgba(124,58,237,0.35)" : "none",
+            style={{ height:44, padding:"0 28px", borderRadius:12, border:"none", fontFamily:F,
+              fontWeight:600, fontSize:14, display:"flex", alignItems:"center",
+              gap:8, cursor: ok ? "pointer" : "not-allowed",
+              background: ok ? BRAND_GRADIENT : "rgba(124,58,237,0.15)",
+              color: ok ? "#fff" : "rgba(124,58,237,0.4)",
+              boxShadow: ok ? "0 4px 16px rgba(124,58,237,0.3)" : "none",
               transition:"all 0.2s" }}>
             ✨ Launch Campaign
           </button>
