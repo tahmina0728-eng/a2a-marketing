@@ -1527,9 +1527,98 @@ async def generate_campaign_reel(
             return "Crisp winter atmosphere: cool blue tones, frosted surfaces, warm contrast accent lighting."
         return ""
 
-    _mod = _season_mod(season)
-    if _mod:
-        brand_scene = f"{brand_scene} {_mod}"
+    # ── Festive scene REPLACEMENT (not append) ────────────────────────────────
+    # When a festive/seasonal occasion is active, REPLACE the entire brand scene
+    # so the Veo prompt leads with the festive context. Appending (the old approach)
+    # meant Veo focused on the base "boiling pot / hair flip / can" scene and treated
+    # Christmas/Diwali as an afterthought, producing plain product shots.
+    import random as _rnd_r
+    def _reel_festive_scene(b: str, s: str, p: str):
+        _sl = s.lower()
+        _xmas  = any(k in _sl for k in ("christmas","xmas","festive","advent"))
+        _diwali = any(k in _sl for k in ("diwali","deepavali"))
+        _ny     = "new year" in _sl
+        _val    = "valentine" in _sl
+        _easter = "easter" in _sl
+        _summer = "summer" in _sl
+        if not any([_xmas, _diwali, _ny, _val, _easter, _summer]):
+            return None
+        _scenes = {
+            "Rnorr": {
+                "xmas": _rnd_r.choice([
+                    f"A warm multi-generational family of 4-5 gathered joyfully around a beautifully set Christmas dinner table — the mother proudly serves a steaming festive feast made with {p}. Decorated Christmas tree behind them, golden fairy lights overhead, holly centrepiece, children in Christmas sweaters laughing. {p} pack visible on the counter. Deep forest green and gold, warm amber candlelight, snow outside the window.",
+                    f"A parent and two excited children (ages 5 and 8) cooking the Christmas feast together — adding {p} to a bubbling pot while Christmas music plays, steam rising dramatically. Christmas cards on the mantle, fairy lights twinkling in the window, festive aprons. Deep green and red palette, genuine family magic.",
+                ]),
+                "diwali": f"A South Asian family of 5 gathered around a Diwali feast — the mother serving a rich dish made with {p} to excited children and grandparents in traditional festive attire. Diyas glowing everywhere, marigold garlands, rangoli patterns on the floor. Warm golden diya light, {p} pack on the counter. Vibrant jewel tones and gold.",
+                "ny":     f"A couple and friends celebrating New Year's Eve with a glamorous dinner — {p} the hero ingredient in the centrepiece dish. Champagne glasses raised, city lights through the window, countdown energy. {p} pack on the kitchen island, deep green and gold NYE palette.",
+                "val":    f"A couple cooking a romantic Valentine's dinner together by candlelight — {p} being stirred lovingly into a bubbling pot, red roses on the counter. Warm rose and deep green palette, intimate and genuinely delicious.",
+                "easter": f"A family with young children making a bright Easter Sunday lunch — {p} in a pot on the stove, Easter eggs and spring flowers on the table, pastel colours and natural light. Joyful and warm.",
+                "summer": f"A group of friends hosting a sunny outdoor summer garden party — the hero cook serves a sizzling dish made with {p} at a table loaded with fresh summer produce. Golden afternoon light, garden flowers, laughter and vibrant energy.",
+            },
+            "Sunglow": {
+                "xmas": _rnd_r.choice([
+                    f"Three diverse women (20-35) getting glamorous together for Christmas night, doing each other's hair in front of a beautifully decorated Christmas tree — {p} bottles on the vanity, golden fairy lights reflecting in their shiny hair, laughing with festive joy. Deep magenta-pink and Christmas gold palette.",
+                    f"A mother and teenage daughter styling each other's hair on Christmas morning — gifts around the tree, fairy lights in the window, {p} bottle between them. Warm golden light, slow-motion hair flip catching the festive glow. Magenta-pink and gold.",
+                ]),
+                "diwali": f"Three South Asian women in jewel-toned traditional outfits getting ready for Diwali together, doing each other's hair amid glowing diyas and marigold garlands — {p} bottles prominent, hair FLYING in slow motion catching warm golden diya light. Rich vibrant festive palette.",
+                "ny":     f"Four women getting glamorous for New Year's Eve together — sequined outfits, champagne flutes on the vanity, {p} products centre-stage, golden confetti beginning to fall. Hair FLYING, pure NYE euphoria.",
+                "val":    f"A woman styling her hair with {p} for a Valentine's date — roses on the dressing table, soft rose-gold candlelight, slow-motion hair flip with pink bokeh and petals falling around her.",
+                "summer": f"Three women at an outdoor summer festival laughing with hair flying in the warm breeze — {p} products on the picnic blanket, sunshine yellow and magenta palette, golden hour hair flip.",
+            },
+            "Boozt": {
+                "xmas": _rnd_r.choice([
+                    f"A group of 6 young people (20-30) at a Christmas house party — Boozt cans raised high, laughing, tinsel and coloured fairy lights everywhere, Christmas tree glowing behind them. Electric cobalt and Christmas red palette, cans PROMINENT and glistening.",
+                    f"Friends celebrating on a rooftop decorated for Christmas — fairy lights strung across the space, Boozt cans raised in a toast, soft snow drifting past. Midnight navy, electric blue and Christmas gold.",
+                ]),
+                "diwali": f"Young South Asian people celebrating Diwali outdoors with sparklers — Boozt cans raised in a toast, Diwali fireworks in the sky, vibrant outfits. Electric cobalt and gold, pure energy and celebration.",
+                "ny":     _rnd_r.choice([
+                    f"A crowd of friends celebrating New Year's Eve countdown — Boozt cans raised as midnight strikes, golden confetti exploding, fireworks through huge windows. Electric cobalt and gold, unstoppable NYE energy.",
+                    f"Four friends on a penthouse rooftop at midnight — Boozt cans clinked together as fireworks burst over the city skyline. Deep navy and electric gold, pure euphoria.",
+                ]),
+                "val":    f"A stylish couple sharing ice-cold Boozt cans on a Valentine's rooftop date — city lights and rose bokeh behind them, condensation rolling down the cans. Cobalt and rose palette.",
+                "summer": f"A group of friends at a summer music festival raising Boozt cans to the sky — stage lights, golden hour sunlight, crowd energy. Electric cobalt and sunshine, euphoric summer festival.",
+            },
+            "Glenfiddich": {
+                "xmas": _rnd_r.choice([
+                    f"Four sophisticated adults around a candlelit Christmas dinner table — crystal Glenfiddich glasses raised in a toast, {p} bottle centre-stage catching the fireplace glow. Holly centrepiece, tall taper candles. Deep teal and Christmas gold.",
+                    f"A {p} bottle with a velvet ribbon on a mantelpiece above a roaring fireplace — Christmas stockings hung, fairy lights reflected in the bottle. Premium aspirational, the ultimate Christmas gift.",
+                ]),
+                "diwali": f"A sophisticated Diwali celebration — {p} bottle beautifully lit among diyas and marigolds, adults raising crystal glasses in a toast. Rich jewel tones, warm diya light, premium and festive.",
+                "ny":     f"Three adults in black tie at a NYE gala — crystal Glenfiddich glasses raised as midnight strikes, {p} bottle prominently lit, confetti beginning to fall. Deep teal and gold, elegant and celebratory.",
+                "val":    f"A couple sharing a glass of {p} at an intimate candlelit Valentine's dinner — red roses, {p} bottle catching the candlelight. Deep teal and rose-red palette, sophisticated romance.",
+                "summer": f"A sophisticated man in a linen blazer on a sunlit outdoor terrace pouring {p} over ice — golden afternoon light, ocean or countryside vista behind him. Teal and chartreuse, premium summer leisure.",
+            },
+        }
+        # UBS Bank — pure lifestyle, zero financial/brand terms (RAI safe)
+        if b == "UBS Bank":
+            if _xmas:
+                return _rnd_r.choice([
+                    "A family of 4 walking hand-in-hand through a beautifully decorated Christmas market — stalls glowing with fairy lights, soft snow falling, warm golden light, children laughing with delight. Cinematic slow dolly, aspirational and heartwarming.",
+                    "A couple decorating their home for Christmas together — hanging ornaments on the tree, fairy lights twinkling, cosy fireplace glowing. Intimate, warm, aspirational domestic happiness in slow motion.",
+                ])
+            if _diwali:
+                return "A family lighting diyas together on their home doorstep at dusk — three generations in traditional festive attire, golden diya light warming their faces, rangoli at their feet. Cinematic slow-motion, warm and joyful."
+            if _ny:
+                return _rnd_r.choice([
+                    "A family on a rooftop terrace watching fireworks at midnight — parents lifting children to see the colourful bursts over the city skyline, golden confetti falling. Wide cinematic shot, joy and optimism.",
+                    "A couple dressed elegantly embracing as midnight fireworks illuminate the sky — confetti falling, city lights below, faces lit with golden light. Cinematic and aspirational.",
+                ])
+            if _val:
+                return "A couple walking through a rose-lit city street on Valentine's evening — boutique windows decorated with hearts and roses, warm pink bokeh, holding hands and smiling. Cinematic and romantic."
+            return None
+
+        b_scenes = _scenes.get(b, {})
+        key = ("xmas" if _xmas else "diwali" if _diwali else "ny" if _ny else
+               "val" if _val else "easter" if _easter else "summer" if _summer else None)
+        return b_scenes.get(key) if key else None
+
+    _festive = _reel_festive_scene(brand, season, _prod)
+    if _festive:
+        brand_scene = _festive          # REPLACE — leads with festive context
+    else:
+        _mod = _season_mod(season)
+        if _mod:
+            brand_scene = f"{brand_scene} {_mod}"  # append for non-festive seasons
 
     _gc = _veo_genai.Client(vertexai=True, project=gcp_project, location=gcp_region)
     _voiceover_line = (
