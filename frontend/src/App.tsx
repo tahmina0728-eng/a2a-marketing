@@ -539,15 +539,6 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
       {status === "running" ? (
         /* ── Running state — replaces the prompt card ── */
         <div style={{ textAlign: "center" as const, padding: "32px 16px" }}>
-          <div style={{
-            width: 72, height: 72, borderRadius: "50%", margin: "0 auto 20px",
-            border: `3px solid ${color}80`, overflow: "hidden",
-            boxShadow: `0 0 0 8px ${color}18, 0 0 40px ${color}30`,
-            animation: "icon-breathe 2s ease-in-out infinite",
-          }}>
-            <img src={AGENT_AVATARS[HARNESS_STAGES.findIndex(s => s.key === agentKey)]}
-              alt={agentLabel} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-          </div>
           <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
             {agentLabel} is working…
           </div>

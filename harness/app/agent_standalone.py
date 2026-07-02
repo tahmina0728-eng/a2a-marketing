@@ -719,14 +719,10 @@ def run_reel(brand: str, prompt: str) -> dict:
             "news tickers, legal disclaimers, violence, explicit content"
         )
 
-        # DO NOT pass image= as start frame — Veo treats it as the video's primary subject,
-        # causing it to just zoom/pan on the logo image instead of generating the cinematic scene.
-        # Instead: text-to-video for the scene, last_frame for the logo end-card.
-        # Note: last_frame is documented as "only for image-to-video", but we try it standalone
-        # first; if it causes empty results we fall back to pure text-to-video.
-        end_image = _build_branded_end_frame(brand)
-
-        def _veo_call(video_text: str, with_end: bool = True) -> object:
+        # Pure text-to-video — no last_frame/image params.
+        # last_frame is only supported in image-to-video mode; passing it in
+        # text-to-video always returns an empty result and triggers a wasted retry.
+        def _veo_call(video_text: str) -> object:
             page = uuid.uuid4().hex[:12]
             uri  = f"gs://{settings.gcs_bucket}/outputs/standalone-{page}/reel.mp4"
             return client.models.generate_videos(
@@ -736,7 +732,6 @@ def run_reel(brand: str, prompt: str) -> dict:
                     aspect_ratio="16:9", duration_seconds=6,
                     output_gcs_uri=uri, number_of_videos=1, generate_audio=True,
                     negative_prompt=_neg_prompt,
-                    last_frame=end_image if (with_end and end_image) else None,
                 ),
             )
 
@@ -755,13 +750,7 @@ def run_reel(brand: str, prompt: str) -> dict:
         def _rai_reasons(op) -> list:
             return getattr(op.result, "rai_media_filtered_reasons", None) if op and op.result else None
 
-        operation = _poll(_veo_call(final_prompt, with_end=True))
-
-        # last_frame may not be supported standalone (SDK says "image-to-video only").
-        # If it causes empty results, retry as pure text-to-video without it.
-        if end_image and not _has_video(operation) and not _rai_reasons(operation):
-            logger.warning("standalone_reel_last_frame_empty_retrying_text_only", model=veo_model)
-            operation = _poll(_veo_call(final_prompt, with_end=False))
+        operation = _poll(_veo_call(final_prompt))
 
         # If prompt was RAI-blocked, retry with the minimal safe scene-only fallback
         _rai = _rai_reasons(operation)
@@ -796,7 +785,7 @@ def run_reel(brand: str, prompt: str) -> dict:
                     _clean_vo = _re_ov.sub(_fp, _fr, _clean_vo, flags=_re_ov.IGNORECASE)
                 from app.runner import _overlay_copy_text_on_video
                 video_bytes = _overlay_copy_text_on_video(
-                    video_bytes, brand, _clean_vo, "", start_sec=4.5
+                    video_bytes, brand, _clean_vo, "", start_sec=4.0
                 )
             except Exception as _ov_err:
                 logger.warning("standalone_reel_overlay_failed", brand=brand, error=str(_ov_err))
