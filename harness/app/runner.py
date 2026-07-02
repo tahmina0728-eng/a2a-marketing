@@ -1116,28 +1116,40 @@ def _overlay_logo_end_card(
         if not logos:
             return video_bytes
 
-        logo_uri   = next((p for p in logos if "whitebg" in p.lower()), logos[0])
+        # Prefer a logo without a white background (transparent PNG); fall back
+        # to whitebg variant only if nothing else exists.
+        logo_uri = next(
+            (p for p in logos if "whitebg" not in p.lower()),
+            logos[0],
+        )
         logo_bytes = _load_bytes(logo_uri)
         if not logo_bytes:
             return video_bytes
 
-        # Build a solid dark pill card (340×90 px) with the logo centred.
-        # Must be saved as RGB (no alpha) — FFmpeg's overlay filter ignores
-        # the alpha channel of the second input by default, so an RGBA PNG
-        # with a transparent background renders as invisible.
-        card_w, card_h = 340, 90
-        card = _PIL.new("RGBA", (card_w, card_h), (10, 10, 19, 255))  # solid dark
+        # White pill card — standard brand end-card treatment (white background,
+        # logo centred, thin border so it's visible on both dark and light video
+        # backgrounds). White works for all logos whether the source has a white
+        # or transparent background.
+        card_w, card_h = 340, 100
+        card = _PIL.new("RGB", (card_w, card_h), (255, 255, 255))
         _Draw.Draw(card).rounded_rectangle(
             [0, 0, card_w - 1, card_h - 1],
-            radius=18, fill=(22, 22, 38, 255),  # slightly lighter solid dark pill
+            radius=20, fill=(255, 255, 255), outline=(220, 220, 228), width=2,
         )
         logo = _PIL.open(BytesIO(logo_bytes)).convert("RGBA")
+        # Flatten onto white so any transparent logo areas become white
+        white_bg = _PIL.new("RGBA", logo.size, (255, 255, 255, 255))
+        white_bg.alpha_composite(logo)
+        logo = white_bg.convert("RGB")
         max_lw, max_lh = card_w - 40, card_h - 28
         sc  = min(max_lw / max(1, logo.width), max_lh / max(1, logo.height), 1.0)
         lw  = max(32, int(logo.width * sc))
         lh  = max(32, int(logo.height * sc))
         logo = logo.resize((lw, lh), _PIL.LANCZOS)
-        card.alpha_composite(logo, ((card_w - lw) // 2, (card_h - lh) // 2))
+        # Paste directly (both RGB now, no alpha needed)
+        x0  = (card_w - lw) // 2
+        y0  = (card_h - lh) // 2
+        card.paste(logo, (x0, y0))
 
         with tempfile.TemporaryDirectory() as _tmp:
             _in  = _P(_tmp) / "input.mp4"
