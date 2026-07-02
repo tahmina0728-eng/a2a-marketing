@@ -988,21 +988,29 @@ def run_reel(brand: str, prompt: str) -> dict:
                         _ldr   = _gal()
                         _logos = _ldr.list_logos(brand)
                         if _logos:
-                            _luri  = next((p for p in _logos if "whitebg" not in p.lower()), _logos[0])
-                            _lbytes = _lb(_luri)
+                            # Selection priority for dark-card compositing:
+                            # 1. whitebg — coloured elements recoloured cleanly
+                            # 2. dark — dark elements turn white via recolouring
+                            # 3. green/coloured — brand colours show directly
+                            # 4. anything except pure-white (white → transparent = invisible)
+                            def _pick(_ps):
+                                return (
+                                    next((p for p in _ps if "whitebg"  in p.lower()), None) or
+                                    next((p for p in _ps if "_dark"    in p.lower()), None) or
+                                    next((p for p in _ps if any(k in p.lower() for k in ("_green","_color","_colour","_rgb"))), None) or
+                                    next((p for p in _ps if not any(k in p.lower() for k in ("_white.","_white_","white.png"))), None) or
+                                    _ps[0]
+                                )
+                            _lbytes = _lb(_pick(_logos))
                             if _lbytes:
                                 _cw, _ch = 380, 110
-                                # Dark navy card
                                 _card_bg = (18, 18, 45)
                                 _card = _PI.new("RGBA", (_cw, _ch), (*_card_bg, 255))
                                 _PD.Draw(_card).rounded_rectangle(
                                     [0, 0, _cw-1, _ch-1], radius=22,
                                     fill=(*_card_bg, 255), outline=(60, 60, 100, 255), width=2,
                                 )
-                                # Prefer whitebg logo — it has the correct red text colour
-                                _wbg_uri = next((p for p in _logos if "whitebg" in p.lower()), _luri)
-                                _wbg_bytes = _lb(_wbg_uri) or _lbytes
-                                _lg = _PI.open(_BIO(_wbg_bytes)).convert("RGBA")
+                                _lg = _PI.open(_BIO(_lbytes)).convert("RGBA")
                                 # Recolour: white bg → transparent, black symbol → white, red text stays
                                 _px = list(_lg.getdata())
                                 _new_px = []

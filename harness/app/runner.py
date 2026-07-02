@@ -1243,8 +1243,20 @@ def _overlay_reel(
             loader = get_asset_loader()
             logos  = loader.list_logos(brand)
             if logos:
-                _wbg_uri   = next((p for p in logos if "whitebg" in p.lower()), logos[0])
-                _logo_bytes = _load_bytes(_wbg_uri)
+                # Selection priority for dark-card compositing:
+                # 1. whitebg variant — has coloured elements on white bg (removed via recolouring)
+                # 2. dark variant — dark elements become white via recolouring
+                # 3. green/coloured variant — brand colours show directly on dark card
+                # 4. anything EXCEPT a pure-white variant (white pixels → transparent = invisible)
+                def _pick_logo(ps):
+                    return (
+                        next((p for p in ps if "whitebg"  in p.lower()), None) or
+                        next((p for p in ps if "_dark"    in p.lower()), None) or
+                        next((p for p in ps if any(k in p.lower() for k in ("_green","_color","_colour","_rgb"))), None) or
+                        next((p for p in ps if not any(k in p.lower() for k in ("_white.","_white_","white.png"))), None) or
+                        ps[0]
+                    )
+                _logo_bytes = _load_bytes(_pick_logo(logos))
                 if _logo_bytes:
                     _cw, _ch   = 380, 110
                     _card_bg   = (18, 18, 45)
