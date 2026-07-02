@@ -2610,10 +2610,18 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
 
   const toggle = (key: string) => setSelected(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
+  // Pre-fill editable fields from copy agent output (no preview needed to start editing)
+  const _defaultSubject  = (copy as any)?.channel_copy?.email_subject ?? copy?.short?.headline ?? strategy?.hero_message ?? "";
+  const _defaultHeadline = copy?.short?.headline ?? copy?.medium?.headline ?? strategy?.hero_message ?? "";
+  const _defaultBody     = copy?.long?.body ?? copy?.medium?.headline ?? "";
+  if (!previewSubject  && _defaultSubject)  setTimeout(() => setPreviewSubject(_defaultSubject), 0);
+  if (!previewHeadline && _defaultHeadline) setTimeout(() => setPreviewHeadline(_defaultHeadline), 0);
+  if (!previewBody     && _defaultBody)     setTimeout(() => setPreviewBody(_defaultBody), 0);
+
   const openEmailPreview = () => {
-    setPreviewSubject((copy as any)?.channel_copy?.email_subject ?? copy?.short?.headline ?? strategy?.hero_message ?? "");
-    setPreviewHeadline(copy?.short?.headline ?? copy?.medium?.headline ?? strategy?.hero_message ?? "");
-    setPreviewBody(copy?.long?.body ?? copy?.medium?.headline ?? "");
+    if (!previewSubject)  setPreviewSubject(_defaultSubject);
+    if (!previewHeadline) setPreviewHeadline(_defaultHeadline);
+    if (!previewBody)     setPreviewBody(_defaultBody);
     setShowEmailPreview(true);
   };
 
@@ -2729,6 +2737,107 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
           )}
         </div>
       </div>
+
+      {/* ── Campaign content review — editable before launch ──────────── */}
+      {!published && (copy?.short?.headline || (copy as any)?.channel_copy) && (
+        <div style={{ padding: "24px 36px", borderBottom: "1px solid var(--card-border)",
+          display: "flex", flexDirection: "column" as const, gap: 20 }}>
+
+          {/* KV image + headline row */}
+          <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
+            {(selectedImageB64 ?? cp?.image_b64) && (
+              <div style={{ flexShrink: 0, width: 180, borderRadius: 12, overflow: "hidden",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.15)" }}>
+                <img src={`data:image/jpeg;base64,${selectedImageB64 ?? cp?.image_b64}`}
+                  alt="Campaign visual"
+                  style={{ width: "100%", display: "block", objectFit: "cover" as const }} />
+              </div>
+            )}
+
+            <div style={{ flex: 1, display: "flex", flexDirection: "column" as const, gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                  textTransform: "uppercase" as const, color: "var(--text-secondary)",
+                  display: "block", marginBottom: 5 }}>Headline</label>
+                <textarea value={previewHeadline || copy?.short?.headline || ""}
+                  onChange={e => setPreviewHeadline(e.target.value)}
+                  rows={2}
+                  placeholder="Campaign headline…"
+                  style={{ width: "100%", fontSize: 15, fontWeight: 700, color: "var(--text-primary)",
+                    background: "var(--card-bg-soft)", border: "1.5px solid var(--card-border)",
+                    borderRadius: 10, padding: "10px 14px", resize: "none" as const,
+                    outline: "none", lineHeight: 1.4, boxSizing: "border-box" as const,
+                    fontFamily: "inherit", transition: "border-color 0.15s" }}
+                  onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--card-border)"} />
+              </div>
+              <div>
+                <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                  textTransform: "uppercase" as const, color: "var(--text-secondary)",
+                  display: "block", marginBottom: 5 }}>Body copy</label>
+                <textarea value={previewBody || copy?.long?.body || copy?.medium?.headline || ""}
+                  onChange={e => setPreviewBody(e.target.value)}
+                  rows={3}
+                  placeholder="Campaign body copy…"
+                  style={{ width: "100%", fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6,
+                    background: "var(--card-bg-soft)", border: "1.5px solid var(--card-border)",
+                    borderRadius: 10, padding: "10px 14px", resize: "none" as const,
+                    outline: "none", boxSizing: "border-box" as const,
+                    fontFamily: "inherit", transition: "border-color 0.15s" }}
+                  onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                  onBlur={e => e.currentTarget.style.borderColor = "var(--card-border)"} />
+              </div>
+            </div>
+          </div>
+
+          {/* Email subject (editable) */}
+          {(copy as any)?.channel_copy?.email_subject && (
+            <div>
+              <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
+                textTransform: "uppercase" as const, color: "var(--text-secondary)",
+                display: "block", marginBottom: 5 }}>📧 Email Subject</label>
+              <input value={previewSubject || (copy as any)?.channel_copy?.email_subject || ""}
+                onChange={e => setPreviewSubject(e.target.value)}
+                placeholder="Email subject line…"
+                style={{ width: "100%", padding: "9px 14px", borderRadius: 10,
+                  border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
+                  color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit",
+                  outline: "none", boxSizing: "border-box" as const, transition: "border-color 0.15s" }}
+                onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                onBlur={e => e.currentTarget.style.borderColor = "var(--card-border)"} />
+            </div>
+          )}
+
+          {/* Channel copy cards — read-only reference */}
+          {(copy as any)?.channel_copy && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 10 }}>
+              {Object.entries((copy as any).channel_copy as Record<string, string>)
+                .filter(([k]) => k !== "email_subject")
+                .map(([key, val]) => {
+                  const _chCfg: Record<string, {icon:string;label:string;color:string}> = {
+                    instagram: {icon:"📸",label:"Instagram",color:"#c026d3"},
+                    tiktok:    {icon:"🎵",label:"TikTok",   color:"#0f172a"},
+                    ooh_headline:{icon:"🏙️",label:"OOH",   color:"#d97706"},
+                    ooh:       {icon:"🏙️",label:"OOH",     color:"#d97706"},
+                  };
+                  const cfg = _chCfg[key] ?? { icon: "📢", label: key.replace(/_/g," "), color: "var(--text-secondary)" };
+                  return (
+                    <div key={key} style={{ padding: "12px 14px", borderRadius: 12,
+                      background: "var(--card-bg-soft)", border: "1px solid var(--card-border)" }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: cfg.color,
+                        textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 5 }}>
+                        {cfg.icon} {cfg.label}
+                      </div>
+                      <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                        {String(val).slice(0, 120)}{String(val).length > 120 ? "…" : ""}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Email preview modal ─────────────────────────────────────────── */}
       {showEmailPreview && (
