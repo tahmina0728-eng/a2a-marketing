@@ -1031,7 +1031,7 @@ def run_reel(brand: str, prompt: str) -> dict:
                         if _has_logo and _txt_f:
                             _fc = (
                                 f"[0:v]{_txt_f}[txt];"
-                                f"[1:v]scale=340:100,fade=t=in:st=4.2:d=0.4[logo];"
+                                f"[1:v]scale=340:100[logo];"
                                 f"[txt][logo]overlay=W-w-24:H-h-90:"
                                 f"enable=between(t\\,4.2\\,6)[vout]"
                             )
@@ -1042,7 +1042,7 @@ def run_reel(brand: str, prompt: str) -> dict:
                                     "-c:a","copy","output.mp4"]
                         elif _has_logo:
                             _fc = (
-                                f"[1:v]scale=340:100,fade=t=in:st=4.2:d=0.4[logo];"
+                                f"[1:v]scale=340:100[logo];"
                                 f"[0:v][logo]overlay=W-w-24:H-h-90:"
                                 f"enable=between(t\\,4.2\\,6)[vout]"
                             )
