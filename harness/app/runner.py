@@ -737,7 +737,7 @@ def _apply_brand_overlay(
             "Sunglow":     ["Alatsi"],
             "Rnorr":       ["Antonio", "Rubik"],
             "Boozt":       ["Rubik"],
-            "Glenfiddich": ["Cormorant"],
+            "Glenfiddich": ["Agrandir", "Aston Martin Flare"],
         }
         font_dir  = _P(__file__).parent.parent / "bucket" / "brands" / brand / "Font"
         font_path = None
