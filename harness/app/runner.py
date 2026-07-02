@@ -1085,6 +1085,99 @@ def _overlay_copy_text_on_video(
         return video_bytes
 
 
+def _overlay_logo_end_card(
+    video_bytes: bytes,
+    brand: str,
+    start_sec: float = 4.2,
+) -> bytes:
+    """
+    Overlay the brand logo as a frosted bottom-right card for the final
+    ~1.8 seconds of the reel (start_sec → 6s), with a 0.4s fade-in.
+
+    Uses FFmpeg's overlay filter with a pre-built RGBA logo card saved to
+    the temp dir — no absolute paths so the Windows drive-colon issue that
+    affects drawtext doesn't apply here.  Falls back to the original bytes
+    on any error (missing ffmpeg, missing logo, etc.).
+    """
+    import shutil, subprocess, tempfile
+    from pathlib import Path as _P
+
+    if not shutil.which("ffmpeg"):
+        return video_bytes
+
+    try:
+        from io import BytesIO
+        from PIL import Image as _PIL, ImageDraw as _Draw
+        from app.data_loader import get_asset_loader
+        from app.creative_pipeline import _load_bytes
+
+        loader = get_asset_loader()
+        logos  = loader.list_logos(brand)
+        if not logos:
+            return video_bytes
+
+        logo_uri   = next((p for p in logos if "whitebg" in p.lower()), logos[0])
+        logo_bytes = _load_bytes(logo_uri)
+        if not logo_bytes:
+            return video_bytes
+
+        # Build a small frosted-pill card (320×80 px) with the logo centred on it
+        card_w, card_h = 320, 80
+        card = _PIL.new("RGBA", (card_w, card_h), (0, 0, 0, 0))
+        _Draw.Draw(card).rounded_rectangle(
+            [0, 0, card_w - 1, card_h - 1],
+            radius=16, fill=(10, 10, 19, 210),
+        )
+        logo = _PIL.open(BytesIO(logo_bytes)).convert("RGBA")
+        max_lw, max_lh = card_w - 32, card_h - 24
+        sc  = min(max_lw / max(1, logo.width), max_lh / max(1, logo.height), 1.0)
+        lw  = max(24, int(logo.width * sc))
+        lh  = max(24, int(logo.height * sc))
+        logo = logo.resize((lw, lh), _PIL.LANCZOS)
+        card.alpha_composite(logo, ((card_w - lw) // 2, (card_h - lh) // 2))
+
+        with tempfile.TemporaryDirectory() as _tmp:
+            _in  = _P(_tmp) / "input.mp4"
+            _out = _P(_tmp) / "output.mp4"
+            _in.write_bytes(video_bytes)
+
+            # Save card as PNG (preserves alpha so FFmpeg overlay handles transparency)
+            card_path = _P(_tmp) / "logo_card.png"
+            card.save(str(card_path), format="PNG")
+
+            # overlay=W-w-20:H-h-20 → bottom-right, 20 px margin
+            # enable / alpha use \, to escape commas at filtergraph level
+            _t0  = start_sec
+            _t1  = round(_t0 + 0.4, 1)
+            _fc  = (
+                f"[1:v]scale={card_w}:{card_h}[card];"
+                f"[card]fade=t=in:st={_t0}:d=0.4:alpha=1[fcard];"
+                f"[0:v][fcard]overlay=W-w-20:H-h-20:enable=between(t\\,{_t0}\\,6)"
+            )
+
+            _result = subprocess.run(
+                ["ffmpeg", "-y",
+                 "-i", "input.mp4",
+                 "-i", "logo_card.png",
+                 "-filter_complex", _fc,
+                 "-c:v", "libx264", "-preset", "fast", "-crf", "20",
+                 "-c:a", "copy",
+                 "output.mp4"],
+                capture_output=True, timeout=120,
+                cwd=_tmp,
+            )
+            if _result.returncode != 0 or not _out.exists():
+                logger.warning("reel_logo_overlay_failed", brand=brand,
+                               stderr=_result.stderr.decode(errors="ignore")[-300:])
+                return video_bytes
+            logger.info("reel_logo_overlay_applied", brand=brand)
+            return _out.read_bytes()
+
+    except Exception as e:
+        logger.warning("reel_logo_overlay_error", brand=brand, error=str(e))
+        return video_bytes
+
+
 async def generate_campaign_reel(
     brand: str,
     big_idea: str,
@@ -1356,6 +1449,9 @@ Output the prompt only.""",
                 None,
                 lambda: _overlay_copy_text_on_video(video_bytes2, brand, copy_headline, copy_cta),
             )
+            video_bytes2 = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: _overlay_logo_end_card(video_bytes2, brand),
+            )
             return base64.b64encode(video_bytes2).decode("utf-8"), video_gcs
 
         video_gcs = operation.result.generated_videos[0].video.uri
@@ -1374,6 +1470,10 @@ Output the prompt only.""",
         video_bytes = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: _overlay_copy_text_on_video(video_bytes, brand, copy_headline, copy_cta),
+        )
+        # ── Brand logo end-card (bottom-right, last ~1.8 s) ──────────────────
+        video_bytes = await asyncio.get_event_loop().run_in_executor(
+            None, lambda: _overlay_logo_end_card(video_bytes, brand),
         )
 
         return base64.b64encode(video_bytes).decode("utf-8"), video_gcs

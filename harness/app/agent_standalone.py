@@ -783,10 +783,11 @@ def run_reel(brand: str, prompt: str) -> dict:
                     (r"\bwealth\b",     "life"),      (r"\baffluent\b", "accomplished"),
                 ]:
                     _clean_vo = _re_ov.sub(_fp, _fr, _clean_vo, flags=_re_ov.IGNORECASE)
-                from app.runner import _overlay_copy_text_on_video
+                from app.runner import _overlay_copy_text_on_video, _overlay_logo_end_card
                 video_bytes = _overlay_copy_text_on_video(
                     video_bytes, brand, _clean_vo, "", start_sec=4.0
                 )
+                video_bytes = _overlay_logo_end_card(video_bytes, brand, start_sec=4.2)
             except Exception as _ov_err:
                 logger.warning("standalone_reel_overlay_failed", brand=brand, error=str(_ov_err))
             video_b64 = base64.b64encode(video_bytes).decode("utf-8")
