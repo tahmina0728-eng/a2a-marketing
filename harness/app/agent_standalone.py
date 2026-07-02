@@ -851,15 +851,16 @@ def run_reel(brand: str, prompt: str) -> dict:
         # Strip any markdown label Gemini might prepend (e.g. "**VIDEO:**", "**Prompt:**")
         raw = _re.sub(r"^\*{0,2}[A-Z][A-Z\s:]{1,20}\*{0,2}:?\s*", "", raw).strip()
         # Also strip financial/wealth terms that slip through — replace with neutral alternatives
+        # Only strip terms that historically triggered Veo RAI code 15236754.
+        # "financial" is NOT in this list — "a clear financial future" is a
+        # legitimate lifestyle phrase and safe for Veo.
         _financial_terms = [
             (r"\bhigh[\s-]net[\s-]worth\b", "discerning"),
-            (r"\bwealth management\b", "lifestyle"),
-            (r"\baffluent\b", "accomplished"),
-            (r"\bprosperous\b", "fulfilled"),
-            (r"\binvestment\b", "future"),
-            (r"\bportfolio\b", "journey"),
-            (r"\bbanking\b", "service"),
-            (r"\bfinancial\b", "personal"),
+            (r"\bwealth management\b", "lifestyle planning"),
+            (r"\baffluent\b",           "accomplished"),
+            (r"\bprosperous\b",         "fulfilled"),
+            (r"\bstock market\b",       "opportunity"),
+            (r"\bportfolio\b",          "journey"),
         ]
         for pattern, replacement in _financial_terms:
             raw = _re.sub(pattern, replacement, raw, flags=_re.IGNORECASE)
@@ -945,14 +946,11 @@ def run_reel(brand: str, prompt: str) -> dict:
             # Also apply the same financial-term cleanup used on the Veo
             # prompt so the on-screen text matches what the audio says.
             try:
-                import re as _re_ov
-                _clean_vo = voiceover
-                for _fp, _fr in [
-                    (r"\bfinancial\b", "personal"), (r"\bbanking\b", "service"),
-                    (r"\binvestment\b", "future"),   (r"\bportfolio\b", "journey"),
-                    (r"\bwealth\b",     "life"),      (r"\baffluent\b", "accomplished"),
-                ]:
-                    _clean_vo = _re_ov.sub(_fp, _fr, _clean_vo, flags=_re_ov.IGNORECASE)
+                # Use the original voiceover as the burned text — "financial future"
+                # is a valid campaign line and should appear on screen as-is.
+                # Financial-term substitution only lives in the Veo video PROMPT
+                # (to avoid RAI blocks on the generated scene), not in the overlay.
+                _burn_text = voiceover
                 # Single FFmpeg pass: text lower-third + logo end-card together.
                 # Two separate passes caused the second pass to silently drop
                 # everything from the first pass on Windows.
@@ -1018,8 +1016,8 @@ def run_reel(brand: str, prompt: str) -> dict:
                             _logo_card.save(str(_lc_path), format="PNG")
 
                         # Build combined filter_complex ─────────────────────
-                        if _font_arg and _clean_vo.strip():
-                            _hl = _clean_vo[:80].replace("\\","\\\\").replace("'","'\\''" ).replace(":","\\:")
+                        if _font_arg and _burn_text.strip():
+                            _hl = _burn_text[:80].replace("\\","\\\\").replace("'","'\\''" ).replace(":","\\:")
                             _txt_f = (
                                 f"drawtext=fontfile={_font_arg}:text='{_hl}':"
                                 f"fontsize=38:fontcolor=white:x=60:y=H-110:"
@@ -1034,7 +1032,7 @@ def run_reel(brand: str, prompt: str) -> dict:
                             _fc = (
                                 f"[0:v]{_txt_f}[txt];"
                                 f"[1:v]scale=340:100,fade=t=in:st=4.2:d=0.4[logo];"
-                                f"[txt][logo]overlay=W-w-24:H-h-24:"
+                                f"[txt][logo]overlay=W-w-24:H-h-90:"
                                 f"enable=between(t\\,4.2\\,6)[vout]"
                             )
                             _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
@@ -1045,7 +1043,7 @@ def run_reel(brand: str, prompt: str) -> dict:
                         elif _has_logo:
                             _fc = (
                                 f"[1:v]scale=340:100,fade=t=in:st=4.2:d=0.4[logo];"
-                                f"[0:v][logo]overlay=W-w-24:H-h-24:"
+                                f"[0:v][logo]overlay=W-w-24:H-h-90:"
                                 f"enable=between(t\\,4.2\\,6)[vout]"
                             )
                             _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo_card.png",
