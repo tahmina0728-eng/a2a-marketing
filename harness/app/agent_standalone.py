@@ -992,22 +992,34 @@ def run_reel(brand: str, prompt: str) -> dict:
                             _lbytes = _lb(_luri)
                             if _lbytes:
                                 _cw, _ch = 380, 110
-                                # Dark navy card — works for ALL logo types:
-                                # white-bg logos (UBS) show as a white block on dark
-                                # which gives clear contrast; transparent logos render
-                                # their colours directly on the dark background.
-                                _card = _PI.new("RGB", (_cw, _ch), (12, 12, 30))
+                                # Dark navy card
+                                _card_bg = (18, 18, 45)
+                                _card = _PI.new("RGBA", (_cw, _ch), (*_card_bg, 255))
                                 _PD.Draw(_card).rounded_rectangle(
                                     [0, 0, _cw-1, _ch-1], radius=22,
-                                    fill=(18, 18, 45), outline=(60, 60, 100), width=2,
+                                    fill=(*_card_bg, 255), outline=(60, 60, 100, 255), width=2,
                                 )
-                                _lg = _PI.open(_BIO(_lbytes)).convert("RGB")
+                                # Prefer whitebg logo — it has the correct red text colour
+                                _wbg_uri = next((p for p in _logos if "whitebg" in p.lower()), _luri)
+                                _wbg_bytes = _lb(_wbg_uri) or _lbytes
+                                _lg = _PI.open(_BIO(_wbg_bytes)).convert("RGBA")
+                                # Recolour: white bg → transparent, black symbol → white, red text stays
+                                _px = list(_lg.getdata())
+                                _new_px = []
+                                for _r, _g, _b, _a in _px:
+                                    if _r > 210 and _g > 210 and _b > 210:  # white bg → transparent
+                                        _new_px.append((_r, _g, _b, 0))
+                                    elif _r < 60 and _g < 60 and _b < 60:   # black symbol → white
+                                        _new_px.append((255, 255, 255, _a))
+                                    else:                                     # red text → keep
+                                        _new_px.append((_r, _g, _b, _a))
+                                _lg.putdata(_new_px)
                                 _sc = min((_cw-48)/max(1,_lg.width), (_ch-28)/max(1,_lg.height), 1.0)
                                 _lw = max(40, int(_lg.width*_sc))
                                 _lh = max(30, int(_lg.height*_sc))
                                 _lg = _lg.resize((_lw, _lh), _PI.LANCZOS)
-                                _card.paste(_lg, ((_cw-_lw)//2, (_ch-_lh)//2))
-                                _logo_card = _card
+                                _card.alpha_composite(_lg, ((_cw-_lw)//2, (_ch-_lh)//2))
+                                _logo_card = _card.convert("RGB")
                     except Exception:
                         pass
 
