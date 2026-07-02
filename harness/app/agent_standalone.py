@@ -462,116 +462,349 @@ def run_reel(brand: str, prompt: str) -> dict:
     voiceover = ctx.get("voiceover", "") or big_idea
     _prod     = product or f"{brand} product"
 
-    # ── Step 2: Brand + festive-aware visual scene ───────────────────────────
+    # ── Step 2: Brand + occasion-aware visual scene ──────────────────────────
+    import random as _rnd
     _szn = season.lower() if season else ""
-    _is_christmas  = any(x in _szn for x in ["christmas", "xmas", "festive", "winter fest"])
-    _is_new_year   = any(x in _szn for x in ["new year", "nye", "new year"])
-    _is_diwali     = "diwali" in _szn
-    _is_summer     = any(x in _szn for x in ["summer", "festival", "outdoor"])
-    _is_halloween  = "halloween" in _szn
-    _is_valentine  = any(x in _szn for x in ["valentine", "love", "romance"])
-    _is_easter     = "easter" in _szn
+    _ol  = prompt.lower()
 
-    def _festive_suffix() -> str:
-        """Return a visual atmosphere suffix matching the detected season."""
-        if _is_christmas:
-            return ("Warm Christmas atmosphere — twinkling fairy lights, soft snowfall, "
-                    "festive bokeh in the background, golden and red seasonal colour palette.")
-        if _is_new_year:
-            return ("New Year celebration atmosphere — golden confetti, city lights at midnight, "
-                    "fireworks bokeh in the background, joyful and optimistic mood.")
-        if _is_diwali:
-            return ("Diwali celebration atmosphere — warm golden diyas, vibrant colours, "
-                    "glittering light bokeh, joyful festive mood.")
-        if _is_summer:
-            return ("Summer outdoor atmosphere — bright sunlight, warm golden hour light, "
-                    "vibrant energy, open landscapes.")
-        if _is_halloween:
-            return ("Halloween atmosphere — moody amber and deep purple tones, "
-                    "atmospheric mist, dramatic cinematic lighting.")
-        if _is_valentine:
-            return ("Valentine mood — soft warm lighting, rose and blush colour tones, "
-                    "intimate and romantic atmosphere.")
-        if _is_easter:
-            return ("Spring Easter atmosphere — fresh pastel tones, natural daylight, "
-                    "blooming flowers in the background, bright and optimistic.")
-        return ""
+    _is_christmas  = any(x in _szn for x in ["christmas", "xmas", "festive", "advent"])
+    _is_new_year   = any(x in _szn for x in ["new year", "nye"])
+    _is_diwali     = any(x in _szn for x in ["diwali", "deepavali"])
+    _is_valentine  = any(x in _szn for x in ["valentine", "valentines"])
+    _is_easter     = "easter" in _szn
+    _is_halloween  = "halloween" in _szn
+    _is_summer     = any(x in _szn for x in ["summer"])
+    _is_autumn     = any(x in _szn for x in ["autumn", "fall"])
+    _is_winter     = "winter" in _szn and not _is_christmas
+    _is_spring     = "spring" in _szn
+
+    # Each brand has fully distinct scene descriptions per occasion.
+    # random.choice() picks one of 2-3 variants so the same brief
+    # never produces the same video twice.
 
     def _sunglow_scene(p: str) -> str:
-        festive = f" {_festive_suffix()}" if _festive_suffix() else ""
+        if _is_christmas:
+            return _rnd.choice([
+                f"Three diverse women (25-38) laughing and getting ready together for Christmas night, "
+                f"doing each other's hair in front of a beautifully decorated Christmas tree covered in warm fairy lights. "
+                f"Red and gold baubles everywhere, {p} products on the vanity, shiny hair catching the festive glow. "
+                f"Magenta-pink and deep red colour palette, genuine sisterhood and festive joy.",
+                f"A mother and teenage daughter doing their hair together on Christmas morning — "
+                f"kitchen table covered in gift wrap, Christmas tree in background, fairy lights strung across the window. "
+                f"The daughter's hair transforms in slow motion, {p} bottle centred on the table between them. "
+                f"Warm golden Christmas kitchen light, red and gold palette, pure family warmth.",
+            ])
+        if _is_diwali:
+            return _rnd.choice([
+                f"Three South Asian women (20-45) in jewel-toned saris and salwars getting ready together for Diwali, "
+                f"doing each other's hair surrounded by diyas and marigold garlands. "
+                f"Warm golden diya light catches their hair mid-flip, {p} products gleaming on the dressing table. "
+                f"Rich jewel-tone palette — deep magenta, gold and emerald — joyful and celebratory.",
+                f"A South Asian grandmother, mother and daughter getting ready for Diwali puja — "
+                f"three generations doing hair together, diyas flickering, rangoli visible on the floor behind them. "
+                f"{p} bottle between them, hair FLYING in slow motion catching golden diya light. "
+                f"Vibrant traditional outfits, warm amber and gold colour palette.",
+            ])
+        if _is_new_year:
+            return _rnd.choice([
+                f"Four women (22-35) getting glamorous together for New Year's Eve — sequined outfits, "
+                f"champagne flutes on the vanity, golden confetti beginning to fall from the ceiling. "
+                f"Hair FLYING in slow motion as they count down, {p} bottle centre-frame, golden and silver palette. "
+                f"Pure NYE euphoria and sisterhood.",
+                f"A woman doing a dramatic hair flip in a penthouse as fireworks explode outside the floor-to-ceiling windows "
+                f"behind her — golden bursts of light catching every strand of her impossibly shiny hair. "
+                f"{p} bottle on the window ledge, midnight skyline, Sunglow magenta-pink and gold palette.",
+            ])
+        if _is_valentine:
+            return _rnd.choice([
+                f"A woman styling her hair with {p} for a Valentine's date — roses and petals on the dressing table, "
+                f"warm rose-gold candlelight catching her flowing locks. Slow-motion hair flip with soft pink bokeh "
+                f"and red rose petals raining down. Intimate, romantic, Sunglow pink and rose-gold palette.",
+                f"Two women (best friends) getting ready for Valentine's night out together — laughing, "
+                f"doing each other's hair, {p} products and red roses on the vanity, pink champagne on the table. "
+                f"Warm rose-toned lighting, pure joy and self-love energy.",
+            ])
+        if _is_easter:
+            return (f"A woman doing a slow-motion hair flip outdoors in a spring garden full of blooming cherry blossoms — "
+                    f"pastel pink petals drifting through her shiny flowing hair. {p} bottle in foreground catching sunlight. "
+                    f"Fresh spring light, pastel pink and yellow palette, renewal and joy.")
+        if _is_halloween:
+            return (f"A woman with dramatically gorgeous styled hair at a Halloween party — "
+                    f"deep purple and amber lighting, jack-o-lanterns glowing in the background, "
+                    f"her hair catching the moody cinematic light beautifully. {p} bottle in foreground, "
+                    f"deep magenta-purple palette, glamorous and slightly mysterious.")
+        if _is_summer:
+            return _rnd.choice([
+                f"A woman doing a dramatic slow-motion hair flip on a sun-drenched beach, "
+                f"golden hour light turning her shiny hair into a cascade of light. "
+                f"Warm ocean in the background, {p} bottle half-buried in sand in the foreground. "
+                f"Bright magenta-pink and sunshine yellow, pure summer energy.",
+                f"Three women at an outdoor summer festival, laughing with hair flying in the warm breeze — "
+                f"colourful festival lights behind them, {p} products on the picnic blanket. "
+                f"Vibrant sunshine yellow and magenta palette, joyful summer sisterhood.",
+            ])
+        if _is_autumn:
+            return (f"A woman walking through an autumn park doing a hair flip as golden and copper leaves swirl around her — "
+                    f"amber afternoon light turning her shiny hair into a warm halo. {p} bottle on a wooden bench. "
+                    f"Deep amber, rust and magenta palette, cosy autumn energy.")
+        # Evergreen default — still pick from variants
         if any(x in p.lower() for x in ["serum", "oil", "scalp", "treat"]):
             return (f"Close-up slow-motion of a woman applying {p} drops onto her fingertips, "
-                    f"then running them through her hair as golden light particles trail behind. "
-                    f"The {p} bottle gleams in warm studio light in the foreground. "
-                    f"Magenta-pink and sunshine yellow brand colours. Warm glowing bokeh.{festive}")
-        elif any(x in p.lower() for x in ["conditioner", "mask", "repair"]):
-            return (f"A woman applying {p} through her hair in a bright studio, smiling confidently "
-                    f"as her hair transforms into glossy, flowing locks in slow motion. "
-                    f"The {p} tube displayed on a clean white surface. Sunglow magenta-pink palette.{festive}")
-        else:
-            return (f"A beautiful woman doing a slow-motion hair flip after washing with {p}, "
-                    f"her incredibly shiny hair cascading through golden light particles and warm bokeh. "
-                    f"The {p} bottle visible in foreground catching the light. "
-                    f"Magenta-pink and sunshine yellow brand colours, dramatic rim lighting.{festive}")
+                    f"running them through her hair as golden light particles trail behind. "
+                    f"The {p} bottle gleams in warm studio light. Magenta-pink and sunshine yellow palette.")
+        return _rnd.choice([
+            f"A beautiful woman doing a slow-motion hair flip after washing with {p}, "
+            f"her shiny hair cascading through golden light particles and warm bokeh. "
+            f"The {p} bottle visible in foreground. Magenta-pink and sunshine yellow, dramatic rim lighting.",
+            f"Two women (25-38) in a bright bathroom, one applying {p} as the other's hair transforms "
+            f"into impossibly glossy flowing locks in slow motion. Warm studio light, brand palette.",
+        ])
 
     def _rnorr_scene(p: str) -> str:
-        festive = f" {_festive_suffix()}" if _festive_suffix() else ""
+        if _is_christmas:
+            return _rnd.choice([
+                f"A multi-generational family of 5 (grandparents, parents, young child) gathered around "
+                f"a beautifully set Christmas dinner table — the mother is serving the hero dish made with {p}, "
+                f"faces glowing with joy. Decorated Christmas tree behind them, fairy lights strung overhead, "
+                f"holly centrepiece, crackers and baubles on the table. {p} pack beside the serving bowl. "
+                f"Deep forest green and gold palette, warm and genuinely festive.",
+                f"A parent and two children (ages 5 and 8) cooking the Christmas feast together in a "
+                f"festively decorated kitchen — the children standing on stools to help stir the pot with {p}. "
+                f"Christmas cards on the mantle, fairy lights in the window, steam rising dramatically. "
+                f"{p} box on the counter, deep green and red palette, real family magic.",
+            ])
+        if _is_diwali:
+            return _rnd.choice([
+                f"A South Asian family of 6 (multi-generational) gathered around a Diwali feast table — "
+                f"diyas glowing everywhere, rangoli on the floor, the mother serving a dish made with {p} "
+                f"to excited children. Jewel-toned fabrics, marigold garlands, warm golden diya light. "
+                f"Deep green and vibrant gold palette, joyful and celebratory.",
+                f"A grandmother and her adult daughter cooking together in a Diwali kitchen — "
+                f"adding {p} to a rich bubbling pot, diyas reflected in the rising steam. "
+                f"Traditional outfits, warm amber light, {p} pack on the counter beside fresh spices.",
+            ])
+        if _is_new_year:
+            return _rnd.choice([
+                f"A couple cooking a glamorous New Year's Eve dinner together — champagne flutes on the counter, "
+                f"candles lit, midnight countdown on TV in the background. {p} being added dramatically to "
+                f"a rich golden sauce, steam rising. Deep green and gold NYE palette, aspirational and warm.",
+                f"Friends hosting a NYE dinner party — the host serving a beautifully plated dish made with {p}, "
+                f"guests raising champagne flutes, city lights visible through the window. "
+                f"Celebration energy, {p} pack on the kitchen island, sophisticated and joyful.",
+            ])
+        if _is_valentine:
+            return (f"A couple cooking a romantic Valentine's dinner together by candlelight — "
+                    f"red roses on the kitchen counter, {p} being stirred into a bubbling pot with a loving smile. "
+                    f"Soft rose and candlelight warmth, {p} pack beside fresh herbs and rose petals. "
+                    f"Intimate, romantic, deep green and rose-red palette.")
+        if _is_easter:
+            return (f"A family with young children cooking a bright Easter lunch together — "
+                    f"decorated Easter eggs on the counter, spring flowers in a vase, pastel tablecloth. "
+                    f"Parent and children stirring a pot with {p}, steam rising, natural spring light. "
+                    f"Pastel and deep green palette, warm family togetherness.")
+        if _is_halloween:
+            return (f"A family carving pumpkins while making a cosy autumn stew with {p} — "
+                    f"jack-o-lanterns glowing on the windowsill, autumn leaves outside. "
+                    f"Warm amber and orange kitchen light, {p} box on the counter, comforting and festive.")
+        if _is_summer:
+            return (f"A family hosting an outdoor summer garden party — the hero cook serving "
+                    f"a sizzling dish made with {p} at a table covered in fresh summer ingredients. "
+                    f"Golden afternoon light, garden flowers, children running in the background. "
+                    f"Bright and vibrant, {p} pack on the outdoor table, joyful summer energy.")
+        if _is_autumn:
+            return (f"A home cook making a rich autumn stew with {p} in a cosy kitchen — "
+                    f"fallen leaves visible through the window, warm amber light, steaming pot. "
+                    f"Warm earthy palette, {p} pack beside root vegetables, comfort and warmth.")
+        # Evergreen default
         if any(x in p.lower() for x in ["gravy", "sauce", "cook-in", "liquid"]):
             return (f"A home cook pouring rich golden {p} over a sizzling pan of vegetables, "
-                    f"dramatic steam and golden sauce trails catching warm kitchen light. "
-                    f"The {p} bottle/pack on the counter, deep green and yellow brand accents.{festive}")
-        elif any(x in p.lower() for x in ["bouillon", "powder", "seasoning"]):
-            return (f"A close-up of {p} being sprinkled into a bubbling pot, golden powder "
-                    f"dissolving into rich broth with cinematic steam wisps rising. "
-                    f"Rnorr {p} pack beside fresh herbs. Deep forest green and yellow palette.{festive}")
-        else:
-            return (f"A home cook dropping a {p} into a steaming pot, watching it dissolve "
-                    f"into rich golden broth — steam rising dramatically in warm amber kitchen light. "
-                    f"The {p} box/jar on the counter beside fresh vegetables. "
-                    f"Deep forest green and sunshine yellow brand colours.{festive}")
+                    f"dramatic steam and golden sauce trails in warm kitchen light. "
+                    f"Deep forest green and yellow palette.")
+        return _rnd.choice([
+            f"A family of 4 cooking together — parent and children stirring a pot with {p}, "
+            f"steam rising dramatically in warm amber kitchen light, {p} box on the counter. "
+            f"Deep forest green and sunshine yellow, genuine family joy.",
+            f"A home cook dropping {p} into a steaming pot, watching it dissolve into rich golden broth. "
+            f"Steam rising dramatically, {p} box beside fresh vegetables. Deep green and yellow palette.",
+        ])
 
     def _boozt_scene(p: str) -> str:
-        festive = f" {_festive_suffix()}" if _festive_suffix() else ""
-        if any(x in p.lower() for x in ["sport", "hydration", "zero", "sugar"]):
-            return (f"An athlete refreshing with a cold can of {p} after a workout, "
-                    f"condensation droplets rolling down the can in slow motion under cool blue studio light. "
-                    f"The {p} can gleams in the foreground against a deep navy background. "
-                    f"Deep midnight navy and electric cobalt blue brand colours.{festive}")
-        else:
-            return (f"A confident young professional opening a can of {p} in a modern urban setting, "
-                    f"cobalt blue light reflecting off the condensation-covered can as they take a refreshing sip. "
-                    f"The {p} can displayed prominently in foreground under dramatic studio lighting. "
-                    f"Deep midnight navy and cobalt blue brand colours.{festive}")
+        if _is_christmas:
+            return _rnd.choice([
+                f"A group of 6 young people (20-30, mixed gender) at a Christmas house party — "
+                f"Boozt cans raised high, laughing, tinsel draped everywhere, Christmas tree with coloured lights behind them. "
+                f"Electric cobalt and Christmas red palette, cans PROMINENT and glistening, pure festive energy.",
+                f"Friends celebrating on a rooftop terrace decorated for Christmas — city lights below, "
+                f"fairy lights strung across the space, Boozt cans raised in a toast as soft snow drifts down. "
+                f"Midnight navy and electric blue with Christmas gold, aspirational and electric.",
+            ])
+        if _is_new_year:
+            return _rnd.choice([
+                f"A crowd of young people celebrating New Year's Eve countdown — Boozt cans raised as "
+                f"the clock strikes midnight, golden confetti exploding, fireworks visible through huge windows. "
+                f"Electric cobalt blue and gold palette, unstoppable celebration energy, cans centre-frame.",
+                f"Four friends on a penthouse rooftop at midnight — Boozt cans clinked together "
+                f"as fireworks burst over the city skyline behind them, droplets flying in slow motion. "
+                f"Deep navy and electric gold, pure NYE euphoria.",
+            ])
+        if _is_diwali:
+            return (f"A group of young South Asian people (20-30) celebrating Diwali outdoors — "
+                    f"Boozt cans raised in a toast surrounded by sparklers and diya lights, "
+                    f"vibrant outfits, Diwali fireworks in the sky behind them. "
+                    f"Electric cobalt and gold with warm Diwali colours, joyful and energetic.")
+        if _is_valentine:
+            return (f"A stylish couple sharing ice-cold Boozt cans on a Valentine's rooftop date — "
+                    f"city lights and red heart bokeh in the background, condensation rolling down the cans. "
+                    f"Rose-red and electric cobalt palette, intimate but energetic, cans centre-frame.")
+        if _is_easter:
+            return (f"Young people at a spring outdoor festival — Boozt cans in hand, "
+                    f"pastel decorations and spring flowers everywhere, bright afternoon sun. "
+                    f"Vibrant pastel and cobalt blue, fresh spring energy, cans prominent.")
+        if _is_halloween:
+            return (f"A Halloween party — young people in costumes raising Boozt cans, "
+                    f"deep orange and purple strobe lighting, jack-o-lanterns glowing on the bar. "
+                    f"Dark electric atmosphere, cobalt and amber/purple palette, pure Halloween energy.")
+        if _is_summer:
+            return _rnd.choice([
+                f"A group of friends at a summer music festival raising Boozt cans to the sky — "
+                f"stage lights behind them, golden hour sunlight, crowd energy. "
+                f"Electric cobalt and sunshine, cans PROMINENT, euphoric summer festival atmosphere.",
+                f"An athlete finishing an outdoor track session, cracking open a cold Boozt can — "
+                f"condensation exploding in slow motion under brilliant summer sunlight. "
+                f"Bright cobalt and white, performance energy, can centre-frame.",
+            ])
+        if _is_autumn:
+            return (f"Young professionals at an autumn rooftop bar — Boozt cans in hand, "
+                    f"copper and amber autumn leaves below, warm afternoon light. "
+                    f"Deep navy and warm amber palette, stylish and energetic.")
+        # Evergreen
+        return _rnd.choice([
+            f"A group of 5 young people (18-30, mixed gender) at an urban rooftop party — "
+            f"Boozt cans raised high, electric blue lights, city skyline behind them. "
+            f"Deep midnight navy and cobalt blue, pure charged celebration energy.",
+            f"A confident athlete mid-sprint through a city street, Boozt can thrust toward the camera — "
+            f"electric arcs and blue light trails, can PROMINENT and glistening. "
+            f"Deep navy and electric cobalt, unstoppable momentum.",
+        ])
 
     def _glenfiddich_scene(p: str) -> str:
-        festive = f" {_festive_suffix()}" if _festive_suffix() else ""
-        return (f"A sophisticated man in a dark green blazer stands in a moody bar interior, "
-                f"picking up a glass of {p} as amber liquid catches warm candlelight. "
-                f"A teal-and-chartreuse Glenfiddich AMF1 bottle gleams prominently in the foreground. "
-                f"Slow cinematic dolly push-in, bokeh highlights, deep teal and chartreuse brand palette. "
-                f"Premium Scotch whisky advertising quality — elegant, restrained, confident.{festive}")
+        if _is_christmas:
+            return _rnd.choice([
+                f"Four sophisticated adults (30-55) around a beautifully set Christmas dinner table — "
+                f"crystal whisky glasses raised in a toast, {p} bottle centre-stage, amber liquid catching "
+                f"candlelight and fireplace glow. Holly and pine centrepiece, Christmas crackers, "
+                f"tall taper candles. Deep teal and Christmas gold palette, understated luxury.",
+                f"A {p} bottle wrapped in a velvet ribbon sitting as the hero Christmas gift on a "
+                f"mantelpiece above a roaring fireplace — Christmas stockings hung, fairy lights reflected "
+                f"in the bottle, fire casting warm amber light. Premium aspirational, the ultimate gift.",
+            ])
+        if _is_new_year:
+            return _rnd.choice([
+                f"Three sophisticated adults in black tie at a NYE gala — crystal Glenfiddich glasses "
+                f"raised as midnight strikes, {p} bottle prominently lit, confetti beginning to fall. "
+                f"Deep teal and gold palette, elegant and celebratory, refined NYE luxury.",
+                f"An intimate couple's NYE toast — two {p} crystal glasses catching the light "
+                f"as fireworks burst outside the floor-to-ceiling windows, the bottle on the table. "
+                f"Deep navy, teal and gold, cinematic and aspirational.",
+            ])
+        if _is_valentine:
+            return (f"A couple sharing a glass of {p} at an intimate candlelit Valentine's dinner — "
+                    f"red roses on the table, {p} bottle between them catching the candlelight, "
+                    f"both looking at each other with warmth. Deep teal and rose-red palette, "
+                    f"sophisticated romantic elegance.")
+        if _is_diwali:
+            return (f"A sophisticated Diwali celebration gathering — {p} bottle on a beautifully set table "
+                    f"with diyas and marigolds, adults raising crystal glasses in a toast. "
+                    f"Rich jewel tones and gold, warm diya light, premium and festive.")
+        if _is_summer:
+            return (f"A sophisticated man in a linen blazer at a sunlit outdoor terrace bar, "
+                    f"pouring {p} over ice into a crystal glass — golden afternoon light, "
+                    f"ocean or countryside vista behind him. Teal and chartreuse, premium summer leisure.")
+        if _is_halloween:
+            return (f"A moody Halloween evening — a lone figure in an elegant dark outfit pours {p} "
+                    f"in a dramatically lit study, jack-o-lanterns casting amber light, "
+                    f"the bottle prominent on a mahogany desk. Deep teal and amber, gothic sophistication.")
+        # Evergreen
+        return _rnd.choice([
+            f"A sophisticated man in a dark green blazer in a moody bar, picking up a glass of {p} "
+            f"as amber liquid catches warm candlelight. Glenfiddich AMF1 bottle gleams in the foreground. "
+            f"Cinematic dolly push-in, deep teal and chartreuse brand palette, restrained confidence.",
+            f"Three adults at an intimate private dining table raising crystal Glenfiddich glasses — "
+            f"{p} bottle centre-stage under warm pendant lighting. Deep teal and gold, premium occasion.",
+        ])
 
     def _ubs_scene(_p: str) -> str:
-        # Pure visual/lifestyle — no brand name, no financial/wealth terminology whatsoever.
-        # Even "Swiss" or the brand name in a video prompt triggers Veo RAI code 15236754.
+        # Pure visual/lifestyle — ZERO brand name, financial, or wealth terms (RAI filter).
         if _is_christmas:
-            return ("A couple walks hand-in-hand along a beautifully decorated city street at Christmas, "
-                    "twinkling fairy lights glowing in shop windows, soft snowflakes drifting, "
-                    "warm golden festive light, bright red scarf detail catching the glow. "
-                    "Cinematic slow dolly, shallow depth of field, joyful and aspirational mood.")
+            return _rnd.choice([
+                "A family of 4 (parents and two young children) walking hand-in-hand through a "
+                "beautifully decorated Christmas market — stalls glowing with fairy lights, soft snow falling, "
+                "warm golden light on their faces, red scarves and winter coats, children laughing with delight. "
+                "Cinematic slow dolly, shallow depth of field, warm festive joy.",
+                "A couple decorating their home for Christmas — hanging ornaments on the tree together, "
+                "fairy lights twinkling, cosy living room with fireplace glowing. "
+                "Intimate, warm, aspirational domestic happiness. Slow-motion close-ups of their smiling faces.",
+            ])
         if _is_new_year:
-            return ("People celebrate on a rooftop terrace overlooking a sparkling city skyline at midnight, "
-                    "golden confetti falling, fireworks illuminating the night sky, joyful and optimistic. "
-                    "Cinematic wide establishing shot, aspirational and celebratory atmosphere.")
+            return _rnd.choice([
+                "A family on a rooftop terrace watching fireworks at midnight — parents lifting children "
+                "to see the colourful bursts over the city skyline, golden confetti falling around them. "
+                "Wide cinematic shot, joy and optimism, warm amber and gold tones.",
+                "A couple dressed elegantly embracing as midnight fireworks illuminate the sky behind them — "
+                "confetti falling, city lights below, faces lit with golden light. "
+                "Cinematic and aspirational, intimate but grand.",
+            ])
+        if _is_diwali:
+            return _rnd.choice([
+                "A family lighting diyas together on their home doorstep at dusk — "
+                "three generations (grandparents, parents, children) in traditional festive attire, "
+                "golden diya light warming their faces, rangoli patterns at their feet. "
+                "Warm and joyful, cinematic slow-motion, rich jewel tones.",
+                "A couple sharing a Diwali meal together by the warm glow of dozens of diyas — "
+                "traditional outfits, flower garlands, soft Diwali fireworks visible through the window. "
+                "Intimate and aspirational.",
+            ])
+        if _is_valentine:
+            return _rnd.choice([
+                "A couple walking through a rose-lit city street on Valentine's evening — "
+                "boutique windows decorated with hearts and roses, warm pink bokeh, "
+                "holding hands and smiling at each other. Cinematic and romantic.",
+                "A couple at an intimate candlelit restaurant — roses on the table, "
+                "soft warm lighting, genuine laughter and connection. "
+                "Close-up of their hands together, shallow depth of field, rose and gold tones.",
+            ])
+        if _is_easter:
+            return ("A young family on an Easter morning egg hunt in a sunny garden — "
+                    "children in pastel outfits discovering Easter eggs among spring flowers, "
+                    "parents watching and laughing. Fresh spring light, pastel palette, pure joy.")
+        if _is_halloween:
+            return ("A family carving pumpkins together on a cosy autumn evening — "
+                    "jack-o-lanterns glowing on the porch, children in costumes laughing, "
+                    "warm amber light. Wholesome family Halloween moment.")
         if _is_summer:
-            return ("A confident person walks through a sun-drenched European city square, "
-                    "warm golden afternoon light, vibrant summer energy, purposeful and at ease. "
-                    "Cinematic dolly movement, shallow depth of field, clean and modern atmosphere.")
-        festive = f" {_festive_suffix()}" if _festive_suffix() else ""
-        return ("A couple walks confidently through a sunlit city street, smiling warmly, "
-                "golden light falling across elegant architecture, breath visible in the cool air. "
-                "Slow cinematic dolly movement, shallow depth of field, bright red scarf detail. "
-                f"Clean, modern, aspirational, understated elegance.{festive}")
+            return _rnd.choice([
+                "A family on a sunny summer holiday — children running on the beach, "
+                "parents laughing in golden hour light, carefree and joyful. "
+                "Cinematic wide shot, warm and aspirational.",
+                "A couple walking confidently through a sun-drenched European city square — "
+                "golden afternoon light, vibrant summer energy, modern and at ease.",
+            ])
+        if _is_autumn:
+            return ("A couple walking through a stunning autumn park — "
+                    "copper and golden leaves falling around them, warm afternoon light, "
+                    "cosy scarves, genuinely happy. Cinematic and aspirational.")
+        if _is_winter:
+            return ("A family in cosy winter outerwear walking through a frosted landscape — "
+                    "breath visible in the crisp air, children playing in the snow, "
+                    "warm smiles, aspirational winter lifestyle.")
+        return _rnd.choice([
+            "A couple walks confidently through a sunlit city street, smiling warmly, "
+            "golden light falling across elegant architecture. "
+            "Slow cinematic dolly, shallow depth of field, clean and aspirational.",
+            "A family of 4 walking together through a beautiful park on a bright morning — "
+            "children running ahead, parents hand-in-hand, warm natural light. "
+            "Cinematic and uplifting, clean and modern.",
+        ])
 
     _BRAND_SCENE_FN = {
         "Sunglow":     _sunglow_scene,
@@ -580,73 +813,10 @@ def run_reel(brand: str, prompt: str) -> dict:
         "Glenfiddich": _glenfiddich_scene,
         "UBS Bank":    _ubs_scene,
     }
-    festive_ctx = f" {_festive_suffix()}" if _festive_suffix() else ""
     brand_scene = (
         _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN
-        else f"A premium cinematic advertising scene for {brand}, photorealistic, elegant and aspirational.{festive_ctx}"
+        else f"A premium cinematic advertising scene for {brand}, photorealistic, elegant and aspirational."
     )
-
-    # ── Group/family scene override for festive and social campaigns ─────────
-    # Mirrors _scene_variety_override() in runner.py's generate_campaign_reel.
-    # When the objective or season signals a group/celebration context, swap the
-    # brand_scene for a crowd/family version so the reel isn't always a solo shot.
-    _ol = prompt.lower()
-    _is_group_obj = any(k in _ol for k in (
-        "family", "families", "friends", "together", "community",
-        "gathering", "celebration", "group", "crowd", "party",
-        "social", "bonding", "sharing", "reunion", "festive",
-    ))
-    if (_is_christmas or _is_diwali or _is_new_year or _is_valentine or _is_group_obj) \
-            and brand in _BRAND_SCENE_FN:
-        _GROUP_SCENES = {
-            "Rnorr": {
-                "christmas": (f"A family of 3-5 people (multi-generational) around a beautifully set "
-                              f"Christmas dinner table. The hero parent serves a steaming dish made with {_prod}, "
-                              f"faces lit with joy and anticipation. Golden fairy lights, holly centrepiece, "
-                              f"festive crockery. {_prod} pack visible on the table. Warm amber kitchen light."),
-                "diwali":    (f"A South Asian family of 4-6 (multi-generational) gathered around a Diwali feast, "
-                              f"diyas glowing everywhere, the mother serving a dish made with {_prod} to an "
-                              f"excited family. Jewel-toned fabrics, warm golden diya light."),
-                "default":   (f"A warm family of 3-4 cooking and laughing together around a kitchen table, "
-                              f"{_prod} prominently featured as the hero ingredient bringing the meal to life. "
-                              f"Genuine joy, multicultural, steam rising from the pot."),
-            },
-            "Sunglow": {
-                "christmas": (f"Three diverse women (20-35) getting ready together for a Christmas party, "
-                              f"doing each other's hair — laughing, hair FLYING, the whole room glowing "
-                              f"with fairy lights. {_prod} bottles on the vanity. Pure sisterhood and festive joy."),
-                "default":   (f"Three diverse women (20-35) laughing together, doing each other's hair in a "
-                              f"bright warm setting — {_prod} on the vanity, hair the absolute HERO, "
-                              f"friendship and joy radiating from every face."),
-            },
-            "Boozt": {
-                "christmas": (f"A group of 5-6 young people (20-30, mixed gender) at a Christmas/New Year party — "
-                              f"Boozt cans raised high, laughing, confetti falling, electric blue stage lighting "
-                              f"and Christmas lights mixing. Pure electric celebration. Cans PROMINENT."),
-                "newyear":   (f"A group of friends on a rooftop at midnight, city skyline behind them, "
-                              f"Boozt cans clinked together, fireworks bursting above. Electric blue and gold. "
-                              f"Euphoric countdown energy, cans glistening in the light."),
-                "default":   (f"A group of 4-5 friends (20-30) in an urban setting, laughing and sharing "
-                              f"Boozt cans — electric cobalt energy, cans raised, pure momentum and togetherness."),
-            },
-            "Glenfiddich": {
-                "christmas": (f"Three or four sophisticated adults around a candlelit Christmas dinner table, "
-                              f"crystal whisky glasses raised in a toast, the {_prod} bottle prominent, "
-                              f"amber liquid catching firelight. Fireplace glow. Premium, intimate, elegant."),
-                "default":   (f"A group of 3-4 sophisticated adults in a premium bar or lounge, raising "
-                              f"Glenfiddich glasses in a toast, the {_prod} bottle beautifully lit in "
-                              f"the foreground. Warm candlelight, understated luxury, genuine connection."),
-            },
-        }
-        _brand_group = _GROUP_SCENES.get(brand, {})
-        if _is_christmas and "christmas" in _brand_group:
-            brand_scene = _brand_group["christmas"]
-        elif _is_diwali and "diwali" in _brand_group:
-            brand_scene = _brand_group["diwali"]
-        elif _is_new_year and "newyear" in _brand_group:
-            brand_scene = _brand_group["newyear"]
-        elif _brand_group:
-            brand_scene = _brand_group["default"]
 
     # ── Step 3: Generate the rich 80-100 word cinematic prompt (same as full pipeline) ──
     _voiceover_line = f'A warm confident voiceover says: "{voiceover}"' if voiceover \
