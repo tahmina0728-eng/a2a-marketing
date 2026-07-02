@@ -2618,12 +2618,14 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
   if (!previewHeadline && _defaultHeadline) setTimeout(() => setPreviewHeadline(_defaultHeadline), 0);
   if (!previewBody     && _defaultBody)     setTimeout(() => setPreviewBody(_defaultBody), 0);
 
+  // Modal kept for future use (e.g. multi-channel with email mixed in)
   const openEmailPreview = () => {
     if (!previewSubject)  setPreviewSubject(_defaultSubject);
     if (!previewHeadline) setPreviewHeadline(_defaultHeadline);
     if (!previewBody)     setPreviewBody(_defaultBody);
     setShowEmailPreview(true);
   };
+  void openEmailPreview; // suppress unused warning — modal still rendered below
 
   const handlePublish = useCallback(async () => {
     if (selected.size === 0) return;
@@ -2955,27 +2957,89 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
         </div>
       )}
 
-      {/* Action bar */}
+      {/* ── Inline email template — auto-shows when Email channel selected ── */}
+      {!published && selected.has("email") && (
+        <div style={{ borderTop: "1px solid var(--card-border)",
+          background: "var(--card-bg-soft)", padding: "20px 36px",
+          display: "flex", flexDirection: "column" as const, gap: 14 }}>
+
+          <div style={{ fontSize: 12, fontWeight: 800, color: "#7c3aed",
+            letterSpacing: "0.1em", textTransform: "uppercase" as const }}>
+            📧 Email Preview — edit before sending
+          </div>
+
+          {/* Template card */}
+          <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid var(--card-border)",
+            background: "#ffffff" }}>
+            {(selectedImageB64 ?? cp?.image_b64) && (
+              <img src={`data:image/jpeg;base64,${selectedImageB64 ?? cp?.image_b64}`} alt=""
+                style={{ width: "100%", maxHeight: 220, objectFit: "contain" as const,
+                  display: "block", background: "#f8fafc" }} />
+            )}
+            <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column" as const, gap: 10 }}>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
+                  textTransform: "uppercase" as const, color: "#888", marginBottom: 4 }}>Subject</div>
+                <input value={previewSubject} onChange={e => setPreviewSubject(e.target.value)}
+                  style={{ width: "100%", padding: "7px 10px", borderRadius: 7,
+                    border: "1.5px dashed #d0d0e0", background: "#fafafa",
+                    fontSize: 13, fontWeight: 600, color: "#0f172a",
+                    fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const }}
+                  onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                  onBlur={e => e.currentTarget.style.borderColor = "#d0d0e0"} />
+              </div>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
+                  textTransform: "uppercase" as const, color: "#888", marginBottom: 4 }}>Headline</div>
+                <textarea value={previewHeadline} onChange={e => setPreviewHeadline(e.target.value)} rows={2}
+                  style={{ width: "100%", padding: "7px 10px", borderRadius: 7,
+                    border: "1.5px dashed #d0d0e0", background: "#fafafa",
+                    fontSize: 18, fontWeight: 700, color: "#0f172a", fontFamily: "Georgia, serif",
+                    outline: "none", resize: "none" as const, lineHeight: 1.3,
+                    boxSizing: "border-box" as const }}
+                  onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                  onBlur={e => e.currentTarget.style.borderColor = "#d0d0e0"} />
+              </div>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.12em",
+                  textTransform: "uppercase" as const, color: "#888", marginBottom: 4 }}>Body copy</div>
+                <textarea value={previewBody} onChange={e => setPreviewBody(e.target.value)} rows={3}
+                  style={{ width: "100%", padding: "7px 10px", borderRadius: 7,
+                    border: "1.5px dashed #d0d0e0", background: "#fafafa",
+                    fontSize: 13, color: "#374151", fontFamily: "Georgia, serif",
+                    outline: "none", resize: "none" as const, lineHeight: 1.6,
+                    boxSizing: "border-box" as const }}
+                  onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
+                  onBlur={e => e.currentTarget.style.borderColor = "#d0d0e0"} />
+              </div>
+            </div>
+          </div>
+
+          {/* Recipient + send email button */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <input type="email" placeholder="Recipient email address" value={email}
+              onChange={e => setEmail(e.target.value)}
+              style={{ flex: 1, padding: "10px 14px", borderRadius: 10,
+                border: "1.5px solid var(--card-border)", background: "var(--page-bg)",
+                color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+            <button onClick={() => { setSelected(new Set(["email"])); handlePublish(); }}
+              disabled={!email.trim() || loading}
+              style={{ padding: "10px 24px", borderRadius: 10, border: "none", fontWeight: 700,
+                fontSize: 13, whiteSpace: "nowrap" as const,
+                cursor: email.trim() ? "pointer" : "not-allowed",
+                background: email.trim() ? ORB_BG : "rgba(124,58,237,0.15)",
+                color: email.trim() ? "white" : "rgba(124,58,237,0.4)",
+                boxShadow: email.trim() ? "0 4px 16px rgba(124,58,237,0.3)" : "none" }}>
+              {loading ? "Sending…" : "Send Email →"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Action bar — non-email channels launch */}
       {!published && (
         <div style={{ padding: "16px 36px", background: "var(--card-bg)", display: "flex",
           alignItems: "center", gap: 16, borderTop: "1px solid var(--card-border)" }}>
-          {/* Selected image thumbnail */}
-          {selectedImageB64 && (
-            <div style={{ flexShrink: 0, position: "relative" as const }}>
-              <img src={`data:image/jpeg;base64,${selectedImageB64}`} alt="Selected key visual"
-                style={{ width: 48, height: 48, objectFit: "cover" as const, borderRadius: 8,
-                  border: "2px solid rgba(124,58,237,0.35)", display: "block" }} />
-              <div style={{ position: "absolute" as const, top: -4, right: -4, width: 15, height: 15,
-                borderRadius: "50%", background: "#7c3aed", border: "2px solid #f8fafc",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: 8, color: "white", fontWeight: 800, lineHeight: 1 }}>✓</div>
-            </div>
-          )}
-          {selected.has("email") && !showEmailPreview && (
-            <input type="email" placeholder="Recipient email address" value={email} onChange={e => setEmail(e.target.value)}
-              style={{ flex: 1, padding: "10px 14px", borderRadius: 10, border: "1.5px solid rgba(124,58,237,0.30)",
-                background: "var(--page-bg)", color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit", outline: "none" }} />
-          )}
           {selected.size === 0 ? (
             <div style={{ flex: 1, fontSize: 13, color: "var(--text-secondary)", fontStyle: "italic" }}>
               Select channels above to enable launch
@@ -2985,26 +3049,13 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
               {selected.size} channel{selected.size > 1 ? "s" : ""} selected
             </div>
           )}
-          {/* If email is the only channel selected, show "Preview Email" button */}
-          {selected.size > 0 && selected.has("email") && selected.size === 1 ? (
-            <button onClick={openEmailPreview} disabled={loading}
-              style={{ padding: "12px 28px", borderRadius: 12, border: "none", cursor: "pointer",
-                background: ORB_BG, color: "white", fontSize: 13, fontWeight: 800,
-                letterSpacing: "0.02em", transition: "all 0.2s",
-                boxShadow: "0 4px 20px rgba(124,58,237,0.40)" }}>
-              👁 Preview & Edit Email
-            </button>
-          ) : (
-            <button onClick={selected.has("email") && selected.size > 1
-              ? () => { openEmailPreview(); }
-              : handlePublish}
-              disabled={loading || selected.size === 0}
+          {/* Only show Launch button when non-email channels are selected */}
+          {selected.size > 0 && !(selected.size === 1 && selected.has("email")) && (
+            <button onClick={handlePublish} disabled={loading || selected.size === 0}
               style={{ padding: "12px 28px", borderRadius: 12, border: "none",
-                cursor: selected.size === 0 ? "not-allowed" : "pointer",
-                background: selected.size === 0 ? "rgba(255,255,255,0.05)" : ORB_BG,
-                color: selected.size === 0 ? "var(--text-secondary)" : "white",
+                cursor: "pointer", background: ORB_BG, color: "white",
                 fontSize: 13, fontWeight: 800, letterSpacing: "0.02em", transition: "all 0.2s",
-                boxShadow: selected.size > 0 ? "0 4px 20px rgba(124,58,237,0.40)" : "none" }}>
+                boxShadow: "0 4px 20px rgba(124,58,237,0.40)" }}>
               {loading ? "Launching…" : selected.size === 0 ? "Select Channels" : `🚀 Launch to ${selected.size} Channel${selected.size > 1 ? "s" : ""}`}
             </button>
           )}
