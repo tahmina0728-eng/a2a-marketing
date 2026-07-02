@@ -966,11 +966,15 @@ def _overlay_copy_text_on_video(
     brand: str,
     headline: str,
     cta: str = "",
+    start_sec: float = 3.5,
 ) -> bytes:
     """
     Burn the copy agent's headline (and optional CTA) as a lower-third onto the
-    reel using FFmpeg.  Text fades in at t=3.5s and is visible to the end of the
-    6-second clip — matching how real brand ads close on the campaign line.
+    reel using FFmpeg.
+
+    start_sec controls when the text fades in:
+    - Full pipeline default: 3.5s (text rides alongside the closing voiceover)
+    - Standalone: 4.5s (text appears AFTER the voiceover finishes, as an end card)
 
     Falls back gracefully (returns original bytes untouched) if:
     - FFmpeg is not installed (dev machines), or
@@ -1036,12 +1040,16 @@ def _overlay_copy_text_on_video(
             # escaped as \, at the filtergraph level — single-quoting alone
             # is unreliable on Windows FFmpeg builds.
             # Input/output use plain relative filenames so no path issues.
+            _t0  = start_sec            # headline fade-in start
+            _t1  = round(_t0 + 0.5, 1) # headline fully opaque
+            _t2  = round(_t0 + 0.3, 1) # cta fade-in start (offset)
+            _t3  = round(_t2 + 0.3, 1) # cta fully opaque
             _headline_filter = (
                 f"drawtext=fontfile=font.ttf:text='{_hl}':"
                 f"fontsize=40:fontcolor=white:"
                 f"x=60:y=H-{140 if _cta else 100}:"
-                f"enable=between(t\\,3.5\\,6):"
-                f"alpha=if(lt(t\\,4)\\,(t-3.5)/0.5\\,1):"
+                f"enable=between(t\\,{_t0}\\,6):"
+                f"alpha=if(lt(t\\,{_t1})\\,(t-{_t0})/0.5\\,1):"
                 f"box=1:boxcolor=black@0.55:boxborderw=18"
             )
             _filters = _headline_filter
@@ -1051,8 +1059,8 @@ def _overlay_copy_text_on_video(
                     f"drawtext=fontfile=font.ttf:text='{_cta}':"
                     f"fontsize=26:fontcolor=white@0.85:"
                     f"x=60:y=H-85:"
-                    f"enable=between(t\\,4\\,6):"
-                    f"alpha=if(lt(t\\,4.3)\\,(t-4)/0.3\\,1):"
+                    f"enable=between(t\\,{_t2}\\,6):"
+                    f"alpha=if(lt(t\\,{_t3})\\,(t-{_t2})/0.3\\,1):"
                     f"box=1:boxcolor=black@0.40:boxborderw=12"
                 )
                 _filters = f"{_headline_filter},{_cta_filter}"

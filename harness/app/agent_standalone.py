@@ -586,6 +586,68 @@ def run_reel(brand: str, prompt: str) -> dict:
         else f"A premium cinematic advertising scene for {brand}, photorealistic, elegant and aspirational.{festive_ctx}"
     )
 
+    # ── Group/family scene override for festive and social campaigns ─────────
+    # Mirrors _scene_variety_override() in runner.py's generate_campaign_reel.
+    # When the objective or season signals a group/celebration context, swap the
+    # brand_scene for a crowd/family version so the reel isn't always a solo shot.
+    _ol = prompt.lower()
+    _is_group_obj = any(k in _ol for k in (
+        "family", "families", "friends", "together", "community",
+        "gathering", "celebration", "group", "crowd", "party",
+        "social", "bonding", "sharing", "reunion", "festive",
+    ))
+    if (_is_christmas or _is_diwali or _is_new_year or _is_valentine or _is_group_obj) \
+            and brand in _BRAND_SCENE_FN:
+        _GROUP_SCENES = {
+            "Rnorr": {
+                "christmas": (f"A family of 3-5 people (multi-generational) around a beautifully set "
+                              f"Christmas dinner table. The hero parent serves a steaming dish made with {_prod}, "
+                              f"faces lit with joy and anticipation. Golden fairy lights, holly centrepiece, "
+                              f"festive crockery. {_prod} pack visible on the table. Warm amber kitchen light."),
+                "diwali":    (f"A South Asian family of 4-6 (multi-generational) gathered around a Diwali feast, "
+                              f"diyas glowing everywhere, the mother serving a dish made with {_prod} to an "
+                              f"excited family. Jewel-toned fabrics, warm golden diya light."),
+                "default":   (f"A warm family of 3-4 cooking and laughing together around a kitchen table, "
+                              f"{_prod} prominently featured as the hero ingredient bringing the meal to life. "
+                              f"Genuine joy, multicultural, steam rising from the pot."),
+            },
+            "Sunglow": {
+                "christmas": (f"Three diverse women (20-35) getting ready together for a Christmas party, "
+                              f"doing each other's hair — laughing, hair FLYING, the whole room glowing "
+                              f"with fairy lights. {_prod} bottles on the vanity. Pure sisterhood and festive joy."),
+                "default":   (f"Three diverse women (20-35) laughing together, doing each other's hair in a "
+                              f"bright warm setting — {_prod} on the vanity, hair the absolute HERO, "
+                              f"friendship and joy radiating from every face."),
+            },
+            "Boozt": {
+                "christmas": (f"A group of 5-6 young people (20-30, mixed gender) at a Christmas/New Year party — "
+                              f"Boozt cans raised high, laughing, confetti falling, electric blue stage lighting "
+                              f"and Christmas lights mixing. Pure electric celebration. Cans PROMINENT."),
+                "newyear":   (f"A group of friends on a rooftop at midnight, city skyline behind them, "
+                              f"Boozt cans clinked together, fireworks bursting above. Electric blue and gold. "
+                              f"Euphoric countdown energy, cans glistening in the light."),
+                "default":   (f"A group of 4-5 friends (20-30) in an urban setting, laughing and sharing "
+                              f"Boozt cans — electric cobalt energy, cans raised, pure momentum and togetherness."),
+            },
+            "Glenfiddich": {
+                "christmas": (f"Three or four sophisticated adults around a candlelit Christmas dinner table, "
+                              f"crystal whisky glasses raised in a toast, the {_prod} bottle prominent, "
+                              f"amber liquid catching firelight. Fireplace glow. Premium, intimate, elegant."),
+                "default":   (f"A group of 3-4 sophisticated adults in a premium bar or lounge, raising "
+                              f"Glenfiddich glasses in a toast, the {_prod} bottle beautifully lit in "
+                              f"the foreground. Warm candlelight, understated luxury, genuine connection."),
+            },
+        }
+        _brand_group = _GROUP_SCENES.get(brand, {})
+        if _is_christmas and "christmas" in _brand_group:
+            brand_scene = _brand_group["christmas"]
+        elif _is_diwali and "diwali" in _brand_group:
+            brand_scene = _brand_group["diwali"]
+        elif _is_new_year and "newyear" in _brand_group:
+            brand_scene = _brand_group["newyear"]
+        elif _brand_group:
+            brand_scene = _brand_group["default"]
+
     # ── Step 3: Generate the rich 80-100 word cinematic prompt (same as full pipeline) ──
     _voiceover_line = f'A warm confident voiceover says: "{voiceover}"' if voiceover \
         else "A warm confident voiceover narrates the campaign tagline."
@@ -719,6 +781,25 @@ def run_reel(brand: str, prompt: str) -> dict:
             without = video_gcs[5:]
             bucket_name, _, blob_path = without.partition("/")
             video_bytes = _gcs.Client().bucket(bucket_name).blob(blob_path).download_as_bytes()
+            # Burn headline as an end-card (start_sec=4.5 so text appears
+            # AFTER the voiceover audio finishes, not simultaneously).
+            # Also apply the same financial-term cleanup used on the Veo
+            # prompt so the on-screen text matches what the audio says.
+            try:
+                import re as _re_ov
+                _clean_vo = voiceover
+                for _fp, _fr in [
+                    (r"\bfinancial\b", "personal"), (r"\bbanking\b", "service"),
+                    (r"\binvestment\b", "future"),   (r"\bportfolio\b", "journey"),
+                    (r"\bwealth\b",     "life"),      (r"\baffluent\b", "accomplished"),
+                ]:
+                    _clean_vo = _re_ov.sub(_fp, _fr, _clean_vo, flags=_re_ov.IGNORECASE)
+                from app.runner import _overlay_copy_text_on_video
+                video_bytes = _overlay_copy_text_on_video(
+                    video_bytes, brand, _clean_vo, "", start_sec=4.5
+                )
+            except Exception as _ov_err:
+                logger.warning("standalone_reel_overlay_failed", brand=brand, error=str(_ov_err))
             video_b64 = base64.b64encode(video_bytes).decode("utf-8")
             logger.info("standalone_reel_succeeded", model=veo_model)
         else:
