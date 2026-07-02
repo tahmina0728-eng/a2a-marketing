@@ -289,7 +289,15 @@ def run_kv(brand: str, prompt: str) -> dict:
 
         contents: list = []
         logos = loader.list_logos(brand)
-        if logos and (part := _part_for_uri(logos[0])):
+        # Prefer a logo that contains the brand name and isn't a pure-white variant
+        _bslug = brand.split()[0].lower()
+        _ref_logo = (
+            next((p for p in logos if _bslug in p.lower() and "_dark" in p.lower()), None) or
+            next((p for p in logos if _bslug in p.lower() and "_white" not in p.lower()), None) or
+            next((p for p in logos if _bslug in p.lower()), None) or
+            (logos[0] if logos else None)
+        )
+        if _ref_logo and (part := _part_for_uri(_ref_logo)):
             contents.append(f"BRAND IDENTITY REFERENCE for {brand} — colour palette and style "
                              f"only, do not render this logo in the image.")
             contents.append(part)

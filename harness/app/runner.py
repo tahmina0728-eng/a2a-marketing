@@ -854,11 +854,17 @@ def _apply_brand_overlay(
         try:
             from app.brand_assets import get_asset_loader as _gal
             _logos = _gal().list_logos(brand)
-            _sfx   = {"green","red","yellow","orange","purple","blue"}
-            _primary = next(
-                (p for p in _logos if p.lower().endswith(".png")
-                 and not any(p.lower().rsplit(".",1)[0].endswith(s) for s in _sfx)),
-                _logos[0] if _logos else None,
+            _bslug = brand.split()[0].lower()
+            # Priority: brand-name + dark → brand-name + non-white/color → any non-color-suffix
+            _primary = (
+                next((p for p in _logos if _bslug in p.lower() and "_dark"  in p.lower()), None) or
+                next((p for p in _logos if _bslug in p.lower()
+                      and not any(k in p.lower() for k in ("_white","_green","_red","_blue","_yellow"))), None) or
+                next((p for p in _logos if _bslug in p.lower()), None) or
+                next((p for p in _logos if p.lower().endswith(".png")
+                      and not any(p.lower().rsplit(".",1)[0].endswith(s)
+                                  for s in {"green","red","yellow","orange","purple","blue"})), None) or
+                (_logos[0] if _logos else None)
             )
             if _primary:
                 _logo_bytes = None
