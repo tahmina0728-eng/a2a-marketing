@@ -1121,18 +1121,21 @@ def _overlay_logo_end_card(
         if not logo_bytes:
             return video_bytes
 
-        # Build a small frosted-pill card (320×80 px) with the logo centred on it
-        card_w, card_h = 320, 80
-        card = _PIL.new("RGBA", (card_w, card_h), (0, 0, 0, 0))
+        # Build a solid dark pill card (340×90 px) with the logo centred.
+        # Must be saved as RGB (no alpha) — FFmpeg's overlay filter ignores
+        # the alpha channel of the second input by default, so an RGBA PNG
+        # with a transparent background renders as invisible.
+        card_w, card_h = 340, 90
+        card = _PIL.new("RGBA", (card_w, card_h), (10, 10, 19, 255))  # solid dark
         _Draw.Draw(card).rounded_rectangle(
             [0, 0, card_w - 1, card_h - 1],
-            radius=16, fill=(10, 10, 19, 210),
+            radius=18, fill=(22, 22, 38, 255),  # slightly lighter solid dark pill
         )
         logo = _PIL.open(BytesIO(logo_bytes)).convert("RGBA")
-        max_lw, max_lh = card_w - 32, card_h - 24
+        max_lw, max_lh = card_w - 40, card_h - 28
         sc  = min(max_lw / max(1, logo.width), max_lh / max(1, logo.height), 1.0)
-        lw  = max(24, int(logo.width * sc))
-        lh  = max(24, int(logo.height * sc))
+        lw  = max(32, int(logo.width * sc))
+        lh  = max(32, int(logo.height * sc))
         logo = logo.resize((lw, lh), _PIL.LANCZOS)
         card.alpha_composite(logo, ((card_w - lw) // 2, (card_h - lh) // 2))
 
@@ -1141,18 +1144,18 @@ def _overlay_logo_end_card(
             _out = _P(_tmp) / "output.mp4"
             _in.write_bytes(video_bytes)
 
-            # Save card as PNG (preserves alpha so FFmpeg overlay handles transparency)
+            # Save as RGB PNG — no alpha channel so the overlay is fully opaque.
+            # The fade filter fades from black (luminance fade), which looks clean
+            # on a dark card and doesn't require alpha compositing in FFmpeg.
             card_path = _P(_tmp) / "logo_card.png"
-            card.save(str(card_path), format="PNG")
+            card.convert("RGB").save(str(card_path), format="PNG")
 
-            # overlay=W-w-20:H-h-20 → bottom-right, 20 px margin
-            # enable / alpha use \, to escape commas at filtergraph level
-            _t0  = start_sec
-            _t1  = round(_t0 + 0.4, 1)
-            _fc  = (
-                f"[1:v]scale={card_w}:{card_h}[card];"
-                f"[card]fade=t=in:st={_t0}:d=0.4:alpha=1[fcard];"
-                f"[0:v][fcard]overlay=W-w-20:H-h-20:enable=between(t\\,{_t0}\\,6)"
+            _t0 = start_sec
+            _fc = (
+                f"[1:v]scale={card_w}:{card_h},"
+                f"fade=t=in:st={_t0}:d=0.4[fcard];"
+                f"[0:v][fcard]overlay=W-w-24:H-h-24:"
+                f"enable=between(t\\,{_t0}\\,6)"
             )
 
             _result = subprocess.run(
