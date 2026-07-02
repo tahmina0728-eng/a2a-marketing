@@ -1108,7 +1108,7 @@ def _overlay_logo_end_card(
     try:
         from io import BytesIO
         from PIL import Image as _PIL, ImageDraw as _Draw
-        from app.data_loader import get_asset_loader
+        from app.brand_assets import get_asset_loader
         from app.creative_pipeline import _load_bytes
 
         loader = get_asset_loader()
