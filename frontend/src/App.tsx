@@ -3292,6 +3292,20 @@ const CARD_OFF: [number, number][] = [
 function AgentNetworkWakeUp() {
   const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 160;
 
+  // Scale the fixed-size diagram to fit any screen width
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver(entries => {
+      const w = entries[0].contentRect.width;
+      setScale(Math.min(1, (w - 32) / W));   // 16px padding each side
+    });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   const nodes = HARNESS_STAGES.map((s, i) => {
     const a = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
     return { ...s, x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R,
@@ -3300,7 +3314,7 @@ function AgentNetworkWakeUp() {
   });
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
+    <div ref={containerRef} style={{ flex: 1, display: "flex", flexDirection: "column" as const,
       background: "var(--page-bg)",
       overflow: "hidden", position: "relative" as const }}>
 
@@ -3319,9 +3333,9 @@ function AgentNetworkWakeUp() {
         background: "radial-gradient(circle, rgba(99,102,241,0.10) 0%, transparent 70%)",
         pointerEvents: "none" as const }} />
 
-      {/* Title */}
-      <div style={{ textAlign: "center" as const, padding: "24px 24px 0", position: "relative", zIndex: 10 }}>
-        <h2 style={{ fontSize: 24, fontWeight: 800, color: "var(--text-primary)",
+      {/* Title — font scales down on small screens */}
+      <div style={{ textAlign: "center" as const, padding: "24px 16px 0", position: "relative", zIndex: 10 }}>
+        <h2 style={{ fontSize: `clamp(16px, ${scale * 24}px, 24px)`, fontWeight: 800, color: "var(--text-primary)",
           letterSpacing: "-0.02em", marginBottom: 6, lineHeight: 1.3 }}>
           Seven AI Agents.{" "}
           <span style={{ background: ORB_BG, WebkitBackgroundClip: "text",
@@ -3329,16 +3343,19 @@ function AgentNetworkWakeUp() {
             One Powerful Campaign.
           </span>
         </h2>
-        <p style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.6, maxWidth: 460, margin: "0 auto",
-          textShadow: "0 1px 4px rgba(255,255,255,0.2)" }}>
+        <p style={{ fontSize: `clamp(10px, ${scale * 12}px, 12px)`, color: "var(--text-primary)", lineHeight: 1.6,
+          maxWidth: 460, margin: "0 auto", textShadow: "0 1px 4px rgba(255,255,255,0.2)" }}>
           From strategy to content, visuals to videos, and channel-optimised publishing —
           our AI agents collaborate to launch campaigns that perform.
         </p>
       </div>
 
-      {/* Network diagram */}
-      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 110, overflow: "hidden" }}>
-        <div style={{ position: "relative" as const, width: W, height: H, overflow: "visible" }}>
+      {/* Network diagram — scales uniformly to fit any screen width */}
+      <div style={{ flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center",
+        paddingTop: Math.round(110 * scale), overflow: "hidden" }}>
+        <div style={{ position: "relative" as const, width: W, height: H, overflow: "visible",
+          transform: `scale(${scale})`, transformOrigin: "top center",
+          marginBottom: H * (scale - 1) /* collapse empty space when scaled down */ }}>
 
           {/* SVG: rings + connecting lines + travelling dots */}
           <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H}
