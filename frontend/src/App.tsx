@@ -5502,7 +5502,15 @@ export default function App() {
           onSelectAgent={(key) => { setActiveAgentKey(key); setView("agent"); }} />
 
         {view === "brand-hub" ? (
-          <BrandHub />
+          <>
+            <BgVideoPlayer fixed brightness={0.55} saturate={0.9} />
+            <div style={{ position: "fixed" as const, inset: 0, zIndex: 1,
+              pointerEvents: "none" as const, background: "var(--video-wash)" }} />
+            <div style={{ position: "relative" as const, zIndex: 2, flex: 1,
+              display: "flex", flexDirection: "column" as const, overflow: "hidden" }}>
+              <BrandHub />
+            </div>
+          </>
         ) : view === "hub" ? (
           <ContentHub onStartCampaign={() => setView("app")} />
         ) : view === "agent" && activeAgentKey ? (
