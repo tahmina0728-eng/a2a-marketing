@@ -26,6 +26,7 @@ import { saveToContentHub } from "./hooks/useContentHub";
 import ContentHub from "./ContentHub";
 import CampaignForm from "./components/CampaignForm";
 import BrandHub from "./components/BrandHub";
+import BrandHubNav, { type BrandHubSection } from "./components/BrandHubNav";
 import type { HarnessBriefRequest, AgentEvent } from "./types/pipeline";
 
 // ── Infosys Aster logo — top-left header (small, with "Powered by") ──
@@ -5050,10 +5051,12 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 
 // ── Sidebar ───────────────────────────────────────────────────
 
-function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSelectAgent }: {
+function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSelectAgent,
+  brandHubSection, onBrandHubSection }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
   view: "app" | "hub" | "agent" | "brand-hub"; onNavigate: (v: "app" | "hub" | "brand-hub") => void;
   activeAgentKey: string | null; onSelectAgent: (key: string) => void;
+  brandHubSection: BrandHubSection; onBrandHubSection: (s: BrandHubSection) => void;
 }) {
   return (
     <div style={{ width: 260, flexShrink: 0, height: "100vh",
@@ -5162,11 +5165,17 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
 
           return (
             <div style={{ padding: "12px 16px 0", display: "flex", flexDirection: "column" as const, gap: 2 }}>
-              {/* Top items */}
+              {/* Top items + Brand Hub sub-nav */}
               {topItems.map(item => (
-                <button key={item.label} onClick={item.onClick} style={nb(item.active)}>
-                  {item.icon}{item.label}
-                </button>
+                <Fragment key={item.label}>
+                  <button onClick={item.onClick} style={nb(item.active)}>
+                    {item.icon}{item.label}
+                  </button>
+                  {/* Brand Hub sub-nav — shown inline when active */}
+                  {item.label === "Brand Hub" && view === "brand-hub" && (
+                    <BrandHubNav active={brandHubSection} onChange={onBrandHubSection} />
+                  )}
+                </Fragment>
               ))}
 
               {/* AI Agent — collapsible */}
@@ -5451,6 +5460,7 @@ export default function App() {
   const { theme, toggleTheme } = useTheme();
   const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub">("app");
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
+  const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("guidelines");
   const [campaignPrompt, setCampaignPrompt] = useState("");
 
   const [wizardStarted, setWizardStarted]   = useState(true);
@@ -5499,7 +5509,8 @@ export default function App() {
         {/* Left: Sidebar */}
         <Sidebar theme={theme} onToggleTheme={toggleTheme} view={view} onNavigate={setView}
           activeAgentKey={activeAgentKey}
-          onSelectAgent={(key) => { setActiveAgentKey(key); setView("agent"); }} />
+          onSelectAgent={(key) => { setActiveAgentKey(key); setView("agent"); }}
+          brandHubSection={brandHubSection} onBrandHubSection={setBrandHubSection} />
 
         {view === "brand-hub" ? (
           <>
@@ -5508,7 +5519,7 @@ export default function App() {
               pointerEvents: "none" as const, background: "var(--video-wash)" }} />
             <div style={{ position: "relative" as const, zIndex: 2, flex: 1,
               display: "flex", flexDirection: "column" as const, overflow: "hidden" }}>
-              <BrandHub />
+              <BrandHub section={brandHubSection} />
             </div>
           </>
         ) : view === "hub" ? (
