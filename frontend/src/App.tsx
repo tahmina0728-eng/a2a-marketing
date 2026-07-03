@@ -25,6 +25,7 @@ import { useTheme } from "./hooks/useTheme";
 import { saveToContentHub } from "./hooks/useContentHub";
 import ContentHub from "./ContentHub";
 import CampaignForm from "./components/CampaignForm";
+import BrandHub from "./components/BrandHub";
 import type { HarnessBriefRequest, AgentEvent } from "./types/pipeline";
 
 // ── Infosys Aster logo — top-left header (small, with "Powered by") ──
@@ -5051,7 +5052,7 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 
 function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSelectAgent }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
-  view: "app" | "hub" | "agent"; onNavigate: (v: "app" | "hub") => void;
+  view: "app" | "hub" | "agent" | "brand-hub"; onNavigate: (v: "app" | "hub" | "brand-hub") => void;
   activeAgentKey: string | null; onSelectAgent: (key: string) => void;
 }) {
   return (
@@ -5130,7 +5131,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
             { label: "Home",         active: view === "app",  onClick: () => onNavigate("app"),
               icon: <Icon d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
                 extra={<polyline points="9 22 9 12 15 12 15 22"/>} /> },
-            { label: "Brand Hub",    active: false, onClick: () => {},
+            { label: "Brand Hub",    active: view === "brand-hub", onClick: () => onNavigate("brand-hub"),
               icon: <Icon d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /> },
             { label: "Assets",       active: false, onClick: () => {},
               icon: <Icon d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /> },
@@ -5448,7 +5449,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<"app" | "hub" | "agent">("app");
+  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub">("app");
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
   const [campaignPrompt, setCampaignPrompt] = useState("");
 
@@ -5500,7 +5501,9 @@ export default function App() {
           activeAgentKey={activeAgentKey}
           onSelectAgent={(key) => { setActiveAgentKey(key); setView("agent"); }} />
 
-        {view === "hub" ? (
+        {view === "brand-hub" ? (
+          <BrandHub />
+        ) : view === "hub" ? (
           <ContentHub onStartCampaign={() => setView("app")} />
         ) : view === "agent" && activeAgentKey ? (
           <AgentProfile key={activeAgentKey} agentKey={activeAgentKey}
