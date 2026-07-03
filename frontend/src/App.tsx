@@ -303,11 +303,12 @@ const HARNESS_STAGES = [
   { key: "reel",         icon: "🎬", label: "Kinetik",  desc: "Generating 6s campaign reel with Veo" },
   { key: "channel",      icon: "📡", label: "Poly",     desc: "Publishing to Instagram, TikTok & more" },
   { key: "performance",  icon: "📊", label: "Nexus",    desc: "Forecasting reach, ROAS & channel performance" },
+  { key: "tvc",          icon: "🎥", label: "Director", desc: "Generates a 15s or 30s multi-scene TVC with Veo" },
 ];
 
 // First 7 agents shown as individual nav entries in the sidebar (Nexus/Performance excluded —
 // it's a forecasting stage, not a content-producing creative agent like the other seven).
-const SIDEBAR_AGENT_KEYS = ["briefing", "strategy", "copy", "culture", "kv", "reel", "channel"];
+const SIDEBAR_AGENT_KEYS = ["briefing", "strategy", "copy", "culture", "kv", "reel", "channel", "tvc"];
 
 
 // ── Individual agent profile page (static — sidebar nav) ──────
@@ -414,7 +415,7 @@ function BrandUploadPanel() {
 }
 
 // ── Standalone single-agent run panel ──────────────────────────
-const STANDALONE_SUPPORTED = ["briefing", "strategy", "copy", "culture", "channel", "kv", "reel"];
+const STANDALONE_SUPPORTED = ["briefing", "strategy", "copy", "culture", "channel", "kv", "reel", "tvc"];
 
 // Card styling for Poly's per-channel results — distinct accent colors so each
 // channel reads like its own platform, not a generic key/value list.
@@ -488,7 +489,7 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
     try {
       const res = await fetch(`${API_BASE_PUB}/agents/${agentKey}/run`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim() }),
+        body: JSON.stringify({ prompt: prompt.trim(), duration: tvcDuration }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.detail || `Run failed (${res.status})`);
@@ -535,6 +536,7 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
     kv:       "What key visual should I create?",
     reel:     "What campaign reel should I generate?",
     channel:  "How should I adapt this campaign for channels?",
+    tvc:      "What TV commercial should I direct and produce?",
   };
 
   const AGENT_RUNNING_MSG: Record<string, string> = {
@@ -545,7 +547,11 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
     kv:       "Morphis is generating your key visual with Gemini 3 Pro Image…",
     reel:     "Kinetik is generating your 6-second reel with Veo — this can take 2-5 minutes…",
     channel:  "Poly is adapting your campaign across channels and building the landing page…",
+    tvc:      "Director is writing the script and generating each scene with Veo — this takes 8–15 minutes…",
   };
+
+  // TVC-specific: duration picker state
+  const [tvcDuration, setTvcDuration] = useState<15|30>(30);
 
   return (
     <div style={{ marginTop: 20 }}>
@@ -578,6 +584,26 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
             </span>{" "}
             {AGENT_AGENDA[agentKey] ?? `What would you like ${agentLabel} to do?`}
           </h3>
+
+          {/* TVC duration picker — only shown for Director agent */}
+          {agentKey === "tvc" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>TVC Duration:</span>
+              {([15, 30] as const).map(d => (
+                <button key={d} onClick={() => setTvcDuration(d)}
+                  style={{ padding: "6px 18px", borderRadius: 99, fontWeight: 700, fontSize: 12,
+                    border: `1.5px solid ${tvcDuration === d ? color : "var(--card-border)"}`,
+                    background: tvcDuration === d ? `${color}18` : "transparent",
+                    color: tvcDuration === d ? color : "var(--text-secondary)",
+                    cursor: "pointer" }}>
+                  {d}s {d === 15 ? "(3 scenes)" : "(5 scenes)"}
+                </button>
+              ))}
+              <span style={{ fontSize: 11, color: "var(--text-secondary)", marginLeft: 4 }}>
+                {tvcDuration === 15 ? "~5–8 min" : "~8–15 min"}
+              </span>
+            </div>
+          )}
 
           {/* Chat-style prompt card */}
           <div style={{
@@ -937,7 +963,93 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
         </div>
       )}
 
-      {status === "done" && result && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && (
+      {/* ── TVC result ─────────────────────────────────────────────────────── */}
+      {status === "done" && result && agentKey === "tvc" && (
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column" as const, gap: 16 }}>
+
+          {/* Script breakdown */}
+          {Array.isArray(result.scenes) && (result.scenes as any[]).length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color, letterSpacing: "0.08em",
+                textTransform: "uppercase" as const, marginBottom: 10 }}>
+                📝 {result.title} — {result.duration}s Script
+              </div>
+              <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                {(result.scenes as any[]).map((scene: any, i: number) => (
+                  <div key={i} style={{ padding: "12px 16px", borderRadius: 12,
+                    background: "var(--card-bg-soft)", border: `1px solid ${color}25`,
+                    display: "grid", gridTemplateColumns: "28px 1fr", gap: 12, alignItems: "flex-start" }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
+                      background: `linear-gradient(135deg,${color},#6366f1)`,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: 11, fontWeight: 800, color: "white" }}>{i + 1}</div>
+                    <div>
+                      <div style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.5, marginBottom: 4 }}>
+                        {scene.visual}
+                      </div>
+                      {scene.voiceover && (
+                        <div style={{ fontSize: 11, color, fontStyle: "italic" }}>
+                          🎙 "{scene.voiceover}"
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stitched TVC video */}
+          {result.video_b64 ? (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 800, color, letterSpacing: "0.08em",
+                textTransform: "uppercase" as const, marginBottom: 8 }}>
+                🎥 Final TVC — {result.n_scenes} scenes · {result.duration}s
+              </div>
+              <video controls autoPlay loop muted playsInline
+                src={`data:video/mp4;base64,${result.video_b64}`}
+                style={{ width: "100%", borderRadius: 14, display: "block", boxShadow: "var(--shadow-md)" }} />
+              {result.tagline && (
+                <div style={{ marginTop: 8, fontSize: 13, fontWeight: 600, color: "var(--text-secondary)",
+                  fontStyle: "italic" }}>"{result.tagline}"</div>
+              )}
+              <div style={{ display: "flex", gap: 14, marginTop: 8 }}>
+                <a href={`data:video/mp4;base64,${result.video_b64}`} download="tvc.mp4"
+                  style={{ fontSize: 12, fontWeight: 700, color }}>⬇ Download TVC</a>
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 13, color: "var(--text-tertiary)", padding: "12px 0" }}>
+              {result.n_scenes === 0
+                ? "Script ready but video generation failed — check Veo quota and retry."
+                : `${result.n_scenes} of ${(result.scenes as any[])?.length} scenes generated — stitching failed. Individual clips available below.`}
+            </div>
+          )}
+
+          {/* Individual scene clips (fallback / preview) */}
+          {Array.isArray(result.scene_clips) && (result.scene_clips as string[]).length > 0 && (
+            <div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)",
+                letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 8 }}>
+                Scene clips
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 10 }}>
+                {(result.scene_clips as string[]).map((clip, i) => (
+                  <div key={i}>
+                    <video controls muted playsInline src={`data:video/mp4;base64,${clip}`}
+                      style={{ width: "100%", borderRadius: 10, display: "block" }} />
+                    <div style={{ fontSize: 10, color: "var(--text-secondary)", marginTop: 4, textAlign: "center" as const }}>
+                      Scene {i + 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {status === "done" && result && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && (
         <div style={{ marginTop: 14, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
           {Object.entries(result).filter(([k]) => k !== "agent").map(([key, val]) => (
             <div key={key} style={{ marginBottom: 8 }}>

@@ -1262,7 +1262,8 @@ async def upload_brand(brand_name: str, file: UploadFile = File(...)):
 
 
 class AgentStandaloneRequest(_BaseModel):
-    prompt: str   # e.g. "UBS Bank for UK market, festive: christmas" — brand is detected from this
+    prompt:   str       # e.g. "UBS Bank for UK market, festive: christmas"
+    duration: int = 30  # TVC duration in seconds (15 or 30); ignored by other agents
 
 
 @app.post("/agents/{agent_key}/run")
@@ -1275,7 +1276,7 @@ async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
     from app import agent_standalone
     try:
         result = await asyncio.to_thread(
-            agent_standalone.run_agent_standalone, agent_key, req.prompt,
+            agent_standalone.run_agent_standalone, agent_key, req.prompt, req.duration,
         )
         return result
     except ValueError as e:
