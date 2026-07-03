@@ -27,6 +27,8 @@ import ContentHub from "./ContentHub";
 import CampaignForm from "./components/CampaignForm";
 import BrandHub from "./components/BrandHub";
 import BrandHubNav, { type BrandHubSection } from "./components/BrandHubNav";
+import PublishingNav, { type PublishingChannel } from "./components/PublishingNav";
+import Publishing from "./components/Publishing";
 import type { HarnessBriefRequest, AgentEvent } from "./types/pipeline";
 
 // ── Infosys Aster logo — top-left header (small, with "Powered by") ──
@@ -5052,11 +5054,12 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 // ── Sidebar ───────────────────────────────────────────────────
 
 function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSelectAgent,
-  brandHubSection, onBrandHubSection }: {
+  brandHubSection, onBrandHubSection, publishingChannel, onPublishingChannel }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
-  view: "app" | "hub" | "agent" | "brand-hub"; onNavigate: (v: "app" | "hub" | "brand-hub") => void;
+  view: "app" | "hub" | "agent" | "brand-hub" | "publishing"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing") => void;
   activeAgentKey: string | null; onSelectAgent: (key: string) => void;
   brandHubSection: BrandHubSection; onBrandHubSection: (s: BrandHubSection) => void;
+  publishingChannel: PublishingChannel; onPublishingChannel: (c: PublishingChannel) => void;
 }) {
   return (
     <div style={{ width: 260, flexShrink: 0, height: "100vh",
@@ -5109,6 +5112,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
         {(() => {
           const [aiOpen, setAiOpen] = useState(view === "agent");
           const [brandHubOpen, setBrandHubOpen] = useState(view === "brand-hub");
+          const [publishingOpen, setPublishingOpen] = useState(view === "publishing");
 
           // Shared nav button style
           const nb = (active: boolean, indent = false): React.CSSProperties => ({
@@ -5147,7 +5151,8 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
               icon: <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" /> },
             { label: "Content Studio",active: view === "hub",  onClick: () => onNavigate("hub"),
               icon: <Icon d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /> },
-            { label: "Publishing",    active: false, onClick: () => {},
+            { label: "Publishing",    active: view === "publishing",
+              onClick: () => { onNavigate("publishing"); setPublishingOpen(o => !o); },
               icon: <Icon d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" /> },
             { label: "Analytics",     active: false, onClick: () => {},
               icon: <Icon d="M18 20V10M12 20V4M6 20v-6" extra={<line x1="2" y1="20" x2="22" y2="20"/>} /> },
@@ -5237,11 +5242,30 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
                 );
               })}
 
-              {/* Bottom items */}
+              {/* Bottom items — Publishing has collapsible channel sub-nav */}
               {bottomItems.map(item => (
-                <button key={item.label} onClick={item.onClick} style={nb(item.active)}>
-                  {item.icon}{item.label}
-                </button>
+                <Fragment key={item.label}>
+                  <button onClick={item.onClick}
+                    style={item.label === "Publishing"
+                      ? { ...nb(item.active), justifyContent: "space-between" }
+                      : nb(item.active)}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {item.icon}{item.label}
+                    </span>
+                    {item.label === "Publishing" && (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ transform: publishingOpen ? "rotate(180deg)" : "none",
+                          transition: "transform 0.2s", flexShrink: 0 }}>
+                        <path d="M6 9l6 6 6-6"/>
+                      </svg>
+                    )}
+                  </button>
+                  {item.label === "Publishing" && publishingOpen && (
+                    <PublishingNav active={publishingChannel} onChange={onPublishingChannel} />
+                  )}
+                </Fragment>
               ))}
             </div>
           );
@@ -5480,9 +5504,10 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub">("app");
+  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing">("app");
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
   const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("guidelines");
+  const [publishingChannel, setPublishingChannel] = useState<PublishingChannel>("instagram");
   const [campaignPrompt, setCampaignPrompt] = useState("");
 
   const [wizardStarted, setWizardStarted]   = useState(true);
@@ -5532,7 +5557,8 @@ export default function App() {
         <Sidebar theme={theme} onToggleTheme={toggleTheme} view={view} onNavigate={setView}
           activeAgentKey={activeAgentKey}
           onSelectAgent={(key) => { setActiveAgentKey(key); setView("agent"); }}
-          brandHubSection={brandHubSection} onBrandHubSection={setBrandHubSection} />
+          brandHubSection={brandHubSection} onBrandHubSection={setBrandHubSection}
+          publishingChannel={publishingChannel} onPublishingChannel={setPublishingChannel} />
 
         {view === "brand-hub" ? (
           <>
@@ -5542,6 +5568,16 @@ export default function App() {
             <div style={{ position: "relative" as const, zIndex: 2, flex: 1,
               display: "flex", flexDirection: "column" as const, overflow: "hidden" }}>
               <BrandHub section={brandHubSection} />
+            </div>
+          </>
+        ) : view === "publishing" ? (
+          <>
+            <BgVideoPlayer fixed brightness={0.55} saturate={0.9} />
+            <div style={{ position: "fixed" as const, inset: 0, zIndex: 1,
+              pointerEvents: "none" as const, background: "var(--video-wash)" }} />
+            <div style={{ position: "relative" as const, zIndex: 2, flex: 1,
+              display: "flex", flexDirection: "column" as const, overflow: "hidden" }}>
+              <Publishing channel={publishingChannel} />
             </div>
           </>
         ) : view === "hub" ? (
