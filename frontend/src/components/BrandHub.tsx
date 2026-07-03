@@ -116,9 +116,25 @@ export default function BrandHub() {
   };
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "40px 48px" }}>
+    <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
+      alignItems: "center", justifyContent: "center",
+      overflowY: "auto", position: "relative" as const, padding: "40px 24px" }}>
+
+      {/* Subtle grid — matches other pages */}
+      <div style={{ position: "absolute" as const, inset: 0, pointerEvents: "none" as const,
+        backgroundImage: "linear-gradient(rgba(124,58,237,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(124,58,237,0.04) 1px,transparent 1px)",
+        backgroundSize: "44px 44px" }} />
+
+      {/* Ambient blobs — matches AgentNetworkWakeUp */}
+      <div style={{ position: "absolute" as const, top: "-20%", right: "-10%",
+        width: 500, height: 500, borderRadius: "50%", pointerEvents: "none" as const,
+        background: "radial-gradient(circle,rgba(124,58,237,0.10) 0%,transparent 70%)" }} />
+      <div style={{ position: "absolute" as const, bottom: "-20%", left: "-10%",
+        width: 400, height: 400, borderRadius: "50%", pointerEvents: "none" as const,
+        background: "radial-gradient(circle,rgba(99,102,241,0.08) 0%,transparent 70%)" }} />
+
       {/* Page header */}
-      <div style={{ marginBottom: 32 }}>
+      <div style={{ marginBottom: 32, position: "relative" as const, zIndex: 1 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
@@ -140,7 +156,7 @@ export default function BrandHub() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 560 }}>
+      <div style={{ maxWidth: 520, width: "100%", position: "relative" as const, zIndex: 1 }}>
         {/* Upload section */}
         <div style={{ padding: 24, borderRadius: 16,
           background: "var(--card-bg)", border: "1px solid var(--card-border)",
