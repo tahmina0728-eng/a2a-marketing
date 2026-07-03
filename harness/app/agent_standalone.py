@@ -1258,7 +1258,7 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
     from google.genai.types import GenerateVideosConfig
 
     n_scenes  = 3 if duration <= 15 else 5
-    clip_dur  = 5 if duration <= 15 else 6
+    clip_dur  = 6   # Veo minimum is 6s; 3×6s ≈ 15s, 5×6s = 30s
 
     # ── Step 1: Script generation ────────────────────────────────────────────
     script_data = _generate(
@@ -1266,7 +1266,7 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
         brand, prompt,
         f'Respond ONLY with valid JSON — no markdown. '
         f'Write a {duration}-second TVC script with exactly {n_scenes} scenes '
-        f'(each scene = {clip_dur} seconds). '
+        f'(each scene = 6 seconds). '
         f'{{"title":"short punchy campaign title","tagline":"one memorable end-line",'
         f'"scenes":[{{"scene":1,"visual":"cinematic visual description for AI video generation — '
         f'3 sentences, no brand name, no text on screen",'
@@ -1310,19 +1310,37 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
             _page   = uuid.uuid4().hex[:10]
             out_uri = f"gs://{settings.gcs_bucket}/outputs/tvc-{_page}/scene{scene_num:02d}.mp4"
 
-            op = client.models.generate_videos(
-                model  = veo_model,
-                prompt = veo_prompt,
-                config = GenerateVideosConfig(
-                    aspect_ratio      = "16:9",
-                    duration_seconds  = clip_dur,
-                    output_gcs_uri    = out_uri,
-                    number_of_videos  = 1,
-                    generate_audio    = True,
-                    negative_prompt   = "text, subtitles, words, logos, watermarks",
-                ),
-            )
+            # Retry on 429 / RESOURCE_EXHAUSTED with backoff (same as reel generator)
+            _waits = [60, 120, 180]
+            op = None
+            for _attempt in range(4):
+                try:
+                    op = client.models.generate_videos(
+                        model  = veo_model,
+                        prompt = veo_prompt,
+                        config = GenerateVideosConfig(
+                            aspect_ratio      = "16:9",
+                            duration_seconds  = clip_dur,
+                            output_gcs_uri    = out_uri,
+                            number_of_videos  = 1,
+                            generate_audio    = True,
+                            negative_prompt   = "text, subtitles, words, logos, watermarks",
+                        ),
+                    )
+                    break
+                except Exception as _ve:
+                    if _attempt < 3 and ("429" in str(_ve) or "RESOURCE_EXHAUSTED" in str(_ve)):
+                        _w = _waits[_attempt]
+                        logger.warning("tvc_veo_rate_limited", scene=scene_num,
+                                       attempt=_attempt+1, wait_s=_w)
+                        _time.sleep(_w)
+                    else:
+                        raise
 
+            if op is None:
+                raise RuntimeError("Veo call failed after retries")
+
+            # Poll until done (max 8 min)
             deadline = _time.time() + 480
             while not op.done:
                 if _time.time() > deadline:
