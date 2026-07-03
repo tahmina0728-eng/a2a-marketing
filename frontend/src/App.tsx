@@ -5100,51 +5100,120 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
         background: "linear-gradient(90deg, transparent, rgba(124,58,237,0.2), transparent)",
         position: "relative" as const, zIndex: 2 }} />
 
-      {/* Navigation */}
-      <div style={{ padding: "16px 16px 0", display: "flex", flexDirection: "column" as const, gap: 4,
-        position: "relative" as const, zIndex: 2 }}>
-        {([
-          { id: "app" as const,  icon: "🏠", label: "Home" },
-          { id: "hub" as const,  icon: "📚", label: "Content Hub" },
-        ]).map((nav) => (
-          <button key={nav.id} onClick={() => onNavigate(nav.id)} style={{
-            display: "flex", alignItems: "center", gap: 10, padding: "9px 12px",
-            borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "inherit",
-            fontSize: 13, fontWeight: 600, textAlign: "left" as const,
-            background: view === nav.id ? "var(--sel-bg)" : "transparent",
-            color: view === nav.id ? "var(--sel-brd)" : "var(--text-secondary)",
-          }}>
-            <span style={{ fontSize: 15 }}>{nav.icon}</span>
-            {nav.label}
-          </button>
-        ))}
-      </div>
+      {/* ── Full navigation list ── */}
+      <div style={{ flex: 1, overflowY: "auto" as const, position: "relative" as const, zIndex: 2 }}>
+        {(() => {
+          const [aiOpen, setAiOpen] = useState(view === "agent");
 
-      {/* Agents — flat list, always visible */}
-      <div style={{ padding: "4px 16px 0", position: "relative" as const, zIndex: 2 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.1em",
-          textTransform: "uppercase" as const, padding: "10px 12px 6px" }}>Agents</div>
-      </div>
-      <div style={{ flex: 1, overflowY: "auto" as const, display: "flex", flexDirection: "column" as const,
-        gap: 2, padding: "0 16px", position: "relative" as const, zIndex: 2 }}>
-        {SIDEBAR_AGENT_KEYS.map((key) => {
-          const idx   = HARNESS_STAGES.findIndex((s) => s.key === key);
-          const stage = HARNESS_STAGES[idx];
-          const isActive = view === "agent" && activeAgentKey === key;
-          return (
-            <button key={key} onClick={() => onSelectAgent(key)} style={{
-              display: "flex", alignItems: "center", gap: 10, padding: "8px 12px",
-              borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "inherit",
-              fontSize: 13, fontWeight: 600, textAlign: "left" as const,
-              background: isActive ? "var(--sel-bg)" : "transparent",
-              color: isActive ? "var(--sel-brd)" : "var(--text-secondary)",
-            }}>
-              <img src={AGENT_AVATARS[idx] ?? stage.icon} alt={stage.label}
-                style={{ width: 22, height: 22, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
-              {stage.label}
-            </button>
+          // Shared nav button style
+          const nb = (active: boolean, indent = false): React.CSSProperties => ({
+            display: "flex", alignItems: "center", gap: 10,
+            padding: indent ? "7px 12px 7px 36px" : "9px 12px",
+            borderRadius: 10, border: "none", cursor: "pointer", fontFamily: "inherit",
+            fontSize: 13, fontWeight: 600, textAlign: "left" as const, width: "100%",
+            background: active ? "var(--sel-bg)" : "transparent",
+            color: active ? "var(--sel-brd)" : "var(--text-secondary)",
+            transition: "background 0.15s, color 0.15s",
+          });
+
+          // Small inline SVG icon helper
+          const Icon = ({ d, extra }: { d: string; extra?: React.ReactNode }) => (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{ flexShrink: 0 }}>
+              <path d={d} />{extra}
+            </svg>
           );
-        })}
+
+          // Nav items above "AI Agent"
+          const topItems = [
+            { label: "Home",         active: view === "app",  onClick: () => onNavigate("app"),
+              icon: <Icon d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"
+                extra={<polyline points="9 22 9 12 15 12 15 22"/>} /> },
+            { label: "Brand Hub",    active: false, onClick: () => {},
+              icon: <Icon d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /> },
+            { label: "Assets",       active: false, onClick: () => {},
+              icon: <Icon d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /> },
+          ];
+
+          // Nav items below "AI Agent"
+          const bottomItems = [
+            { label: "Campaigns",     active: view === "app",  onClick: () => onNavigate("app"),
+              icon: <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" /> },
+            { label: "Content Studio",active: view === "hub",  onClick: () => onNavigate("hub"),
+              icon: <Icon d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /> },
+            { label: "Publishing",    active: false, onClick: () => {},
+              icon: <Icon d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" /> },
+            { label: "Analytics",     active: false, onClick: () => {},
+              icon: <Icon d="M18 20V10M12 20V4M6 20v-6" extra={<line x1="2" y1="20" x2="22" y2="20"/>} /> },
+            { label: "Reports",       active: false, onClick: () => {},
+              icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                extra={<><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>} /> },
+            { label: "Settings",      active: false, onClick: () => {},
+              icon: (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+              )},
+          ];
+
+          return (
+            <div style={{ padding: "12px 16px 0", display: "flex", flexDirection: "column" as const, gap: 2 }}>
+              {/* Top items */}
+              {topItems.map(item => (
+                <button key={item.label} onClick={item.onClick} style={nb(item.active)}>
+                  {item.icon}{item.label}
+                </button>
+              ))}
+
+              {/* AI Agent — collapsible */}
+              <button onClick={() => setAiOpen(o => !o)}
+                style={{ ...nb(view === "agent"), justifyContent: "space-between" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    <rect x="9" y="9" width="6" height="6"/>
+                    <line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/>
+                    <line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/>
+                    <line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/>
+                    <line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/>
+                  </svg>
+                  AI Agent
+                </span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                  style={{ transform: aiOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s", flexShrink: 0 }}>
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+
+              {/* Agent sub-list */}
+              {aiOpen && SIDEBAR_AGENT_KEYS.map((key) => {
+                const idx   = HARNESS_STAGES.findIndex((s) => s.key === key);
+                const stage = HARNESS_STAGES[idx];
+                const isActive = view === "agent" && activeAgentKey === key;
+                return (
+                  <button key={key} onClick={() => onSelectAgent(key)} style={nb(isActive, true)}>
+                    <img src={AGENT_AVATARS[idx] ?? ""} alt={stage.label}
+                      style={{ width: 20, height: 20, borderRadius: 5,
+                        objectFit: "cover" as const, flexShrink: 0 }} />
+                    {stage.label}
+                  </button>
+                );
+              })}
+
+              {/* Bottom items */}
+              {bottomItems.map(item => (
+                <button key={item.label} onClick={item.onClick} style={nb(item.active)}>
+                  {item.icon}{item.label}
+                </button>
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Theme toggle */}
