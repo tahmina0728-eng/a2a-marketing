@@ -5108,6 +5108,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
       <div style={{ flex: 1, overflowY: "auto" as const, position: "relative" as const, zIndex: 2 }}>
         {(() => {
           const [aiOpen, setAiOpen] = useState(view === "agent");
+          const [brandHubOpen, setBrandHubOpen] = useState(view === "brand-hub");
 
           // Shared nav button style
           const nb = (active: boolean, indent = false): React.CSSProperties => ({
@@ -5165,14 +5166,35 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
 
           return (
             <div style={{ padding: "12px 16px 0", display: "flex", flexDirection: "column" as const, gap: 2 }}>
-              {/* Top items + Brand Hub sub-nav */}
+              {/* Top items — Brand Hub has its own collapsible sub-nav */}
               {topItems.map(item => (
                 <Fragment key={item.label}>
-                  <button onClick={item.onClick} style={nb(item.active)}>
-                    {item.icon}{item.label}
-                  </button>
-                  {/* Brand Hub sub-nav — shown inline when active */}
-                  {item.label === "Brand Hub" && view === "brand-hub" && (
+                  {item.label === "Brand Hub" ? (
+                    // Brand Hub — toggle sub-nav on click (like AI Agent)
+                    <button
+                      onClick={() => {
+                        onNavigate("brand-hub");
+                        setBrandHubOpen(o => !o);
+                      }}
+                      style={{ ...nb(item.active), justifyContent: "space-between" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        {item.icon}{item.label}
+                      </span>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ transform: brandHubOpen ? "rotate(180deg)" : "none",
+                          transition: "transform 0.2s", flexShrink: 0 }}>
+                        <path d="M6 9l6 6 6-6"/>
+                      </svg>
+                    </button>
+                  ) : (
+                    <button onClick={item.onClick} style={nb(item.active)}>
+                      {item.icon}{item.label}
+                    </button>
+                  )}
+                  {/* Brand Hub sub-nav — visible only when expanded */}
+                  {item.label === "Brand Hub" && brandHubOpen && (
                     <BrandHubNav active={brandHubSection} onChange={onBrandHubSection} />
                   )}
                 </Fragment>
