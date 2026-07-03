@@ -1306,12 +1306,15 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
         logger.info("tvc_scene_generating",
                     brand=brand, scene=scene_num, total=n_scenes, prompt=veo_prompt[:90])
 
+        _quota_hit = False
         try:
             _page   = uuid.uuid4().hex[:10]
             out_uri = f"gs://{settings.gcs_bucket}/outputs/tvc-{_page}/scene{scene_num:02d}.mp4"
 
-            # Retry on 429 / RESOURCE_EXHAUSTED with backoff (same as reel generator)
-            _waits = [60, 120, 180]
+            # Retry on 429 with increasing backoff; on persistent quota exhaustion
+            # stop early and return whatever clips we have so the caller gets a
+            # graceful response (script + partial video) instead of a 500 error.
+            _waits = [90, 180, 300]
             op = None
             for _attempt in range(4):
                 try:
@@ -1329,16 +1332,26 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
                     )
                     break
                 except Exception as _ve:
-                    if _attempt < 3 and ("429" in str(_ve) or "RESOURCE_EXHAUSTED" in str(_ve)):
+                    _is_quota = "429" in str(_ve) or "RESOURCE_EXHAUSTED" in str(_ve)
+                    if _is_quota and _attempt < 3:
                         _w = _waits[_attempt]
                         logger.warning("tvc_veo_rate_limited", scene=scene_num,
                                        attempt=_attempt+1, wait_s=_w)
                         _time.sleep(_w)
+                    elif _is_quota:
+                        # Quota still exhausted after all retries — stop gracefully
+                        logger.warning("tvc_quota_exhausted_stopping", scene=scene_num)
+                        _quota_hit = True
+                        break
                     else:
                         raise
 
+            if _quota_hit:
+                break   # exit the scene loop, stitch what we have
+
             if op is None:
-                raise RuntimeError("Veo call failed after retries")
+                logger.warning("tvc_scene_no_op", scene=scene_num)
+                continue
 
             # Poll until done (max 8 min)
             deadline = _time.time() + 480
@@ -1379,6 +1392,11 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
     elif clip_bytes_list:
         video_b64 = clips_b64[0]
 
+    _veo_error = (
+        "Veo quota exhausted — script is ready. Wait a few minutes and try again, "
+        "or the Vertex AI quota may need increasing."
+    ) if _quota_hit and not clip_bytes_list else ""
+
     return {
         "agent":        "tvc",
         "brand":        brand,
@@ -1391,6 +1409,7 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
         "video_b64":    video_b64,
         "headline":     title,
         "body":         tagline,
+        "error":        _veo_error,
     }
 
 
