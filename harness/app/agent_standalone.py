@@ -1235,14 +1235,23 @@ def _stitch_tvc_clips(clips: list, brand: str, tagline: str) -> bytes:
 
         stitched = (_PP(_td) / "stitched.mp4").read_bytes()
 
-    # Logo end-card on the final stitched video
+    # Text overlay (title/tagline synced with voiceover) + brand logo end-card
+    # Use _overlay_reel so text appears from t=1.5s and logo appears in the
+    # last 2 seconds of the stitched video.
     try:
-        from app.runner import _overlay_logo_end_card
-        total_secs = len(clips) * 6
-        stitched = _overlay_logo_end_card(stitched, brand,
-                                          start_sec=max(0, total_secs - 2.0))
-    except Exception:
-        pass
+        from app.runner import _overlay_reel
+        total_secs   = len(clips) * 6
+        logo_start   = max(0.0, total_secs - 2.5)
+        _overlaid = _overlay_reel(
+            stitched, brand, tagline, "",
+            text_start_sec=1.5,
+            logo_start_sec=logo_start,
+        )
+        if len(_overlaid) > 1000:
+            stitched = _overlaid
+    except Exception as _oe:
+        import logging
+        logging.warning(f"tvc_overlay_failed: {_oe}")
     return stitched
 
 
@@ -1267,9 +1276,14 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
         f'Respond ONLY with valid JSON — no markdown. '
         f'Write a {duration}-second TVC script with exactly {n_scenes} scenes '
         f'(each scene = 6 seconds). '
+        f'CRITICAL RULES for visual descriptions: '
+        f'(1) NO logos, brand cards, end cards, product packaging, text overlays or typography — '
+        f'these are added in post-production. '
+        f'(2) Every scene must show PEOPLE or ENVIRONMENTS — not static product shots or logo cards. '
+        f'(3) No scene should describe "a card", "a logo", "a screen" or any graphic element. '
         f'{{"title":"short punchy campaign title","tagline":"one memorable end-line",'
-        f'"scenes":[{{"scene":1,"visual":"cinematic visual description for AI video generation — '
-        f'3 sentences, no brand name, no text on screen",'
+        f'"scenes":[{{"scene":1,"visual":"cinematic visual description — people, setting, action, '
+        f'lighting. No brand name, no text, no logos, no product packaging in the scene.",'
         f'"voiceover":"narrator line, max 8 words",'
         f'"mood":"e.g. warm and intimate"}}]}}',
     )
@@ -1288,19 +1302,31 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
     clip_bytes_list: list[bytes] = []
     clips_b64: list[str]         = []
 
+    import re as _re_tvc
+    _LOGO_PATTERNS = _re_tvc.compile(
+        r"\b(logo|brand card|end card|title card|product shot|packaging|"
+        r"close.?up of (the )?product|brand name|typography|text overlay|"
+        r"graphic|screen|card fades|logo appears)\b",
+        _re_tvc.IGNORECASE,
+    )
+
     for i, scene in enumerate(scenes):
         visual    = scene.get("visual",    "")
         voiceover = scene.get("voiceover", "")
         mood      = scene.get("mood",      "cinematic and premium")
         scene_num = i + 1
 
+        # Strip any logo/card language Gemini may have sneaked into the visual
+        visual = _LOGO_PATTERNS.sub("", visual).strip()
+
         veo_prompt = (
-            f"Cinematic {clip_dur}-second TV commercial scene. "
+            f"Cinematic {clip_dur}-second TV commercial scene showing REAL PEOPLE and PLACES — "
+            f"no static cards, no logos, no text. "
             f"{visual} "
             f"Mood: {mood}. Photorealistic premium advertising quality, "
             f"smooth camera motion, brand colours prominent. "
             f"AUDIO: brand-appropriate music with a warm confident voiceover "
-            f"saying \"{voiceover}\". No text, logos or typography visible."
+            f"saying \"{voiceover}\"."
         )
 
         logger.info("tvc_scene_generating",
@@ -1327,7 +1353,11 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
                             output_gcs_uri    = out_uri,
                             number_of_videos  = 1,
                             generate_audio    = True,
-                            negative_prompt   = "text, subtitles, words, logos, watermarks",
+                            negative_prompt   = (
+                        "text, subtitles, words, logos, watermarks, brand cards, "
+                        "end cards, title cards, static shots, product packaging, "
+                        "graphic design, typography, brand name text"
+                    ),
                         ),
                     )
                     break
