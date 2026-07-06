@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { BrandHubSection } from "./BrandHubNav";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8000";
@@ -35,14 +35,42 @@ const ASSET_CATEGORIES = [
 ];
 
 function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record<string,number>) => void }) {
-  const [brandName, setBrandName] = useState("");
-  const [file, setFile]           = useState<File | null>(null);
-  const [dragging, setDragging]   = useState(false);
-  const [status, setStatus]       = useState<"idle" | "uploading" | "done" | "error">("idle");
-  const [uploaded, setUploaded]   = useState<Record<string, number>>({});
-  const [skipped, setSkipped]     = useState<string[]>([]);
-  const [errorMsg, setErrorMsg]   = useState("");
-  const fileRef                   = useRef<HTMLInputElement>(null);
+  const [brandName, setBrandName]   = useState("");
+  const [file, setFile]             = useState<File | null>(null);
+  const [dragging, setDragging]     = useState(false);
+  const [status, setStatus]         = useState<"idle" | "uploading" | "done" | "error">("idle");
+  const [uploaded, setUploaded]     = useState<Record<string, number>>({});
+  const [skipped, setSkipped]       = useState<string[]>([]);
+  const [errorMsg, setErrorMsg]     = useState("");
+  const [brands, setBrands]         = useState<string[]>([]);
+  const [loadingBrand, setLoadingBrand] = useState(false);
+  const fileRef                     = useRef<HTMLInputElement>(null);
+
+  // Fetch existing brands on mount
+  useEffect(() => {
+    fetch(`${API_BASE}/brands`)
+      .then(r => r.json())
+      .then(d => setBrands(d.brands ?? []))
+      .catch(() => {});
+  }, []);
+
+  const loadBrandAssets = async (name: string) => {
+    if (!name) return;
+    setLoadingBrand(true);
+    try {
+      const res = await fetch(`${API_BASE}/brands/${encodeURIComponent(name)}/assets`);
+      const data = await res.json();
+      const counts: Record<string, number> = data.assets ?? {};
+      setUploaded(counts);
+      setSkipped([]);
+      setStatus("done");
+      onAssetsUploaded?.(counts);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingBrand(false);
+    }
+  };
 
   const handleUpload = async () => {
     if (!brandName.trim() || !file) return;
@@ -97,6 +125,32 @@ function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record
           {" "}<code style={{ fontSize: 10, background: "var(--card-bg-soft)",
             padding: "1px 5px", borderRadius: 4 }}>Assets/</code>
         </p>
+
+        {/* Existing brands — load without re-uploading */}
+        {brands.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-secondary)",
+              marginBottom: 6 }}>Select existing brand</div>
+            <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+              {brands.map(b => (
+                <button key={b} onClick={() => { setBrandName(b); loadBrandAssets(b); }}
+                  disabled={loadingBrand}
+                  style={{ padding: "5px 14px", borderRadius: 99, fontSize: 12, fontWeight: 600,
+                    cursor: "pointer", border: "1.5px solid var(--card-border)",
+                    background: brandName === b ? "rgba(124,58,237,0.12)" : "var(--card-bg-soft)",
+                    color: brandName === b ? "#7c3aed" : "var(--text-secondary)",
+                    borderColor: brandName === b ? "#7c3aed" : "var(--card-border)" }}>
+                  {loadingBrand && brandName === b ? "Loading…" : b}
+                </button>
+              ))}
+            </div>
+            <div style={{ height: 1, background: "var(--card-border)", margin: "14px 0 12px",
+              display: "flex", alignItems: "center" }}>
+              <span style={{ fontSize: 10, color: "var(--text-secondary)",
+                background: "var(--card-bg)", padding: "0 8px" }}>or upload new</span>
+            </div>
+          </div>
+        )}
 
         <input value={brandName} onChange={e => setBrandName(e.target.value)}
           placeholder="Brand name (e.g. Acme Corp)"

@@ -1233,6 +1233,58 @@ async def content_hub_delete(item_id: str):
     return {"status": "deleted", "id": item_id}
 
 
+@app.get("/brands")
+async def list_brands():
+    """Return all brand names that have assets in the GCS bucket."""
+    from app.brand_assets import get_asset_loader
+    loader = get_asset_loader()
+    try:
+        # GCS mode: list top-level brand folders
+        from google.cloud import storage as _gcs
+        settings = _get_settings()
+        client = _gcs.Client()
+        bucket = client.bucket(settings.gcs_bucket)
+        # Brands are stored as brands/{name}/... — collect unique top-level names
+        blobs = client.list_blobs(settings.gcs_bucket, prefix="brands/", delimiter="/")
+        list(blobs)  # exhaust iterator to populate prefixes
+        brands = sorted({
+            p.replace("brands/", "").rstrip("/")
+            for p in (blobs.prefixes or [])
+            if p.replace("brands/", "").rstrip("/")
+        })
+        return {"brands": brands}
+    except Exception as e:
+        logger.warning("list_brands_failed", error=str(e))
+        return {"brands": []}
+
+
+@app.get("/brands/{brand_name}/assets")
+async def get_brand_assets(brand_name: str):
+    """Return asset file counts for a brand (same structure as the upload response)."""
+    from app.brand_assets import get_asset_loader
+    from pathlib import PurePosixPath
+    loader = get_asset_loader()
+    counts: dict[str, int] = {}
+    try:
+        logos    = loader.list_logos(brand_name)
+        products = loader.list_products(brand_name)
+        fonts    = loader.list_fonts(brand_name)
+        assets   = loader.list_assets(brand_name)
+        colours  = loader.list_colours(brand_name)
+        # Guidelines — check for .md / .txt files
+        from app.creative_pipeline import _load_bytes
+        guidelines_count = 1 if loader.load_guidelines(brand_name) else 0
+        if logos:        counts["logos"]      = len(logos)
+        if products:     counts["products"]   = len(products)
+        if fonts:        counts["fonts"]      = len(fonts)
+        if assets:       counts["assets"]     = len(assets)
+        if colours:      counts["colours"]    = len(colours)
+        if guidelines_count: counts["guidelines"] = guidelines_count
+    except Exception as e:
+        logger.warning("get_brand_assets_failed", brand=brand_name, error=str(e))
+    return {"brand": brand_name, "assets": counts}
+
+
 @app.post("/brands/{brand_name}/upload")
 async def upload_brand(brand_name: str, file: UploadFile = File(...)):
     """
