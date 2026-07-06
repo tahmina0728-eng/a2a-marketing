@@ -1236,16 +1236,12 @@ async def content_hub_delete(item_id: str):
 @app.get("/brands")
 async def list_brands():
     """Return all brand names that have assets in the GCS bucket."""
-    from app.brand_assets import get_asset_loader
-    loader = get_asset_loader()
     try:
-        # GCS mode: list top-level brand folders
+        from app.config import Settings
+        cfg = Settings()
         from google.cloud import storage as _gcs
-        settings = _get_settings()
         client = _gcs.Client()
-        bucket = client.bucket(settings.gcs_bucket)
-        # Brands are stored as brands/{name}/... — collect unique top-level names
-        blobs = client.list_blobs(settings.gcs_bucket, prefix="brands/", delimiter="/")
+        blobs = client.list_blobs(cfg.gcs_bucket, prefix="brands/", delimiter="/")
         list(blobs)  # exhaust iterator to populate prefixes
         brands = sorted({
             p.replace("brands/", "").rstrip("/")
@@ -1255,7 +1251,14 @@ async def list_brands():
         return {"brands": brands}
     except Exception as e:
         logger.warning("list_brands_failed", error=str(e))
-        return {"brands": []}
+        # Fallback: list from local bucket folder
+        try:
+            from pathlib import Path
+            local = Path(__file__).parent / "bucket" / "brands"
+            brands = sorted([d.name for d in local.iterdir() if d.is_dir()]) if local.is_dir() else []
+            return {"brands": brands}
+        except Exception:
+            return {"brands": []}
 
 
 @app.get("/brands/{brand_name}/assets")

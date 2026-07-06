@@ -61,6 +61,7 @@ function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record
       setSkipped([]);
       setStatus("done");
       localStorage.setItem("brandHub_activeBrand", name);
+      localStorage.setItem("brandHub_assetCounts", JSON.stringify(counts));
       onAssetsUploaded?.(counts);
     } catch {
       // ignore
@@ -89,6 +90,7 @@ function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record
       });
       setUploaded(normalized); setSkipped(data.skipped ?? []); setStatus("done");
       localStorage.setItem("brandHub_activeBrand", brandName.trim());
+      localStorage.setItem("brandHub_assetCounts", JSON.stringify(normalized));
       onAssetsUploaded?.(normalized);
     } catch (e) { setErrorMsg(e instanceof Error ? e.message : String(e)); setStatus("error"); }
   };

@@ -5509,7 +5509,12 @@ export default function App() {
   const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing">("app");
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
   const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("guidelines");
-  const [brandAssets, setBrandAssets] = useState<Record<string, number>>({});
+  const [brandAssets, setBrandAssets] = useState<Record<string, number>>(() => {
+    try {
+      const stored = localStorage.getItem("brandHub_assetCounts");
+      return stored ? JSON.parse(stored) : {};
+    } catch { return {}; }
+  });
   const [publishingChannel, setPublishingChannel] = useState<PublishingChannel>("instagram");
   const [campaignPrompt, setCampaignPrompt] = useState("");
 
