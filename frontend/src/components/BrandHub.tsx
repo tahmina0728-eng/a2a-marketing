@@ -71,9 +71,23 @@ function GuidelinesSection() {
         boxShadow: "var(--shadow-sm)", marginBottom: 20 }}>
 
         <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)",
-          marginBottom: 16, display: "flex", alignItems: "center", gap: 8 }}>
-          <span>📁</span> Upload Brand Guidelines (PDF)
+          marginBottom: 4, display: "flex", alignItems: "center", gap: 8 }}>
+          <span>📁</span> Upload Brand Package (.zip)
         </div>
+        <p style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.6,
+          marginBottom: 14 }}>
+          Create a <strong>.zip</strong> file containing these subfolders:
+          {" "}<code style={{ fontSize: 10, background: "var(--card-bg-soft)",
+            padding: "1px 5px", borderRadius: 4 }}>Guidelines/</code>
+          {" "}<code style={{ fontSize: 10, background: "var(--card-bg-soft)",
+            padding: "1px 5px", borderRadius: 4 }}>Logos/</code>
+          {" "}<code style={{ fontSize: 10, background: "var(--card-bg-soft)",
+            padding: "1px 5px", borderRadius: 4 }}>Font/</code>
+          {" "}<code style={{ fontSize: 10, background: "var(--card-bg-soft)",
+            padding: "1px 5px", borderRadius: 4 }}>Colours/</code>
+          {" "}<code style={{ fontSize: 10, background: "var(--card-bg-soft)",
+            padding: "1px 5px", borderRadius: 4 }}>Assets/</code>
+        </p>
 
         <input value={brandName} onChange={e => setBrandName(e.target.value)}
           placeholder="Brand name (e.g. Acme Corp)"
@@ -97,9 +111,9 @@ function GuidelinesSection() {
             {file ? file.name : "Drag & drop or browse"}
           </div>
           <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-            PDF, PNG, JPG up to 50MB — or a .zip with all brand folders
+            Only <strong>.zip</strong> files accepted — up to 50MB
           </div>
-          <input ref={fileRef} type="file" accept=".zip,.pdf,.png,.jpg,.jpeg"
+          <input ref={fileRef} type="file" accept=".zip"
             style={{ display: "none" }} onChange={e => setFile(e.target.files?.[0] ?? null)} />
         </div>
 
