@@ -2,64 +2,156 @@ import { useState } from "react";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8000";
 
-// ── Types ──────────────────────────────────────────────────────
-type FormatType = "image" | "video" | "reel" | "tvc";
-type ImageSize  = "1:1" | "4:5" | "16:9" | "9:16";
-type VideoLen   = "15s" | "30s" | "45s" | "60s";
-type TVCLen     = "15" | "30";
+type FormatType = "image" | "reel" | "tvc" | "video";
 
 interface GeneratedResult {
-  image_b64?:   string;
-  video_b64?:   string;
-  scene_clips?: string[];
-  headline?:    string;
-  body?:        string;
-  tagline?:     string;
+  image_b64?: string;
+  video_b64?: string;
+  headline?:  string;
+  body?:      string;
+  tagline?:   string;
 }
 
-// ── Shared small components ────────────────────────────────────
-const StepBadge = ({ n, active, done }: { n: number; active: boolean; done: boolean }) => (
-  <div style={{
-    width: 28, height: 28, borderRadius: "50%", flexShrink: 0,
-    display: "flex", alignItems: "center", justifyContent: "center",
-    fontSize: 12, fontWeight: 800,
-    background: done ? "#10b981" : active ? "linear-gradient(135deg,#7c3aed,#6366f1)" : "var(--card-bg-soft)",
-    color: done || active ? "white" : "var(--text-secondary)",
-    border: done || active ? "none" : "1.5px solid var(--card-border)",
-  }}>{done ? "✓" : n}</div>
-);
+const BRANDS    = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank"];
+const GOALS     = ["Brand Awareness","Drive Sales","Lead Generation","Product Launch","Engagement"];
+const AUDIENCES = ["Women 18–35","Men 25–45","Gen Z 16–24","Professionals 30–50","Families"];
+const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Instagram, Facebook"];
 
-// ── Format Card ────────────────────────────────────────────────
-function FormatCard({ label, icon, desc, selected, onClick, sizes, selectedSize, onSize }: {
-  id?: FormatType; label: string; icon: string; desc: string;
+const BRAND_ICONS: Record<string, string> = {
+  "Rnorr": "/brands/rnorr-logo.png",
+  "Sunglow": "/brands/sunglow-logo.png",
+  "Boozt": "/brands/boozt-logo.png",
+  "Glenfiddich": "/brands/glenfiddich-logo.png",
+  "UBS Bank": "/brands/ubs-bank-logo.png",
+};
+
+const G = "linear-gradient(135deg,#7c3aed,#a855f7,#6366f1)";
+
+// ── Horizontal Step Progress ───────────────────────────────────
+function StepProgress({ current }: { current: 1|2|3 }) {
+  const steps = [
+    { n: 1, label: "Campaign Brief",    sub: "Tell us what you want" },
+    { n: 2, label: "Choose Format",     sub: "Image, Video or Reel" },
+    { n: 3, label: "Generate & Review", sub: "AI creates content" },
+  ];
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 32 }}>
+      {steps.map((s, i) => (
+        <div key={s.n} style={{ display: "flex", alignItems: "center", flex: i < 2 ? 1 : "none" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 13, fontWeight: 800,
+              background: current === s.n ? G : current > s.n ? "#10b981" : "rgba(255,255,255,0.08)",
+              color: current >= s.n ? "white" : "rgba(255,255,255,0.35)",
+              boxShadow: current === s.n ? "0 4px 14px rgba(124,58,237,0.5)" : "none",
+              border: current < s.n ? "1.5px solid rgba(255,255,255,0.12)" : "none",
+            }}>
+              {current > s.n ? "✓" : s.n}
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700,
+                color: current >= s.n ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)" }}>
+                {s.label}
+              </div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
+                {s.sub}
+              </div>
+            </div>
+          </div>
+          {i < 2 && (
+            <div style={{ flex: 1, height: 1, margin: "0 20px",
+              background: current > s.n ? "#10b981" : "rgba(255,255,255,0.12)" }} />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Chip Selector ──────────────────────────────────────────────
+function ChipSel({ icon, label, value, onChange, opts }: {
+  icon: React.ReactNode; label: string; value: string;
+  onChange: (v: string) => void; opts: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: "relative" as const, flexShrink: 0 }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        display: "flex", alignItems: "center", gap: 8, padding: "8px 14px",
+        borderRadius: 99, border: "1.5px solid rgba(255,255,255,0.12)",
+        background: value ? "rgba(124,58,237,0.2)" : "rgba(255,255,255,0.06)",
+        cursor: "pointer", fontFamily: "inherit", color: "white", fontSize: 13,
+        fontWeight: 600, transition: "all 0.15s", whiteSpace: "nowrap" as const,
+      }}>
+        <span style={{ opacity: 0.7 }}>{icon}</span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{label}</span>
+        <span style={{ color: value ? "#c084fc" : "rgba(255,255,255,0.4)" }}>
+          {value || "Select…"}
+        </span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+          <path d="M1 1l4 4 4-4" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div style={{ position: "absolute" as const, top: "calc(100% + 6px)", left: 0, zIndex: 100,
+          background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.12)",
+          borderRadius: 12, boxShadow: "0 16px 40px rgba(0,0,0,0.5)",
+          minWidth: 180, overflow: "hidden" }}>
+          {opts.map(o => (
+            <button key={o} onClick={() => { onChange(o); setOpen(false); }}
+              style={{ display: "block", width: "100%", padding: "10px 16px", border: "none",
+                background: value === o ? "rgba(124,58,237,0.2)" : "transparent",
+                color: value === o ? "#c084fc" : "rgba(255,255,255,0.75)",
+                textAlign: "left" as const, cursor: "pointer", fontFamily: "inherit",
+                fontSize: 13, fontWeight: value === o ? 600 : 400 }}>
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Format Cards (Step 2) ──────────────────────────────────────
+function FormatCard({ label, desc, icon, selected, onClick, sizes, selSize, onSize }: {
+  type?: FormatType; label: string; desc: string; icon: React.ReactNode;
   selected: boolean; onClick: () => void;
-  sizes: string[]; selectedSize: string; onSize: (s: string) => void;
+  sizes: string[]; selSize: string; onSize: (s: string) => void;
 }) {
   return (
     <div onClick={onClick} style={{
-      padding: 16, borderRadius: 14, cursor: "pointer", transition: "all 0.15s",
-      border: `2px solid ${selected ? "#7c3aed" : "var(--card-border)"}`,
-      background: selected ? "rgba(124,58,237,0.08)" : "var(--card-bg-soft)",
-      position: "relative" as const,
+      padding: "20px", borderRadius: 16, cursor: "pointer",
+      border: `2px solid ${selected ? "#7c3aed" : "rgba(255,255,255,0.1)"}`,
+      background: selected ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.04)",
+      transition: "all 0.2s", position: "relative" as const,
+      boxShadow: selected ? "0 0 0 4px rgba(124,58,237,0.15)" : "none",
     }}>
       {selected && (
-        <div style={{ position: "absolute" as const, top: 10, right: 10,
-          width: 20, height: 20, borderRadius: "50%",
-          background: "linear-gradient(135deg,#7c3aed,#6366f1)",
+        <div style={{ position: "absolute" as const, top: 14, right: 14,
+          width: 22, height: 22, borderRadius: "50%", background: G,
           display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: 10, color: "white", fontWeight: 800 }}>✓</div>
+          fontSize: 11, color: "white", fontWeight: 800 }}>✓</div>
       )}
-      <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 12 }}>{desc}</div>
+      <div style={{ width: 44, height: 44, borderRadius: 12, marginBottom: 14,
+        background: selected ? "rgba(124,58,237,0.25)" : "rgba(255,255,255,0.06)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: selected ? "#a78bfa" : "rgba(255,255,255,0.4)", transition: "all 0.2s" }}>
+        {icon}
+      </div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.5, marginBottom: selected ? 14 : 0 }}>{desc}</div>
       {selected && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
           {sizes.map(s => (
             <button key={s} onClick={e => { e.stopPropagation(); onSize(s); }}
-              style={{ padding: "3px 10px", borderRadius: 6, border: "none", cursor: "pointer",
+              style={{ padding: "4px 12px", borderRadius: 99, border: "none", cursor: "pointer",
                 fontSize: 11, fontWeight: 600,
-                background: selectedSize === s ? "#7c3aed" : "var(--card-bg)",
-                color: selectedSize === s ? "white" : "var(--text-secondary)" }}>
+                background: selSize === s ? "#7c3aed" : "rgba(255,255,255,0.08)",
+                color: selSize === s ? "white" : "rgba(255,255,255,0.5)",
+                boxShadow: selSize === s ? "0 2px 8px rgba(124,58,237,0.4)" : "none" }}>
               {s}
             </button>
           ))}
@@ -71,441 +163,305 @@ function FormatCard({ label, icon, desc, selected, onClick, sizes, selectedSize,
 
 // ── Main Component ─────────────────────────────────────────────
 export default function Campaigns() {
-  // Step 1 — Brief
-  const [brief, setBrief]         = useState("");
-  const [brand, setBrand]         = useState("");
-  const [goal, setGoal]           = useState("");
-  const [audience, setAudience]   = useState("");
-  const [platform, setPlatform]   = useState("");
+  const [step, setStep]       = useState<1|2|3>(1);
+  const [brief, setBrief]     = useState("");
+  const [brand, setBrand]     = useState("");
+  const [goal, setGoal]       = useState("");
+  const [audience, setAudience] = useState("");
+  const [platform, setPlatform] = useState("");
 
-  // Step 2 — Format
-  const [formats, setFormats]     = useState<Set<FormatType>>(new Set());
-  const [imgSize, setImgSize]     = useState<ImageSize>("16:9");
-  const [vidLen, setVidLen]       = useState<VideoLen>("30s");
-  const [tvcLen, setTvcLen]       = useState<TVCLen>("15");
+  const [formats, setFormats] = useState<Set<FormatType>>(new Set());
+  const [imgSz, setImgSz]     = useState("16:9");
+  const [tvcLen, setTvcLen]   = useState("15");
+  const [vidLen, setVidLen]   = useState("30s");
 
-  // Step 3 — Copy
-  const [copyResult, setCopyResult] = useState<{headline:string;body:string;cta:string}|null>(null);
-  const [copyLoading, setCopyLoading] = useState(false);
-
-  // Step 4 — Generate
+  const [copyRes, setCopyRes] = useState<{headline:string;body:string;cta:string}|null>(null);
+  const [copyBusy, setCopyBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [results, setResults]       = useState<Record<FormatType, GeneratedResult>>({} as any);
-  const [previewTab, setPreviewTab] = useState<FormatType>("image");
-  const [activeStep, setActiveStep] = useState(1);
+  const [results, setResults] = useState<Partial<Record<FormatType, GeneratedResult>>>({});
+  const [tab, setTab]         = useState<FormatType>("image");
 
-  const brands   = ["Rnorr", "Sunglow", "Boozt", "Glenfiddich", "UBS Bank"];
-  const goals    = ["Brand Awareness", "Drive Sales", "Lead Generation", "Product Launch", "Engagement"];
-  const audiences = ["Women 18–35", "Men 25–45", "Gen Z 16–24", "Professionals 30–50", "Families"];
-  const platforms = ["Instagram", "TikTok", "YouTube", "LinkedIn", "Facebook"];
+  const prompt = [brand&&`Brand: ${brand}`, brief, goal&&`Goal: ${goal}`, audience&&`Audience: ${audience}`, platform&&`Platform: ${platform}`].filter(Boolean).join(". ");
+  const anyRes = Object.values(results).some(r => r?.image_b64||r?.video_b64);
+  const hasRes = (f: FormatType) => !!(results[f]?.image_b64 || results[f]?.video_b64);
 
-  const promptForAgent = `${brand ? `Brand: ${brand}. ` : ""}${brief}${goal ? ` Goal: ${goal}.` : ""}${audience ? ` Audience: ${audience}.` : ""}${platform ? ` Platform: ${platform}.` : ""}`;
-
-  // Step 3: Generate copy
-  const generateCopy = async () => {
-    if (!brief.trim()) return;
-    setCopyLoading(true);
-    try {
-      const res = await fetch(`${API_BASE}/agents/copy/run`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: promptForAgent }),
-      });
-      const data = await res.json();
-      setCopyResult({
-        headline: data.short?.headline || data.headline || "",
-        body:     data.long?.body      || data.body     || "",
-        cta:      data.cta             || "Learn More",
-      });
-      setActiveStep(4);
-    } catch { /* ignore */ } finally { setCopyLoading(false); }
+  const toggleFmt = (f: FormatType) => {
+    setFormats(prev => { const n = new Set(prev); n.has(f)?n.delete(f):n.add(f); return n; });
   };
 
-  // Step 4: Generate content
-  const generateContent = async () => {
-    if (!brief.trim() || formats.size === 0) return;
-    setGenerating(true);
-    const newResults: Record<FormatType, GeneratedResult> = {} as any;
+  const genCopy = async () => {
+    setCopyBusy(true);
+    try {
+      const r = await fetch(`${API_BASE}/agents/copy/run`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ prompt }),
+      });
+      const d = await r.json();
+      setCopyRes({ headline:d.short?.headline||d.headline||"", body:d.long?.body||d.body||"", cta:d.cta||"Learn More" });
+    } catch {} finally { setCopyBusy(false); }
+  };
 
+  const genContent = async () => {
+    if (!brief.trim()||formats.size===0) return;
+    setGenerating(true);
     for (const fmt of Array.from(formats)) {
       try {
-        const body: Record<string, unknown> = { prompt: promptForAgent };
-        if (fmt === "tvc") body.duration = parseInt(tvcLen);
-
-        const agentKey = fmt === "image" ? "kv" : fmt === "tvc" ? "tvc" : "reel";
-        const res = await fetch(`${API_BASE}/agents/${agentKey}/run`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
+        const body: Record<string,unknown> = { prompt };
+        if (fmt==="tvc") body.duration = parseInt(tvcLen);
+        const key = fmt==="image"?"kv":fmt==="tvc"?"tvc":"reel";
+        const r = await fetch(`${API_BASE}/agents/${key}/run`, {
+          method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body),
         });
-        const data = await res.json();
-        newResults[fmt] = data;
-        // Show first result as soon as it arrives
-        setResults(prev => ({ ...prev, [fmt]: data }));
-        setPreviewTab(fmt);
-      } catch { /* ignore */ }
+        const d = await r.json();
+        setResults(prev => ({ ...prev, [fmt]: d }));
+        setTab(fmt);
+      } catch {}
     }
     setGenerating(false);
+    setStep(3);
   };
 
-  const toggleFormat = (f: FormatType) => {
-    setFormats(prev => {
-      const next = new Set(prev);
-      next.has(f) ? next.delete(f) : next.add(f);
-      return next;
-    });
-    setActiveStep(s => Math.max(s, 2));
-  };
-
-  const hasResult = (f: FormatType) => !!results[f]?.image_b64 || !!results[f]?.video_b64;
-  const anyResult = Object.values(results).some(r => r?.image_b64 || r?.video_b64);
-
-  const sel = { background: "var(--card-bg-soft)", border: "1.5px solid var(--card-border)",
-    color: "var(--text-primary)", fontFamily: "inherit", fontSize: 12, borderRadius: 8,
-    padding: "7px 10px", outline: "none", cursor: "pointer", width: "100%" };
+  const fmtDefs = [
+    { type:"image" as FormatType, label:"Image", desc:"Key visuals, hero banners & social posts.",
+      sizes:["1:1","4:5","16:9","9:16"], selSize:imgSz, onSize:setImgSz,
+      icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
+    { type:"reel" as FormatType, label:"Reel", desc:"6-second Veo reels for social platforms.",
+      sizes:["9:16","16:9"], selSize:"9:16", onSize:()=>{},
+      icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> },
+    { type:"tvc" as FormatType, label:"TVC", desc:"TV commercials via Veo — 15s or 30s.",
+      sizes:["15s","30s"], selSize:tvcLen+"s", onSize:(s:string)=>setTvcLen(s.replace("s","")),
+      icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg> },
+    { type:"video" as FormatType, label:"Video Ad", desc:"Longer video ads up to 60s.",
+      sizes:["15s","30s","45s","60s"], selSize:vidLen, onSize:(s:string)=>setVidLen(s),
+      icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg> },
+  ];
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
-      overflow: "hidden", height: "100vh" }}>
+    <div style={{ flex:1, display:"flex", flexDirection:"column" as const,
+      height:"100vh", overflow:"hidden",
+      background:"var(--page-bg)" }}>
 
-      {/* ── Header ── */}
-      <div style={{ padding: "18px 28px", display: "flex", alignItems: "center",
-        justifyContent: "space-between", borderBottom: "1px solid var(--card-border)",
-        background: "var(--card-bg)", flexShrink: 0 }}>
+      {/* ── Top bar ── */}
+      <div style={{ padding:"18px 40px", borderBottom:"1px solid var(--card-border)",
+        display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "var(--text-primary)" }}>
-            Create New Campaign ✨
+          <h1 style={{ margin:0, fontSize:22, fontWeight:900, color:"var(--text-primary)", letterSpacing:"-0.03em",
+            display:"flex", alignItems:"center", gap:10 }}>
+            Create New Campaign
+            <span style={{ background:G, WebkitBackgroundClip:"text",
+              WebkitTextFillColor:"transparent", backgroundClip:"text" }}>✦</span>
           </h1>
-          <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--text-secondary)" }}>
-            Describe your idea and AI agents will generate on-brand content across formats.
+          <p style={{ margin:"3px 0 0", fontSize:12, color:"var(--text-secondary)" }}>
+            Describe your idea, and AI will create on-brand content across formats.
           </p>
         </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button style={{ padding: "9px 20px", borderRadius: 10, fontWeight: 600, fontSize: 13,
-            border: "1.5px solid var(--card-border)", background: "transparent",
-            color: "var(--text-primary)", cursor: "pointer" }}>
+        <div style={{ display:"flex", gap:10 }}>
+          <button style={{ padding:"9px 20px", borderRadius:10, fontWeight:600, fontSize:13,
+            border:"1.5px solid var(--card-border)", background:"var(--card-bg-soft)",
+            color:"var(--text-secondary)", cursor:"pointer" }}>
             Save Draft
           </button>
-          <button onClick={generateContent}
-            disabled={generating || formats.size === 0 || !brief.trim()}
-            style={{ padding: "9px 22px", borderRadius: 10, fontWeight: 700, fontSize: 13,
-              border: "none", cursor: formats.size > 0 && brief.trim() ? "pointer" : "not-allowed",
-              background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white",
-              opacity: formats.size === 0 || !brief.trim() ? 0.5 : 1,
-              display: "flex", alignItems: "center", gap: 8 }}>
-            {generating ? "⏳ Generating…" : "✦ Generate Content"}
-          </button>
+          {step===1 && (
+            <button onClick={()=>brief.trim()&&setStep(2)} disabled={!brief.trim()}
+              style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
+                border:"none", background:G, color:"var(--text-primary)", cursor:brief.trim()?"pointer":"not-allowed",
+                opacity:brief.trim()?1:0.4, boxShadow:brief.trim()?"0 4px 16px rgba(124,58,237,0.4)":"none" }}>
+              Next →
+            </button>
+          )}
+          {step===2 && (
+            <button onClick={()=>formats.size>0&&setStep(3)} disabled={formats.size===0}
+              style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
+                border:"none", background:G, color:"var(--text-primary)", cursor:formats.size>0?"pointer":"not-allowed",
+                opacity:formats.size>0?1:0.4, boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
+              Generate Content ✦
+            </button>
+          )}
+          {step===3 && (
+            <button onClick={genContent} disabled={generating}
+              style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
+                border:"none", background:G, color:"var(--text-primary)", cursor:"pointer",
+                boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
+              {generating?"Generating…":"✦ Generate"}
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ── Body ── */}
-      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+      {/* ── Content ── */}
+      <div style={{ flex:1, overflowY:"auto", padding:"32px 40px" }}>
+        <StepProgress current={step} />
 
-        {/* ── LEFT: Steps ── */}
-        <div style={{ width: 520, flexShrink: 0, overflowY: "auto",
-          borderRight: "1px solid var(--card-border)", padding: "24px 28px",
-          display: "flex", flexDirection: "column" as const, gap: 28 }}>
+        {/* ═══ STEP 1 — Brief ═══ */}
+        {step===1 && (
+          <div style={{ maxWidth:780 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <span style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)" }}>Campaign Brief</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              </div>
+              <button onClick={genCopy} disabled={!brief.trim()||copyBusy}
+                style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px",
+                  borderRadius:8, border:"1.5px solid rgba(124,58,237,0.4)",
+                  background:"rgba(124,58,237,0.12)", color:"#a78bfa",
+                  fontSize:12, fontWeight:600, cursor:brief.trim()?"pointer":"not-allowed",
+                  opacity:brief.trim()?1:0.5 }}>
+                <span style={{ background:G, WebkitBackgroundClip:"text",
+                  WebkitTextFillColor:"transparent", backgroundClip:"text" }}>✦</span>
+                {copyBusy?"Improving…":"Improve with AI"}
+              </button>
+            </div>
 
-          {/* Step 1 — Campaign Brief */}
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-              <StepBadge n={1} active={activeStep === 1} done={activeStep > 1 && !!brief.trim()} />
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)" }}>Campaign Brief</div>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>Describe what you want to create</div>
+            {/* Textarea card */}
+            <div style={{ borderRadius:16, border:"1.5px solid var(--card-border)",
+              background:"var(--card-bg-soft)", overflow:"hidden",
+              boxShadow:"0 4px 24px rgba(0,0,0,0.3)" }}>
+              <textarea value={brief} onChange={e=>setBrief(e.target.value)}
+                maxLength={2000}
+                placeholder="Create a summer collection campaign for our new women's linen dresses.
+Highlight comfort, natural fabrics, and beach lifestyle.
+Use a calm, elegant tone."
+                rows={7}
+                style={{ width:"100%", padding:"20px 22px", border:"none", resize:"none" as const,
+                  background:"transparent", color:"rgba(255,255,255,0.9)", fontFamily:"inherit",
+                  fontSize:14, lineHeight:1.75, outline:"none", boxSizing:"border-box" as const }} />
+              <div style={{ padding:"10px 22px 14px", display:"flex", justifyContent:"flex-end" }}>
+                <span style={{ fontSize:11, color:"var(--text-secondary)" }}>
+                  {brief.length} / 2000
+                </span>
               </div>
             </div>
-            <textarea value={brief} onChange={e => { setBrief(e.target.value); setActiveStep(1); }}
-              placeholder="Create a Christmas campaign for Rnorr stock cubes targeting UK families. Warm, festive, family-focused — show the joy of cooking together."
-              rows={5}
-              style={{ width: "100%", padding: "14px 16px", borderRadius: 12, resize: "none" as const,
-                border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
-                color: "var(--text-primary)", fontFamily: "inherit", fontSize: 13,
-                lineHeight: 1.6, outline: "none", boxSizing: "border-box" as const,
-                transition: "border-color 0.15s" }}
-              onFocus={e => e.currentTarget.style.borderColor = "#7c3aed"}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--card-border)"} />
-            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" as const }}>
-              {[
-                { label: "Brand", value: brand, set: setBrand, opts: brands },
-                { label: "Goal",  value: goal,  set: setGoal,  opts: goals },
-                { label: "Audience", value: audience, set: setAudience, opts: audiences },
-                { label: "Platform", value: platform, set: setPlatform, opts: platforms },
-              ].map(f => (
-                <div key={f.label} style={{ flex: 1, minWidth: 110 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
-                    marginBottom: 4, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>
-                    {f.label}
-                  </div>
-                  <select value={f.value} onChange={e => { f.set(e.target.value); setActiveStep(s => Math.max(s, 1)); }}
-                    style={sel}>
-                    <option value="">Select…</option>
-                    {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
+
+            {/* Copy improvement result */}
+            {copyRes && (
+              <div style={{ marginTop:12, padding:"14px 18px", borderRadius:12,
+                border:"1px solid rgba(124,58,237,0.3)", background:"rgba(124,58,237,0.08)" }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"#a78bfa", marginBottom:6, textTransform:"uppercase" as const, letterSpacing:".06em" }}>AI Suggestion</div>
+                <div style={{ fontSize:13, color:"var(--text-secondary)", lineHeight:1.6, cursor:"pointer" }}
+                  onClick={() => setBrief(copyRes.headline + " " + copyRes.body)}>
+                  {copyRes.headline} {copyRes.body}
+                  <span style={{ marginLeft:8, fontSize:11, color:"#a78bfa" }}>(click to apply)</span>
                 </div>
+              </div>
+            )}
+
+            {/* Chip selectors */}
+            <div style={{ display:"flex", gap:10, marginTop:16, flexWrap:"wrap" as const }}>
+              <ChipSel label="Brand" value={brand} onChange={setBrand} opts={BRANDS}
+                icon={brand&&BRAND_ICONS[brand]
+                  ? <img src={BRAND_ICONS[brand]} style={{ width:14, height:14, objectFit:"contain" as const }} alt="" />
+                  : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>} />
+              <ChipSel label="Campaign Goal" value={goal} onChange={setGoal} opts={GOALS}
+                icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/></svg>} />
+              <ChipSel label="Target Audience" value={audience} onChange={setAudience} opts={AUDIENCES}
+                icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>} />
+              <ChipSel label="Platform" value={platform} onChange={setPlatform} opts={PLATFORMS}
+                icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
+            </div>
+          </div>
+        )}
+
+        {/* ═══ STEP 2 — Choose Format ═══ */}
+        {step===2 && (
+          <div style={{ maxWidth:780 }}>
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)", marginBottom:4 }}>Choose Your Content Format</div>
+              <div style={{ fontSize:13, color:"var(--text-secondary)" }}>Select the type of content you want to generate. You can choose one or multiple formats.</div>
+            </div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+              {fmtDefs.map(f => (
+                <FormatCard key={f.type} {...f}
+                  selected={formats.has(f.type)}
+                  onClick={()=>toggleFmt(f.type)} />
               ))}
             </div>
-            {brief.trim() && (
-              <button onClick={() => setActiveStep(2)}
-                style={{ marginTop: 12, padding: "8px 20px", borderRadius: 8, border: "none",
-                  background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white",
-                  fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
-                Next: Choose Format →
-              </button>
-            )}
-          </div>
-
-          {/* Step 2 — Choose Format */}
-          <div style={{ opacity: activeStep >= 2 ? 1 : 0.4, transition: "opacity 0.2s",
-            pointerEvents: activeStep >= 2 ? "auto" : "none" as any }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-              <StepBadge n={2} active={activeStep === 2} done={activeStep > 2 && formats.size > 0} />
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)" }}>Choose Format</div>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>Select content type — choose one or multiple</div>
-              </div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <FormatCard id="image" label="Image" icon="🎨" desc="Key visuals, hero banners & social posts."
-                selected={formats.has("image")} onClick={() => toggleFormat("image")}
-                sizes={["1:1","4:5","16:9","9:16"]} selectedSize={imgSize}
-                onSize={s => setImgSize(s as ImageSize)} />
-              <FormatCard id="reel" label="Reel" icon="🎬" desc="6-second Veo reels for social media."
-                selected={formats.has("reel")} onClick={() => toggleFormat("reel")}
-                sizes={["9:16","16:9"]} selectedSize="9:16" onSize={() => {}} />
-              <FormatCard id="tvc" label="TVC" icon="📺" desc="15s or 30s TV commercials via Veo."
-                selected={formats.has("tvc")} onClick={() => toggleFormat("tvc")}
-                sizes={["15s","30s"]} selectedSize={tvcLen + "s"}
-                onSize={s => setTvcLen(s.replace("s","") as TVCLen)} />
-              <FormatCard id="video" label="Video Ad" icon="▶️" desc="Longer video ads up to 60s."
-                selected={formats.has("video")} onClick={() => toggleFormat("video")}
-                sizes={["15s","30s","45s","60s"]} selectedSize={vidLen}
-                onSize={s => setVidLen(s as VideoLen)} />
-            </div>
-            {formats.size > 0 && (
-              <button onClick={() => setActiveStep(3)}
-                style={{ marginTop: 12, padding: "8px 20px", borderRadius: 8, border: "none",
-                  background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white",
-                  fontWeight: 600, fontSize: 12, cursor: "pointer" }}>
-                Next: Copy Agent →
-              </button>
-            )}
-          </div>
-
-          {/* Step 3 — Copy Agent (Ideon) */}
-          <div style={{ opacity: activeStep >= 3 ? 1 : 0.4, transition: "opacity 0.2s",
-            pointerEvents: activeStep >= 3 ? "auto" : "none" as any }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-              <StepBadge n={3} active={activeStep === 3} done={!!copyResult} />
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)" }}>Copy Agent — Ideon</div>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>Generate headlines, body copy and CTAs</div>
-              </div>
-            </div>
-            {copyResult ? (
-              <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
-                {[
-                  { label: "Headline", val: copyResult.headline },
-                  { label: "Body",     val: copyResult.body },
-                  { label: "CTA",      val: copyResult.cta },
-                ].map(f => (
-                  <div key={f.label}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
-                      textTransform: "uppercase" as const, letterSpacing: ".06em", marginBottom: 4 }}>
-                      {f.label}
-                    </div>
-                    <div style={{ padding: "10px 14px", borderRadius: 10,
-                      background: "var(--card-bg-soft)", border: "1px solid var(--card-border)",
-                      fontSize: 13, color: "var(--text-primary)", lineHeight: 1.5 }}>
-                      {f.val}
-                    </div>
-                  </div>
-                ))}
-                <button onClick={generateCopy} disabled={copyLoading}
-                  style={{ alignSelf: "flex-start" as const, padding: "6px 16px", borderRadius: 8,
-                    border: "1.5px solid var(--card-border)", background: "transparent",
-                    color: "var(--text-secondary)", fontSize: 12, cursor: "pointer" }}>
-                  ↻ Regenerate Copy
+            {formats.size>0 && (
+              <div style={{ marginTop:20, padding:"14px 18px", borderRadius:12,
+                border:"1px solid rgba(124,58,237,0.3)", background:"rgba(124,58,237,0.08)",
+                display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                <span style={{ fontSize:13, color:"var(--text-secondary)" }}>
+                  {formats.size} format{formats.size>1?"s":""} selected — {brief.slice(0,50)}{brief.length>50?"…":""}
+                </span>
+                <button onClick={genContent} disabled={generating}
+                  style={{ padding:"9px 22px", borderRadius:10, border:"none",
+                    background:G, color:"var(--text-primary)", fontWeight:700, fontSize:13,
+                    cursor:"pointer", boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
+                  {generating?"Generating…":"✦ Generate Content"}
                 </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ STEP 3 — Results ═══ */}
+        {step===3 && (
+          <div style={{ maxWidth:900 }}>
+            <div style={{ marginBottom:20, display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)" }}>Generated Content</div>
+              {(["image","reel","tvc","video"] as FormatType[]).filter(hasRes).map(f=>(
+                <button key={f} onClick={()=>setTab(f)}
+                  style={{ padding:"6px 16px", borderRadius:99, border:"none", cursor:"pointer",
+                    fontSize:12, fontWeight:600,
+                    background:tab===f?G:"rgba(255,255,255,0.08)",
+                    color:tab===f?"white":"rgba(255,255,255,0.5)",
+                    boxShadow:tab===f?"0 2px 10px rgba(124,58,237,0.4)":"none" }}>
+                  {f==="image"?"🎨 Image":f==="reel"?"🎬 Reel":f==="tvc"?"📺 TVC":"▶️ Video"}
+                </button>
+              ))}
+            </div>
+            {generating ? (
+              <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center",
+                gap:16, padding:"60px 0" }}>
+                <div style={{ width:48, height:48, borderRadius:"50%",
+                  border:"3px solid var(--card-border)", borderTopColor:"#7c3aed",
+                  animation:"spin 1s linear infinite" }} />
+                <div style={{ fontSize:14, color:"var(--text-secondary)" }}>Generating your campaign content…</div>
+              </div>
+            ) : anyRes ? (
+              <div style={{ display:"flex", flexDirection:"column" as const, gap:16 }}>
+                {hasRes(tab) && (
+                  <div style={{ borderRadius:20, overflow:"hidden",
+                    boxShadow:"0 12px 48px rgba(0,0,0,0.5)" }}>
+                    {tab==="image"&&results.image?.image_b64&&(
+                      <img src={`data:image/jpeg;base64,${results.image.image_b64}`}
+                        style={{ width:"100%", display:"block" }} alt="" />
+                    )}
+                    {(tab==="reel"||tab==="tvc"||tab==="video")&&results[tab]?.video_b64&&(
+                      <video controls autoPlay loop muted playsInline
+                        src={`data:video/mp4;base64,${results[tab]!.video_b64}`}
+                        style={{ width:"100%", display:"block" }} />
+                    )}
+                  </div>
+                )}
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
+                  {[
+                    { icon:"🏆", label:"Best Format", val:formats.has("reel")?"Reel":"Image", sub:"92% higher engagement" },
+                    { icon:"📱", label:"Top Platform", val:platform||"Instagram", sub:"76% of your audience" },
+                    { icon:"⏰", label:"Best Time", val:"7:00 PM", sub:"Peak engagement" },
+                  ].map(i=>(
+                    <div key={i.label} style={{ padding:16, borderRadius:14,
+                      background:"var(--card-bg-soft)", border:"1px solid var(--card-border)" }}>
+                      <div style={{ fontSize:20, marginBottom:8 }}>{i.icon}</div>
+                      <div style={{ fontSize:10, fontWeight:700, color:"var(--text-secondary)",
+                        textTransform:"uppercase" as const, letterSpacing:".06em", marginBottom:4 }}>{i.label}</div>
+                      <div style={{ fontSize:14, fontWeight:800, color:"var(--text-primary)", marginBottom:2 }}>{i.val}</div>
+                      <div style={{ fontSize:10, color:"var(--text-secondary)" }}>{i.sub}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
-              <button onClick={generateCopy} disabled={copyLoading || !brief.trim()}
-                style={{ padding: "10px 24px", borderRadius: 10, border: "none",
-                  background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white",
-                  fontWeight: 700, fontSize: 13, cursor: "pointer",
-                  opacity: !brief.trim() ? 0.5 : 1 }}>
-                {copyLoading ? "✍️ Writing copy…" : "✍️ Generate Copy with Ideon"}
-              </button>
+              <div style={{ padding:"60px 0", textAlign:"center" as const }}>
+                <div style={{ fontSize:14, color:"var(--text-secondary)" }}>
+                  Click "Generate Content" to start
+                </div>
+              </div>
             )}
           </div>
-
-          {/* Step 4 — Generate */}
-          <div style={{ opacity: activeStep >= 4 ? 1 : 0.4, transition: "opacity 0.2s",
-            pointerEvents: activeStep >= 4 ? "auto" : "none" as any }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
-              <StepBadge n={4} active={activeStep === 4} done={anyResult} />
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)" }}>Generate Content</div>
-                <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                  {formats.size > 0
-                    ? `Will generate: ${Array.from(formats).map(f => f === "image" ? "Image (Morphis)" : f === "reel" ? "Reel (Kinetik)" : f === "tvc" ? `TVC ${tvcLen}s (Director)` : "Video").join(" · ")}`
-                    : "Select a format above"}
-                </div>
-              </div>
-            </div>
-            <button onClick={generateContent}
-              disabled={generating || formats.size === 0 || !brief.trim()}
-              style={{ padding: "12px 28px", borderRadius: 12, border: "none",
-                background: "linear-gradient(135deg,#7c3aed,#a855f7,#6366f1)", color: "white",
-                fontWeight: 700, fontSize: 14, cursor: "pointer",
-                boxShadow: "0 4px 20px rgba(124,58,237,0.4)",
-                opacity: formats.size === 0 || !brief.trim() ? 0.5 : 1 }}>
-              {generating ? "⏳ Generating content…" : "✦ Generate Content"}
-            </button>
-          </div>
-        </div>
-
-        {/* ── RIGHT: Preview ── */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px",
-          display: "flex", flexDirection: "column" as const, gap: 20 }}>
-
-          {/* Preview header */}
-          <div>
-            <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", marginBottom: 4 }}>
-              AI Campaign Preview
-            </div>
-            <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-              See how your campaign could look in different formats.
-            </div>
-          </div>
-
-          {/* Format tabs */}
-          {anyResult && (
-            <div style={{ display: "flex", gap: 8, borderBottom: "1px solid var(--card-border)",
-              paddingBottom: 0 }}>
-              {(["image","reel","tvc","video"] as FormatType[]).filter(f => hasResult(f)).map(f => (
-                <button key={f} onClick={() => setPreviewTab(f)}
-                  style={{ padding: "8px 18px", border: "none", cursor: "pointer",
-                    background: "transparent", fontFamily: "inherit", fontSize: 13,
-                    fontWeight: previewTab === f ? 700 : 500,
-                    color: previewTab === f ? "#7c3aed" : "var(--text-secondary)",
-                    borderBottom: `2px solid ${previewTab === f ? "#7c3aed" : "transparent"}`,
-                    transition: "all 0.15s" }}>
-                  {f === "image" ? "🎨 Image" : f === "reel" ? "🎬 Reel" : f === "tvc" ? "📺 TVC" : "▶️ Video"}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Preview content */}
-          {!anyResult && !generating ? (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-              flexDirection: "column" as const, gap: 16, opacity: 0.5 }}>
-              <div style={{ fontSize: 48 }}>✦</div>
-              <div style={{ fontSize: 14, color: "var(--text-secondary)", textAlign: "center" as const }}>
-                Fill in your brief and generate content<br/>to see the preview here
-              </div>
-            </div>
-          ) : generating ? (
-            <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-              flexDirection: "column" as const, gap: 16 }}>
-              <div style={{ fontSize: 36, animation: "hub-beat 1.5s ease-in-out infinite" }}>⏳</div>
-              <div style={{ fontSize: 14, color: "var(--text-secondary)" }}>Generating your campaign…</div>
-              <div style={{ fontSize: 12, color: "var(--text-secondary)", opacity: 0.7 }}>
-                {Array.from(formats).map(f =>
-                  f === "tvc" ? `TVC ${tvcLen}s (Director)` :
-                  f === "image" ? "Image (Morphis)" :
-                  f === "reel" ? "Reel (Kinetik)" : "Video"
-                ).join(" · ")}
-              </div>
-            </div>
-          ) : hasResult(previewTab) ? (
-            <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
-              {/* Image preview */}
-              {previewTab === "image" && results.image?.image_b64 && (
-                <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "var(--shadow-md)" }}>
-                  <img src={`data:image/jpeg;base64,${results.image.image_b64}`}
-                    style={{ width: "100%", display: "block" }} alt="Campaign visual" />
-                </div>
-              )}
-              {/* Video/Reel/TVC preview */}
-              {(previewTab === "reel" || previewTab === "tvc" || previewTab === "video") &&
-                (results[previewTab]?.video_b64) && (
-                <div style={{ borderRadius: 16, overflow: "hidden", boxShadow: "var(--shadow-md)" }}>
-                  <video controls autoPlay loop muted playsInline
-                    src={`data:video/mp4;base64,${results[previewTab].video_b64}`}
-                    style={{ width: "100%", display: "block" }} />
-                </div>
-              )}
-              {/* Headline */}
-              {copyResult && (
-                <div style={{ padding: "14px 18px", borderRadius: 12,
-                  background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-                  <div style={{ fontSize: 11, color: "var(--text-secondary)", marginBottom: 6,
-                    fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".06em" }}>
-                    Campaign Headline
-                  </div>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
-                    {copyResult.headline}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : null}
-
-          {/* Campaign Insights */}
-          {anyResult && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-              {[
-                { label: "Best Format", value: formats.has("reel") ? "Reel" : "Image",
-                  sub: "92% higher engagement", icon: "🏆" },
-                { label: "Top Platform", value: platform || "Instagram",
-                  sub: "76% of your audience", icon: "📱" },
-                { label: "Best Time to Post", value: "7:00 PM",
-                  sub: "Today · Peak engagement", icon: "🕖" },
-              ].map(i => (
-                <div key={i.label} style={{ padding: "14px 16px", borderRadius: 12,
-                  background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-                  <div style={{ fontSize: 18, marginBottom: 6 }}>{i.icon}</div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
-                    textTransform: "uppercase" as const, letterSpacing: ".06em", marginBottom: 4 }}>
-                    {i.label}
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", marginBottom: 2 }}>
-                    {i.value}
-                  </div>
-                  <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>{i.sub}</div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Brand Compliance */}
-          {anyResult && brand && (
-            <div style={{ padding: "16px 20px", borderRadius: 14,
-              background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-                marginBottom: 12 }}>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Brand Compliance</div>
-                  <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-                    AI checks your content against brand guidelines
-                  </div>
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 900, color: "#10b981" }}>98%</div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
-                {["Brand colours", "Logo placement", "Typography", "Tone of voice", "Brand locks"].map(c => (
-                  <div key={c} style={{ display: "flex", alignItems: "center", gap: 8,
-                    fontSize: 12, color: "var(--text-secondary)" }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981"
-                      strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    {c}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
