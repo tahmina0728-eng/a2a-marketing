@@ -5054,11 +5054,12 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 // ── Sidebar ───────────────────────────────────────────────────
 
 function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSelectAgent,
-  brandHubSection, onBrandHubSection, publishingChannel, onPublishingChannel }: {
+  brandHubSection, onBrandHubSection, brandAssets, publishingChannel, onPublishingChannel }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
   view: "app" | "hub" | "agent" | "brand-hub" | "publishing"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing") => void;
   activeAgentKey: string | null; onSelectAgent: (key: string) => void;
   brandHubSection: BrandHubSection; onBrandHubSection: (s: BrandHubSection) => void;
+  brandAssets: Record<string, number>;
   publishingChannel: PublishingChannel; onPublishingChannel: (c: PublishingChannel) => void;
 }) {
   return (
@@ -5200,7 +5201,8 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
                   )}
                   {/* Brand Hub sub-nav — visible only when expanded */}
                   {item.label === "Brand Hub" && brandHubOpen && (
-                    <BrandHubNav active={brandHubSection} onChange={onBrandHubSection} />
+                    <BrandHubNav active={brandHubSection} onChange={onBrandHubSection}
+                      brandAssets={brandAssets} />
                   )}
                 </Fragment>
               ))}
@@ -5507,6 +5509,7 @@ export default function App() {
   const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing">("app");
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
   const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("guidelines");
+  const [brandAssets, setBrandAssets] = useState<Record<string, number>>({});
   const [publishingChannel, setPublishingChannel] = useState<PublishingChannel>("instagram");
   const [campaignPrompt, setCampaignPrompt] = useState("");
 
@@ -5558,6 +5561,7 @@ export default function App() {
           activeAgentKey={activeAgentKey}
           onSelectAgent={(key) => { setActiveAgentKey(key); setView("agent"); }}
           brandHubSection={brandHubSection} onBrandHubSection={setBrandHubSection}
+          brandAssets={brandAssets}
           publishingChannel={publishingChannel} onPublishingChannel={setPublishingChannel} />
 
         {view === "brand-hub" ? (
@@ -5567,7 +5571,7 @@ export default function App() {
               pointerEvents: "none" as const, background: "var(--video-wash)" }} />
             <div style={{ position: "relative" as const, zIndex: 2, flex: 1,
               display: "flex", flexDirection: "column" as const, overflow: "hidden" }}>
-              <BrandHub section={brandHubSection} />
+              <BrandHub section={brandHubSection} onAssetsUploaded={setBrandAssets} />
             </div>
           </>
         ) : view === "publishing" ? (

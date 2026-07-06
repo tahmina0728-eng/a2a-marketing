@@ -86,12 +86,23 @@ const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+const ASSET_ITEMS = [
+  { key: "guidelines", label: "Brand Guidelines", icon: "📄" },
+  { key: "logos",      label: "Logos",             icon: "⭐" },
+  { key: "products",   label: "Product Images",    icon: "🖼" },
+  { key: "fonts",      label: "Fonts",             icon: "Aa" },
+  { key: "colours",    label: "Color Palette",     icon: "🎨" },
+  { key: "assets",     label: "Brand Assets",      icon: "📦" },
+];
+
 interface BrandHubNavProps {
   active: BrandHubSection;
   onChange: (s: BrandHubSection) => void;
+  brandAssets?: Record<string, number>;
 }
 
-export default function BrandHubNav({ active, onChange }: BrandHubNavProps) {
+export default function BrandHubNav({ active, onChange, brandAssets = {} }: BrandHubNavProps) {
+  const hasAssets = Object.keys(brandAssets).length > 0;
   return (
     <div style={{ padding: "0 8px" }}>
       {/* Section label */}
@@ -103,32 +114,57 @@ export default function BrandHubNav({ active, onChange }: BrandHubNavProps) {
 
       {NAV_ITEMS.map(item => {
         const isActive = item.id === active;
+        const showAssets = item.id === "guidelines" && hasAssets;
         return (
-          <button
-            key={item.id}
-            onClick={() => onChange(item.id)}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "8px 10px", borderRadius: 8, border: "none",
-              cursor: "pointer", fontFamily: "inherit",
-              fontSize: 13, fontWeight: isActive ? 600 : 500,
-              textAlign: "left" as const, width: "100%",
-              transition: "all 0.15s",
-              background: isActive ? "rgba(124,58,237,0.10)" : "transparent",
-              color: isActive ? "#7c3aed" : "var(--text-secondary)",
-            }}
-            onMouseEnter={e => {
-              if (!isActive) e.currentTarget.style.background = "var(--card-hover-bg)";
-            }}
-            onMouseLeave={e => {
-              if (!isActive) e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <span style={{ flexShrink: 0, opacity: isActive ? 1 : 0.65 }}>
-              {item.icon}
-            </span>
-            {item.label}
-          </button>
+          <div key={item.id}>
+            <button
+              onClick={() => onChange(item.id)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "8px 10px", borderRadius: 8, border: "none",
+                cursor: "pointer", fontFamily: "inherit",
+                fontSize: 13, fontWeight: isActive ? 600 : 500,
+                textAlign: "left" as const, width: "100%",
+                transition: "all 0.15s",
+                background: isActive ? "rgba(124,58,237,0.10)" : "transparent",
+                color: isActive ? "#7c3aed" : "var(--text-secondary)",
+              }}
+              onMouseEnter={e => {
+                if (!isActive) e.currentTarget.style.background = "var(--card-hover-bg)";
+              }}
+              onMouseLeave={e => {
+                if (!isActive) e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <span style={{ flexShrink: 0, opacity: isActive ? 1 : 0.65 }}>
+                {item.icon}
+              </span>
+              {item.label}
+            </button>
+
+            {/* Asset sub-items under Brand Guidelines */}
+            {showAssets && ASSET_ITEMS.map(a => {
+              const count = brandAssets[a.key] ?? 0;
+              if (count === 0) return null;
+              return (
+                <div key={a.key} style={{
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  padding: "5px 10px 5px 28px", fontSize: 11,
+                  color: "var(--text-secondary)",
+                }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                    <span style={{ fontSize: 11 }}>{a.icon}</span>
+                    {a.label}
+                  </span>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: "#10b981",
+                    background: "rgba(16,185,129,0.12)", padding: "1px 7px",
+                    borderRadius: 99 }}>
+                    {count}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         );
       })}
     </div>

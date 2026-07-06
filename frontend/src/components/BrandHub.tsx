@@ -34,7 +34,7 @@ const ASSET_CATEGORIES = [
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg> },
 ];
 
-function GuidelinesSection() {
+function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record<string,number>) => void }) {
   const [brandName, setBrandName] = useState("");
   const [file, setFile]           = useState<File | null>(null);
   const [dragging, setDragging]   = useState(false);
@@ -63,6 +63,7 @@ function GuidelinesSection() {
         normalized[key] = (normalized[key] ?? 0) + Number(v);
       });
       setUploaded(normalized); setSkipped(data.skipped ?? []); setStatus("done");
+      onAssetsUploaded?.(normalized);
     } catch (e) { setErrorMsg(e instanceof Error ? e.message : String(e)); setStatus("error"); }
   };
 
@@ -206,14 +207,15 @@ const SECTION_META: Record<BrandHubSection, { title: string; subtitle: string }>
 // ── Main BrandHub component ────────────────────────────────────
 interface BrandHubProps {
   section?: BrandHubSection;
+  onAssetsUploaded?: (counts: Record<string, number>) => void;
 }
 
-export default function BrandHub({ section = "guidelines" }: BrandHubProps) {
+export default function BrandHub({ section = "guidelines", onAssetsUploaded }: BrandHubProps) {
   const meta = SECTION_META[section];
 
   const renderSection = () => {
     switch (section) {
-      case "guidelines": return <GuidelinesSection />;
+      case "guidelines": return <GuidelinesSection onAssetsUploaded={onAssetsUploaded} />;
       case "voice":
         return <ComingSoon title="Brand Voice" description="Define your brand's tone of voice, messaging pillars, writing style and personality traits. Coming soon." />;
       case "visual-identity":
