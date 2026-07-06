@@ -28,41 +28,42 @@ const BRAND_ICONS: Record<string, string> = {
 const G = "linear-gradient(135deg,#7c3aed,#a855f7,#6366f1)";
 
 // ── Horizontal Step Progress ───────────────────────────────────
-function StepProgress({ current }: { current: 1|2|3 }) {
+function StepProgress({ current }: { current: 1|2|3|4 }) {
   const steps = [
-    { n: 1, label: "Campaign Brief",    sub: "Tell us what you want" },
-    { n: 2, label: "Choose Format",     sub: "Image, Video or Reel" },
-    { n: 3, label: "Generate & Review", sub: "AI creates content" },
+    { n: 1, label: "Campaign Brief",  sub: "Tell us what you want" },
+    { n: 2, label: "Choose Format",   sub: "Image, Video or Reel" },
+    { n: 3, label: "Copy Agent",      sub: "Ideon writes your copy" },
+    { n: 4, label: "Generate & Review", sub: "AI creates content" },
   ];
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 32 }}>
       {steps.map((s, i) => (
-        <div key={s.n} style={{ display: "flex", alignItems: "center", flex: i < 2 ? 1 : "none" }}>
+        <div key={s.n} style={{ display: "flex", alignItems: "center", flex: i < 3 ? 1 : "none" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, flexShrink: 0 }}>
             <div style={{
               width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
               display: "flex", alignItems: "center", justifyContent: "center",
               fontSize: 13, fontWeight: 800,
-              background: current === s.n ? G : current > s.n ? "#10b981" : "rgba(255,255,255,0.08)",
-              color: current >= s.n ? "white" : "rgba(255,255,255,0.35)",
+              background: current === s.n ? G : current > s.n ? "#10b981" : "var(--card-bg-soft)",
+              color: current >= s.n ? "white" : "var(--text-secondary)",
               boxShadow: current === s.n ? "0 4px 14px rgba(124,58,237,0.5)" : "none",
-              border: current < s.n ? "1.5px solid rgba(255,255,255,0.12)" : "none",
+              border: current < s.n ? "1.5px solid var(--card-border)" : "none",
             }}>
               {current > s.n ? "✓" : s.n}
             </div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700,
-                color: current >= s.n ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.35)" }}>
+                color: current >= s.n ? "var(--text-primary)" : "var(--text-secondary)" }}>
                 {s.label}
               </div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)", marginTop: 1 }}>
+              <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 1, opacity: 0.7 }}>
                 {s.sub}
               </div>
             </div>
           </div>
-          {i < 2 && (
+          {i < 3 && (
             <div style={{ flex: 1, height: 1, margin: "0 20px",
-              background: current > s.n ? "#10b981" : "rgba(255,255,255,0.12)" }} />
+              background: current > s.n ? "#10b981" : "var(--card-border)" }} />
           )}
         </div>
       ))}
@@ -80,30 +81,30 @@ function ChipSel({ icon, label, value, onChange, opts }: {
     <div style={{ position: "relative" as const, flexShrink: 0 }}>
       <button onClick={() => setOpen(o => !o)} style={{
         display: "flex", alignItems: "center", gap: 8, padding: "8px 14px",
-        borderRadius: 99, border: "1.5px solid rgba(255,255,255,0.12)",
-        background: value ? "rgba(124,58,237,0.2)" : "rgba(255,255,255,0.06)",
-        cursor: "pointer", fontFamily: "inherit", color: "white", fontSize: 13,
+        borderRadius: 99, border: `1.5px solid ${value ? "#7c3aed" : "var(--card-border)"}`,
+        background: value ? "rgba(124,58,237,0.08)" : "var(--card-bg-soft)",
+        cursor: "pointer", fontFamily: "inherit", color: "var(--text-primary)", fontSize: 13,
         fontWeight: 600, transition: "all 0.15s", whiteSpace: "nowrap" as const,
       }}>
-        <span style={{ opacity: 0.7 }}>{icon}</span>
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>{label}</span>
-        <span style={{ color: value ? "#c084fc" : "rgba(255,255,255,0.4)" }}>
+        <span style={{ opacity: 0.6, color: "var(--text-secondary)" }}>{icon}</span>
+        <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 500 }}>{label}</span>
+        <span style={{ color: value ? "#7c3aed" : "var(--text-secondary)", fontWeight: value ? 700 : 400 }}>
           {value || "Select…"}
         </span>
         <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
-          <path d="M1 1l4 4 4-4" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" strokeLinecap="round"/>
+          <path d="M1 1l4 4 4-4" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round"/>
         </svg>
       </button>
       {open && (
         <div style={{ position: "absolute" as const, top: "calc(100% + 6px)", left: 0, zIndex: 100,
-          background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.12)",
-          borderRadius: 12, boxShadow: "0 16px 40px rgba(0,0,0,0.5)",
+          background: "var(--card-bg)", border: "1px solid var(--card-border)",
+          borderRadius: 12, boxShadow: "0 16px 40px rgba(0,0,0,0.15)",
           minWidth: 180, overflow: "hidden" }}>
           {opts.map(o => (
             <button key={o} onClick={() => { onChange(o); setOpen(false); }}
               style={{ display: "block", width: "100%", padding: "10px 16px", border: "none",
-                background: value === o ? "rgba(124,58,237,0.2)" : "transparent",
-                color: value === o ? "#c084fc" : "rgba(255,255,255,0.75)",
+                background: value === o ? "rgba(124,58,237,0.08)" : "transparent",
+                color: value === o ? "#7c3aed" : "var(--text-primary)",
                 textAlign: "left" as const, cursor: "pointer", fontFamily: "inherit",
                 fontSize: 13, fontWeight: value === o ? 600 : 400 }}>
               {o}
@@ -163,7 +164,7 @@ function FormatCard({ label, desc, icon, selected, onClick, sizes, selSize, onSi
 
 // ── Main Component ─────────────────────────────────────────────
 export default function Campaigns() {
-  const [step, setStep]       = useState<1|2|3>(1);
+  const [step, setStep]       = useState<1|2|3|4>(1);
   const [brief, setBrief]     = useState("");
   const [brand, setBrand]     = useState("");
   const [goal, setGoal]       = useState("");
@@ -218,7 +219,7 @@ export default function Campaigns() {
       } catch {}
     }
     setGenerating(false);
-    setStep(3);
+    setStep(4);
   };
 
   const fmtDefs = [
@@ -264,7 +265,7 @@ export default function Campaigns() {
           {step===1 && (
             <button onClick={()=>brief.trim()&&setStep(2)} disabled={!brief.trim()}
               style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
-                border:"none", background:G, color:"var(--text-primary)", cursor:brief.trim()?"pointer":"not-allowed",
+                border:"none", background:G, color:"white", cursor:brief.trim()?"pointer":"not-allowed",
                 opacity:brief.trim()?1:0.4, boxShadow:brief.trim()?"0 4px 16px rgba(124,58,237,0.4)":"none" }}>
               Next →
             </button>
@@ -272,17 +273,25 @@ export default function Campaigns() {
           {step===2 && (
             <button onClick={()=>formats.size>0&&setStep(3)} disabled={formats.size===0}
               style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
-                border:"none", background:G, color:"var(--text-primary)", cursor:formats.size>0?"pointer":"not-allowed",
+                border:"none", background:G, color:"white", cursor:formats.size>0?"pointer":"not-allowed",
                 opacity:formats.size>0?1:0.4, boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
-              Generate Content ✦
+              Next: Copy Agent →
             </button>
           )}
           {step===3 && (
+            <button onClick={()=>setStep(4)}
+              style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
+                border:"none", background:G, color:"white", cursor:"pointer",
+                boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
+              Next: Generate ✦
+            </button>
+          )}
+          {step===4 && (
             <button onClick={genContent} disabled={generating}
               style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
-                border:"none", background:G, color:"var(--text-primary)", cursor:"pointer",
+                border:"none", background:G, color:"white", cursor:"pointer",
                 boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
-              {generating?"Generating…":"✦ Generate"}
+              {generating?"Generating…":"✦ Generate Content"}
             </button>
           )}
         </div>
@@ -314,16 +323,14 @@ export default function Campaigns() {
 
             {/* Textarea card */}
             <div style={{ borderRadius:16, border:"1.5px solid var(--card-border)",
-              background:"var(--card-bg-soft)", overflow:"hidden",
-              boxShadow:"0 4px 24px rgba(0,0,0,0.3)" }}>
+              background:"var(--card-bg)", overflow:"hidden",
+              boxShadow:"0 2px 16px rgba(0,0,0,0.06)" }}>
               <textarea value={brief} onChange={e=>setBrief(e.target.value)}
                 maxLength={2000}
-                placeholder="Create a summer collection campaign for our new women's linen dresses.
-Highlight comfort, natural fabrics, and beach lifestyle.
-Use a calm, elegant tone."
+                placeholder="e.g. Create a Christmas campaign for Rnorr stock cubes targeting UK families. Warm, festive, family-focused — show the joy of cooking together."
                 rows={7}
                 style={{ width:"100%", padding:"20px 22px", border:"none", resize:"none" as const,
-                  background:"transparent", color:"rgba(255,255,255,0.9)", fontFamily:"inherit",
+                  background:"transparent", color:"var(--text-primary)", fontFamily:"inherit",
                   fontSize:14, lineHeight:1.75, outline:"none", boxSizing:"border-box" as const }} />
               <div style={{ padding:"10px 22px 14px", display:"flex", justifyContent:"flex-end" }}>
                 <span style={{ fontSize:11, color:"var(--text-secondary)" }}>
@@ -384,17 +391,91 @@ Use a calm, elegant tone."
                 </span>
                 <button onClick={genContent} disabled={generating}
                   style={{ padding:"9px 22px", borderRadius:10, border:"none",
-                    background:G, color:"var(--text-primary)", fontWeight:700, fontSize:13,
+                    background:G, color:"white", fontWeight:700, fontSize:13,
                     cursor:"pointer", boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
-                  {generating?"Generating…":"✦ Generate Content"}
+                  Next: Copy Agent →
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* ═══ STEP 3 — Results ═══ */}
+        {/* ═══ STEP 3 — Copy Agent (Ideon) ═══ */}
         {step===3 && (
+          <div style={{ maxWidth:780 }}>
+            <div style={{ marginBottom:20 }}>
+              <div style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)", marginBottom:4,
+                display:"flex", alignItems:"center", gap:10 }}>
+                ✍️ Copy Agent — Ideon
+              </div>
+              <div style={{ fontSize:13, color:"var(--text-secondary)" }}>
+                Ideon writes your campaign headline, body copy and call-to-action.
+              </div>
+            </div>
+
+            {!copyRes ? (
+              <div style={{ padding:28, borderRadius:16, background:"var(--card-bg)",
+                border:"1.5px solid var(--card-border)", textAlign:"center" as const,
+                boxShadow:"0 2px 16px rgba(0,0,0,0.06)" }}>
+                <div style={{ fontSize:36, marginBottom:14 }}>✍️</div>
+                <div style={{ fontSize:15, fontWeight:700, color:"var(--text-primary)", marginBottom:6 }}>
+                  Ready to generate copy
+                </div>
+                <div style={{ fontSize:13, color:"var(--text-secondary)", marginBottom:20, lineHeight:1.6 }}>
+                  Based on your brief: <em>"{brief.slice(0,80)}{brief.length>80?"…":""}"</em>
+                </div>
+                <button onClick={genCopy} disabled={copyBusy}
+                  style={{ padding:"12px 32px", borderRadius:12, border:"none",
+                    background:G, color:"white", fontWeight:700, fontSize:14,
+                    cursor:"pointer", boxShadow:"0 4px 16px rgba(124,58,237,0.35)",
+                    display:"inline-flex", alignItems:"center", gap:8 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                  </svg>
+                  {copyBusy ? "Writing copy…" : "Generate Copy with Ideon"}
+                </button>
+              </div>
+            ) : (
+              <div style={{ display:"flex", flexDirection:"column" as const, gap:14 }}>
+                {[
+                  { key:"Headline", val:copyRes.headline, large:true },
+                  { key:"Body Copy", val:copyRes.body, large:false },
+                  { key:"Call to Action", val:copyRes.cta, large:false },
+                ].map(f => (
+                  <div key={f.key} style={{ padding:"16px 20px", borderRadius:14,
+                    background:"var(--card-bg)", border:"1.5px solid var(--card-border)",
+                    boxShadow:"0 2px 10px rgba(0,0,0,0.05)" }}>
+                    <div style={{ fontSize:10, fontWeight:700, color:"var(--text-secondary)",
+                      textTransform:"uppercase" as const, letterSpacing:".08em", marginBottom:8 }}>
+                      {f.key}
+                    </div>
+                    <div style={{ fontSize:f.large?17:13, fontWeight:f.large?800:400,
+                      color:"var(--text-primary)", lineHeight:1.6 }}>
+                      {f.val}
+                    </div>
+                  </div>
+                ))}
+                <div style={{ display:"flex", gap:10 }}>
+                  <button onClick={genCopy} disabled={copyBusy}
+                    style={{ padding:"8px 18px", borderRadius:8,
+                      border:"1.5px solid var(--card-border)", background:"transparent",
+                      color:"var(--text-secondary)", fontSize:12, cursor:"pointer" }}>
+                    ↻ Regenerate copy
+                  </button>
+                  <button onClick={()=>setStep(4)}
+                    style={{ padding:"8px 22px", borderRadius:8, border:"none",
+                      background:G, color:"white", fontWeight:700, fontSize:13,
+                      cursor:"pointer", boxShadow:"0 2px 10px rgba(124,58,237,0.3)" }}>
+                    Next: Generate Content ✦
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ═══ STEP 4 — Results ═══ */}
+        {step===4 && (
           <div style={{ maxWidth:900 }}>
             <div style={{ marginBottom:20, display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)" }}>Generated Content</div>
