@@ -298,7 +298,10 @@ export default function Campaigns() {
       </div>
 
       {/* ── Content ── */}
-      <div style={{ flex:1, overflowY:"auto", padding:"32px 40px" }}>
+      <div style={{ flex:1, overflowY:"auto", padding:"40px 24px",
+        display:"flex", flexDirection:"column" as const, alignItems:"center" }}>
+        {/* Centred wrapper — all step content lives here */}
+        <div style={{ width:"100%", maxWidth:820 }}>
         <StepProgress current={step} />
 
         {/* ═══ STEP 1 — Brief ═══ */}
@@ -540,6 +543,7 @@ export default function Campaigns() {
             )}
           </div>
         )}
+        </div>{/* end centred wrapper */}
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
