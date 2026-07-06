@@ -54,7 +54,15 @@ function GuidelinesSection() {
         { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.detail || `Upload failed (${res.status})`);
-      setUploaded(data.uploaded ?? {}); setSkipped(data.skipped ?? []); setStatus("done");
+      // API returns PascalCase folder names (Guidelines, Logos, Font…).
+      // Normalize to lowercase and map "font" → "fonts" to match ASSET_CATEGORIES keys.
+      const raw: Record<string, number> = data.uploaded ?? {};
+      const normalized: Record<string, number> = {};
+      Object.entries(raw).forEach(([k, v]) => {
+        const key = k.toLowerCase() === "font" ? "fonts" : k.toLowerCase();
+        normalized[key] = (normalized[key] ?? 0) + Number(v);
+      });
+      setUploaded(normalized); setSkipped(data.skipped ?? []); setStatus("done");
     } catch (e) { setErrorMsg(e instanceof Error ? e.message : String(e)); setStatus("error"); }
   };
 
