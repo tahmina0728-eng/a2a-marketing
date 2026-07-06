@@ -87,22 +87,22 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const ASSET_ITEMS = [
-  { key: "guidelines", label: "Brand Guidelines", icon: "📄" },
-  { key: "logos",      label: "Logos",             icon: "⭐" },
-  { key: "products",   label: "Product Images",    icon: "🖼" },
-  { key: "fonts",      label: "Fonts",             icon: "Aa" },
-  { key: "colours",    label: "Color Palette",     icon: "🎨" },
-  { key: "assets",     label: "Brand Assets",      icon: "📦" },
+  { key: "logos",    label: "Logos",          icon: "⭐" },
+  { key: "products", label: "Product Images", icon: "🖼" },
+  { key: "fonts",    label: "Fonts",          icon: "Aa" },
+  { key: "colours",  label: "Color Palette",  icon: "🎨" },
+  { key: "assets",   label: "Brand Assets",   icon: "📦" },
 ];
 
 interface BrandHubNavProps {
   active: BrandHubSection;
   onChange: (s: BrandHubSection) => void;
   brandAssets?: Record<string, number>;
+  activeBrand?: string;
 }
 
-export default function BrandHubNav({ active, onChange, brandAssets = {} }: BrandHubNavProps) {
-  const hasAssets = Object.keys(brandAssets).length > 0;
+export default function BrandHubNav({ active, onChange, brandAssets = {}, activeBrand = "" }: BrandHubNavProps) {
+  const hasAssets = Object.keys(brandAssets).length > 0 && !!activeBrand;
   return (
     <div style={{ padding: "0 8px" }}>
       {/* Section label */}
@@ -142,28 +142,45 @@ export default function BrandHubNav({ active, onChange, brandAssets = {} }: Bran
               {item.label}
             </button>
 
-            {/* Asset sub-items under Brand Guidelines */}
-            {showAssets && ASSET_ITEMS.map(a => {
-              const count = brandAssets[a.key] ?? 0;
-              if (count === 0) return null;
-              return (
-                <div key={a.key} style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "5px 10px 5px 28px", fontSize: 11,
-                  color: "var(--text-secondary)",
-                }}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                    <span style={{ fontSize: 11 }}>{a.icon}</span>
-                    {a.label}
-                  </span>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: "#10b981",
-                    background: "rgba(16,185,129,0.12)", padding: "1px 7px",
-                    borderRadius: 99 }}>
-                    {count}
-                  </span>
+            {/* Brand name + asset sub-items */}
+            {showAssets && (
+              <>
+                {/* Brand name row */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8,
+                  padding: "5px 10px 5px 24px", fontSize: 12, fontWeight: 600,
+                  color: "var(--text-primary)" }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
+                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                  </svg>
+                  {activeBrand}
                 </div>
-              );
-            })}
+
+                {/* Asset categories indented under brand */}
+                {ASSET_ITEMS.map(a => {
+                  const count = brandAssets[a.key] ?? 0;
+                  if (count === 0) return null;
+                  return (
+                    <div key={a.key} style={{
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                      padding: "4px 10px 4px 36px", fontSize: 11,
+                      color: "var(--text-secondary)",
+                    }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 11 }}>{a.icon}</span>
+                        {a.label}
+                      </span>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "#10b981",
+                        background: "rgba(16,185,129,0.12)", padding: "1px 7px",
+                        borderRadius: 99 }}>
+                        {count}
+                      </span>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         );
       })}
