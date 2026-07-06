@@ -26,6 +26,7 @@ import { saveToContentHub } from "./hooks/useContentHub";
 import ContentHub from "./ContentHub";
 import CampaignForm from "./components/CampaignForm";
 import BrandHub from "./components/BrandHub";
+import CampaignCreator from "./components/Campaigns";
 import BrandHubNav, { type BrandHubSection } from "./components/BrandHubNav";
 import PublishingNav, { type PublishingChannel } from "./components/PublishingNav";
 import Publishing from "./components/Publishing";
@@ -5056,7 +5057,7 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSelectAgent,
   brandHubSection, onBrandHubSection, brandAssets, activeBrand, publishingChannel, onPublishingChannel }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
-  view: "app" | "hub" | "agent" | "brand-hub" | "publishing"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing") => void;
+  view: "app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing" | "campaigns") => void;
   activeAgentKey: string | null; onSelectAgent: (key: string) => void;
   brandHubSection: BrandHubSection; onBrandHubSection: (s: BrandHubSection) => void;
   brandAssets: Record<string, number>; activeBrand: string;
@@ -5148,7 +5149,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
 
           // Nav items below "AI Agent"
           const bottomItems = [
-            { label: "Campaigns",     active: view === "app",  onClick: () => onNavigate("app"),
+            { label: "Campaigns",     active: view === "campaigns", onClick: () => onNavigate("campaigns"),
               icon: <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" /> },
             { label: "Content Studio",active: view === "hub",  onClick: () => onNavigate("hub"),
               icon: <Icon d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /> },
@@ -5506,7 +5507,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing">("app");
+  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns">("app");
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
   const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("guidelines");
   const [brandAssets, setBrandAssets] = useState<Record<string, number>>(() => {
@@ -5572,7 +5573,9 @@ export default function App() {
           brandAssets={brandAssets} activeBrand={activeBrand}
           publishingChannel={publishingChannel} onPublishingChannel={setPublishingChannel} />
 
-        {view === "brand-hub" ? (
+        {view === "campaigns" ? (
+          <CampaignCreator />
+        ) : view === "brand-hub" ? (
           <>
             <BgVideoPlayer fixed brightness={0.55} saturate={0.9} />
             <div style={{ position: "fixed" as const, inset: 0, zIndex: 1,
