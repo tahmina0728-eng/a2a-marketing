@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { saveToContentHub } from "../hooks/useContentHub";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8000";
 
@@ -181,6 +182,30 @@ export default function Campaigns() {
   const [generating, setGenerating] = useState(false);
   const [results, setResults] = useState<Partial<Record<FormatType, GeneratedResult>>>({});
   const [tab, setTab]         = useState<FormatType>("image");
+  const [saveState, setSaveState] = useState<Record<string, "idle"|"saving"|"saved">>({});
+
+  const saveAsset = async (fmt: FormatType) => {
+    const r = results[fmt];
+    if (!r) return;
+    setSaveState(s => ({ ...s, [fmt]: "saving" }));
+    try {
+      const isVideo = fmt === "reel" || fmt === "tvc" || fmt === "video";
+      await saveToContentHub({
+        kind:         isVideo ? "reel" : "kv",
+        brand:        brand || "",
+        campaignName: brief.slice(0, 40),
+        campaignId:   "",
+        headline:     r.headline || r.tagline || brief.slice(0, 60),
+        assetDataUrl: isVideo
+          ? `data:video/mp4;base64,${r.video_b64}`
+          : `data:image/jpeg;base64,${r.image_b64}`,
+      });
+      setSaveState(s => ({ ...s, [fmt]: "saved" }));
+      setTimeout(() => setSaveState(s => ({ ...s, [fmt]: "idle" })), 2500);
+    } catch {
+      setSaveState(s => ({ ...s, [fmt]: "idle" }));
+    }
+  };
 
   const prompt = [brand&&`Brand: ${brand}`, brief, goal&&`Goal: ${goal}`, audience&&`Audience: ${audience}`, platform&&`Platform: ${platform}`].filter(Boolean).join(". ");
   const anyRes = Object.values(results).some(r => r?.image_b64||r?.video_b64);
@@ -563,17 +588,57 @@ export default function Campaigns() {
             ) : anyRes ? (
               <div style={{ display:"flex", flexDirection:"column" as const, gap:16 }}>
                 {hasRes(tab) && (
-                  <div style={{ borderRadius:20, overflow:"hidden",
-                    boxShadow:"0 12px 48px rgba(0,0,0,0.5)" }}>
-                    {tab==="image"&&results.image?.image_b64&&(
-                      <img src={`data:image/jpeg;base64,${results.image.image_b64}`}
-                        style={{ width:"100%", display:"block" }} alt="" />
-                    )}
-                    {(tab==="reel"||tab==="tvc"||tab==="video")&&results[tab]?.video_b64&&(
-                      <video controls autoPlay loop muted playsInline
-                        src={`data:video/mp4;base64,${results[tab]!.video_b64}`}
-                        style={{ width:"100%", display:"block" }} />
-                    )}
+                  <div>
+                    <div style={{ borderRadius:16, overflow:"hidden",
+                      boxShadow:"0 8px 32px rgba(0,0,0,0.12)", marginBottom:12 }}>
+                      {tab==="image"&&results.image?.image_b64&&(
+                        <img src={`data:image/jpeg;base64,${results.image.image_b64}`}
+                          style={{ width:"100%", display:"block" }} alt="" />
+                      )}
+                      {(tab==="reel"||tab==="tvc"||tab==="video")&&results[tab]?.video_b64&&(
+                        <video controls autoPlay loop muted playsInline
+                          src={`data:video/mp4;base64,${results[tab]!.video_b64}`}
+                          style={{ width:"100%", display:"block" }} />
+                      )}
+                    </div>
+
+                    {/* Save to Content Studio button */}
+                    <div style={{ display:"flex", justifyContent:"flex-end" as const }}>
+                      <button
+                        onClick={() => saveAsset(tab)}
+                        disabled={saveState[tab] === "saving"}
+                        style={{ display:"flex", alignItems:"center", gap:8,
+                          padding:"9px 20px", borderRadius:10, border:"none",
+                          cursor:saveState[tab]==="saving"?"not-allowed":"pointer",
+                          fontFamily:"inherit", fontSize:13, fontWeight:700,
+                          background: saveState[tab]==="saved"
+                            ? "rgba(16,185,129,0.12)"
+                            : "linear-gradient(135deg,#7c3aed,#6366f1)",
+                          color: saveState[tab]==="saved" ? "#10b981" : "white",
+                          boxShadow: saveState[tab]==="saved" ? "none"
+                            : "0 4px 14px rgba(124,58,237,0.35)",
+                          transition:"all 0.2s" }}>
+                        {saveState[tab]==="saving" ? (
+                          <>
+                            <div style={{ width:14, height:14, borderRadius:"50%",
+                              border:"2px solid rgba(255,255,255,0.3)", borderTopColor:"white",
+                              animation:"spin 0.8s linear infinite" }} />
+                            Saving…
+                          </>
+                        ) : saveState[tab]==="saved" ? (
+                          <>✓ Saved to Content Studio</>
+                        ) : (
+                          <>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                              <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                            </svg>
+                            Save to Content Studio
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
                 )}
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
