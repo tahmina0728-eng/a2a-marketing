@@ -449,6 +449,9 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
   const [saSubject,  setSaSubject]  = useState("");
   const [saHeadline, setSaHeadline] = useState("");
   const [saBody,     setSaBody]     = useState("");
+  // Email template variations (3 layouts from Mailer agent)
+  const [emailLayouts, setEmailLayouts]   = useState<any[]>([]);
+  const [emailLayoutBusy, setEmailLayoutBusy] = useState(false);
   const supported = STANDALONE_SUPPORTED.includes(agentKey);
 
   const handleSaveKvToHub = async () => {
@@ -822,17 +825,96 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
                 </div>
               )}
 
-              <button onClick={() => {
-                setSaSubject(result?.email_subject ?? result?.headline ?? "");
-                setSaHeadline(result?.headline ?? "");
-                setSaBody(result?.body ?? result?.copy ?? result?.landing_body ?? result?.headline ?? "");
-                setShowStandaloneEmailPreview(true);
-              }}
-                style={{ padding: "8px 16px", borderRadius: 9, border: "none", fontFamily: "inherit",
-                  fontSize: 12, fontWeight: 700, color: "white", cursor: "pointer",
-                  background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
-                👁 Preview & Edit Email
-              </button>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
+                <button onClick={() => {
+                  setSaSubject(result?.email_subject ?? result?.headline ?? "");
+                  setSaHeadline(result?.headline ?? "");
+                  setSaBody(result?.body ?? result?.copy ?? result?.landing_body ?? result?.headline ?? "");
+                  setShowStandaloneEmailPreview(true);
+                }}
+                  style={{ padding: "8px 16px", borderRadius: 9, border: "none", fontFamily: "inherit",
+                    fontSize: 12, fontWeight: 700, color: "white", cursor: "pointer",
+                    background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
+                  👁 Preview & Edit Email
+                </button>
+
+                {/* Generate 3 email layout variations via Mailer agent */}
+                <button
+                  disabled={emailLayoutBusy}
+                  onClick={async () => {
+                    setEmailLayoutBusy(true);
+                    setEmailLayouts([]);
+                    try {
+                      const res = await fetch(`${API_BASE_PUB}/agents/email_templates/run`, {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ prompt: prompt.trim() }),
+                      });
+                      const data = await res.json();
+                      if (data.templates) setEmailLayouts(data.templates);
+                    } catch { /* ignore */ } finally { setEmailLayoutBusy(false); }
+                  }}
+                  style={{ padding: "8px 16px", borderRadius: 9, border: `1.5px solid ${color}40`,
+                    fontFamily: "inherit", fontSize: 12, fontWeight: 700,
+                    color: color, cursor: "pointer", background: `${color}08` }}>
+                  {emailLayoutBusy ? "⏳ Generating…" : "✦ Generate 3 Email Layouts"}
+                </button>
+              </div>
+
+              {/* 3 Email layout cards */}
+              {emailLayouts.length > 0 && (
+                <div style={{ marginTop: 14, display: "flex", flexDirection: "column" as const, gap: 12 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: "0.08em",
+                    textTransform: "uppercase" as const }}>
+                    3 Email Layout Variations — pick one to send
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+                    {emailLayouts.map((tpl: any) => (
+                      <div key={tpl.id} style={{ borderRadius: 12, overflow: "hidden",
+                        border: `1.5px solid ${color}30`,
+                        boxShadow: `0 4px 16px ${color}12` }}>
+                        {/* Header */}
+                        <div style={{ padding: "9px 12px", background: `${color}10`,
+                          borderBottom: `1px solid ${color}20`,
+                          display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div>
+                            <div style={{ fontSize: 12, fontWeight: 700, color }}>{tpl.name}</div>
+                            <div style={{ fontSize: 10, color: "var(--text-secondary)", marginTop: 1 }}>{tpl.layout}</div>
+                          </div>
+                          <div style={{ display: "flex", gap: 6 }}>
+                            <a href={`data:text/html;charset=utf-8,${encodeURIComponent(tpl.html)}`}
+                              target="_blank" rel="noreferrer"
+                              style={{ fontSize: 11, fontWeight: 700, color, textDecoration: "none",
+                                padding: "3px 9px", borderRadius: 6, border: `1px solid ${color}40`,
+                                background: `${color}08` }}>
+                              Preview ↗
+                            </a>
+                            <a href={`data:text/html;charset=utf-8,${encodeURIComponent(tpl.html)}`}
+                              download={`${tpl.id}-email.html`}
+                              style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)",
+                                textDecoration: "none", padding: "3px 9px", borderRadius: 6,
+                                border: "1px solid var(--card-border)", background: "var(--card-bg-soft)" }}>
+                              ⬇ HTML
+                            </a>
+                          </div>
+                        </div>
+                        {/* Scaled preview */}
+                        <div style={{ position: "relative" as const, height: 200, overflow: "hidden",
+                          background: "#f8fafc" }}>
+                          <iframe srcDoc={tpl.html} title={tpl.name}
+                            style={{ width: "200%", height: "200%", border: "none",
+                              transform: "scale(0.5)", transformOrigin: "top left",
+                              pointerEvents: "none" as const }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11, color: "var(--text-secondary)", padding: "8px 12px",
+                    borderRadius: 8, background: "rgba(124,58,237,0.05)",
+                    border: "1px solid rgba(124,58,237,0.15)" }}>
+                    💡 Click <strong>Preview ↗</strong> to open full email in browser · Download HTML → paste into <strong>Publishing → Email</strong> to send via Mailchimp
+                  </div>
+                </div>
+              )}
             </>
           )}
 
