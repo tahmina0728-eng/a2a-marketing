@@ -137,7 +137,7 @@ export default function MailchimpPanel() {
 
   // ── Connected ─────────────────────────────────────────────
   return (
-    <div style={{ padding: "28px 32px", display: "flex", flexDirection: "column" as const, gap: 28 }}>
+    <div style={{ padding: 0, display: "flex", flexDirection: "column" as const, gap: 24 }}>
 
       {/* Connection badge */}
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

@@ -141,9 +141,9 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
 
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px",
+    <div style={{ flex: 1, overflowY: "auto", padding: "40px 32px",
       display: "flex", flexDirection: "column" as const, alignItems: "center",
-      justifyContent: "center" }}>
+      justifyContent: channel === "email" ? "flex-start" : "center" }}>
       <div style={{ width: "100%", maxWidth: 860 }}>
       {/* Page header */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
@@ -472,7 +472,7 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
       )}
 
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      </div>{/* end maxWidth wrapper */}
+      </div>
     </div>
   );
 }

@@ -1446,9 +1446,18 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
           </div>
 
           <p style={{ position: "relative" as const, zIndex: 1, fontSize: 16, color: "var(--text-primary)",
-            lineHeight: 1.6, margin: "0 0 24px", textShadow: "0 1px 6px rgba(255,255,255,0.25)" }}>
+            lineHeight: 1.6, margin: "0 0 12px", textShadow: "0 1px 6px rgba(255,255,255,0.25)" }}>
             {longDesc}
           </p>
+          {/* Voice intro text — same as what the agent speaks */}
+          {AGENT_INTROS[agentKey] && (
+            <p style={{ position: "relative" as const, zIndex: 1, fontSize: 14,
+              color: "var(--text-secondary)", lineHeight: 1.7, margin: "0 0 24px",
+              fontStyle: "italic", borderLeft: `3px solid ${color}50`,
+              paddingLeft: 14 }}>
+              "{AGENT_INTROS[agentKey]}"
+            </p>
+          )}
 
         </div>
 
