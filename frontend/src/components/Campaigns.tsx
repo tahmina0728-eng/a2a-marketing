@@ -125,10 +125,10 @@ function FormatCard({ label, desc, icon, selected, onClick, sizes, selSize, onSi
   return (
     <div onClick={onClick} style={{
       padding: "20px", borderRadius: 16, cursor: "pointer",
-      border: `2px solid ${selected ? "#7c3aed" : "rgba(255,255,255,0.1)"}`,
-      background: selected ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.04)",
+      border: `2px solid ${selected ? "#7c3aed" : "var(--card-border)"}`,
+      background: selected ? "rgba(124,58,237,0.08)" : "var(--card-bg)",
       transition: "all 0.2s", position: "relative" as const,
-      boxShadow: selected ? "0 0 0 4px rgba(124,58,237,0.15)" : "none",
+      boxShadow: selected ? "0 0 0 4px rgba(124,58,237,0.12), 0 4px 20px rgba(124,58,237,0.15)" : "0 2px 8px rgba(0,0,0,0.06)",
     }}>
       {selected && (
         <div style={{ position: "absolute" as const, top: 14, right: 14,
@@ -137,21 +137,21 @@ function FormatCard({ label, desc, icon, selected, onClick, sizes, selSize, onSi
           fontSize: 11, color: "white", fontWeight: 800 }}>✓</div>
       )}
       <div style={{ width: 44, height: 44, borderRadius: 12, marginBottom: 14,
-        background: selected ? "rgba(124,58,237,0.25)" : "rgba(255,255,255,0.06)",
+        background: selected ? "rgba(124,58,237,0.15)" : "var(--card-bg-soft)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        color: selected ? "#a78bfa" : "rgba(255,255,255,0.4)", transition: "all 0.2s" }}>
+        color: selected ? "#7c3aed" : "var(--text-secondary)", transition: "all 0.2s" }}>
         {icon}
       </div>
-      <div style={{ fontSize: 14, fontWeight: 700, color: "rgba(255,255,255,0.9)", marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.45)", lineHeight: 1.5, marginBottom: selected ? 14 : 0 }}>{desc}</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: selected ? 14 : 0 }}>{desc}</div>
       {selected && (
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
           {sizes.map(s => (
             <button key={s} onClick={e => { e.stopPropagation(); onSize(s); }}
               style={{ padding: "4px 12px", borderRadius: 99, border: "none", cursor: "pointer",
                 fontSize: 11, fontWeight: 600,
-                background: selSize === s ? "#7c3aed" : "rgba(255,255,255,0.08)",
-                color: selSize === s ? "white" : "rgba(255,255,255,0.5)",
+                background: selSize === s ? "#7c3aed" : "var(--card-bg-soft)",
+                color: selSize === s ? "white" : "var(--text-secondary)",
                 boxShadow: selSize === s ? "0 2px 8px rgba(124,58,237,0.4)" : "none" }}>
               {s}
             </button>
