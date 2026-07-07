@@ -471,22 +471,56 @@ export default function Campaigns() {
         {/* ═══ STEP 4 — Results ═══ */}
         {step===4 && (
           <div style={{ width:"100%" }}>
-            <div style={{ marginBottom:20, display:"flex", alignItems:"center", gap:12 }}>
-              <div style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)" }}>Generated Content</div>
-              {(["image","reel","tvc","video"] as FormatType[]).filter(hasRes).map(f=>(
-                <button key={f} onClick={()=>setTab(f)}
-                  style={{ padding:"6px 16px", borderRadius:99, border:"none", cursor:"pointer",
-                    fontSize:12, fontWeight:600,
-                    background:tab===f?G:"rgba(255,255,255,0.08)",
-                    color:tab===f?"white":"rgba(255,255,255,0.5)",
-                    boxShadow:tab===f?"0 2px 10px rgba(124,58,237,0.4)":"none" }}>
-                  {f==="image"?"🎨 Image":f==="reel"?"🎬 Reel":f==="tvc"?"📺 TVC":"▶️ Video"}
-                </button>
-              ))}
+
+            {/* Status banner — changes between idle / generating / generated */}
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+              marginBottom:20 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                {generating ? (
+                  <>
+                    <div style={{ width:18, height:18, borderRadius:"50%", flexShrink:0,
+                      border:"2.5px solid rgba(124,58,237,0.25)", borderTopColor:"#7c3aed",
+                      animation:"spin 0.8s linear infinite" }} />
+                    <span style={{ fontSize:16, fontWeight:700, color:"#7c3aed" }}>
+                      Generating content…
+                    </span>
+                  </>
+                ) : anyRes ? (
+                  <>
+                    <div style={{ width:22, height:22, borderRadius:"50%", background:"#10b981",
+                      display:"flex", alignItems:"center", justifyContent:"center",
+                      fontSize:12, color:"white", fontWeight:800, flexShrink:0 }}>✓</div>
+                    <span style={{ fontSize:16, fontWeight:700, color:"#10b981" }}>
+                      Generated
+                    </span>
+                  </>
+                ) : (
+                  <span style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)" }}>
+                    Generate &amp; Review
+                  </span>
+                )}
+              </div>
+
+              {/* Format tabs — visible only when content is ready */}
+              {anyRes && (
+                <div style={{ display:"flex", gap:8 }}>
+                  {(["image","reel","tvc","video"] as FormatType[]).filter(hasRes).map(f=>(
+                    <button key={f} onClick={()=>setTab(f)}
+                      style={{ padding:"6px 14px", borderRadius:99, border:"none", cursor:"pointer",
+                        fontSize:12, fontWeight:600,
+                        background:tab===f?G:"var(--card-bg-soft)",
+                        color:tab===f?"white":"var(--text-secondary)",
+                        boxShadow:tab===f?"0 2px 10px rgba(124,58,237,0.4)":"none" }}>
+                      {f==="image"?"🎨 Image":f==="reel"?"🎬 Reel":f==="tvc"?"📺 TVC":"▶️ Video"}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            {/* Step 4 — generate button (shown when no results yet) */}
+
+            {/* Generate button — shown when no results yet and not generating */}
             {!anyRes && !generating && (
-              <div style={{ display:"flex", gap:10, marginBottom:24 }}>
+              <div style={{ display:"flex", gap:10, marginBottom:24, justifyContent:"flex-end" as const }}>
                 <button onClick={()=>setStep(3)}
                   style={{ padding:"10px 20px", borderRadius:10, fontWeight:600, fontSize:13,
                     border:"1.5px solid var(--card-border)", background:"transparent",
@@ -504,11 +538,27 @@ export default function Campaigns() {
 
             {generating ? (
               <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center",
-                gap:16, padding:"60px 0" }}>
-                <div style={{ width:48, height:48, borderRadius:"50%",
-                  border:"3px solid var(--card-border)", borderTopColor:"#7c3aed",
-                  animation:"spin 1s linear infinite" }} />
-                <div style={{ fontSize:14, color:"var(--text-secondary)" }}>Generating your campaign content…</div>
+                gap:20, padding:"60px 0" }}>
+                <div style={{ position:"relative" as const, width:64, height:64 }}>
+                  <div style={{ position:"absolute" as const, inset:0, borderRadius:"50%",
+                    border:"3px solid var(--card-border)", borderTopColor:"#7c3aed",
+                    animation:"spin 0.9s linear infinite" }} />
+                  <div style={{ position:"absolute" as const, inset:8, borderRadius:"50%",
+                    border:"2px solid var(--card-border)", borderBottomColor:"#a855f7",
+                    animation:"spin 1.4s linear infinite reverse" }} />
+                </div>
+                <div>
+                  <div style={{ fontSize:16, fontWeight:700, color:"var(--text-primary)",
+                    textAlign:"center" as const, marginBottom:4 }}>
+                    Generating content…
+                  </div>
+                  <div style={{ fontSize:12, color:"var(--text-secondary)", textAlign:"center" as const }}>
+                    {Array.from(formats).map(f=>
+                      f==="image"?"Morphis (Image)":f==="reel"?"Kinetik (Reel)":
+                      f==="tvc"?`Director (TVC ${tvcLen}s)`:"Video Ad"
+                    ).join(" · ")}
+                  </div>
+                </div>
               </div>
             ) : anyRes ? (
               <div style={{ display:"flex", flexDirection:"column" as const, gap:16 }}>
