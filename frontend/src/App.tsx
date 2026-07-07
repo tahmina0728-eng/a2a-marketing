@@ -843,7 +843,8 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
                         body: JSON.stringify({
                           prompt: prompt.trim(),
                           brand: result?.brand ?? "",
-                          image_b64: result?.image_b64 ?? "",
+                          // Don't send image_b64 — too large for POST body.
+                          // Backend loads the best image from GCS automatically.
                         }),
                       });
                       const data = await res.json();
