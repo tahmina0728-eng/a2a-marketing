@@ -248,10 +248,13 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
                     {/* Full email preview — no scroll, scales to fit */}
                     <div style={{ position: "relative" as const, height: 420,
                       overflow: "hidden", background: "#ffffff" }}>
-                      <iframe srcDoc={tpl.html} title={tpl.name}
+                      <iframe
+                        srcDoc={tpl.html}
+                        title={tpl.name}
+                        scrolling="no"
                         style={{ width: "167%", height: "167%", border: "none",
                           transform: "scale(0.6)", transformOrigin: "top left",
-                          pointerEvents: "none" as const }} />
+                          pointerEvents: "none" as const, overflow: "hidden" }} />
                     </div>
                   </div>
                 ))}

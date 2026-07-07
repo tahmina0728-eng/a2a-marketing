@@ -1551,7 +1551,7 @@ def run_email_templates(brand: str, prompt: str, provided_image_b64: str = "") -
 <html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{subject}</title>
 </head>
-<body style="margin:0;padding:0;background:{bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<body style="margin:0;padding:0;overflow:hidden;background:{bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
 
   <!-- Header -->
@@ -1599,7 +1599,7 @@ def run_email_templates(brand: str, prompt: str, provided_image_b64: str = "") -
     <p style="margin:0 0 20px;font-size:16px;color:{col};font-weight:600;">{subheadline}</p>
     <p style="margin:0 0 32px;font-size:15px;color:#475569;line-height:1.75;">{body}</p>
   </div>
-  {'<img src="'+hero_b64+'" alt="" style="width:100%;max-height:280px;object-fit:cover;display:block;">' if hero_b64 else ''}
+  <img src="{hero_b64}" alt="{brand}" style="width:100%;max-height:280px;object-fit:cover;display:block;">
   <div style="padding:32px 40px 40px;text-align:center;">
     <a href="#" style="display:inline-block;padding:14px 36px;background:{col};color:white;
        border-radius:8px;font-size:15px;font-weight:700;text-decoration:none;">{cta}</a>
@@ -1622,7 +1622,9 @@ def run_email_templates(brand: str, prompt: str, provided_image_b64: str = "") -
     <h1 style="margin:0 0 10px;font-size:26px;font-weight:900;color:{col};">{headline}</h1>
     <p style="margin:0 0 28px;font-size:15px;color:#555;line-height:1.6;">{body}</p>
   </div>
-  {'<div style="padding:0 32px;">'+prod_img+'</div>' if prod_img else (f'<div style="padding:0 32px;"><div style="height:180px;background:linear-gradient(135deg,{col}22,{acc}44);border-radius:8px;display:flex;align-items:center;justify-content:center;"><span style="font-size:48px;">📦</span></div></div>')}
+  <div style="padding:0 32px;">
+    <img src="{hero_b64}" alt="{brand}" style="width:100%;border-radius:8px;display:block;">
+  </div>
   <div style="display:flex;gap:12px;flex-wrap:wrap;padding:24px 32px;">
     {features_html}
   </div>
