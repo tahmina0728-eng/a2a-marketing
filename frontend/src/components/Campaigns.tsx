@@ -242,74 +242,29 @@ export default function Campaigns() {
       height:"100vh", overflow:"hidden",
       background:"var(--page-bg)" }}>
 
-      {/* ── Header ── */}
-      <div style={{ padding:"20px 40px 16px", borderBottom:"1px solid var(--card-border)",
-        flexShrink:0, textAlign:"center" as const, position:"relative" as const,
-        background:"var(--card-bg)" }}>
-
-        {/* Glow */}
-        <div style={{ position:"absolute" as const, top:0, left:"50%", transform:"translateX(-50%)",
-          width:360, height:100, borderRadius:"50%", pointerEvents:"none" as const,
-          background:"radial-gradient(ellipse, rgba(124,58,237,0.09) 0%, transparent 70%)" }} />
-
-        {/* Title + subtitle */}
-        <h1 style={{ margin:"0 0 4px", fontSize:26, fontWeight:900, letterSpacing:"-0.03em",
-          color:"var(--text-primary)", display:"inline-flex", alignItems:"center", gap:10 }}>
-          Create New Campaign
-          <span style={{ background:G, WebkitBackgroundClip:"text",
-            WebkitTextFillColor:"transparent", backgroundClip:"text" }}>✦</span>
-        </h1>
-        <p style={{ margin:"0 0 16px", fontSize:12, color:"var(--text-secondary)" }}>
-          Describe your idea — AI agents will generate on-brand content across every format.
-        </p>
-
-        {/* Action buttons — centred, no duplicate step dots */}
-        <div style={{ display:"flex", gap:10, justifyContent:"center" as const }}>
-          <button style={{ padding:"9px 20px", borderRadius:10, fontWeight:600, fontSize:13,
-            border:"1.5px solid var(--card-border)", background:"transparent",
-            color:"var(--text-secondary)", cursor:"pointer" }}>
-            Save Draft
-          </button>
-          {step===1 && (
-            <button onClick={()=>brief.trim()&&setStep(2)} disabled={!brief.trim()}
-              style={{ padding:"10px 28px", borderRadius:10, fontWeight:700, fontSize:13,
-                border:"none", background:G, color:"white", cursor:brief.trim()?"pointer":"not-allowed",
-                opacity:brief.trim()?1:0.4, boxShadow:brief.trim()?"0 4px 18px rgba(124,58,237,0.45)":"none" }}>
-              Next: Choose Format →
-            </button>
-          )}
-          {step===2 && (
-            <button onClick={()=>formats.size>0&&setStep(3)} disabled={formats.size===0}
-              style={{ padding:"10px 28px", borderRadius:10, fontWeight:700, fontSize:13,
-                border:"none", background:G, color:"white", cursor:formats.size>0?"pointer":"not-allowed",
-                opacity:formats.size>0?1:0.4, boxShadow:"0 4px 18px rgba(124,58,237,0.45)" }}>
-              Next: Copy Agent →
-            </button>
-          )}
-          {step===3 && (
-            <button onClick={()=>setStep(4)}
-              style={{ padding:"10px 28px", borderRadius:10, fontWeight:700, fontSize:13,
-                border:"none", background:G, color:"white", cursor:"pointer",
-                boxShadow:"0 4px 18px rgba(124,58,237,0.45)" }}>
-              Next: Generate ✦
-            </button>
-          )}
-          {step===4 && (
-            <button onClick={genContent} disabled={generating}
-              style={{ padding:"10px 28px", borderRadius:10, fontWeight:700, fontSize:13,
-                border:"none", background:G, color:"white", cursor:"pointer",
-                boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
-              {generating?"Generating…":"✦ Generate Content"}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Content ── */}
-      <div style={{ flex:1, overflowY:"auto", padding:"40px 24px",
-        display:"flex", flexDirection:"column" as const, alignItems:"center" }}>
-        {/* Centred wrapper — all step content lives here */}
+      {/* ── Content — centred vertically + horizontally ── */}
+      <div style={{ flex:1, overflowY:"auto", padding:"32px 24px",
+        display:"flex", flexDirection:"column" as const,
+        alignItems:"center", justifyContent:"center" }}>
+        {/* Centred wrapper — title + steps + content all here */}
         <div style={{ width:"100%", maxWidth:820 }}>
+
+          {/* Title — just above the step bar with a small gap */}
+          <div style={{ textAlign:"center" as const, marginBottom:28, position:"relative" as const }}>
+            <div style={{ position:"absolute" as const, top:-20, left:"50%", transform:"translateX(-50%)",
+              width:300, height:80, borderRadius:"50%", pointerEvents:"none" as const,
+              background:"radial-gradient(ellipse, rgba(124,58,237,0.08) 0%, transparent 70%)" }} />
+            <h1 style={{ margin:"0 0 4px", fontSize:26, fontWeight:900, letterSpacing:"-0.03em",
+              color:"var(--text-primary)", display:"inline-flex", alignItems:"center", gap:10 }}>
+              Create New Campaign
+              <span style={{ background:G, WebkitBackgroundClip:"text",
+                WebkitTextFillColor:"transparent", backgroundClip:"text" }}>✦</span>
+            </h1>
+            <p style={{ margin:0, fontSize:12, color:"var(--text-secondary)" }}>
+              Describe your idea — AI agents will generate on-brand content across every format.
+            </p>
+          </div>
+
         <StepProgress current={step} />
 
         {/* ═══ STEP 1 — Brief ═══ */}
@@ -376,6 +331,23 @@ export default function Campaigns() {
               <ChipSel label="Platform" value={platform} onChange={setPlatform} opts={PLATFORMS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
             </div>
+
+            {/* Action buttons — after chips */}
+            <div style={{ display:"flex", gap:10, marginTop:24 }}>
+              <button style={{ padding:"10px 22px", borderRadius:10, fontWeight:600, fontSize:13,
+                border:"1.5px solid var(--card-border)", background:"transparent",
+                color:"var(--text-secondary)", cursor:"pointer" }}>
+                Save Draft
+              </button>
+              <button onClick={()=>brief.trim()&&setStep(2)} disabled={!brief.trim()}
+                style={{ padding:"10px 32px", borderRadius:10, fontWeight:700, fontSize:14,
+                  border:"none", background:G, color:"white",
+                  cursor:brief.trim()?"pointer":"not-allowed",
+                  opacity:brief.trim()?1:0.4,
+                  boxShadow:brief.trim()?"0 4px 20px rgba(124,58,237,0.45)":"none" }}>
+                Next: Choose Format →
+              </button>
+            </div>
           </div>
         )}
 
@@ -394,20 +366,25 @@ export default function Campaigns() {
               ))}
             </div>
             {formats.size>0 && (
-              <div style={{ marginTop:20, padding:"14px 18px", borderRadius:12,
-                border:"1px solid rgba(124,58,237,0.3)", background:"rgba(124,58,237,0.08)",
-                display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                <span style={{ fontSize:13, color:"var(--text-secondary)" }}>
-                  {formats.size} format{formats.size>1?"s":""} selected — {brief.slice(0,50)}{brief.length>50?"…":""}
-                </span>
-                <button onClick={genContent} disabled={generating}
-                  style={{ padding:"9px 22px", borderRadius:10, border:"none",
-                    background:G, color:"white", fontWeight:700, fontSize:13,
-                    cursor:"pointer", boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
-                  Next: Copy Agent →
-                </button>
+              <div style={{ marginTop:14, fontSize:12, color:"var(--text-secondary)" }}>
+                {formats.size} format{formats.size>1?"s":""} selected
               </div>
             )}
+
+            {/* Step 2 buttons */}
+            <div style={{ display:"flex", gap:10, marginTop:24 }}>
+              <button onClick={()=>setStep(1)}
+                style={{ padding:"10px 20px", borderRadius:10, fontWeight:600, fontSize:13,
+                  border:"1.5px solid var(--card-border)", background:"transparent",
+                  color:"var(--text-secondary)", cursor:"pointer" }}>← Back</button>
+              <button onClick={()=>formats.size>0&&setStep(3)} disabled={formats.size===0}
+                style={{ padding:"10px 32px", borderRadius:10, fontWeight:700, fontSize:14,
+                  border:"none", background:G, color:"white",
+                  cursor:formats.size>0?"pointer":"not-allowed", opacity:formats.size>0?1:0.4,
+                  boxShadow:"0 4px 20px rgba(124,58,237,0.45)" }}>
+                Next: Copy Agent →
+              </button>
+            </div>
           </div>
         )}
 
@@ -466,22 +443,28 @@ export default function Campaigns() {
                     </div>
                   </div>
                 ))}
-                <div style={{ display:"flex", gap:10 }}>
-                  <button onClick={genCopy} disabled={copyBusy}
-                    style={{ padding:"8px 18px", borderRadius:8,
-                      border:"1.5px solid var(--card-border)", background:"transparent",
-                      color:"var(--text-secondary)", fontSize:12, cursor:"pointer" }}>
-                    ↻ Regenerate copy
-                  </button>
-                  <button onClick={()=>setStep(4)}
-                    style={{ padding:"8px 22px", borderRadius:8, border:"none",
-                      background:G, color:"white", fontWeight:700, fontSize:13,
-                      cursor:"pointer", boxShadow:"0 2px 10px rgba(124,58,237,0.3)" }}>
-                    Next: Generate Content ✦
-                  </button>
-                </div>
+                <button onClick={genCopy} disabled={copyBusy}
+                  style={{ padding:"8px 18px", borderRadius:8,
+                    border:"1.5px solid var(--card-border)", background:"transparent",
+                    color:"var(--text-secondary)", fontSize:12, cursor:"pointer" }}>
+                  ↻ Regenerate copy
+                </button>
               </div>
             )}
+
+            {/* Step 3 buttons */}
+            <div style={{ display:"flex", gap:10, marginTop:24 }}>
+              <button onClick={()=>setStep(2)}
+                style={{ padding:"10px 20px", borderRadius:10, fontWeight:600, fontSize:13,
+                  border:"1.5px solid var(--card-border)", background:"transparent",
+                  color:"var(--text-secondary)", cursor:"pointer" }}>← Back</button>
+              <button onClick={()=>setStep(4)}
+                style={{ padding:"10px 32px", borderRadius:10, fontWeight:700, fontSize:14,
+                  border:"none", background:G, color:"white", cursor:"pointer",
+                  boxShadow:"0 4px 20px rgba(124,58,237,0.45)" }}>
+                Next: Generate Content ✦
+              </button>
+            </div>
           </div>
         )}
 
@@ -501,6 +484,24 @@ export default function Campaigns() {
                 </button>
               ))}
             </div>
+            {/* Step 4 — generate button (shown when no results yet) */}
+            {!anyRes && !generating && (
+              <div style={{ display:"flex", gap:10, marginBottom:24 }}>
+                <button onClick={()=>setStep(3)}
+                  style={{ padding:"10px 20px", borderRadius:10, fontWeight:600, fontSize:13,
+                    border:"1.5px solid var(--card-border)", background:"transparent",
+                    color:"var(--text-secondary)", cursor:"pointer" }}>← Back</button>
+                <button onClick={genContent} disabled={formats.size===0||!brief.trim()}
+                  style={{ padding:"10px 32px", borderRadius:10, fontWeight:700, fontSize:14,
+                    border:"none", background:G, color:"white",
+                    cursor:formats.size>0&&brief.trim()?"pointer":"not-allowed",
+                    opacity:formats.size>0&&brief.trim()?1:0.4,
+                    boxShadow:"0 4px 20px rgba(124,58,237,0.45)" }}>
+                  ✦ Generate Content
+                </button>
+              </div>
+            )}
+
             {generating ? (
               <div style={{ display:"flex", flexDirection:"column" as const, alignItems:"center",
                 gap:16, padding:"60px 0" }}>
