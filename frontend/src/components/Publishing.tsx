@@ -223,25 +223,35 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
                   <div key={tpl.id}
                     onClick={() => { setSelected(tpl); setEditHtml(tpl.html); }}
                     style={{ borderRadius: 14, overflow: "hidden", cursor: "pointer",
-                      border: `2px solid ${col}20`, transition: "all 0.15s",
-                      boxShadow: `0 2px 12px ${col}10` }}
-                    onMouseEnter={e => (e.currentTarget.style.border = `2px solid ${col}`)}
-                    onMouseLeave={e => (e.currentTarget.style.border = `2px solid ${col}20`)}>
-                    <div style={{ padding: "9px 12px", background: `${col}08`,
-                      borderBottom: `1px solid ${col}15` }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: col }}>{tpl.name}</div>
-                      <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>{tpl.layout}</div>
+                      border: `2px solid ${col}20`, transition: "all 0.2s",
+                      boxShadow: `0 4px 20px ${col}12` }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLDivElement).style.border = `2px solid ${col}`;
+                      (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = `0 8px 30px ${col}25`;
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLDivElement).style.border = `2px solid ${col}20`;
+                      (e.currentTarget as HTMLDivElement).style.transform = "none";
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = `0 4px 20px ${col}12`;
+                    }}>
+                    {/* Card label */}
+                    <div style={{ padding: "10px 14px", background: `${col}08`,
+                      borderBottom: `1px solid ${col}15`,
+                      display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: col }}>{tpl.name}</div>
+                        <div style={{ fontSize: 10, color: "var(--text-secondary)", marginTop: 1 }}>{tpl.layout}</div>
+                      </div>
+                      <span style={{ fontSize: 11, color: col, fontWeight: 600 }}>Select →</span>
                     </div>
-                    <div style={{ height: 180, overflow: "hidden", background: "#f8fafc",
-                      position: "relative" as const }}>
+                    {/* Full email preview — no scroll, scales to fit */}
+                    <div style={{ position: "relative" as const, height: 420,
+                      overflow: "hidden", background: "#ffffff" }}>
                       <iframe srcDoc={tpl.html} title={tpl.name}
-                        style={{ width: "200%", height: "200%", border: "none",
-                          transform: "scale(0.5)", transformOrigin: "top left",
+                        style={{ width: "167%", height: "167%", border: "none",
+                          transform: "scale(0.6)", transformOrigin: "top left",
                           pointerEvents: "none" as const }} />
-                    </div>
-                    <div style={{ padding: "9px", textAlign: "center" as const,
-                      fontSize: 12, fontWeight: 700, color: col, background: `${col}06` }}>
-                      Select →
                     </div>
                   </div>
                 ))}
