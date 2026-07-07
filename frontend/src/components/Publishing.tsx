@@ -100,59 +100,6 @@ export default function Publishing({ channel }: { channel: PublishingChannel }) 
 
   const channelCopy = result?.[CHANNEL_KEY[channel]] ?? "";
 
-  // ── Shared input area ─────────────────────────────────────────
-  const BriefArea = () => (
-    <div style={{ padding: 20, borderRadius: 16, background: "var(--card-bg)",
-      border: "1px solid var(--card-border)", marginBottom: 20,
-      boxShadow: "0 2px 16px rgba(0,0,0,0.05)" }}>
-      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
-            textTransform: "uppercase" as const, letterSpacing: ".08em", marginBottom: 5 }}>Brand</div>
-          <select value={brand} onChange={e => setBrand(e.target.value)}
-            style={{ width: "100%", padding: "8px 12px", borderRadius: 8, fontSize: 13,
-              border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
-              color: "var(--text-primary)", fontFamily: "inherit", outline: "none" }}>
-            <option value="">Select brand…</option>
-            {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
-          </select>
-        </div>
-      </div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
-        textTransform: "uppercase" as const, letterSpacing: ".08em", marginBottom: 5 }}>
-        Campaign Brief
-      </div>
-      <textarea value={brief} onChange={e => setBrief(e.target.value)}
-        placeholder={`Describe your campaign — e.g. "Christmas festive campaign for UK families, warm and family-focused"`}
-        rows={3}
-        style={{ width: "100%", padding: "10px 14px", borderRadius: 10, resize: "none" as const,
-          border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
-          color: "var(--text-primary)", fontFamily: "inherit", fontSize: 13,
-          lineHeight: 1.6, outline: "none", boxSizing: "border-box" as const,
-          marginBottom: 12 }}
-        onFocus={e => (e.currentTarget.style.borderColor = col)}
-        onBlur={e => (e.currentTarget.style.borderColor = "var(--card-border)")} />
-      <button
-        onClick={channel === "email" ? runEmailLayouts : runPoly}
-        disabled={!brief.trim() || busy || layoutBusy}
-        style={{ padding: "10px 24px", borderRadius: 10, border: "none", fontFamily: "inherit",
-          fontSize: 13, fontWeight: 700, color: "white", cursor: brief.trim() ? "pointer" : "not-allowed",
-          opacity: brief.trim() ? 1 : 0.45, background: G,
-          boxShadow: brief.trim() ? "0 4px 16px rgba(124,58,237,0.35)" : "none",
-          display: "inline-flex", alignItems: "center", gap: 8 }}>
-        {(busy || layoutBusy) ? (
-          <>
-            <span style={{ width: 14, height: 14, borderRadius: "50%",
-              border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white",
-              animation: "spin 1s linear infinite", display: "inline-block" }} />
-            Generating…
-          </>
-        ) : channel === "email"
-          ? `✦ Generate 3 Email Layouts`
-          : `✦ Generate ${meta.label} Content`}
-      </button>
-    </div>
-  );
 
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "28px 32px" }}>
@@ -172,8 +119,57 @@ export default function Publishing({ channel }: { channel: PublishingChannel }) 
         </div>
       </div>
 
-      {/* Brief input */}
-      <BriefArea />
+      {/* Brief input — inlined (never a nested component function, that causes remount on keystroke) */}
+      <div style={{ padding: 20, borderRadius: 16, background: "var(--card-bg)",
+        border: "1px solid var(--card-border)", marginBottom: 20,
+        boxShadow: "0 2px 16px rgba(0,0,0,0.05)" }}>
+        <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+              textTransform: "uppercase" as const, letterSpacing: ".08em", marginBottom: 5 }}>Brand</div>
+            <select value={brand} onChange={e => setBrand(e.target.value)}
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 8, fontSize: 13,
+                border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
+                color: "var(--text-primary)", fontFamily: "inherit", outline: "none" }}>
+              <option value="">Select brand…</option>
+              {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
+            </select>
+          </div>
+        </div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+          textTransform: "uppercase" as const, letterSpacing: ".08em", marginBottom: 5 }}>
+          Campaign Brief
+        </div>
+        <textarea value={brief} onChange={e => setBrief(e.target.value)}
+          placeholder={`Describe your campaign — e.g. "Christmas festive campaign for UK families, warm and family-focused"`}
+          rows={3}
+          style={{ width: "100%", padding: "10px 14px", borderRadius: 10, resize: "none" as const,
+            border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
+            color: "var(--text-primary)", fontFamily: "inherit", fontSize: 13,
+            lineHeight: 1.6, outline: "none", boxSizing: "border-box" as const,
+            marginBottom: 12 }}
+          onFocus={e => (e.currentTarget.style.borderColor = col)}
+          onBlur={e => (e.currentTarget.style.borderColor = "var(--card-border)")} />
+        <button
+          onClick={channel === "email" ? runEmailLayouts : runPoly}
+          disabled={!brief.trim() || busy || layoutBusy}
+          style={{ padding: "10px 24px", borderRadius: 10, border: "none", fontFamily: "inherit",
+            fontSize: 13, fontWeight: 700, color: "white", cursor: brief.trim() ? "pointer" : "not-allowed",
+            opacity: brief.trim() ? 1 : 0.45, background: G,
+            boxShadow: brief.trim() ? "0 4px 16px rgba(124,58,237,0.35)" : "none",
+            display: "inline-flex", alignItems: "center", gap: 8 }}>
+          {(busy || layoutBusy) ? (
+            <>
+              <span style={{ width: 14, height: 14, borderRadius: "50%",
+                border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white",
+                animation: "spin 1s linear infinite", display: "inline-block" }} />
+              Generating…
+            </>
+          ) : channel === "email"
+            ? "✦ Generate 3 Email Layouts"
+            : `✦ Generate ${meta.label} Content`}
+        </button>
+      </div>
 
       {/* ── EMAIL: 3 layout cards → select → edit → send ── */}
       {channel === "email" && (
