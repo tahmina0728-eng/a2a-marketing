@@ -849,7 +849,18 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
                       });
                       const data = await res.json();
                       if (data.templates) {
-                        setEmailLayouts(data.templates);
+                        // Inject the campaign KV image into each template
+                        // (replaces __KV_IMAGE__ placeholder the backend puts in)
+                        const kvImage = result?.image_b64
+                          ? `data:image/jpeg;base64,${result.image_b64}`
+                          : null;
+                        const injected = data.templates.map((tpl: any) => ({
+                          ...tpl,
+                          html: kvImage
+                            ? tpl.html.replace(/__KV_IMAGE__/g, kvImage)
+                            : tpl.html,
+                        }));
+                        setEmailLayouts(injected);
                         setEditSubject(data.subject ?? "");
                       }
                       // Load Mailchimp audiences

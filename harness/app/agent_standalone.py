@@ -1489,9 +1489,10 @@ def run_email_templates(brand: str, prompt: str, provided_image_b64: str = "") -
     loader  = _gal_e()
     _bslug  = brand.split()[0].lower()
     logo_b64 = ""
-    # Use the provided KV image (from Morphis) as the hero — gives best results
+    # Use provided KV image if available; otherwise use a placeholder token
+    # that the frontend replaces with result.image_b64 (avoids large POST body)
     hero_b64 = (f"data:image/jpeg;base64,{provided_image_b64}"
-                if provided_image_b64 else "")
+                if provided_image_b64 else "__KV_IMAGE__")
     prod_b64 = ""
 
     try:
@@ -1508,8 +1509,8 @@ def run_email_templates(brand: str, prompt: str, provided_image_b64: str = "") -
 
     try:
         assets = loader.list_assets(brand) or loader.list_products(brand)
-        # Only load GCS image if no KV image was provided
-        if not hero_b64 and assets:
+        # Only load GCS image if no KV image was provided AND no placeholder set
+        if hero_b64 == "__KV_IMAGE__" and assets:
             ab = _lb_e(assets[0])
             if ab:
                 hero_b64 = f"data:image/jpeg;base64,{_b64.b64encode(ab).decode()}"
