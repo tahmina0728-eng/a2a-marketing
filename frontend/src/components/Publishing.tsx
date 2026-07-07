@@ -89,21 +89,40 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
     if (!brief.trim()) return;
     setLayoutBusy(true); setLayouts([]); setSelected(null); setMcResult(null);
     const fullPrompt = [brand && `Brand: ${brand}`, brief].filter(Boolean).join(". ");
+
     try {
+      // Step 1: get campaign image — use pipeline image if available,
+      // otherwise generate one via Morphis so templates look correct.
+      let kvSrc = campaignImage ? `data:image/jpeg;base64,${campaignImage}` : "";
+
+      if (!kvSrc) {
+        try {
+          const imgRes = await fetch(`${API_BASE}/agents/kv/run`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ prompt: fullPrompt }),
+          });
+          const imgData = await imgRes.json();
+          if (imgData.image_b64) {
+            kvSrc = `data:image/jpeg;base64,${imgData.image_b64}`;
+          }
+        } catch { /* image generation optional */ }
+      }
+
+      // Step 2: generate 3 HTML email layouts
       const res = await fetch(`${API_BASE}/mailchimp/email-templates`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: fullPrompt, brand: brand || "" }),
       });
       const data = await res.json();
       if (data.templates) {
-        // Inject campaign KV image (from Morphis) into templates client-side
-        const kvSrc = campaignImage ? `data:image/jpeg;base64,${campaignImage}` : null;
+        // Inject the campaign image (Morphis or pipeline) into each template
         const injected = data.templates.map((tpl: any) => ({
           ...tpl,
-          html: kvSrc ? tpl.html.replace(/__KV_IMAGE__/g, kvSrc) : tpl.html,
+          html: kvSrc
+            ? tpl.html.replace(/__KV_IMAGE__/g, kvSrc)
+            : tpl.html,
         }));
         setLayouts(injected);
-        // Use pipeline subject if available, else AI-generated
         setEditSubject(campaignSubject || data.subject || "");
       }
     } catch { } finally { setLayoutBusy(false); }
@@ -181,7 +200,7 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
               <span style={{ width: 14, height: 14, borderRadius: "50%",
                 border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white",
                 animation: "spin 1s linear infinite", display: "inline-block" }} />
-              Generating…
+              {channel === "email" ? "Generating image + layouts…" : "Generating…"}
             </>
           ) : channel === "email"
             ? "✦ Generate 3 Email Layouts"
