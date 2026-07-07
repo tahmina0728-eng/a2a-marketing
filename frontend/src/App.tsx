@@ -446,18 +446,40 @@ const AGENT_INTROS: Record<string, string> = {
   email_templates: "Hi, I'm Mailer! Give me your campaign brief and I'll generate three beautiful email layout variations — Hero, Text-first and Product showcase — ready to send via Mailchimp.",
 };
 
+// Gender map based on avatar images:
+// Logos=F, Helia=F, Ideon=M, Aether=M, Morphis=M, Kinetik=F, Poly=F, Director=M, Mailer=F
+const AGENT_GENDER: Record<string, "female" | "male"> = {
+  briefing:        "female",  // Logos     — red/pink hair
+  strategy:        "female",  // Helia     — hijab
+  copy:            "male",    // Ideon     — beard
+  culture:         "male",    // Aether    — dark hair
+  kv:              "male",    // Morphis   — white beard + glasses
+  reel:            "female",  // Kinetik   — curly hair + glasses
+  channel:         "female",  // Poly      — black bob
+  tvc:             "male",    // Director  — no avatar, default male
+  email_templates: "female",  // Mailer    — female
+};
+
+const FEMALE_VOICE = /samantha|zira|google uk english female|karen|moira|victoria|amy|emma|joanna|kimberly|salli|ivy|ava|nicole|allison|fiona/i;
+const MALE_VOICE   = /google uk english male|daniel|alex|fred|lee|tom|david|james|mark|oliver|aaron|brian|matthew|stephen|russell/i;
+
 function speakAgentIntro(agentKey: string, onDone?: () => void) {
   const text = AGENT_INTROS[agentKey];
   if (!text || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
-  utt.rate = 1.0; utt.pitch = 1.05; utt.volume = 1.0;
-  // Prefer a natural-sounding voice
+  utt.rate = 1.0; utt.pitch = 1.0; utt.volume = 1.0;
+
+  const gender = AGENT_GENDER[agentKey] ?? "female";
   const voices = window.speechSynthesis.getVoices();
-  const pick = voices.find(v =>
-    /samantha|zira|google uk english female|google us english|karen|moira/i.test(v.name)
-  );
+  const pattern = gender === "female" ? FEMALE_VOICE : MALE_VOICE;
+  const pick = voices.find(v => pattern.test(v.name))
+    // fallback: any voice that looks like the right gender by lang
+    ?? voices.find(v => gender === "female"
+        ? v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("woman")
+        : v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("man"));
   if (pick) utt.voice = pick;
+  utt.pitch = gender === "female" ? 1.1 : 0.9;  // slight pitch adjustment as fallback cue
   if (onDone) utt.onend = onDone;
   window.speechSynthesis.speak(utt);
 }
