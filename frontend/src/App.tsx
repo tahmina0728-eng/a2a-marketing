@@ -460,28 +460,54 @@ const AGENT_GENDER: Record<string, "female" | "male"> = {
   email_templates: "female",  // Mailer    — female
 };
 
-const FEMALE_VOICE = /samantha|zira|google uk english female|karen|moira|victoria|amy|emma|joanna|kimberly|salli|ivy|ava|nicole|allison|fiona/i;
-const MALE_VOICE   = /google uk english male|daniel|alex|fred|lee|tom|david|james|mark|oliver|aaron|brian|matthew|stephen|russell/i;
+// Female voice keywords (across macOS, Windows, Chrome, Android)
+const FEMALE_VOICE = /samantha|zira|google uk english female|karen|moira|victoria|amy|emma|joanna|kimberly|salli|ivy|ava|nicole|allison|fiona|catherine|kate|susan|lisa|helen|linda|jessica|anna|julia|hazel|tessa|veena|nora|sara|amelie|ioana/i;
+
+// Male voice keywords — includes Microsoft Windows voices
+const MALE_VOICE   = /microsoft david|microsoft mark|microsoft james|microsoft george|microsoft richard|microsoft sean|google uk english male|daniel|alex|fred|lee|tom|oliver|aaron|brian|matthew|stephen|russell|jorge|diego|martin|thomas|luca|reed|evan|arthur|eddy|albert/i;
 
 function speakAgentIntro(agentKey: string, onDone?: () => void) {
   const text = AGENT_INTROS[agentKey];
   if (!text || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
-  const utt = new SpeechSynthesisUtterance(text);
-  utt.rate = 1.0; utt.pitch = 1.0; utt.volume = 1.0;
 
   const gender = AGENT_GENDER[agentKey] ?? "female";
+
+  const doSpeak = () => {
+    const utt = new SpeechSynthesisUtterance(text);
+    utt.rate = 1.0; utt.volume = 1.0;
+    const voices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith("en"));
+
+    let pick: SpeechSynthesisVoice | undefined;
+    if (gender === "female") {
+      // 1. Try known female voice name
+      pick = voices.find(v => FEMALE_VOICE.test(v.name));
+      // 2. Fallback: any English voice that is NOT a known male voice
+      if (!pick) pick = voices.find(v => !MALE_VOICE.test(v.name));
+      utt.pitch = 1.15;
+    } else {
+      // 1. Try known male voice name
+      pick = voices.find(v => MALE_VOICE.test(v.name));
+      // 2. Fallback: any English voice that is NOT a known female voice
+      if (!pick) pick = voices.find(v => !FEMALE_VOICE.test(v.name));
+      utt.pitch = 0.85;
+    }
+
+    if (pick) utt.voice = pick;
+    if (onDone) utt.onend = onDone;
+    window.speechSynthesis.speak(utt);
+  };
+
+  // Voices may not be loaded yet on first call — wait if needed
   const voices = window.speechSynthesis.getVoices();
-  const pattern = gender === "female" ? FEMALE_VOICE : MALE_VOICE;
-  const pick = voices.find(v => pattern.test(v.name))
-    // fallback: any voice that looks like the right gender by lang
-    ?? voices.find(v => gender === "female"
-        ? v.name.toLowerCase().includes("female") || v.name.toLowerCase().includes("woman")
-        : v.name.toLowerCase().includes("male") || v.name.toLowerCase().includes("man"));
-  if (pick) utt.voice = pick;
-  utt.pitch = gender === "female" ? 1.1 : 0.9;  // slight pitch adjustment as fallback cue
-  if (onDone) utt.onend = onDone;
-  window.speechSynthesis.speak(utt);
+  if (voices.length === 0) {
+    window.speechSynthesis.onvoiceschanged = () => {
+      window.speechSynthesis.onvoiceschanged = null;
+      doSpeak();
+    };
+  } else {
+    doSpeak();
+  }
 }
 
 function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: {
