@@ -242,53 +242,61 @@ export default function Campaigns() {
       height:"100vh", overflow:"hidden",
       background:"var(--page-bg)" }}>
 
-      {/* ── Top bar ── */}
-      <div style={{ padding:"18px 40px", borderBottom:"1px solid var(--card-border)",
-        display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0 }}>
-        <div>
-          <h1 style={{ margin:0, fontSize:22, fontWeight:900, color:"var(--text-primary)", letterSpacing:"-0.03em",
-            display:"flex", alignItems:"center", gap:10 }}>
-            Create New Campaign
-            <span style={{ background:G, WebkitBackgroundClip:"text",
-              WebkitTextFillColor:"transparent", backgroundClip:"text" }}>✦</span>
-          </h1>
-          <p style={{ margin:"3px 0 0", fontSize:12, color:"var(--text-secondary)" }}>
-            Describe your idea, and AI will create on-brand content across formats.
-          </p>
-        </div>
-        <div style={{ display:"flex", gap:10 }}>
+      {/* ── Header ── */}
+      <div style={{ padding:"20px 40px 16px", borderBottom:"1px solid var(--card-border)",
+        flexShrink:0, textAlign:"center" as const, position:"relative" as const,
+        background:"var(--card-bg)" }}>
+
+        {/* Glow */}
+        <div style={{ position:"absolute" as const, top:0, left:"50%", transform:"translateX(-50%)",
+          width:360, height:100, borderRadius:"50%", pointerEvents:"none" as const,
+          background:"radial-gradient(ellipse, rgba(124,58,237,0.09) 0%, transparent 70%)" }} />
+
+        {/* Title + subtitle */}
+        <h1 style={{ margin:"0 0 4px", fontSize:26, fontWeight:900, letterSpacing:"-0.03em",
+          color:"var(--text-primary)", display:"inline-flex", alignItems:"center", gap:10 }}>
+          Create New Campaign
+          <span style={{ background:G, WebkitBackgroundClip:"text",
+            WebkitTextFillColor:"transparent", backgroundClip:"text" }}>✦</span>
+        </h1>
+        <p style={{ margin:"0 0 16px", fontSize:12, color:"var(--text-secondary)" }}>
+          Describe your idea — AI agents will generate on-brand content across every format.
+        </p>
+
+        {/* Action buttons — centred, no duplicate step dots */}
+        <div style={{ display:"flex", gap:10, justifyContent:"center" as const }}>
           <button style={{ padding:"9px 20px", borderRadius:10, fontWeight:600, fontSize:13,
-            border:"1.5px solid var(--card-border)", background:"var(--card-bg-soft)",
+            border:"1.5px solid var(--card-border)", background:"transparent",
             color:"var(--text-secondary)", cursor:"pointer" }}>
             Save Draft
           </button>
           {step===1 && (
             <button onClick={()=>brief.trim()&&setStep(2)} disabled={!brief.trim()}
-              style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
+              style={{ padding:"10px 28px", borderRadius:10, fontWeight:700, fontSize:13,
                 border:"none", background:G, color:"white", cursor:brief.trim()?"pointer":"not-allowed",
-                opacity:brief.trim()?1:0.4, boxShadow:brief.trim()?"0 4px 16px rgba(124,58,237,0.4)":"none" }}>
-              Next →
+                opacity:brief.trim()?1:0.4, boxShadow:brief.trim()?"0 4px 18px rgba(124,58,237,0.45)":"none" }}>
+              Next: Choose Format →
             </button>
           )}
           {step===2 && (
             <button onClick={()=>formats.size>0&&setStep(3)} disabled={formats.size===0}
-              style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
+              style={{ padding:"10px 28px", borderRadius:10, fontWeight:700, fontSize:13,
                 border:"none", background:G, color:"white", cursor:formats.size>0?"pointer":"not-allowed",
-                opacity:formats.size>0?1:0.4, boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
+                opacity:formats.size>0?1:0.4, boxShadow:"0 4px 18px rgba(124,58,237,0.45)" }}>
               Next: Copy Agent →
             </button>
           )}
           {step===3 && (
             <button onClick={()=>setStep(4)}
-              style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
+              style={{ padding:"10px 28px", borderRadius:10, fontWeight:700, fontSize:13,
                 border:"none", background:G, color:"white", cursor:"pointer",
-                boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
+                boxShadow:"0 4px 18px rgba(124,58,237,0.45)" }}>
               Next: Generate ✦
             </button>
           )}
           {step===4 && (
             <button onClick={genContent} disabled={generating}
-              style={{ padding:"9px 22px", borderRadius:10, fontWeight:700, fontSize:13,
+              style={{ padding:"10px 28px", borderRadius:10, fontWeight:700, fontSize:13,
                 border:"none", background:G, color:"white", cursor:"pointer",
                 boxShadow:"0 4px 16px rgba(124,58,237,0.4)" }}>
               {generating?"Generating…":"✦ Generate Content"}
@@ -306,7 +314,7 @@ export default function Campaigns() {
 
         {/* ═══ STEP 1 — Brief ═══ */}
         {step===1 && (
-          <div style={{ maxWidth:780 }}>
+          <div style={{ width:"100%" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <span style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)" }}>Campaign Brief</span>
@@ -373,7 +381,7 @@ export default function Campaigns() {
 
         {/* ═══ STEP 2 — Choose Format ═══ */}
         {step===2 && (
-          <div style={{ maxWidth:780 }}>
+          <div style={{ width:"100%" }}>
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)", marginBottom:4 }}>Choose Your Content Format</div>
               <div style={{ fontSize:13, color:"var(--text-secondary)" }}>Select the type of content you want to generate. You can choose one or multiple formats.</div>
@@ -405,7 +413,7 @@ export default function Campaigns() {
 
         {/* ═══ STEP 3 — Copy Agent (Ideon) ═══ */}
         {step===3 && (
-          <div style={{ maxWidth:780 }}>
+          <div style={{ width:"100%" }}>
             <div style={{ marginBottom:20 }}>
               <div style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)", marginBottom:4,
                 display:"flex", alignItems:"center", gap:10 }}>
@@ -479,7 +487,7 @@ export default function Campaigns() {
 
         {/* ═══ STEP 4 — Results ═══ */}
         {step===4 && (
-          <div style={{ maxWidth:900 }}>
+          <div style={{ width:"100%" }}>
             <div style={{ marginBottom:20, display:"flex", alignItems:"center", gap:12 }}>
               <div style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)" }}>Generated Content</div>
               {(["image","reel","tvc","video"] as FormatType[]).filter(hasRes).map(f=>(
