@@ -450,8 +450,16 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
   const [saHeadline, setSaHeadline] = useState("");
   const [saBody,     setSaBody]     = useState("");
   // Email template variations (3 layouts from Mailer agent)
-  const [emailLayouts, setEmailLayouts]   = useState<any[]>([]);
+  const [emailLayouts, setEmailLayouts]       = useState<any[]>([]);
   const [emailLayoutBusy, setEmailLayoutBusy] = useState(false);
+  const [selectedLayout, setSelectedLayout]   = useState<any | null>(null);
+  // Editable fields for selected layout
+  const [editSubject,  setEditSubject]  = useState("");
+  const [editHtml,     setEditHtml]     = useState("");
+  const [mcListId,     setMcListId]     = useState("");
+  const [mcAudiences,  setMcAudiences]  = useState<{id:string;name:string;member_count:number}[]>([]);
+  const [mcSending,    setMcSending]    = useState(false);
+  const [mcResult,     setMcResult]     = useState<{status:string;campaign_id?:string} | null>(null);
   const supported = STANDALONE_SUPPORTED.includes(agentKey);
 
   const handleSaveKvToHub = async () => {
@@ -825,93 +833,183 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
                 </div>
               )}
 
-              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" as const }}>
-                <button onClick={() => {
-                  setSaSubject(result?.email_subject ?? result?.headline ?? "");
-                  setSaHeadline(result?.headline ?? "");
-                  setSaBody(result?.body ?? result?.copy ?? result?.landing_body ?? result?.headline ?? "");
-                  setShowStandaloneEmailPreview(true);
-                }}
-                  style={{ padding: "8px 16px", borderRadius: 9, border: "none", fontFamily: "inherit",
-                    fontSize: 12, fontWeight: 700, color: "white", cursor: "pointer",
-                    background: `linear-gradient(135deg, ${color}, #6366f1)` }}>
-                  👁 Preview & Edit Email
-                </button>
-
-                {/* Generate 3 email layout variations via Mailer agent */}
-                <button
-                  disabled={emailLayoutBusy}
-                  onClick={async () => {
-                    setEmailLayoutBusy(true);
-                    setEmailLayouts([]);
+              {/* Auto-generate 3 layouts on first render of email tab */}
+              {emailLayouts.length === 0 && !emailLayoutBusy && (
+                <button onClick={async () => {
+                    setEmailLayoutBusy(true); setSelectedLayout(null); setMcResult(null);
                     try {
-                      const res = await fetch(`${API_BASE_PUB}/agents/email_templates/run`, {
+                      const res = await fetch(`${API_BASE_PUB}/mailchimp/email-templates`, {
                         method: "POST", headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ prompt: prompt.trim() }),
+                        body: JSON.stringify({
+                          prompt: prompt.trim(),
+                          brand: result?.brand ?? "",
+                          image_b64: result?.image_b64 ?? "",
+                        }),
                       });
                       const data = await res.json();
-                      if (data.templates) setEmailLayouts(data.templates);
-                    } catch { /* ignore */ } finally { setEmailLayoutBusy(false); }
+                      if (data.templates) {
+                        setEmailLayouts(data.templates);
+                        setEditSubject(data.subject ?? "");
+                      }
+                      // Load Mailchimp audiences
+                      fetch(`${API_BASE_PUB}/mailchimp/audiences`)
+                        .then(r => r.json()).then(d => setMcAudiences(d.audiences ?? [])).catch(()=>{});
+                    } catch { } finally { setEmailLayoutBusy(false); }
                   }}
-                  style={{ padding: "8px 16px", borderRadius: 9, border: `1.5px solid ${color}40`,
-                    fontFamily: "inherit", fontSize: 12, fontWeight: 700,
-                    color: color, cursor: "pointer", background: `${color}08` }}>
-                  {emailLayoutBusy ? "⏳ Generating…" : "✦ Generate 3 Email Layouts"}
+                  style={{ padding: "10px 22px", borderRadius: 10, border: "none", fontFamily: "inherit",
+                    fontSize: 13, fontWeight: 700, color: "white", cursor: "pointer",
+                    background: `linear-gradient(135deg,${color},#6366f1)`,
+                    boxShadow: `0 4px 16px ${color}40` }}>
+                  ✦ Generate 3 Email Layouts
                 </button>
-              </div>
+              )}
 
-              {/* 3 Email layout cards */}
-              {emailLayouts.length > 0 && (
-                <div style={{ marginTop: 14, display: "flex", flexDirection: "column" as const, gap: 12 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: "0.08em",
+              {emailLayoutBusy && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 13,
+                  color: "var(--text-secondary)" }}>
+                  <div style={{ width: 16, height: 16, borderRadius: "50%",
+                    border: `2px solid ${color}30`, borderTopColor: color,
+                    animation: "spin 1s linear infinite" }} />
+                  Generating 3 email layout variations…
+                </div>
+              )}
+
+              {/* ── Step 1: Pick a layout ── */}
+              {emailLayouts.length > 0 && !selectedLayout && (
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color, letterSpacing: ".06em",
                     textTransform: "uppercase" as const }}>
-                    3 Email Layout Variations — pick one to send
+                    Step 1 — Pick a layout
                   </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 12 }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12 }}>
                     {emailLayouts.map((tpl: any) => (
-                      <div key={tpl.id} style={{ borderRadius: 12, overflow: "hidden",
-                        border: `1.5px solid ${color}30`,
-                        boxShadow: `0 4px 16px ${color}12` }}>
-                        {/* Header */}
-                        <div style={{ padding: "9px 12px", background: `${color}10`,
-                          borderBottom: `1px solid ${color}20`,
-                          display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <div>
-                            <div style={{ fontSize: 12, fontWeight: 700, color }}>{tpl.name}</div>
-                            <div style={{ fontSize: 10, color: "var(--text-secondary)", marginTop: 1 }}>{tpl.layout}</div>
-                          </div>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <a href={`data:text/html;charset=utf-8,${encodeURIComponent(tpl.html)}`}
-                              target="_blank" rel="noreferrer"
-                              style={{ fontSize: 11, fontWeight: 700, color, textDecoration: "none",
-                                padding: "3px 9px", borderRadius: 6, border: `1px solid ${color}40`,
-                                background: `${color}08` }}>
-                              Preview ↗
-                            </a>
-                            <a href={`data:text/html;charset=utf-8,${encodeURIComponent(tpl.html)}`}
-                              download={`${tpl.id}-email.html`}
-                              style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)",
-                                textDecoration: "none", padding: "3px 9px", borderRadius: 6,
-                                border: "1px solid var(--card-border)", background: "var(--card-bg-soft)" }}>
-                              ⬇ HTML
-                            </a>
-                          </div>
+                      <div key={tpl.id}
+                        onClick={() => { setSelectedLayout(tpl); setEditSubject(tpl.subject ?? editSubject); setEditHtml(tpl.html); }}
+                        style={{ borderRadius: 12, overflow: "hidden", cursor: "pointer",
+                          border: `2px solid ${color}25`, transition: "all 0.15s",
+                          boxShadow: `0 2px 12px ${color}10` }}
+                        onMouseEnter={e => (e.currentTarget.style.borderColor = color)}
+                        onMouseLeave={e => (e.currentTarget.style.borderColor = `${color}25`)}>
+                        <div style={{ padding: "8px 10px", background: `${color}08`,
+                          borderBottom: `1px solid ${color}15` }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color }}>{tpl.name}</div>
+                          <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>{tpl.layout}</div>
                         </div>
-                        {/* Scaled preview */}
-                        <div style={{ position: "relative" as const, height: 200, overflow: "hidden",
-                          background: "#f8fafc" }}>
+                        <div style={{ position: "relative" as const, height: 180, overflow: "hidden", background: "#f8fafc" }}>
                           <iframe srcDoc={tpl.html} title={tpl.name}
                             style={{ width: "200%", height: "200%", border: "none",
                               transform: "scale(0.5)", transformOrigin: "top left",
                               pointerEvents: "none" as const }} />
                         </div>
+                        <div style={{ padding: "8px 10px", textAlign: "center" as const,
+                          fontSize: 12, fontWeight: 600, color, background: `${color}06` }}>
+                          Select →
+                        </div>
                       </div>
                     ))}
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--text-secondary)", padding: "8px 12px",
-                    borderRadius: 8, background: "rgba(124,58,237,0.05)",
-                    border: "1px solid rgba(124,58,237,0.15)" }}>
-                    💡 Click <strong>Preview ↗</strong> to open full email in browser · Download HTML → paste into <strong>Publishing → Email</strong> to send via Mailchimp
+                </div>
+              )}
+
+              {/* ── Step 2: Edit & Send ── */}
+              {selectedLayout && (
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color, letterSpacing: ".06em",
+                      textTransform: "uppercase" as const }}>
+                      Step 2 — Edit & Send · {selectedLayout.name}
+                    </div>
+                    <button onClick={() => { setSelectedLayout(null); setMcResult(null); }}
+                      style={{ fontSize: 11, color: "var(--text-secondary)", background: "none",
+                        border: "none", cursor: "pointer" }}>← Back to layouts</button>
+                  </div>
+
+                  {/* Live preview */}
+                  <div style={{ borderRadius: 12, overflow: "hidden", border: "1px solid var(--card-border)",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
+                    <iframe srcDoc={editHtml} title="Preview"
+                      style={{ width: "100%", height: 320, border: "none", display: "block" }} />
+                  </div>
+
+                  {/* Editable fields */}
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 10,
+                    padding: 16, borderRadius: 12, background: "var(--card-bg)",
+                    border: "1px solid var(--card-border)" }}>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                        textTransform: "uppercase" as const, letterSpacing: ".06em", marginBottom: 5 }}>Subject Line</div>
+                      <input value={editSubject} onChange={e => setEditSubject(e.target.value)}
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 13,
+                          border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
+                          color: "var(--text-primary)", fontFamily: "inherit", outline: "none",
+                          boxSizing: "border-box" as const }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                        textTransform: "uppercase" as const, letterSpacing: ".06em", marginBottom: 5 }}>HTML Content (editable)</div>
+                      <textarea value={editHtml} onChange={e => setEditHtml(e.target.value)} rows={5}
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 11,
+                          border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
+                          color: "var(--text-primary)", fontFamily: "monospace", outline: "none",
+                          resize: "vertical" as const, boxSizing: "border-box" as const }} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                        textTransform: "uppercase" as const, letterSpacing: ".06em", marginBottom: 5 }}>Mailchimp Audience</div>
+                      <select value={mcListId} onChange={e => setMcListId(e.target.value)}
+                        style={{ width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 13,
+                          border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
+                          color: "var(--text-primary)", fontFamily: "inherit", outline: "none" }}>
+                        <option value="">Select audience…</option>
+                        {mcAudiences.map(a => (
+                          <option key={a.id} value={a.id}>{a.name} ({a.member_count} contacts)</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {mcResult && (
+                    <div style={{ padding: "10px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)",
+                      color: "#10b981" }}>
+                      ✓ Campaign {mcResult.status}! ID: {mcResult.campaign_id}
+                    </div>
+                  )}
+
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <a href={`data:text/html;charset=utf-8,${encodeURIComponent(editHtml)}`}
+                      target="_blank" rel="noreferrer"
+                      style={{ padding: "9px 18px", borderRadius: 9, border: `1.5px solid ${color}40`,
+                        fontSize: 12, fontWeight: 700, color, textDecoration: "none",
+                        background: `${color}08` }}>
+                      Preview ↗
+                    </a>
+                    <button disabled={!mcListId || mcSending}
+                      onClick={async () => {
+                        setMcSending(true); setMcResult(null);
+                        try {
+                          const r = await fetch(`${API_BASE_PUB}/mailchimp/send`, {
+                            method: "POST", headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              list_id: mcListId, subject: editSubject,
+                              html: editHtml, from_name: "CampaignOS",
+                              reply_to: "", preview_text: "",
+                            }),
+                          });
+                          const d = await r.json();
+                          if (!r.ok) throw new Error(d.detail);
+                          setMcResult(d);
+                        } catch (e: any) { alert(e.message); }
+                        finally { setMcSending(false); }
+                      }}
+                      style={{ flex: 1, padding: "10px 22px", borderRadius: 9, border: "none",
+                        fontSize: 13, fontWeight: 700, color: "white",
+                        cursor: mcListId ? "pointer" : "not-allowed",
+                        opacity: mcListId ? 1 : 0.4,
+                        background: `linear-gradient(135deg,${color},#6366f1)`,
+                        boxShadow: mcListId ? `0 4px 16px ${color}35` : "none" }}>
+                      🐵 {mcSending ? "Sending via Mailchimp…" : "Send Campaign via Mailchimp"}
+                    </button>
                   </div>
                 </div>
               )}

@@ -1443,7 +1443,7 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
     }
 
 
-def run_email_templates(brand: str, prompt: str) -> dict:
+def run_email_templates(brand: str, prompt: str, provided_image_b64: str = "") -> dict:
     """
     Standalone Email Templates agent.
     Generates 3 distinct HTML email layout variations for a campaign:
@@ -1489,7 +1489,9 @@ def run_email_templates(brand: str, prompt: str) -> dict:
     loader  = _gal_e()
     _bslug  = brand.split()[0].lower()
     logo_b64 = ""
-    hero_b64 = ""
+    # Use the provided KV image (from Morphis) as the hero — gives best results
+    hero_b64 = (f"data:image/jpeg;base64,{provided_image_b64}"
+                if provided_image_b64 else "")
     prod_b64 = ""
 
     try:
@@ -1506,7 +1508,8 @@ def run_email_templates(brand: str, prompt: str) -> dict:
 
     try:
         assets = loader.list_assets(brand) or loader.list_products(brand)
-        if assets:
+        # Only load GCS image if no KV image was provided
+        if not hero_b64 and assets:
             ab = _lb_e(assets[0])
             if ab:
                 hero_b64 = f"data:image/jpeg;base64,{_b64.b64encode(ab).decode()}"

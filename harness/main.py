@@ -1196,6 +1196,34 @@ async def mailchimp_campaigns(count: int = 20):
         raise HTTPException(status_code=400, detail=str(e))
 
 
+class EmailTemplatesRequest(_BaseModel):
+    prompt:    str
+    brand:     str  = ""
+    image_b64: str  = ""   # optional KV image (base64 JPEG) to embed as hero
+
+
+@app.post("/mailchimp/email-templates")
+async def mailchimp_email_templates(req: EmailTemplatesRequest):
+    """
+    Generate 3 HTML email layout variations.
+    If image_b64 is provided it is used as the hero image in all layouts
+    instead of loading from GCS — so the campaign KV image appears correctly.
+    """
+    from app import agent_standalone
+    try:
+        brand = req.brand or agent_standalone._extract_brand(req.prompt) or ""
+        if not brand:
+            raise HTTPException(status_code=400, detail="Brand not recognised — include brand name in prompt")
+        result = await asyncio.to_thread(
+            agent_standalone.run_email_templates, brand, req.prompt, req.image_b64
+        )
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ══════════════════════════════════════════════════════════════════
 
 class StandalonePublishRequest(_BaseModel):
