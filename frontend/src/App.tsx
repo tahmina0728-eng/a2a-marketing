@@ -5529,7 +5529,8 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
                     )}
                   </button>
                   {item.label === "Publishing" && publishingOpen && (
-                    <PublishingNav active={publishingChannel} onChange={onPublishingChannel} />
+                    <PublishingNav active={publishingChannel} onChange={onPublishingChannel}
+                      onPolyClick={() => onSelectAgent("channel")} />
                   )}
                 </Fragment>
               ))}

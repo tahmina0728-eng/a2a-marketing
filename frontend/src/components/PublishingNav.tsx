@@ -115,65 +115,87 @@ const CHANNELS: ChannelItem[] = [
 interface PublishingNavProps {
   active: PublishingChannel;
   onChange: (c: PublishingChannel) => void;
+  onPolyClick?: () => void;
 }
 
-export default function PublishingNav({ active, onChange }: PublishingNavProps) {
+export default function PublishingNav({ active, onChange, onPolyClick }: PublishingNavProps) {
   return (
     <div style={{ padding: "0 8px" }}>
-      {/* Section label */}
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
-        textTransform: "uppercase" as const, color: "var(--text-secondary)",
-        padding: "10px 10px 6px", opacity: 0.6 }}>
-        Channels
-      </div>
 
-      {CHANNELS.map(ch => {
-        const isActive = ch.id === active;
-        return (
-          <button
-            key={ch.id}
-            onClick={() => onChange(ch.id)}
-            style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "8px 10px", borderRadius: 8, border: "none",
-              cursor: "pointer", fontFamily: "inherit", width: "100%",
-              transition: "all 0.15s",
-              background: isActive ? "rgba(124,58,237,0.10)" : "transparent",
-            }}
-            onMouseEnter={e => {
-              if (!isActive) e.currentTarget.style.background = "var(--card-hover-bg)";
-            }}
-            onMouseLeave={e => {
-              if (!isActive) e.currentTarget.style.background = "transparent";
-            }}
-          >
-            <span style={{ flexShrink: 0 }}>{ch.icon}</span>
-            <span style={{ fontSize: 13, fontWeight: isActive ? 600 : 500,
-              color: isActive ? "#7c3aed" : "var(--text-secondary)" }}>
-              {ch.label}
-            </span>
-          </button>
-        );
-      })}
-
-      {/* Connect Channel button */}
+      {/* Poly agent row */}
       <button
-        style={{ display: "flex", alignItems: "center", gap: 8,
+        onClick={onPolyClick}
+        style={{ display: "flex", alignItems: "center", gap: 10,
           padding: "8px 10px", borderRadius: 8, border: "none",
           cursor: "pointer", fontFamily: "inherit", width: "100%",
-          background: "transparent", transition: "all 0.15s",
-          fontSize: 13, fontWeight: 500, color: "#7c3aed",
-          marginTop: 4 }}
-        onMouseEnter={e => e.currentTarget.style.background = "rgba(124,58,237,0.08)"}
-        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+          background: "transparent", transition: "all 0.15s" }}
+        onMouseEnter={e => (e.currentTarget.style.background = "var(--card-hover-bg)")}
+        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-          stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-          <line x1="12" y1="5" x2="12" y2="19"/>
-          <line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        Connect Channel
+        <img src="/agent-logo/Poly.png" alt="Poly"
+          style={{ width: 22, height: 22, borderRadius: 6,
+            objectFit: "cover" as const, flexShrink: 0 }} />
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)",
+            lineHeight: 1.2 }}>Poly</div>
+          <div style={{ fontSize: 10, color: "var(--text-secondary)", marginTop: 1 }}>
+            Channel Adaptation
+          </div>
+        </div>
       </button>
+
+      {/* Channels — indented under Poly */}
+
+      {/* Left border to show nesting under Poly */}
+      <div style={{ marginLeft: 18, borderLeft: "1.5px solid var(--card-border)",
+        paddingLeft: 6 }}>
+        {CHANNELS.map(ch => {
+          const isActive = ch.id === active;
+          return (
+            <button
+              key={ch.id}
+              onClick={() => onChange(ch.id)}
+              style={{
+                display: "flex", alignItems: "center", gap: 9,
+                padding: "7px 8px", borderRadius: 7, border: "none",
+                cursor: "pointer", fontFamily: "inherit", width: "100%",
+                transition: "all 0.15s",
+                background: isActive ? "rgba(124,58,237,0.10)" : "transparent",
+              }}
+              onMouseEnter={e => {
+                if (!isActive) e.currentTarget.style.background = "var(--card-hover-bg)";
+              }}
+              onMouseLeave={e => {
+                if (!isActive) e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <span style={{ flexShrink: 0 }}>{ch.icon}</span>
+              <span style={{ fontSize: 12, fontWeight: isActive ? 600 : 500,
+                color: isActive ? "#7c3aed" : "var(--text-secondary)" }}>
+                {ch.label}
+              </span>
+            </button>
+          );
+        })}
+
+        {/* Connect Channel */}
+        <button
+          style={{ display: "flex", alignItems: "center", gap: 7,
+            padding: "7px 8px", borderRadius: 7, border: "none",
+            cursor: "pointer", fontFamily: "inherit", width: "100%",
+            background: "transparent", transition: "all 0.15s",
+            fontSize: 12, fontWeight: 500, color: "#7c3aed", marginTop: 2 }}
+          onMouseEnter={e => e.currentTarget.style.background = "rgba(124,58,237,0.08)"}
+          onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Connect Channel
+        </button>
+      </div>
     </div>
   );
 }
