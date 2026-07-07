@@ -1509,11 +1509,8 @@ def run_email_templates(brand: str, prompt: str, provided_image_b64: str = "") -
 
     try:
         assets = loader.list_assets(brand) or loader.list_products(brand)
-        # Only load GCS image if no KV image was provided AND no placeholder set
-        if hero_b64 == "__KV_IMAGE__" and assets:
-            ab = _lb_e(assets[0])
-            if ab:
-                hero_b64 = f"data:image/jpeg;base64,{_b64.b64encode(ab).decode()}"
+        # hero_b64 stays as "__KV_IMAGE__" — the frontend replaces it with
+        # the Morphis-generated image. Never overwrite with a GCS asset here.
         if len(assets or []) > 1:
             pb = _lb_e(assets[1])
             if pb:
@@ -1539,12 +1536,10 @@ def run_email_templates(brand: str, prompt: str, provided_image_b64: str = "") -
                  if logo_b64 else
                  f'<span style="font-size:22px;font-weight:900;color:{col};">{brand}</span>')
 
-    hero_img  = (f'<img src="{hero_b64}" alt="{brand}" '
-                 f'style="width:100%;display:block;border-radius:8px 8px 0 0;">'
-                 if hero_b64 else
-                 f'<div style="width:100%;height:240px;background:linear-gradient(135deg,{col},{acc});'
-                 f'display:flex;align-items:center;justify-content:center;border-radius:8px 8px 0 0;">'
-                 f'<span style="color:white;font-size:32px;font-weight:900;">{brand}</span></div>')
+    # Always use __KV_IMAGE__ placeholder — frontend replaces with Morphis image.
+    # The img tag uses __KV_IMAGE__ as src; if injection fails the alt text shows.
+    hero_img = (f'<img src="{hero_b64}" alt="{brand}" '
+                f'style="width:100%;display:block;border-radius:8px 8px 0 0;">')
 
     prod_img  = (f'<img src="{prod_b64}" alt="{brand}" '
                  f'style="width:100%;max-height:220px;object-fit:cover;border-radius:8px;">'
