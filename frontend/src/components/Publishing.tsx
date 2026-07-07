@@ -49,6 +49,8 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
   const [editHtml,    setEditHtml]    = useState("");
   const [mcSending,   setMcSending]   = useState(false);
   const [mcResult,    setMcResult]    = useState<any>(null);
+  const [mcError,     setMcError]     = useState("");
+  const [replyTo,     setReplyTo]     = useState("");
   const [audiences,   setAudiences]   = useState<{id:string;name:string;member_count:number}[]>([]);
   const [mcListId,    setMcListId]    = useState("");
 
@@ -306,22 +308,47 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
                       color: "var(--text-primary)", fontFamily: "monospace", outline: "none",
                       resize: "vertical" as const, boxSizing: "border-box" as const }} />
                 </div>
-                <div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
-                    textTransform: "uppercase" as const, letterSpacing: ".08em", marginBottom: 5 }}>
-                    Mailchimp Audience
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                      textTransform: "uppercase" as const, letterSpacing: ".08em", marginBottom: 5 }}>
+                      Mailchimp Audience
+                    </div>
+                    <select value={mcListId} onChange={e => setMcListId(e.target.value)}
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 13,
+                        border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
+                        color: "var(--text-primary)", fontFamily: "inherit", outline: "none" }}>
+                      <option value="">Select audience…</option>
+                      {audiences.map(a => (
+                        <option key={a.id} value={a.id}>{a.name} ({a.member_count} contacts)</option>
+                      ))}
+                    </select>
                   </div>
-                  <select value={mcListId} onChange={e => setMcListId(e.target.value)}
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 13,
-                      border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
-                      color: "var(--text-primary)", fontFamily: "inherit", outline: "none" }}>
-                    <option value="">Select audience…</option>
-                    {audiences.map(a => (
-                      <option key={a.id} value={a.id}>{a.name} ({a.member_count} contacts)</option>
-                    ))}
-                  </select>
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                      textTransform: "uppercase" as const, letterSpacing: ".08em", marginBottom: 5 }}>
+                      Reply-to Email
+                    </div>
+                    <input type="email" value={replyTo} onChange={e => setReplyTo(e.target.value)}
+                      placeholder="your@email.com"
+                      style={{ width: "100%", padding: "9px 12px", borderRadius: 8, fontSize: 13,
+                        border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)",
+                        color: "var(--text-primary)", fontFamily: "inherit", outline: "none",
+                        boxSizing: "border-box" as const }} />
+                    <div style={{ fontSize: 10, color: "var(--text-secondary)", marginTop: 4 }}>
+                      Must be verified in Mailchimp
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {mcError && (
+                <div style={{ padding: "10px 14px", borderRadius: 8, fontSize: 12,
+                  background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)",
+                  color: "#ef4444" }}>
+                  ⚠ {mcError}
+                </div>
+              )}
 
               {mcResult && (
                 <div style={{ padding: "10px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600,
@@ -341,17 +368,18 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
                 </a>
                 <button disabled={!mcListId || mcSending}
                   onClick={async () => {
-                    setMcSending(true); setMcResult(null);
+                    setMcSending(true); setMcResult(null); setMcError("");
                     try {
                       const r = await fetch(`${API_BASE}/mailchimp/send`, {
                         method: "POST", headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ list_id: mcListId, subject: editSubject,
-                          html: editHtml, from_name: "CampaignOS", reply_to: "" }),
+                          html: editHtml, from_name: "CampaignOS",
+                          reply_to: replyTo }),
                       });
                       const d = await r.json();
-                      if (!r.ok) throw new Error(d.detail);
+                      if (!r.ok) throw new Error(d.detail ?? JSON.stringify(d));
                       setMcResult(d);
-                    } catch (e: any) { alert(e.message); }
+                    } catch (e: any) { setMcError(e.message); }
                     finally { setMcSending(false); }
                   }}
                   style={{ flex: 1, padding: "10px 22px", borderRadius: 9, border: "none",

@@ -123,6 +123,15 @@ def delete_template(template_id: int) -> None:
 
 # ── Campaigns ─────────────────────────────────────────────────
 
+def _account_email() -> str:
+    """Return the verified email from the connected Mailchimp account."""
+    try:
+        info = ping()
+        return info.get("email", "")
+    except Exception:
+        return ""
+
+
 def create_campaign(
     list_id:   str,
     subject:   str,
@@ -132,6 +141,8 @@ def create_campaign(
     title:     str = "",
 ) -> dict:
     """Create a regular email campaign and return its ID."""
+    # reply_to must be a verified email — fall back to account email if empty
+    effective_reply_to = reply_to or _account_email()
     body = {
         "type": "regular",
         "recipients": {"list_id": list_id},
@@ -140,7 +151,7 @@ def create_campaign(
             "preview_text": preview_text,
             "title":        title or subject[:50],
             "from_name":    from_name,
-            "reply_to":     reply_to,
+            "reply_to":     effective_reply_to,
         },
     }
     result = _post("/campaigns", body)
