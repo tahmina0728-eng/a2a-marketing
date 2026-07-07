@@ -397,8 +397,58 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
         </>
       )}
 
-      {/* ── NON-EMAIL: show Poly-generated copy ── */}
-      {channel !== "email" && result && channelCopy && (
+      {/* ── WEBSITE: landing page preview + open link ── */}
+      {channel === "website" && result && result.landing_page_id && (
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
+          {/* KV image + headline preview */}
+          {(result.image_b64 || result.logo_b64) && (
+            <div style={{ borderRadius: 14, overflow: "hidden",
+              border: "1px solid var(--card-border)", boxShadow: "0 4px 20px rgba(0,0,0,0.08)" }}>
+              {result.image_b64 && (
+                <div style={{ position: "relative" as const }}>
+                  <img src={`data:image/jpeg;base64,${result.image_b64}`} alt="Campaign"
+                    style={{ width: "100%", display: "block", maxHeight: 260,
+                      objectFit: "cover" as const }} />
+                  {result.logo_b64 && (
+                    <div style={{ position: "absolute" as const, top: 12, right: 12,
+                      background: "rgba(255,255,255,0.92)", backdropFilter: "blur(8px)",
+                      borderRadius: 8, padding: "5px 10px" }}>
+                      <img src={`data:image/png;base64,${result.logo_b64}`} alt="Logo"
+                        style={{ height: 24, objectFit: "contain" as const, display: "block" }} />
+                    </div>
+                  )}
+                </div>
+              )}
+              <div style={{ padding: "16px 20px", background: "var(--card-bg)" }}>
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)",
+                  marginBottom: 6 }}>{result.headline}</div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                  {result.body}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Open landing page */}
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <a href={`${API_BASE}/agents/landing/${result.landing_page_id}`}
+              target="_blank" rel="noreferrer"
+              style={{ padding: "10px 22px", borderRadius: 10, fontWeight: 700,
+                fontSize: 13, color: "white", textDecoration: "none",
+                background: `linear-gradient(135deg,${col},#6366f1)`,
+                boxShadow: `0 4px 16px ${col}35`,
+                display: "inline-flex", alignItems: "center", gap: 8 }}>
+              🌐 Open Landing Page ↗
+            </a>
+            <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+              Hosted at /agents/landing/{result.landing_page_id as string}
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── NON-EMAIL, NON-WEBSITE: show Poly-generated copy ── */}
+      {channel !== "email" && channel !== "website" && result && channelCopy && (
         <div style={{ padding: 20, borderRadius: 14, background: "var(--card-bg)",
           border: `1.5px solid ${col}30`, boxShadow: `0 4px 20px ${col}10` }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: col,
