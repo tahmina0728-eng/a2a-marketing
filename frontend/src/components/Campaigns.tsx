@@ -332,15 +332,15 @@ export default function Campaigns() {
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
             </div>
 
-            {/* Action buttons — after chips */}
-            <div style={{ display:"flex", gap:10, marginTop:24 }}>
+            {/* Action buttons — right-aligned to match card edge */}
+            <div style={{ display:"flex", gap:10, marginTop:20, justifyContent:"flex-end" as const }}>
               <button style={{ padding:"10px 22px", borderRadius:10, fontWeight:600, fontSize:13,
                 border:"1.5px solid var(--card-border)", background:"transparent",
                 color:"var(--text-secondary)", cursor:"pointer" }}>
                 Save Draft
               </button>
               <button onClick={()=>brief.trim()&&setStep(2)} disabled={!brief.trim()}
-                style={{ padding:"10px 32px", borderRadius:10, fontWeight:700, fontSize:14,
+                style={{ padding:"10px 28px", borderRadius:10, fontWeight:700, fontSize:13,
                   border:"none", background:G, color:"white",
                   cursor:brief.trim()?"pointer":"not-allowed",
                   opacity:brief.trim()?1:0.4,
@@ -372,7 +372,7 @@ export default function Campaigns() {
             )}
 
             {/* Step 2 buttons */}
-            <div style={{ display:"flex", gap:10, marginTop:24 }}>
+            <div style={{ display:"flex", gap:10, marginTop:20, justifyContent:"flex-end" as const }}>
               <button onClick={()=>setStep(1)}
                 style={{ padding:"10px 20px", borderRadius:10, fontWeight:600, fontSize:13,
                   border:"1.5px solid var(--card-border)", background:"transparent",
@@ -453,7 +453,7 @@ export default function Campaigns() {
             )}
 
             {/* Step 3 buttons */}
-            <div style={{ display:"flex", gap:10, marginTop:24 }}>
+            <div style={{ display:"flex", gap:10, marginTop:20, justifyContent:"flex-end" as const }}>
               <button onClick={()=>setStep(2)}
                 style={{ padding:"10px 20px", borderRadius:10, fontWeight:600, fontSize:13,
                   border:"1.5px solid var(--card-border)", background:"transparent",
