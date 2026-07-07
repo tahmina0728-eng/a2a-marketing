@@ -5858,7 +5858,16 @@ export default function App() {
               pointerEvents: "none" as const, background: "var(--video-wash)" }} />
             <div style={{ position: "relative" as const, zIndex: 2, flex: 1,
               display: "flex", flexDirection: "column" as const, overflow: "hidden" }}>
-              <Publishing channel={publishingChannel} />
+              <Publishing channel={publishingChannel}
+                campaignImage={(() => {
+                  const cp = (state.pipeline_output as any)?.creative_pipeline;
+                  return cp?.images_b64?.[0] ?? cp?.image_b64 ?? "";
+                })()}
+                campaignSubject={String((state.pipeline_output as any)?.campaign_copy?.channel_copy?.email_subject ?? "")}
+                campaignHeadline={String((state.pipeline_output as any)?.campaign_copy?.short?.headline ?? "")}
+                campaignBody={String((state.pipeline_output as any)?.campaign_copy?.long?.body ?? "")}
+                campaignBrand={String((state.pipeline_output as any)?.brand ?? "")}
+              />
             </div>
           </>
         ) : view === "hub" ? (

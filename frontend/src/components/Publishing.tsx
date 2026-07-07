@@ -19,12 +19,23 @@ const CHANNEL_META: Record<PublishingChannel, {
 
 interface EmailLayout { id: string; name: string; layout: string; html: string; }
 
-export default function Publishing({ channel }: { channel: PublishingChannel }) {
+interface PublishingProps {
+  channel: PublishingChannel;
+  campaignImage?:   string;  // base64 KV image from Morphis
+  campaignSubject?: string;  // email subject from copy agent
+  campaignHeadline?: string; // short headline from Ideon
+  campaignBody?:    string;  // long body from Ideon
+  campaignBrand?:   string;  // brand from pipeline
+}
+
+export default function Publishing({ channel, campaignImage="", campaignSubject="",
+  campaignHeadline="", campaignBody="", campaignBrand="" }: PublishingProps) {
   const meta = CHANNEL_META[channel];
 
-  // Brief state
-  const [brief,  setBrief]  = useState("");
-  const [brand,  setBrand]  = useState("");
+  // Brief state — pre-fill with pipeline data when available
+  // Pre-fill brief with pipeline headline + body when available
+  const [brief,  setBrief]  = useState([campaignHeadline, campaignBody].filter(Boolean).join(" — ") || "");
+  const [brand,  setBrand]  = useState(campaignBrand || "");
 
   // Poly generation
   const [busy,   setBusy]   = useState(false);
@@ -85,8 +96,15 @@ export default function Publishing({ channel }: { channel: PublishingChannel }) 
       });
       const data = await res.json();
       if (data.templates) {
-        setLayouts(data.templates);
-        setEditSubject(data.subject ?? "");
+        // Inject campaign KV image (from Morphis) into templates client-side
+        const kvSrc = campaignImage ? `data:image/jpeg;base64,${campaignImage}` : null;
+        const injected = data.templates.map((tpl: any) => ({
+          ...tpl,
+          html: kvSrc ? tpl.html.replace(/__KV_IMAGE__/g, kvSrc) : tpl.html,
+        }));
+        setLayouts(injected);
+        // Use pipeline subject if available, else AI-generated
+        setEditSubject(campaignSubject || data.subject || "");
       }
     } catch { } finally { setLayoutBusy(false); }
   };
