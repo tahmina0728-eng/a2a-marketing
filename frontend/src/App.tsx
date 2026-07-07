@@ -314,7 +314,8 @@ const HARNESS_STAGES = [
 
 // First 7 agents shown as individual nav entries in the sidebar (Nexus/Performance excluded —
 // it's a forecasting stage, not a content-producing creative agent like the other seven).
-const SIDEBAR_AGENT_KEYS = ["briefing", "strategy", "copy", "culture", "kv", "reel", "channel", "tvc"];
+// "channel" (Poly) removed from AI Agent — it lives under Publishing
+const SIDEBAR_AGENT_KEYS = ["briefing", "strategy", "copy", "culture", "kv", "reel", "tvc"];
 
 
 // ── Individual agent profile page (static — sidebar nav) ──────
