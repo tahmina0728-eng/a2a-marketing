@@ -1,4 +1,5 @@
 import type { PublishingChannel } from "./PublishingNav";
+import MailchimpPanel from "./Mailchimp";
 
 const CHANNEL_META: Record<PublishingChannel, {
   label: string; color: string; desc: string; formats: string[];
@@ -101,18 +102,22 @@ export default function Publishing({ channel }: PublishingProps) {
           </div>
         </div>
 
-        {/* Coming soon */}
-        <div style={{ padding: 28, borderRadius: 16, textAlign: "center" as const,
-          background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🚀</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 6 }}>
-            Publishing to {meta.label} coming soon
+        {/* Email → Mailchimp panel; others → coming soon */}
+        {channel === "email" ? (
+          <MailchimpPanel />
+        ) : (
+          <div style={{ padding: 28, borderRadius: 16, textAlign: "center" as const,
+            background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🚀</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 6 }}>
+              Publishing to {meta.label} coming soon
+            </div>
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+              Connect your {meta.label} account to publish campaigns, reels and key visuals
+              directly from CampaignOS — no manual export needed.
+            </div>
           </div>
-          <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-            Connect your {meta.label} account to publish campaigns, reels and key visuals
-            directly from CampaignOS — no manual export needed.
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

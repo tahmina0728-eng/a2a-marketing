@@ -308,7 +308,8 @@ const HARNESS_STAGES = [
   { key: "reel",         icon: "🎬", label: "Kinetik",  desc: "Generating 6s campaign reel with Veo" },
   { key: "channel",      icon: "📡", label: "Poly",     desc: "Publishing to Instagram, TikTok & more" },
   { key: "performance",  icon: "📊", label: "Nexus",    desc: "Forecasting reach, ROAS & channel performance" },
-  { key: "tvc",          icon: "🎥", label: "Director", desc: "Generates a 15s or 30s multi-scene TVC with Veo" },
+  { key: "tvc",            icon: "🎥", label: "Director",  desc: "Generates a 15s or 30s multi-scene TVC with Veo" },
+  { key: "email_templates",icon: "📧", label: "Mailer",   desc: "Generates 3 email layout variations for a campaign" },
 ];
 
 // First 7 agents shown as individual nav entries in the sidebar (Nexus/Performance excluded —
@@ -420,7 +421,7 @@ function BrandUploadPanel() {
 }
 
 // ── Standalone single-agent run panel ──────────────────────────
-const STANDALONE_SUPPORTED = ["briefing", "strategy", "copy", "culture", "channel", "kv", "reel", "tvc"];
+const STANDALONE_SUPPORTED = ["briefing", "strategy", "copy", "culture", "channel", "kv", "reel", "tvc", "email_templates"];
 
 // Card styling for Poly's per-channel results — distinct accent colors so each
 // channel reads like its own platform, not a generic key/value list.
@@ -552,7 +553,8 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
     kv:       "Morphis is generating your key visual with Gemini 3 Pro Image…",
     reel:     "Kinetik is generating your 6-second reel with Veo — this can take 2-5 minutes…",
     channel:  "Poly is adapting your campaign across channels and building the landing page…",
-    tvc:      "Director is writing the script and generating each scene with Veo — this takes 8–15 minutes…",
+    tvc:             "Director is writing the script and generating each scene with Veo — this takes 8–15 minutes…",
+    email_templates: "Mailer is generating 3 email template variations with brand-matched copy and layouts…",
   };
 
   // TVC-specific: duration picker state
@@ -1054,7 +1056,75 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
         </div>
       )}
 
-      {status === "done" && result && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && (
+      {/* ── Email Templates result ────────────────────────────────────────── */}
+      {status === "done" && result && agentKey === "email_templates" && (
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column" as const, gap: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color, letterSpacing: "0.08em",
+            textTransform: "uppercase" as const }}>
+            📧 {(result.templates as any[])?.length} Email Templates — Subject: "{result.subject}"
+          </div>
+
+          {/* Template cards — side-scroll on small screens */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 14 }}>
+            {((result.templates as any[]) ?? []).map((tpl: any) => (
+              <div key={tpl.id} style={{ borderRadius: 14, overflow: "hidden",
+                border: `1.5px solid ${color}30`,
+                boxShadow: `0 4px 20px ${color}15` }}>
+                {/* Layout label */}
+                <div style={{ padding: "10px 14px", background: `${color}12`,
+                  borderBottom: `1px solid ${color}20`,
+                  display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color }}>
+                      {tpl.name}
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--text-secondary)", marginTop: 2 }}>
+                      {tpl.layout}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <a href={`data:text/html;charset=utf-8,${encodeURIComponent(tpl.html)}`}
+                      target="_blank" rel="noreferrer"
+                      style={{ fontSize: 11, fontWeight: 700, color, textDecoration: "none",
+                        padding: "4px 10px", borderRadius: 6, border: `1px solid ${color}40`,
+                        background: `${color}08` }}>
+                      Preview ↗
+                    </a>
+                    <a href={`data:text/html;charset=utf-8,${encodeURIComponent(tpl.html)}`}
+                      download={`${tpl.id}-template.html`}
+                      style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)",
+                        textDecoration: "none", padding: "4px 10px", borderRadius: 6,
+                        border: "1px solid var(--card-border)", background: "var(--card-bg-soft)" }}>
+                      ⬇ HTML
+                    </a>
+                  </div>
+                </div>
+                {/* Scaled iframe preview */}
+                <div style={{ position: "relative" as const, height: 240, overflow: "hidden",
+                  background: "#f8fafc" }}>
+                  <iframe
+                    srcDoc={tpl.html}
+                    style={{ width: "200%", height: "200%", border: "none",
+                      transform: "scale(0.5)", transformOrigin: "top left",
+                      pointerEvents: "none" as const }}
+                    title={tpl.name}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Send via Mailchimp hint */}
+          <div style={{ padding: "12px 16px", borderRadius: 10,
+            background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.2)",
+            fontSize: 12, color: "var(--text-secondary)" }}>
+            💡 Pick a template, click <strong>Preview ↗</strong> to review, download the HTML,
+            then paste it into <strong>Publishing → Email</strong> to send via Mailchimp.
+          </div>
+        </div>
+      )}
+
+      {status === "done" && result && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && (
         <div style={{ marginTop: 14, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
           {Object.entries(result).filter(([k]) => k !== "agent").map(([key, val]) => (
             <div key={key} style={{ marginBottom: 8 }}>

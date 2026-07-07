@@ -1081,6 +1081,123 @@ async def serve_standalone_landing_page(page_id: str):
     return HTMLResponse(content=html)
 
 
+# ══════════════════════════════════════════════════════════════════
+# Mailchimp integration routes
+# ══════════════════════════════════════════════════════════════════
+
+@app.get("/mailchimp/ping")
+async def mailchimp_ping():
+    """Verify Mailchimp API key is valid."""
+    from app.mailchimp_client import ping
+    try:
+        info = ping()
+        return {"connected": True, "account_name": info.get("account_name",""),
+                "email": info.get("email","")}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Mailchimp connection failed: {e}")
+
+
+@app.get("/mailchimp/audiences")
+async def mailchimp_audiences():
+    """List all Mailchimp audiences (contact lists)."""
+    from app.mailchimp_client import list_audiences
+    try:
+        return {"audiences": list_audiences()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/mailchimp/audiences/{list_id}/segments")
+async def mailchimp_segments(list_id: str):
+    from app.mailchimp_client import list_segments
+    try:
+        return {"segments": list_segments(list_id)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/mailchimp/templates")
+async def mailchimp_templates():
+    from app.mailchimp_client import list_templates
+    try:
+        return {"templates": list_templates()}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class MailchimpTemplateRequest(_BaseModel):
+    name: str
+    html: str
+
+
+@app.post("/mailchimp/templates")
+async def mailchimp_create_template(req: MailchimpTemplateRequest):
+    from app.mailchimp_client import create_template
+    try:
+        return create_template(req.name, req.html)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+class MailchimpSendRequest(_BaseModel):
+    list_id:       str
+    subject:       str
+    html:          str
+    from_name:     str  = "CampaignOS"
+    reply_to:      str  = ""
+    preview_text:  str  = ""
+    schedule_time: str  = ""   # ISO 8601 UTC — empty = send immediately
+
+
+@app.post("/mailchimp/send")
+async def mailchimp_send(req: MailchimpSendRequest):
+    """Create a campaign, upload HTML, and send (or schedule) via Mailchimp."""
+    from app.mailchimp_client import create_and_send
+    try:
+        result = await asyncio.to_thread(
+            create_and_send,
+            list_id      = req.list_id,
+            subject      = req.subject,
+            html         = req.html,
+            from_name    = req.from_name,
+            reply_to     = req.reply_to,
+            preview_text = req.preview_text,
+            schedule_time= req.schedule_time,
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/mailchimp/reports")
+async def mailchimp_reports(count: int = 10):
+    from app.mailchimp_client import list_reports
+    try:
+        return {"reports": list_reports(count)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/mailchimp/reports/{campaign_id}")
+async def mailchimp_report(campaign_id: str):
+    from app.mailchimp_client import get_report
+    try:
+        return get_report(campaign_id)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/mailchimp/campaigns")
+async def mailchimp_campaigns(count: int = 20):
+    from app.mailchimp_client import list_campaigns
+    try:
+        return {"campaigns": list_campaigns(count)}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ══════════════════════════════════════════════════════════════════
+
 class StandalonePublishRequest(_BaseModel):
     page_id:       str
     channel:       str   # "landing_page" | "email" | "google_ads"
