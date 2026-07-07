@@ -433,6 +433,35 @@ const POLY_CHANNEL_CFG: Record<string, { icon: string; label: string; color: str
   ooh:           { icon: "🏙️", label: "OOH Billboard",  color: "#d97706" },
 };
 
+// ── Agent voice introductions ──────────────────────────────────
+const AGENT_INTROS: Record<string, string> = {
+  briefing: "Hello! I'm Logos, the campaign briefing agent. Tell me about your brand, market and campaign objectives — I'll validate your brief, score the consumer truth, and prepare everything for the creative team.",
+  strategy: "Hi, I'm Helia, your creative strategist. Share your campaign brief and I'll craft your big idea, hero message and creative territory that will guide the whole campaign.",
+  copy:     "I'm Ideon, the copy agent. Give me your campaign direction and I'll write compelling headlines, body copy and calls to action — perfectly tuned to your brand voice and audience.",
+  culture:  "Hello! I'm Aether, the cultural intelligence agent. I research trends, audience insights and cultural signals to make sure your campaign resonates with the right people at the right moment.",
+  kv:       "Hi, I'm Morphis. I generate on-brand key visuals and hero images using Gemini's image model — campaign-ready visuals in seconds, with your logo and headline applied automatically.",
+  reel:     "I'm Kinetik, your reel director. Describe your campaign and I'll generate a cinematic 6-second reel using Veo — complete with voiceover, brand overlay and logo.",
+  tvc:      "I'm Director. Give me a brief and I'll produce a full TV commercial — I write the script, generate each scene with Veo, and stitch everything into a 15 or 30 second film.",
+  channel:  "I'm Poly, the channel adaptation agent. Tell me your campaign and I'll adapt it for every platform — Instagram, TikTok, LinkedIn, email and landing pages.",
+  email_templates: "Hi, I'm Mailer! Give me your campaign brief and I'll generate three beautiful email layout variations — Hero, Text-first and Product showcase — ready to send via Mailchimp.",
+};
+
+function speakAgentIntro(agentKey: string, onDone?: () => void) {
+  const text = AGENT_INTROS[agentKey];
+  if (!text || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.rate = 1.0; utt.pitch = 1.05; utt.volume = 1.0;
+  // Prefer a natural-sounding voice
+  const voices = window.speechSynthesis.getVoices();
+  const pick = voices.find(v =>
+    /samantha|zira|google uk english female|google us english|karen|moira/i.test(v.name)
+  );
+  if (pick) utt.voice = pick;
+  if (onDone) utt.onend = onDone;
+  window.speechSynthesis.speak(utt);
+}
+
 function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: {
   agentKey: string; agentLabel: string; color: string;
   prompt: string; onPromptChange: (v: string) => void;
@@ -453,6 +482,16 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
   // Email template variations (3 layouts from Mailer agent)
   const [emailLayouts, setEmailLayouts]       = useState<any[]>([]);
   const [emailLayoutBusy, setEmailLayoutBusy] = useState(false);
+  // Voice intro
+  const [_speaking, setSpeaking] = useState(false);
+
+  // Auto-play voice intro once on mount (when user clicks the agent)
+  useEffect(() => {
+    setSpeaking(true);
+    speakAgentIntro(agentKey, () => setSpeaking(false));
+    return () => { window.speechSynthesis?.cancel(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentKey]);
   const [selectedLayout, setSelectedLayout]   = useState<any | null>(null);
   // Editable fields for selected layout
   const [editSubject,  setEditSubject]  = useState("");
@@ -1371,9 +1410,30 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
             }}>
               <img src={avatar} alt={stage.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
             </div>
-            <div>
-              <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.1 }}>
-                {stage.label}
+            <div style={{ flex: 1 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.1 }}>
+                  {stage.label}
+                </div>
+                {/* Voice intro replay button */}
+                <button
+                  onClick={() => {
+                    window.speechSynthesis?.cancel();
+                    speakAgentIntro(agentKey);
+                  }}
+                  title="Hear introduction"
+                  style={{ width: 32, height: 32, borderRadius: "50%", border: "none",
+                    background: `${color}18`, cursor: "pointer", flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    color, transition: "all 0.15s",
+                    boxShadow: `0 0 0 0 ${color}40` }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                  </svg>
+                </button>
               </div>
               {workflowStage && (
                 <span style={{
