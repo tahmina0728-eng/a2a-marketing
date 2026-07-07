@@ -8,9 +8,9 @@ RUN npm ci
 
 COPY . .
 
-# Harness URL is injected at build time
-ARG VITE_API_URL
-ENV VITE_API_URL=$VITE_API_URL
+# Harness URL injected at build time — must match VITE_API_BASE in the app
+ARG VITE_API_BASE
+ENV VITE_API_BASE=$VITE_API_BASE
 
 RUN npm run build
 

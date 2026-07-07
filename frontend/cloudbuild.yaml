@@ -5,7 +5,7 @@ steps:
       - '-t'
       - 'gcr.io/$PROJECT_ID/campaignos-frontend:latest'
       - '--build-arg'
-      - 'VITE_API_URL=${_HARNESS_URL}'
+      - 'VITE_API_BASE=${_HARNESS_URL}'
       - '.'
 
   - name: 'gcr.io/cloud-builders/docker'
