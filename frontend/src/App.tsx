@@ -541,16 +541,6 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
   // Email template variations (3 layouts from Mailer agent)
   const [emailLayouts, setEmailLayouts]       = useState<any[]>([]);
   const [emailLayoutBusy, setEmailLayoutBusy] = useState(false);
-  // Voice intro
-  const [speaking, setSpeaking] = useState(false);
-
-  // Auto-play voice intro once on mount (when user clicks the agent)
-  useEffect(() => {
-    setSpeaking(true);
-    speakAgentIntro(agentKey, () => setSpeaking(false));
-    return () => { window.speechSynthesis?.cancel(); };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [agentKey]);
   const [selectedLayout, setSelectedLayout]   = useState<any | null>(null);
   // Editable fields for selected layout
   const [editSubject,  setEditSubject]  = useState("");
@@ -1442,12 +1432,22 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
 }) {
   const idx   = HARNESS_STAGES.findIndex((s) => s.key === agentKey);
   const stage = HARNESS_STAGES[idx];
-  if (!stage) return null;
 
   const color    = AGENT_COLORS[idx] ?? "#7c3aed";
-  const longDesc = AGENT_DESCS[idx] ?? stage.desc;
-  const avatar   = avatarUrl(stage.label, idx);
+  const longDesc = AGENT_DESCS[idx] ?? (stage?.desc ?? "");
+  const avatar   = avatarUrl(stage?.label ?? "", idx);
   const workflowStage = WORKFLOW_STAGES.find((w) => w.agents.includes(agentKey))?.label ?? "";
+
+  // Voice intro — auto-play once on mount, toggle stop/replay via button
+  const [speaking, setSpeaking] = useState(false);
+  useEffect(() => {
+    setSpeaking(true);
+    speakAgentIntro(agentKey, () => setSpeaking(false));
+    return () => { window.speechSynthesis?.cancel(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentKey]);
+
+  if (!stage) return null;
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "40px 48px",
