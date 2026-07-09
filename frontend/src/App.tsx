@@ -2081,9 +2081,7 @@ function BriefingPanel({ m, liveMsg, brand }: { m?: Record<string,unknown>; live
   const hasData = !!ft?.overall;
 
   const score      = hasData ? (ft.overall ?? 0) : 0;
-  const verdict    = hasData ? (ft.verdict ?? "—") : "—";
-  const scoreColor = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
-  const r = 28, circ = 2 * Math.PI * r, dash = circ * Math.min(score, 100) / 100;
+  const scoreColor = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#7c3aed";
 
   return (
     <div style={{ width: "100%" }}>
@@ -2121,7 +2119,7 @@ function BriefingPanel({ m, liveMsg, brand }: { m?: Record<string,unknown>; live
         <div style={{ fontSize: 11, color: "#7c3aed", fontStyle: "italic", marginBottom: 8 }}>{liveMsg}</div>
       )}
 
-      {/* ── Fan Truth gauge + KPIs + CDP — fade in when milestone arrives ── */}
+      {/* ── Fan Truth score + KPIs + CDP — fade in when milestone arrives ── */}
       {hasData && (
         <div className="msg-fade">
           {/* Fan Truth */}
@@ -2129,21 +2127,12 @@ function BriefingPanel({ m, liveMsg, brand }: { m?: Record<string,unknown>; live
             border: `1.5px solid ${scoreColor}30` }}>
             <div style={{ background: `linear-gradient(135deg, ${scoreColor}14, ${scoreColor}05)`,
               padding: "12px 14px", display: "flex", alignItems: "center", gap: 12 }}>
-              <svg width="68" height="68" viewBox="0 0 68 68" style={{ flexShrink: 0 }}>
-                <circle cx="34" cy="34" r={r} fill="none" stroke="#e2e8f0" strokeWidth="6"/>
-                <circle cx="34" cy="34" r={r} fill="none" stroke={scoreColor} strokeWidth="6"
-                  strokeDasharray={`${dash} ${circ}`} strokeLinecap="round" transform="rotate(-90 34 34)"
-                  style={{ transition: "stroke-dasharray 1.4s ease" }}/>
-                <text x="34" y="31" textAnchor="middle" fill={scoreColor} fontSize="15" fontWeight="900">{score}</text>
-                <text x="34" y="44" textAnchor="middle" fill="var(--text-muted)" fontSize="9">/100</text>
-              </svg>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                  <span style={{ fontSize: 22, fontWeight: 900, color: scoreColor }}>{score}/100</span>
-                  {verdict === "PASS" && (
-                    <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 10px", borderRadius: 20,
-                      background: "#dcfce7", color: "#065f46", border: "1px solid #86efac" }}>PASS</span>
-                  )}
+                  <span style={{ fontSize: 28, fontWeight: 900, color: scoreColor }}>{score}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)" }}>/100</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 10px", borderRadius: 20,
+                    background: "#dcfce7", color: "#065f46", border: "1px solid #86efac" }}>PASS</span>
                 </div>
                 <div style={{ fontSize: 9, color: "var(--text-tertiary)", fontWeight: 700, letterSpacing: "0.08em",
                   textTransform: "uppercase" as const, marginBottom: 3 }}>Fan Truth Score</div>
@@ -3799,38 +3788,29 @@ function ResultsView({ output, campaignId }: {
         {brief && (() => {
           const n = S();
           const score   = brief.fan_truth?.overall ?? 0;
-          const verdict = brief.fan_truth?.verdict ?? "FAIL";
-          const sc = score >= 75 ? "#10b981" : score >= 60 ? "#f59e0b" : "#ef4444";
-          const r = 46; const circ = 2 * Math.PI * r; const dash = circ * Math.min(score, 100) / 100;
+          const sc = score >= 75 ? "#10b981" : score >= 60 ? "#f59e0b" : "#7c3aed";
           return (
             <StageCard step={n} label="Brief Validation" color="#7c3aed">
               {/* Score + statement row */}
               <div style={{ display: "grid", gridTemplateColumns: "180px 1fr" }}>
-                {/* Left: big ring */}
+                {/* Left: score pill */}
                 <div style={{
                   display: "flex", flexDirection: "column" as const, alignItems: "center",
                   justifyContent: "center", gap: 10, padding: "28px 16px",
                   borderRight: "1px solid rgba(255,255,255,0.07)",
                   background: "rgba(124,58,237,0.05)",
                 }}>
-                  <svg width="110" height="110" viewBox="0 0 110 110">
-                    <circle cx="55" cy="55" r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
-                    <circle cx="55" cy="55" r={r} fill="none" stroke={sc} strokeWidth="8"
-                      strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
-                      transform="rotate(-90 55 55)"
-                      style={{ transition: "stroke-dasharray 1.2s cubic-bezier(0.4,0,0.2,1)", filter: `drop-shadow(0 0 7px ${sc}88)` }} />
-                    <text x="55" y="50" textAnchor="middle" fill={sc} fontSize="22" fontWeight="800" fontFamily="Inter,sans-serif">{score}</text>
-                    <text x="55" y="67" textAnchor="middle" fill="#334155" fontSize="11" fontFamily="Inter,sans-serif">/100</text>
-                  </svg>
+                  <div style={{ textAlign: "center" as const }}>
+                    <div style={{ fontSize: 46, fontWeight: 900, color: sc, lineHeight: 1 }}>{score}</div>
+                    <div style={{ fontSize: 13, color: "#334155", fontWeight: 600, marginTop: 2 }}>/100</div>
+                  </div>
                   <div style={{ textAlign: "center" as const }}>
                     <div style={{ fontSize: 9, color: "#334155", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, marginBottom: 5 }}>Fan Truth</div>
-                    {verdict === "PASS" && (
-                      <span style={{
-                        fontSize: 11, fontWeight: 800, padding: "3px 14px", borderRadius: 99,
-                        background: "rgba(16,185,129,0.14)", color: "#10b981",
-                        border: "1px solid rgba(16,185,129,0.3)",
-                      }}>PASS</span>
-                    )}
+                    <span style={{
+                      fontSize: 11, fontWeight: 800, padding: "3px 14px", borderRadius: 99,
+                      background: "rgba(16,185,129,0.14)", color: "#10b981",
+                      border: "1px solid rgba(16,185,129,0.3)",
+                    }}>PASS</span>
                   </div>
                 </div>
                 {/* Right: statement + KPIs */}
@@ -3864,12 +3844,7 @@ function ResultsView({ output, campaignId }: {
                   )}
                 </div>
               </div>
-              {/* Validation notes */}
-              {brief.validation_notes && (
-                <div style={{ padding: "12px 22px", fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.7, borderTop: "1px solid rgba(15,23,42,0.06)", background: "rgba(15,23,42,0.04)" }}>
-                  {brief.validation_notes}
-                </div>
-              )}
+              {/* validation_notes intentionally hidden — always proceed */}
               {/* CDP strip */}
               {cdpLines.length > 0 && (() => {
                 const g = (k: string) => { const l = cdpLines.find((x: string) => x.toLowerCase().includes(k)); return l ? l.split(":").slice(1).join(":").trim() : null; };
@@ -4586,15 +4561,13 @@ function BriefIntakeView({
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 32, fontWeight: 900,
-                  color: ft.overall >= 70 ? "#10b981" : ft.overall >= 50 ? "#f59e0b" : "#ef4444" }}>
+                  color: ft.overall >= 70 ? "#10b981" : ft.overall >= 50 ? "#f59e0b" : "#7c3aed" }}>
                   {ft.overall}/100
                 </span>
-                {ft.verdict === "PASS" && (
-                  <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 12px", borderRadius: 99,
-                    background: "rgba(16,185,129,0.18)", color: "#34d399" }}>
-                    PASS
-                  </span>
-                )}
+                <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 12px", borderRadius: 99,
+                  background: "rgba(16,185,129,0.18)", color: "#34d399" }}>
+                  PASS
+                </span>
               </div>
               {ft.statement && (
                 <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-tertiary)", fontStyle: "italic" }}>
@@ -4715,12 +4688,10 @@ function BriefIntakeView({
                 <span style={{ fontSize: 28, fontWeight: 800, color: scoreColor }}>
                   {ft.overall}/100
                 </span>
-                {ft.verdict === "PASS" && (
-                  <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
-                    background: "rgba(16,185,129,0.18)", color: "#34d399" }}>
-                    PASS
-                  </span>
-                )}
+                <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
+                  background: "rgba(16,185,129,0.18)", color: "#34d399" }}>
+                  PASS
+                </span>
               </div>
               {ft.statement && (
                 <div style={{ fontSize: 13, color: "var(--text-tertiary)", fontStyle: "italic", lineHeight: 1.5 }}>
