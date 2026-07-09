@@ -20,14 +20,18 @@ function ComingSoon({ title, description }: { title: string; description: string
 
 // ── Brand Guidelines — upload section ──────────────────────────
 
+const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB — stays under Cloud Run's 32 MB limit
+
 function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record<string,number>) => void }) {
   const [brandName, setBrandName]   = useState("");
   const [file, setFile]             = useState<File | null>(null);
   const [dragging, setDragging]     = useState(false);
   const [status, setStatus]         = useState<"idle" | "uploading" | "done" | "error">("idle");
-  const [, setUploaded]     = useState<Record<string, number>>({});
-  const [, setSkipped]       = useState<string[]>([]);
+  const [, setUploaded]             = useState<Record<string, number>>({});
+  const [, setSkipped]              = useState<string[]>([]);
   const [errorMsg, setErrorMsg]     = useState("");
+  const [progress, setProgress]     = useState(0);
+  const [progressLabel, setProgressLabel] = useState("");
   const [brands, setBrands]         = useState<string[]>([]);
   const [loadingBrand, setLoadingBrand] = useState(false);
   const fileRef                     = useRef<HTMLInputElement>(null);
@@ -72,16 +76,44 @@ function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record
 
   const handleUpload = async () => {
     if (!brandName.trim() || !file) return;
-    setStatus("uploading"); setErrorMsg(""); setUploaded({}); setSkipped([]);
+    setStatus("uploading"); setProgress(0); setProgressLabel("Preparing upload…");
+    setErrorMsg(""); setUploaded({}); setSkipped([]);
+
+    const brand = encodeURIComponent(brandName.trim());
+    const sessionId = crypto.randomUUID();
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+
     try {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch(`${API_BASE}/brands/${encodeURIComponent(brandName.trim())}/upload`,
-        { method: "POST", body: fd });
+      // Upload chunks
+      for (let i = 0; i < totalChunks; i++) {
+        const slice = file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        const fd = new FormData();
+        fd.append("file", slice, "chunk");
+        fd.append("session_id", sessionId);
+        fd.append("chunk_index", String(i));
+        fd.append("total_chunks", String(totalChunks));
+        setProgressLabel(`Uploading part ${i + 1} of ${totalChunks}…`);
+        const res = await fetch(`${API_BASE}/brands/${brand}/upload-chunk`, { method: "POST", body: fd });
+        if (!res.ok) {
+          const d = await res.json().catch(() => ({}));
+          throw new Error((d as any)?.detail || `Chunk ${i + 1} failed (${res.status})`);
+        }
+        setProgress(Math.round(((i + 1) / totalChunks) * 80));
+      }
+
+      // Finalise
+      setProgressLabel("Indexing brand assets…");
+      setProgress(85);
+      const res = await fetch(`${API_BASE}/brands/${brand}/finalize-upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, total_chunks: totalChunks }),
+      });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.detail || `Upload failed (${res.status})`);
-      // API returns PascalCase folder names (Guidelines, Logos, Font…).
-      // Normalize to lowercase and map "font" → "fonts" to match ASSET_CATEGORIES keys.
+      if (!res.ok) throw new Error((data as any)?.detail || `Finalise failed (${res.status})`);
+
+      setProgress(100);
+      // Normalise PascalCase → lowercase; "font" → "fonts"
       const raw: Record<string, number> = data.uploaded ?? {};
       const normalized: Record<string, number> = {};
       Object.entries(raw).forEach(([k, v]) => {
@@ -174,7 +206,7 @@ function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record
             {file ? file.name : "Drag & drop or browse"}
           </div>
           <div style={{ fontSize: 11, color: "var(--text-secondary)" }}>
-            Only <strong>.zip</strong> files accepted — up to 50MB
+            Only <strong>.zip</strong> files accepted
           </div>
           <input ref={fileRef} type="file" accept=".zip"
             style={{ display: "none" }} onChange={e => setFile(e.target.files?.[0] ?? null)} />
@@ -184,11 +216,21 @@ function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record
           disabled={!brandName.trim() || !file || status === "uploading"}
           style={{ padding: "10px 24px", borderRadius: 10, border: "none",
             fontFamily: "inherit", fontSize: 13, fontWeight: 700, color: "white",
-            cursor: !brandName.trim() || !file ? "not-allowed" : "pointer",
+            cursor: !brandName.trim() || !file || status === "uploading" ? "not-allowed" : "pointer",
             opacity: !brandName.trim() || !file ? 0.4 : 1,
             background: "linear-gradient(135deg,#7c3aed,#6366f1)" }}>
-          {status === "uploading" ? "Uploading & indexing…" : "Upload & index"}
+          {status === "uploading" ? "Uploading…" : "Upload & index"}
         </button>
+
+        {status === "uploading" && (
+          <div style={{ marginTop: 12 }}>
+            <div style={{ height: 4, borderRadius: 4, background: "var(--card-border)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${progress}%`, borderRadius: 4,
+                background: "linear-gradient(90deg,#7c3aed,#6366f1)", transition: "width 0.3s ease" }} />
+            </div>
+            <div style={{ fontSize: 11, color: "#7c3aed", marginTop: 5, fontWeight: 600 }}>{progressLabel}</div>
+          </div>
+        )}
 
         {status === "error" && (
           <div style={{ marginTop: 12, fontSize: 12, color: "#ef4444" }}>⚠ {errorMsg}</div>
