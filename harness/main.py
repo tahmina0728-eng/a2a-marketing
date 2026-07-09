@@ -26,7 +26,7 @@ from dotenv import load_dotenv
 load_dotenv()
 if os.getenv("GROQ_API_KEY"):
     os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile, File
 from fastapi.responses import JSONResponse, StreamingResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel as _BaseModel  # avoid clash with app.models
