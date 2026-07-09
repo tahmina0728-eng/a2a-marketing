@@ -531,7 +531,7 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
   const [emailLayouts, setEmailLayouts]       = useState<any[]>([]);
   const [emailLayoutBusy, setEmailLayoutBusy] = useState(false);
   // Voice intro
-  const [_speaking, setSpeaking] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
 
   // Auto-play voice intro once on mount (when user clicks the agent)
   useEffect(() => {
@@ -1463,24 +1463,38 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
                 <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.1 }}>
                   {stage.label}
                 </div>
-                {/* Voice intro replay button */}
+                {/* Stop / replay voice button */}
                 <button
                   onClick={() => {
-                    window.speechSynthesis?.cancel();
-                    speakAgentIntro(agentKey);
+                    if (speaking) {
+                      window.speechSynthesis?.cancel();
+                      setSpeaking(false);
+                    } else {
+                      setSpeaking(true);
+                      speakAgentIntro(agentKey, () => setSpeaking(false));
+                    }
                   }}
-                  title="Hear introduction"
+                  title={speaking ? "Stop voice" : "Replay introduction"}
                   style={{ width: 32, height: 32, borderRadius: "50%", border: "none",
-                    background: `${color}18`, cursor: "pointer", flexShrink: 0,
+                    background: speaking ? `${color}28` : `${color}18`,
+                    cursor: "pointer", flexShrink: 0,
                     display: "flex", alignItems: "center", justifyContent: "center",
                     color, transition: "all 0.15s",
-                    boxShadow: `0 0 0 0 ${color}40` }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-                  </svg>
+                    boxShadow: speaking ? `0 0 0 3px ${color}30` : "none" }}>
+                  {speaking ? (
+                    /* Stop icon — square */
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    </svg>
+                  ) : (
+                    /* Speaker icon */
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                    </svg>
+                  )}
                 </button>
               </div>
               {workflowStage && (
