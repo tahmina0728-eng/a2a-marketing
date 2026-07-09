@@ -300,16 +300,15 @@ function BgVideoPlayer({
 // ── Harness pipeline agents (for loading display) ────────────
 // Order matches actual backend execution
 const HARNESS_STAGES = [
-  { key: "briefing",     icon: "📋", label: "Logos",    desc: "Validating brief & Fan Truth score" },
-  { key: "strategy",     icon: "💡", label: "Helia",    desc: "Building big idea & strategy" },
-  { key: "copy",         icon: "✍️", label: "Ideon",    desc: "Writing campaign copy variants" },
-  { key: "culture",      icon: "🌍", label: "Aether",   desc: "Researching cultural intelligence" },
-  { key: "kv",           icon: "🎨", label: "Morphis",  desc: "Generating key visual with Gemini 3 Pro Image" },
-  { key: "reel",         icon: "🎬", label: "Kinetik",  desc: "Generating 6s campaign reel with Veo" },
-  { key: "channel",      icon: "📡", label: "Poly",     desc: "Publishing to Instagram, TikTok & more" },
-  { key: "performance",  icon: "📊", label: "Nexus",    desc: "Forecasting reach, ROAS & channel performance" },
-  { key: "tvc",            icon: "🎥", label: "Director",  desc: "Generates a 15s or 30s multi-scene TVC with Veo" },
-  { key: "email_templates",icon: "📧", label: "Mailer",   desc: "Generates 3 email layout variations for a campaign" },
+  { key: "briefing",    icon: "📋", label: "Logos",    desc: "Validating brief & Fan Truth score" },
+  { key: "strategy",    icon: "💡", label: "Helia",    desc: "Building big idea & strategy" },
+  { key: "copy",        icon: "✍️", label: "Ideon",    desc: "Writing campaign copy variants" },
+  { key: "culture",     icon: "🌍", label: "Aether",   desc: "Researching cultural intelligence" },
+  { key: "kv",          icon: "🎨", label: "Morphis",  desc: "Generating key visual with Gemini 3 Pro Image" },
+  { key: "reel",        icon: "🎬", label: "Kinetik",  desc: "Generating 6s campaign reel with Veo" },
+  { key: "channel",     icon: "📡", label: "Poly",     desc: "Publishing to Instagram, TikTok & more" },
+  { key: "performance", icon: "📊", label: "Nexus",    desc: "Forecasting reach, ROAS & channel performance" },
+  { key: "tvc",         icon: "🎥", label: "Director", desc: "Generates a 15s or 30s multi-scene TVC with Veo" },
 ];
 
 // First 7 agents shown as individual nav entries in the sidebar (Nexus/Performance excluded —
@@ -328,8 +327,18 @@ function BrandUploadPanel() {
   const [skipped, setSkipped] = useState<string[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
 
+  const MAX_ZIP_MB = 28;
+
   const handleUpload = async () => {
     if (!brandName.trim() || !file) return;
+    if (file.size > MAX_ZIP_MB * 1024 * 1024) {
+      setErrorMsg(
+        `Zip is ${(file.size / 1024 / 1024).toFixed(1)} MB — Cloud Run's upload limit is ${MAX_ZIP_MB} MB. ` +
+        `Compress or resize images inside the zip and try again.`
+      );
+      setStatus("error");
+      return;
+    }
     setStatus("uploading");
     setErrorMsg(""); setUploaded({}); setSkipped([]);
     try {
@@ -369,9 +378,11 @@ function BrandUploadPanel() {
         <label style={{ padding: "8px 14px", borderRadius: 8, fontSize: 13, fontWeight: 600,
           border: "1px solid var(--card-border)", background: "var(--card-bg-soft)",
           color: "var(--text-secondary)", cursor: "pointer", whiteSpace: "nowrap" as const }}>
-          {file ? file.name.slice(0, 22) : "Choose .zip"}
+          {file
+            ? `${file.name.slice(0, 18)} (${(file.size / 1024 / 1024).toFixed(1)} MB)`
+            : "Choose .zip"}
           <input type="file" accept=".zip" style={{ display: "none" }}
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+            onChange={(e) => { setFile(e.target.files?.[0] ?? null); setStatus("idle"); setErrorMsg(""); }} />
         </label>
       </div>
 
@@ -4241,17 +4252,15 @@ const RIGHT_X = 60;
 const LEFT_X  = -176;
 
 const CARD_OFF: [number, number][] = [
-  [-58, -90],      // 0 Logos — centred above avatar: co[0]=(54-170)/2, co[1]=-(card_h+gap)
+  [-58, -90],      // 0 Logos — centred above avatar
   [RIGHT_X, -10],  // 1 Helia
   [RIGHT_X, -12],  // 2 Ideon
   [RIGHT_X,   6],  // 3 Aether
-
   [LEFT_X,    6],  // 4 Morphis
   [LEFT_X,  -12],  // 5 Kinetik
   [LEFT_X,  -36],  // 6 Poly
   [RIGHT_X,  28],  // 7 Nexus — lower right
   [LEFT_X,  -14],  // 8 Director — upper left
-  [RIGHT_X, -14],  // 9 Mailer — upper right
 ];
 function AgentNetworkWakeUp() {
   const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 160;
