@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import type { PipelineState, HarnessBriefRequest, AgentStatus, AgentEvent } from "../types/pipeline";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
 const INITIAL_STATE: PipelineState = {
   campaign_id:  null,

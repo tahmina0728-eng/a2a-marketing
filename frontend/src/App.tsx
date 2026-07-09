@@ -3081,7 +3081,7 @@ function RunningView({
 }
 
 // ── Distribute Campaign Panel ─────────────────────────────────
-const API_BASE_PUB = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE_PUB = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 
 const PUBLISH_CHANNEL_CFG: Record<string, { icon: string; color: string; bg: string; border: string; desc: string; publishKey: string }> = {
   "Instagram":  { icon: "📸", color: "#c026d3", bg: "#fdf4ff", border: "#e9d5ff", desc: "Feed + Stories post",   publishKey: "instagram" },
@@ -4236,6 +4236,8 @@ const CARD_OFF: [number, number][] = [
   [LEFT_X,  -12],  // 5 Kinetik
   [LEFT_X,  -36],  // 6 Poly
   [RIGHT_X,  28],  // 7 Nexus — lower right
+  [LEFT_X,  -14],  // 8 Director — upper left
+  [RIGHT_X, -14],  // 9 Mailer — upper right
 ];
 function AgentNetworkWakeUp() {
   const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 160;
@@ -4351,8 +4353,8 @@ function AgentNetworkWakeUp() {
                 <img src={n.avatar} alt={n.label}
                   style={{ width: "100%", height: "100%", display: "block", objectFit: "cover" }} />
                 {/* Number badge */}
-                <div style={{ position: "absolute" as const, top: -7, right: n.co[0] < 0 ? undefined : -7,
-                  left: n.co[0] < 0 ? -7 : undefined,
+                <div style={{ position: "absolute" as const, top: -7, right: (n.co?.[0] ?? 0) < 0 ? undefined : -7,
+                  left: (n.co?.[0] ?? 0) < 0 ? -7 : undefined,
                   width: 19, height: 19, borderRadius: "50%",
                   background: n.color, border: "2px solid white",
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -4369,7 +4371,7 @@ function AgentNetworkWakeUp() {
                 border: `1px solid ${n.color}35`,
                 borderRadius: 10,
                 boxShadow: `0 4px 16px var(--card-border), 0 0 12px ${n.color}22`,
-                textAlign: i === 0 ? "center" as const : n.co[0] < 0 ? "right" as const : "left" as const }}>
+                textAlign: i === 0 ? "center" as const : (n.co?.[0] ?? 0) < 0 ? "right" as const : "left" as const }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: n.color, marginBottom: 3 }}>
                   {n.label}
                 </div>
