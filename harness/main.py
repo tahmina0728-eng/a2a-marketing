@@ -1461,6 +1461,76 @@ async def upload_brand(brand_name: str, file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Upload failed: {e}")
 
 
+@app.post("/brands/{brand_name}/upload-chunk")
+async def upload_brand_chunk(
+    brand_name: str,
+    file: UploadFile = File(...),
+    session_id: str = Form(...),
+    chunk_index: int = Form(...),
+    total_chunks: int = Form(...),
+):
+    """
+    Receive one 10 MB slice of a brand zip.  Chunks are stored in GCS at
+    brands/{brand}/._chunks/{session_id}/{index:05d} and assembled on finalize.
+    """
+    from google.cloud import storage as _gcs
+    data = await file.read()
+    client = _gcs.Client(project=settings.gcp_project)
+    bucket = client.bucket(settings.gcs_bucket)
+    bucket.blob(f"brands/{brand_name}/._chunks/{session_id}/{chunk_index:05d}").upload_from_string(data)
+    return {"received": chunk_index, "total_chunks": total_chunks}
+
+
+class _FinalizeUpload(_BaseModel):
+    session_id:   str
+    total_chunks: int
+
+
+@app.post("/brands/{brand_name}/finalize-upload")
+async def finalize_brand_upload(brand_name: str, req: _FinalizeUpload):
+    """
+    Concatenate previously uploaded chunks, run brand ingest + reindex, then
+    delete the temporary chunk blobs.
+    """
+    import zipfile
+    from google.cloud import storage as _gcs
+    from app import brand_onboarding
+
+    client = _gcs.Client(project=settings.gcp_project)
+    bucket = client.bucket(settings.gcs_bucket)
+
+    # Download and assemble in order
+    pieces: list[bytes] = []
+    for i in range(req.total_chunks):
+        blob = bucket.blob(f"brands/{brand_name}/._chunks/{req.session_id}/{i:05d}")
+        pieces.append(await asyncio.to_thread(blob.download_as_bytes))
+
+    zip_bytes = b"".join(pieces)
+
+    # Clean up temp chunks (best-effort)
+    for i in range(req.total_chunks):
+        try:
+            bucket.blob(f"brands/{brand_name}/._chunks/{req.session_id}/{i:05d}").delete()
+        except Exception:
+            pass
+
+    try:
+        result = await asyncio.to_thread(brand_onboarding.ingest_brand_zip, brand_name, zip_bytes)
+        if not result["uploaded"]:
+            raise HTTPException(status_code=400, detail=(
+                "No recognised files found. Zip must contain Guidelines/, Logos/, Font/, "
+                "Colours/, and/or Assets/ subfolders."
+            ))
+        reindex = await asyncio.to_thread(brand_onboarding.reindex_brand, brand_name)
+        return {**result, "reindex": reindex}
+    except zipfile.BadZipFile:
+        raise HTTPException(status_code=400, detail="Invalid zip file")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Finalize failed: {e}")
+
+
 class AgentStandaloneRequest(_BaseModel):
     prompt:   str       # e.g. "UBS Bank for UK market, festive: christmas"
     duration: int = 30  # TVC duration in seconds (15 or 30); ignored by other agents
