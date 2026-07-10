@@ -5528,6 +5528,9 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
           const [aiOpen, setAiOpen] = useState(view === "agent");
           const [brandHubOpen, setBrandHubOpen] = useState(view === "brand-hub");
           const [publishingOpen, setPublishingOpen] = useState(view === "publishing");
+          const [savedCampaigns] = useState<{id:string;name:string;brand:string}[]>(() => {
+            try { return JSON.parse(localStorage.getItem("a2a_campaigns") ?? "[]"); } catch { return []; }
+          });
 
           // Shared nav button style
           const nb = (active: boolean, indent = false): React.CSSProperties => ({
@@ -5560,18 +5563,18 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
               icon: <Icon d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /> },
           ];
 
-          // Nav items below "AI Agent"
-          const bottomItems = [
-            { label: "Campaigns",     active: view === "campaigns", onClick: () => onNavigate("campaigns"),
-              icon: <Icon d="M22 12h-4l-3 9L9 3l-3 9H2" /> },
+          // Nav items below "AI Agent" — split into two groups around the Campaigns section
+          const midItems = [
             { label: "Content Studio",active: view === "hub",  onClick: () => onNavigate("hub"),
               icon: <Icon d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /> },
             { label: "Publishing",    active: view === "publishing",
               onClick: () => { onNavigate("publishing"); setPublishingOpen(o => !o); },
               icon: <Icon d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" /> },
+          ];
+          const lowerItems = [
             { label: "Analytics",     active: false, onClick: () => {},
               icon: <Icon d="M18 20V10M12 20V4M6 20v-6" extra={<line x1="2" y1="20" x2="22" y2="20"/>} /> },
-            { label: "Reports",       active: false, onClick: () => {},
+            { label: "Report",        active: false, onClick: () => {},
               icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
                 extra={<><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>} /> },
             { label: "Settings",      active: false, onClick: () => {},
@@ -5658,8 +5661,8 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
                 );
               })}
 
-              {/* Bottom items — Publishing has collapsible channel sub-nav */}
-              {bottomItems.map(item => (
+              {/* Content Studio + Publishing */}
+              {midItems.map(item => (
                 <Fragment key={item.label}>
                   <button onClick={item.onClick}
                     style={item.label === "Publishing"
@@ -5683,6 +5686,58 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
                       onPolyClick={() => onSelectAgent("channel")} />
                   )}
                 </Fragment>
+              ))}
+
+              {/* ── Campaigns section ── */}
+              <div style={{ margin: "10px 0 2px", padding: "0 12px",
+                display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em",
+                  textTransform: "uppercase" as const, color: "var(--text-tertiary)" }}>
+                  Campaigns
+                </span>
+                <button onClick={() => onNavigate("campaigns")}
+                  style={{ background: "none", border: "none", cursor: "pointer",
+                    color: "var(--text-tertiary)", fontSize: 16, lineHeight: 1,
+                    padding: "0 2px", display: "flex", alignItems: "center",
+                    borderRadius: 6, transition: "color 0.15s" }}
+                  title="New campaign">+</button>
+              </div>
+              {savedCampaigns.slice(0, 3).map(c => (
+                <button key={c.id} onClick={() => onNavigate("campaigns")} style={nb(false, true)}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                    strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.6 }}>
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                    {c.name}
+                  </span>
+                </button>
+              ))}
+              {savedCampaigns.length === 0 && (
+                <>
+                  {["Campaign1","Campaign2","Campaign3"].map(name => (
+                    <button key={name} onClick={() => onNavigate("campaigns")} style={nb(false, true)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                        strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.6 }}>
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                      </svg>
+                      {name}
+                    </button>
+                  ))}
+                </>
+              )}
+              <button onClick={() => onNavigate("campaigns")}
+                style={{ ...nb(false, true), color: "#7c3aed", fontWeight: 600, fontSize: 12 }}>
+                View all
+              </button>
+
+              {/* ── Lower nav items ── */}
+              {lowerItems.map(item => (
+                <button key={item.label} onClick={item.onClick} style={nb(item.active)}>
+                  {item.icon}{item.label}
+                </button>
               ))}
             </div>
           );

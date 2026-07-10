@@ -1555,6 +1555,45 @@ async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
         raise HTTPException(status_code=500, detail=f"Agent run failed: {e}")
 
 
+# ── Figma Integration ─────────────────────────────────────────────────────────
+_figma_store: dict = {}  # {id: {image_b64, campaign_name}} + "latest" key
+
+
+class FigmaPrepareRequest(_BaseModel):
+    image_b64: str
+    campaign_name: str = "Campaign"
+
+
+@app.post("/figma/prepare")
+async def figma_prepare(req: FigmaPrepareRequest):
+    """Store a generated image for Figma plugin pickup."""
+    campaign_id = str(uuid.uuid4())[:8]
+    _figma_store[campaign_id] = {
+        "image_b64": req.image_b64,
+        "campaign_name": req.campaign_name,
+    }
+    _figma_store["latest"] = campaign_id
+    return {
+        "campaign_id": campaign_id,
+        "campaign_name": req.campaign_name,
+        "status": "ready",
+        "figma_url": "https://www.figma.com/new",
+    }
+
+
+@app.get("/figma/latest")
+async def figma_latest():
+    """Figma plugin polls this to get the most-recently prepared image."""
+    latest_id = _figma_store.get("latest")
+    if not latest_id or latest_id not in _figma_store:
+        raise HTTPException(status_code=404, detail="No image prepared")
+    entry = _figma_store[latest_id]
+    return {
+        "campaign_name": entry["campaign_name"],
+        "image_b64": entry["image_b64"],
+    }
+
+
 @app.post("/refresh")
 async def refresh():
     """

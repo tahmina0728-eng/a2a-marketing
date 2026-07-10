@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { saveToContentHub } from "../hooks/useContentHub";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8000";
@@ -183,6 +183,9 @@ export default function Campaigns() {
   const [results, setResults] = useState<Partial<Record<FormatType, GeneratedResult>>>({});
   const [tab, setTab]         = useState<FormatType>("image");
   const [saveState, setSaveState] = useState<Record<string, "idle"|"saving"|"saved">>({});
+  const [modifyOpen, setModifyOpen] = useState(false);
+  const [modifyText, setModifyText] = useState("");
+  const [figmaState, setFigmaState] = useState<"idle"|"loading"|"ready">("idle");
 
   const saveAsset = async (fmt: FormatType) => {
     const r = results[fmt];
@@ -210,6 +213,34 @@ export default function Campaigns() {
   const prompt = [brand&&`Brand: ${brand}`, brief, goal&&`Goal: ${goal}`, audience&&`Audience: ${audience}`, platform&&`Platform: ${platform}`].filter(Boolean).join(". ");
   const anyRes = Object.values(results).some(r => r?.image_b64||r?.video_b64);
   const hasRes = (f: FormatType) => !!(results[f]?.image_b64 || results[f]?.video_b64);
+
+  // Save campaign name to sidebar list once generation is done
+  useEffect(() => {
+    if (!anyRes || !brief.trim()) return;
+    const name = brief.slice(0, 32);
+    const stored: {id:string;name:string;brand:string}[] = (() => {
+      try { return JSON.parse(localStorage.getItem("a2a_campaigns") ?? "[]"); } catch { return []; }
+    })();
+    if (stored[0]?.name === name) return; // already saved
+    const updated = [{ id: `c_${Date.now()}`, name, brand }, ...stored.filter(c => c.name !== name)].slice(0, 10);
+    localStorage.setItem("a2a_campaigns", JSON.stringify(updated));
+  }, [anyRes, brief, brand]);
+
+  const handleFigmaMcp = async () => {
+    const img = results.image?.image_b64;
+    if (!img) return;
+    setFigmaState("loading");
+    try {
+      await fetch(`${API_BASE}/figma/prepare`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_b64: img, campaign_name: brief.slice(0, 40) || "Campaign" }),
+      });
+      setFigmaState("ready");
+      window.open("https://www.figma.com/new", "_blank");
+    } catch {
+      setFigmaState("idle");
+    }
+  };
 
   const toggleFmt = (f: FormatType) => {
     setFormats(prev => { const n = new Set(prev); n.has(f)?n.delete(f):n.add(f); return n; });
@@ -602,11 +633,47 @@ export default function Campaigns() {
                       )}
                     </div>
 
-                    {/* Save to Content Studio button */}
-                    <div style={{ display:"flex", justifyContent:"flex-end" as const }}>
-                      <button
-                        onClick={() => saveAsset(tab)}
-                        disabled={saveState[tab] === "saving"}
+                    {/* ── Action row: Figma MCP + Modify | Save ── */}
+                    <div style={{ display:"flex", alignItems:"center",
+                      justifyContent:"space-between", marginTop:4 }}>
+                      {/* Left: Figma MCP + Modify */}
+                      <div style={{ display:"flex", gap:8 }}>
+                        {tab==="image" && (
+                          <button onClick={handleFigmaMcp} disabled={figmaState==="loading"}
+                            style={{ display:"flex", alignItems:"center", gap:7,
+                              padding:"9px 18px", borderRadius:10, cursor:"pointer",
+                              fontFamily:"inherit", fontSize:13, fontWeight:600,
+                              border:"1.5px solid var(--card-border)",
+                              background:"var(--card-bg)",
+                              color:"var(--text-primary)", transition:"all 0.2s",
+                              opacity: figmaState==="loading" ? 0.6 : 1 }}>
+                            {/* Figma F icon */}
+                            <svg width="14" height="14" viewBox="0 0 38 57" fill="none">
+                              <path d="M19 28.5a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0z" fill="#1ABCFE"/>
+                              <path d="M0 47.5A9.5 9.5 0 0 1 9.5 38H19v9.5a9.5 9.5 0 0 1-19 0z" fill="#0ACF83"/>
+                              <path d="M19 0v19h9.5a9.5 9.5 0 0 0 0-19H19z" fill="#FF7262"/>
+                              <path d="M0 9.5A9.5 9.5 0 0 0 9.5 19H19V0H9.5A9.5 9.5 0 0 0 0 9.5z" fill="#F24E1E"/>
+                              <path d="M0 28.5A9.5 9.5 0 0 0 9.5 38H19V19H9.5A9.5 9.5 0 0 0 0 28.5z" fill="#FF7262"/>
+                            </svg>
+                            {figmaState==="loading" ? "Opening…" : figmaState==="ready" ? "Figma MCP ✓" : "Figma MCP"}
+                          </button>
+                        )}
+                        <button onClick={() => setModifyOpen(true)}
+                          style={{ display:"flex", alignItems:"center", gap:7,
+                            padding:"9px 18px", borderRadius:10, border:"none",
+                            cursor:"pointer", fontFamily:"inherit", fontSize:13, fontWeight:700,
+                            background:"linear-gradient(135deg,#7c3aed,#6366f1)",
+                            color:"white", boxShadow:"0 4px 14px rgba(124,58,237,0.35)",
+                            transition:"all 0.2s" }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                            <path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                          </svg>
+                          Modify
+                        </button>
+                      </div>
+                      {/* Right: Save to Content Studio */}
+                      <button onClick={() => saveAsset(tab)} disabled={saveState[tab]==="saving"}
                         style={{ display:"flex", alignItems:"center", gap:8,
                           padding:"9px 20px", borderRadius:10, border:"none",
                           cursor:saveState[tab]==="saving"?"not-allowed":"pointer",
@@ -625,14 +692,13 @@ export default function Campaigns() {
                               animation:"spin 0.8s linear infinite" }} />
                             Saving…
                           </>
-                        ) : saveState[tab]==="saved" ? (
-                          <>✓ Saved to Content Studio</>
-                        ) : (
+                        ) : saveState[tab]==="saved" ? <>✓ Saved to Content Studio</> : (
                           <>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                               stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                              <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+                              <polyline points="17 21 17 13 7 13 7 21"/>
+                              <polyline points="7 3 7 8 15 8"/>
                             </svg>
                             Save to Content Studio
                           </>
@@ -671,6 +737,147 @@ export default function Campaigns() {
       </div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
+      {/* ── Modify panel ── full-screen overlay */}
+      {modifyOpen && (
+        <div style={{ position:"fixed" as const, inset:0, zIndex:200,
+          display:"flex", flexDirection:"column" as const,
+          background:"var(--page-bg)", fontFamily:"inherit" }}>
+
+          {/* Top bar */}
+          <div style={{ height:56, borderBottom:"1px solid var(--card-border)",
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            padding:"0 24px", flexShrink:0 }}>
+            <div style={{ fontSize:17, fontWeight:700, color:"var(--text-primary)" }}>Modify</div>
+            <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+              <button style={{ padding:"8px 20px", borderRadius:10, border:"none",
+                background:"linear-gradient(135deg,#7c3aed,#6366f1)", color:"white",
+                fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
+                display:"flex", alignItems:"center", gap:6 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                  <polyline points="17 21 17 13 7 13 7 21"/>
+                </svg>
+                Save
+              </button>
+              <button onClick={() => setModifyOpen(false)}
+                style={{ padding:"8px 18px", borderRadius:10,
+                  border:"1.5px solid var(--card-border)", background:"transparent",
+                  color:"var(--text-secondary)", fontSize:13, fontWeight:600,
+                  cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
+              <button onClick={() => setModifyOpen(false)}
+                style={{ background:"none", border:"none", cursor:"pointer",
+                  color:"var(--text-tertiary)", fontSize:20, lineHeight:1,
+                  padding:"4px 6px", borderRadius:6 }}>×</button>
+            </div>
+          </div>
+
+          {/* Body */}
+          <div style={{ flex:1, display:"flex", overflow:"hidden" }}>
+
+            {/* Left panel */}
+            <div style={{ width:320, flexShrink:0, borderRight:"1px solid var(--card-border)",
+              display:"flex", flexDirection:"column" as const, padding:"20px 16px", gap:16,
+              overflowY:"auto" as const }}>
+
+              {/* Agent selector */}
+              <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <div style={{ flex:1, display:"flex", alignItems:"center", gap:8,
+                  padding:"8px 14px", borderRadius:10, border:"1.5px solid var(--card-border)",
+                  background:"var(--card-bg)", cursor:"pointer" }}>
+                  <span style={{ fontSize:13, fontWeight:600, color:"var(--text-primary)" }}>Kinetik</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2.5" strokeLinecap="round" style={{ marginLeft:"auto" }}>
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </div>
+                <button style={{ width:36, height:36, borderRadius:10, border:"1.5px solid var(--card-border)",
+                  background:"var(--card-bg)", cursor:"pointer", display:"flex",
+                  alignItems:"center", justifyContent:"center", color:"var(--text-secondary)" }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+                  </svg>
+                </button>
+              </div>
+
+              {/* Heading */}
+              <div style={{ fontSize:14, fontWeight:700, color:"var(--text-primary)", marginTop:4 }}>
+                What changes would you like to make?
+              </div>
+
+              {/* Quick options */}
+              {[
+                { label:"Change Typography", icon:"T" },
+                { label:"Connect to Figma",  icon:"F", action: handleFigmaMcp },
+                { label:"Adjust Color Palette", icon:"◉" },
+              ].map(opt => (
+                <button key={opt.label} onClick={opt.action}
+                  style={{ display:"flex", alignItems:"center", gap:10,
+                    padding:"10px 14px", borderRadius:10,
+                    border:"1.5px solid var(--card-border)", background:"var(--card-bg)",
+                    color:"var(--text-primary)", fontSize:13, fontWeight:500,
+                    cursor:"pointer", fontFamily:"inherit", textAlign:"left" as const,
+                    width:"100%", transition:"border-color 0.15s" }}>
+                  <span style={{ fontSize:14, color:"var(--text-secondary)", width:18,
+                    textAlign:"center" as const, flexShrink:0 }}>{opt.icon}</span>
+                  {opt.label}
+                </button>
+              ))}
+
+              {/* Free-text input */}
+              <div style={{ marginTop:"auto", border:"1.5px solid var(--card-border)",
+                borderRadius:12, background:"var(--card-bg)", padding:"10px 12px" }}>
+                <input value={modifyText} onChange={e => setModifyText(e.target.value)}
+                  placeholder="Describe your request…"
+                  style={{ width:"100%", border:"none", background:"transparent",
+                    fontSize:13, color:"var(--text-primary)", fontFamily:"inherit",
+                    outline:"none", marginBottom:8 }} />
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <button style={{ width:28, height:28, borderRadius:8,
+                    border:"1.5px solid var(--card-border)", background:"transparent",
+                    cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+                    color:"var(--text-secondary)", fontSize:18, lineHeight:1 }}>+</button>
+                  <button style={{ width:28, height:28, borderRadius:8, border:"none",
+                    background:"linear-gradient(135deg,#7c3aed,#6366f1)",
+                    cursor: modifyText.trim() ? "pointer" : "not-allowed",
+                    opacity: modifyText.trim() ? 1 : 0.4,
+                    display:"flex", alignItems:"center", justifyContent:"center" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                      stroke="white" strokeWidth="2.5" strokeLinecap="round">
+                      <line x1="22" y1="2" x2="11" y2="13"/>
+                      <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Right panel — image preview */}
+            <div style={{ flex:1, display:"flex", flexDirection:"column" as const,
+              alignItems:"center", justifyContent:"center", padding:32, gap:16,
+              overflowY:"auto" as const }}>
+              {tab==="image" && results.image?.image_b64 ? (
+                <img src={`data:image/jpeg;base64,${results.image.image_b64}`}
+                  style={{ maxWidth:"100%", maxHeight:"70vh", borderRadius:16,
+                    boxShadow:"0 16px 48px rgba(0,0,0,0.18)", display:"block" }} alt="" />
+              ) : results[tab]?.video_b64 ? (
+                <video controls autoPlay loop muted playsInline
+                  src={`data:video/mp4;base64,${results[tab]!.video_b64}`}
+                  style={{ maxWidth:"100%", maxHeight:"70vh", borderRadius:16,
+                    boxShadow:"0 16px 48px rgba(0,0,0,0.18)", display:"block" }} />
+              ) : null}
+              <p style={{ fontSize:13, color:"var(--text-secondary)", textAlign:"center" as const,
+                maxWidth:520, lineHeight:1.6, margin:0 }}>
+                This creative is fully editable. You can rearrange the typography and logo,
+                change the image, and modify the text. You can also ask the agent to make
+                these changes for you.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
