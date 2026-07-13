@@ -3,6 +3,246 @@ import type { BrandHubSection } from "./BrandHubNav";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8000";
 
+// ── Brand Voice ────────────────────────────────────────────────
+
+interface BrandVoice {
+  id: string;
+  name: string;
+  description: string;
+  traits: string[];
+  exampleSnippet: string;
+}
+
+const VOICE_STORAGE_KEY = "brandhub_voices";
+
+const DEFAULT_VOICES: BrandVoice[] = [
+  { id: "dv1", name: "Friendly & Warm", description: "Approachable, knowledgeable and clear. We sound like a helpful expert who genuinely cares about our audience.", traits: ["Helpful", "Clear", "Optimistic"], exampleSnippet: "Hi there! We're excited to help you get started. Our team has worked hard to make this as easy as possible for you." },
+  { id: "dv2", name: "Bold & Confident", description: "Direct, powerful and assertive. We make bold statements, inspire action and never shy away from ambition.", traits: ["Confident", "Bold", "Inspiring"], exampleSnippet: "Transform your business today. Don't wait. Seize this opportunity and lead the market." },
+  { id: "dv3", name: "Playful & Creative", description: "Fun, energetic and imaginative. We use wordplay, humour and creativity to make our brand stand out.", traits: ["Fun", "Energetic", "Imaginative"], exampleSnippet: "Colour outside the lines. Break the rules. Make something the world has never seen before." },
+  { id: "dv4", name: "Warm & Empathetic", description: "Compassionate, understanding and supportive. We create a safe space where our audience feels heard.", traits: ["Caring", "Gentle", "Understanding"], exampleSnippet: "We know this journey can feel overwhelming. You're not alone in this — we're here every step of the way." },
+];
+
+const TRAIT_COLOURS = ["#7c3aed","#6366f1","#0ea5e9","#10b981","#f59e0b","#ef4444","#ec4899"];
+
+function TraitChip({ label, index }: { label: string; index: number }) {
+  const color = TRAIT_COLOURS[index % TRAIT_COLOURS.length];
+  return (
+    <span style={{ display:"inline-block", padding:"3px 10px", borderRadius:99,
+      background:`${color}18`, color, fontSize:11, fontWeight:700, letterSpacing:".02em" }}>
+      {label}
+    </span>
+  );
+}
+
+function VoiceCard({ voice, onClick }: { voice: BrandVoice; onClick: () => void }) {
+  return (
+    <div onClick={onClick} style={{ padding:"20px 22px", borderRadius:14,
+      border:"1.5px solid var(--card-border)", background:"var(--card-bg)",
+      cursor:"pointer", transition:"box-shadow 0.15s, border-color 0.15s",
+      display:"flex", flexDirection:"column" as const, gap:10 }}
+      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor="#7c3aed"; (e.currentTarget as HTMLDivElement).style.boxShadow="0 4px 20px rgba(124,58,237,0.12)"; }}
+      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor="var(--card-border)"; (e.currentTarget as HTMLDivElement).style.boxShadow="none"; }}>
+      <div style={{ fontSize:15, fontWeight:800, color:"var(--text-primary)", lineHeight:1.3 }}>{voice.name}</div>
+      <div style={{ fontSize:12, color:"var(--text-secondary)", lineHeight:1.6,
+        overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const }}>
+        {voice.description}
+      </div>
+      <div style={{ display:"flex", gap:6, flexWrap:"wrap" as const }}>
+        {voice.traits.slice(0,4).map((t,i) => <TraitChip key={t} label={t} index={i} />)}
+      </div>
+      {voice.exampleSnippet && (
+        <div>
+          <div style={{ fontSize:10, fontWeight:700, color:"var(--text-tertiary)",
+            textTransform:"uppercase" as const, letterSpacing:".08em", marginBottom:4 }}>
+            Example Snippet
+          </div>
+          <div style={{ fontSize:12, color:"var(--text-secondary)", fontStyle:"italic",
+            lineHeight:1.55, overflow:"hidden", display:"-webkit-box",
+            WebkitLineClamp:2, WebkitBoxOrient:"vertical" as const }}>
+            "{voice.exampleSnippet}"
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function VoiceModal({ voice, isNew, onSave, onDelete, onClose }: {
+  voice: BrandVoice; isNew: boolean;
+  onSave: (v: BrandVoice) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
+}) {
+  const [draft, setDraft] = useState<BrandVoice>({ ...voice });
+  const [traitsRaw, setTraitsRaw] = useState(voice.traits.join(", "));
+
+  const handleSave = () => {
+    if (!draft.name.trim()) return;
+    onSave({ ...draft, traits: traitsRaw.split(",").map(t => t.trim()).filter(Boolean) });
+  };
+
+  return (
+    <div style={{ position:"fixed" as const, inset:0, zIndex:300,
+      background:"rgba(0,0,0,0.45)", display:"flex", alignItems:"center", justifyContent:"center" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ width:"100%", maxWidth:520, margin:"0 20px", borderRadius:18,
+        background:"var(--card-bg)", border:"1.5px solid var(--card-border)",
+        boxShadow:"0 24px 60px rgba(0,0,0,0.25)", overflow:"hidden" }}>
+        {/* Header */}
+        <div style={{ padding:"20px 24px 0", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)" }}>
+            {isNew ? "New Brand Voice" : "Edit Brand Voice"}
+          </div>
+          <button onClick={onClose} style={{ background:"none", border:"none", cursor:"pointer",
+            color:"var(--text-tertiary)", fontSize:20, padding:"2px 6px", borderRadius:6 }}>×</button>
+        </div>
+        {/* Body */}
+        <div style={{ padding:"20px 24px", display:"flex", flexDirection:"column" as const, gap:14 }}>
+          <div>
+            <label style={{ fontSize:11, fontWeight:700, color:"var(--text-secondary)",
+              textTransform:"uppercase" as const, letterSpacing:".07em", display:"block", marginBottom:6 }}>
+              Voice Name
+            </label>
+            <input value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
+              placeholder="e.g. Bold & Confident"
+              style={{ width:"100%", padding:"10px 14px", borderRadius:10,
+                border:"1.5px solid var(--card-border)", background:"var(--card-bg-soft)",
+                color:"var(--text-primary)", fontFamily:"inherit", fontSize:13,
+                fontWeight:600, outline:"none", boxSizing:"border-box" as const }} />
+          </div>
+          <div>
+            <label style={{ fontSize:11, fontWeight:700, color:"var(--text-secondary)",
+              textTransform:"uppercase" as const, letterSpacing:".07em", display:"block", marginBottom:6 }}>
+              Description / Tone
+            </label>
+            <textarea value={draft.description} onChange={e => setDraft(d => ({ ...d, description: e.target.value }))}
+              placeholder="Describe the personality, tone and style..."
+              rows={3}
+              style={{ width:"100%", padding:"10px 14px", borderRadius:10, resize:"none" as const,
+                border:"1.5px solid var(--card-border)", background:"var(--card-bg-soft)",
+                color:"var(--text-primary)", fontFamily:"inherit", fontSize:13,
+                lineHeight:1.6, outline:"none", boxSizing:"border-box" as const }} />
+          </div>
+          <div>
+            <label style={{ fontSize:11, fontWeight:700, color:"var(--text-secondary)",
+              textTransform:"uppercase" as const, letterSpacing:".07em", display:"block", marginBottom:6 }}>
+              Traits <span style={{ fontWeight:400, textTransform:"none" as const }}>(comma-separated)</span>
+            </label>
+            <input value={traitsRaw} onChange={e => setTraitsRaw(e.target.value)}
+              placeholder="e.g. Confident, Bold, Inspiring"
+              style={{ width:"100%", padding:"10px 14px", borderRadius:10,
+                border:"1.5px solid var(--card-border)", background:"var(--card-bg-soft)",
+                color:"var(--text-primary)", fontFamily:"inherit", fontSize:13,
+                outline:"none", boxSizing:"border-box" as const }} />
+          </div>
+          <div>
+            <label style={{ fontSize:11, fontWeight:700, color:"var(--text-secondary)",
+              textTransform:"uppercase" as const, letterSpacing:".07em", display:"block", marginBottom:6 }}>
+              Example Snippet
+            </label>
+            <textarea value={draft.exampleSnippet} onChange={e => setDraft(d => ({ ...d, exampleSnippet: e.target.value }))}
+              placeholder="A short example of this voice in action..."
+              rows={3}
+              style={{ width:"100%", padding:"10px 14px", borderRadius:10, resize:"none" as const,
+                border:"1.5px solid var(--card-border)", background:"var(--card-bg-soft)",
+                color:"var(--text-primary)", fontFamily:"inherit", fontSize:13,
+                lineHeight:1.6, outline:"none", boxSizing:"border-box" as const }} />
+          </div>
+        </div>
+        {/* Footer */}
+        <div style={{ padding:"0 24px 22px", display:"flex", gap:10, justifyContent:"space-between" }}>
+          {!isNew && (
+            <button onClick={() => onDelete(draft.id)}
+              style={{ padding:"9px 18px", borderRadius:10, border:"1.5px solid #ef444440",
+                background:"transparent", color:"#ef4444", fontSize:13, fontWeight:600,
+                cursor:"pointer", fontFamily:"inherit" }}>
+              Delete
+            </button>
+          )}
+          <div style={{ display:"flex", gap:10, marginLeft:"auto" }}>
+            <button onClick={onClose}
+              style={{ padding:"9px 18px", borderRadius:10, border:"1.5px solid var(--card-border)",
+                background:"transparent", color:"var(--text-secondary)", fontSize:13, fontWeight:600,
+                cursor:"pointer", fontFamily:"inherit" }}>
+              Cancel
+            </button>
+            <button onClick={handleSave} disabled={!draft.name.trim()}
+              style={{ padding:"9px 22px", borderRadius:10, border:"none",
+                background:"linear-gradient(135deg,#7c3aed,#6366f1)", color:"white",
+                fontSize:13, fontWeight:700, cursor:draft.name.trim()?"pointer":"not-allowed",
+                opacity:draft.name.trim()?1:0.5, fontFamily:"inherit" }}>
+              {isNew ? "Create Voice" : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function VoiceSection() {
+  const [voices, setVoices] = useState<BrandVoice[]>(() => {
+    try {
+      const stored = localStorage.getItem(VOICE_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : DEFAULT_VOICES;
+    } catch { return DEFAULT_VOICES; }
+  });
+  const [editing, setEditing] = useState<BrandVoice | null>(null);
+  const [isNew, setIsNew] = useState(false);
+
+  const persist = (updated: BrandVoice[]) => {
+    setVoices(updated);
+    localStorage.setItem(VOICE_STORAGE_KEY, JSON.stringify(updated));
+  };
+
+  const handleSave = (v: BrandVoice) => {
+    persist(isNew ? [v, ...voices] : voices.map(x => x.id === v.id ? v : x));
+    setEditing(null);
+  };
+
+  const handleDelete = (id: string) => {
+    persist(voices.filter(v => v.id !== id));
+    setEditing(null);
+  };
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column" as const, gap:20 }}>
+      {/* Toolbar */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+        <div style={{ fontSize:13, color:"var(--text-secondary)", lineHeight:1.5 }}>
+          {voices.length} voice{voices.length !== 1 ? "s" : ""} defined — used to shape AI-generated campaign copy
+        </div>
+        <button onClick={() => { setIsNew(true); setEditing({ id:`v_${Date.now()}`, name:"", description:"", traits:[], exampleSnippet:"" }); }}
+          style={{ display:"flex", alignItems:"center", gap:8, padding:"9px 18px",
+            borderRadius:10, border:"none", background:"linear-gradient(135deg,#7c3aed,#6366f1)",
+            color:"white", fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit" }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Voice
+        </button>
+      </div>
+
+      {/* Grid */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))", gap:16 }}>
+        {voices.map(v => (
+          <VoiceCard key={v.id} voice={v} onClick={() => { setIsNew(false); setEditing(v); }} />
+        ))}
+        {voices.length === 0 && (
+          <div style={{ gridColumn:"1/-1", textAlign:"center" as const, padding:"48px 24px",
+            color:"var(--text-tertiary)", fontSize:13 }}>
+            No voices yet — click <strong>New Voice</strong> to get started.
+          </div>
+        )}
+      </div>
+
+      {/* Modal */}
+      {editing && (
+        <VoiceModal voice={editing} isNew={isNew}
+          onSave={handleSave} onDelete={handleDelete} onClose={() => setEditing(null)} />
+      )}
+    </div>
+  );
+}
+
 // ── Shared placeholder for sections not yet built ──────────────
 function ComingSoon({ title, description }: { title: string; description: string }) {
   return (
@@ -283,7 +523,7 @@ export default function BrandHub({ section = "guidelines", onAssetsUploaded }: B
     switch (section) {
       case "guidelines": return <GuidelinesSection onAssetsUploaded={onAssetsUploaded} />;
       case "voice":
-        return <ComingSoon title="Brand Voice" description="Define your brand's tone of voice, messaging pillars, writing style and personality traits. Coming soon." />;
+        return <VoiceSection />;
       case "visual-identity":
         return <ComingSoon title="Visual Identity" description="Manage logos, colour palettes, typography and visual design tokens used across all campaign outputs. Coming soon." />;
       case "products":

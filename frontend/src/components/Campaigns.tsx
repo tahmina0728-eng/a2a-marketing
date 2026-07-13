@@ -172,6 +172,10 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
   const [goal, setGoal]       = useState("");
   const [audience, setAudience] = useState("");
   const [platform, setPlatform] = useState("");
+  const [voiceName, setVoiceName] = useState("");
+  const [voices] = useState<{id:string;name:string;description:string;traits:string[]}[]>(() => {
+    try { return JSON.parse(localStorage.getItem("brandhub_voices") ?? "[]"); } catch { return []; }
+  });
 
   const [formats, setFormats] = useState<Set<FormatType>>(new Set());
   const [imgSz, setImgSz]     = useState("16:9");
@@ -212,7 +216,15 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
     }
   };
 
-  const prompt = [brand&&`Brand: ${brand}`, brief, goal&&`Goal: ${goal}`, audience&&`Audience: ${audience}`, platform&&`Platform: ${platform}`].filter(Boolean).join(". ");
+  const selectedVoice = voices.find(v => v.name === voiceName);
+  const prompt = [
+    brand && `Brand: ${brand}`,
+    selectedVoice && `Tone of voice: ${selectedVoice.description}. Traits: ${selectedVoice.traits.join(", ")}`,
+    brief,
+    goal && `Goal: ${goal}`,
+    audience && `Audience: ${audience}`,
+    platform && `Platform: ${platform}`,
+  ].filter(Boolean).join(". ");
   const anyRes = Object.values(results).some(r => r?.image_b64||r?.video_b64);
   const hasRes = (f: FormatType) => !!(results[f]?.image_b64 || results[f]?.video_b64);
 
@@ -431,6 +443,11 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>} />
               <ChipSel label="Platform" value={platform} onChange={setPlatform} opts={PLATFORMS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
+              {voices.length > 0 && (
+                <ChipSel label="Brand Voice" value={voiceName} onChange={setVoiceName}
+                  opts={voices.map(v => v.name)}
+                  icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>} />
+              )}
             </div>
 
             {/* Action buttons — right-aligned to match card edge */}
