@@ -164,10 +164,11 @@ function FormatCard({ label, desc, icon, selected, onClick, sizes, selSize, onSi
 }
 
 // ── Main Component ─────────────────────────────────────────────
-export default function Campaigns() {
-  const [step, setStep]       = useState<1|2|3|4>(1);
-  const [brief, setBrief]     = useState("");
-  const [brand, setBrand]     = useState("");
+export default function Campaigns({ initialName, initialBrand, initialResults, onSaved }: { initialName?: string; initialBrand?: string; initialResults?: Partial<Record<FormatType, GeneratedResult>>; onSaved?: () => void } = {}) {
+  const [step, setStep]         = useState<1|2|3|4>(initialResults ? 4 : 1);
+  const [campaignName, setCampaignName] = useState(initialName ?? "");
+  const [brief, setBrief]       = useState("");
+  const [brand, setBrand]       = useState(initialBrand ?? "");
   const [goal, setGoal]       = useState("");
   const [audience, setAudience] = useState("");
   const [platform, setPlatform] = useState("");
@@ -180,11 +181,12 @@ export default function Campaigns() {
   const [copyRes, setCopyRes] = useState<{headline:string;body:string;cta:string}|null>(null);
   const [copyBusy, setCopyBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [results, setResults] = useState<Partial<Record<FormatType, GeneratedResult>>>({});
-  const [tab, setTab]         = useState<FormatType>("image");
+  const [results, setResults] = useState<Partial<Record<FormatType, GeneratedResult>>>(initialResults ?? {});
+  const [tab, setTab]         = useState<FormatType>(initialResults?.image ? "image" : initialResults?.reel ? "reel" : "image");
   const [saveState, setSaveState] = useState<Record<string, "idle"|"saving"|"saved">>({});
   const [modifyOpen, setModifyOpen] = useState(false);
   const [modifyText, setModifyText] = useState("");
+  const [preModifyResults, setPreModifyResults] = useState<Partial<Record<FormatType, GeneratedResult>>>({});
   const [figmaState, setFigmaState] = useState<"idle"|"loading"|"ready">("idle");
 
   const saveAsset = async (fmt: FormatType) => {
@@ -214,29 +216,59 @@ export default function Campaigns() {
   const anyRes = Object.values(results).some(r => r?.image_b64||r?.video_b64);
   const hasRes = (f: FormatType) => !!(results[f]?.image_b64 || results[f]?.video_b64);
 
-  // Save campaign name to sidebar list once generation is done
+  // Save campaign name + results to localStorage once generation is done
   useEffect(() => {
-    if (!anyRes || !brief.trim()) return;
-    const name = brief.slice(0, 32);
+    if (!anyRes) return;
+    const name = campaignName.trim() || brand || "Untitled Campaign";
     const stored: {id:string;name:string;brand:string}[] = (() => {
       try { return JSON.parse(localStorage.getItem("a2a_campaigns") ?? "[]"); } catch { return []; }
     })();
-    if (stored[0]?.name === name) return; // already saved
-    const updated = [{ id: `c_${Date.now()}`, name, brand }, ...stored.filter(c => c.name !== name)].slice(0, 10);
-    localStorage.setItem("a2a_campaigns", JSON.stringify(updated));
-  }, [anyRes, brief, brand]);
+    const existingId = stored.find(c => c.name === name)?.id;
+    const id = existingId ?? `c_${Date.now()}`;
+    if (!existingId) {
+      const updated = [{ id, name, brand }, ...stored.filter(c => c.name !== name)].slice(0, 10);
+      localStorage.setItem("a2a_campaigns", JSON.stringify(updated));
+      onSaved?.();
+    }
+    // Persist results (image only — keep localStorage size manageable)
+    try {
+      const toSave: Partial<Record<FormatType, GeneratedResult>> = {};
+      if (results.image) toSave.image = { image_b64: results.image.image_b64, headline: results.image.headline, tagline: results.image.tagline };
+      localStorage.setItem(`a2a_results_${id}`, JSON.stringify(toSave));
+    } catch {}
+  }, [anyRes, campaignName, brief, brand, onSaved, results]);
+
+  const [modifyBusy, setModifyBusy] = useState(false);
+
+  const handleModifySubmit = async () => {
+    if (!modifyText.trim() || modifyBusy) return;
+    setModifyBusy(true);
+    try {
+      const modifiedPrompt = `${prompt}. Modification request: ${modifyText}`;
+      const r = await fetch(`${API_BASE}/agents/kv/run`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: modifiedPrompt }),
+      });
+      const d = await r.json();
+      setResults(prev => ({ ...prev, image: d }));
+      setTab("image");
+      setModifyText("");
+    } catch {}
+    setModifyBusy(false);
+  };
 
   const handleFigmaMcp = async () => {
     const img = results.image?.image_b64;
     if (!img) return;
     setFigmaState("loading");
     try {
-      await fetch(`${API_BASE}/figma/prepare`, {
+      const res = await fetch(`${API_BASE}/figma/prepare`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image_b64: img, campaign_name: brief.slice(0, 40) || "Campaign" }),
       });
+      const data = await res.json();
       setFigmaState("ready");
-      window.open("https://www.figma.com/new", "_blank");
+      window.open(data.figma_url || "https://www.figma.com/new", "_blank");
     } catch {
       setFigmaState("idle");
     }
@@ -312,12 +344,14 @@ export default function Campaigns() {
               background:"radial-gradient(ellipse, rgba(124,58,237,0.08) 0%, transparent 70%)" }} />
             <h1 style={{ margin:"0 0 4px", fontSize:26, fontWeight:900, letterSpacing:"-0.03em",
               color:"var(--text-primary)", display:"inline-flex", alignItems:"center", gap:10 }}>
-              Create New Campaign
+              {campaignName.trim() || "Create New Campaign"}
               <span style={{ background:G, WebkitBackgroundClip:"text",
                 WebkitTextFillColor:"transparent", backgroundClip:"text" }}>✦</span>
             </h1>
             <p style={{ margin:0, fontSize:12, color:"var(--text-secondary)" }}>
-              Describe your idea — AI agents will generate on-brand content across every format.
+              {initialName
+                ? `${initialBrand ? initialBrand + " · " : ""}AI-generated campaign`
+                : "Describe your idea — AI agents will generate on-brand content across every format."}
             </p>
           </div>
 
@@ -342,6 +376,17 @@ export default function Campaigns() {
                 {copyBusy?"Improving…":"Improve with AI"}
               </button>
             </div>
+
+            {/* Campaign name input */}
+            <input
+              value={campaignName} onChange={e => setCampaignName(e.target.value)}
+              placeholder="Campaign name (e.g. Wash Day Glow)"
+              maxLength={60}
+              style={{ width:"100%", marginBottom:10, padding:"12px 16px",
+                borderRadius:10, border:"1.5px solid var(--card-border)",
+                background:"var(--card-bg)", color:"var(--text-primary)",
+                fontFamily:"inherit", fontSize:14, fontWeight:600, outline:"none",
+                boxSizing:"border-box" as const }} />
 
             {/* Textarea card */}
             <div style={{ borderRadius:16, border:"1.5px solid var(--card-border)",
@@ -658,7 +703,7 @@ export default function Campaigns() {
                             {figmaState==="loading" ? "Opening…" : figmaState==="ready" ? "Figma MCP ✓" : "Figma MCP"}
                           </button>
                         )}
-                        <button onClick={() => setModifyOpen(true)}
+                        <button onClick={() => { setPreModifyResults(results); setModifyOpen(true); }}
                           style={{ display:"flex", alignItems:"center", gap:7,
                             padding:"9px 18px", borderRadius:10, border:"none",
                             cursor:"pointer", fontFamily:"inherit", fontSize:13, fontWeight:700,
@@ -750,7 +795,8 @@ export default function Campaigns() {
             padding:"0 24px", flexShrink:0 }}>
             <div style={{ fontSize:17, fontWeight:700, color:"var(--text-primary)" }}>Modify</div>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-              <button style={{ padding:"8px 20px", borderRadius:10, border:"none",
+              <button onClick={() => setModifyOpen(false)}
+                style={{ padding:"8px 20px", borderRadius:10, border:"none",
                 background:"linear-gradient(135deg,#7c3aed,#6366f1)", color:"white",
                 fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"inherit",
                 display:"flex", alignItems:"center", gap:6 }}>
@@ -761,12 +807,12 @@ export default function Campaigns() {
                 </svg>
                 Save
               </button>
-              <button onClick={() => setModifyOpen(false)}
+              <button onClick={() => { setResults(preModifyResults); setModifyOpen(false); }}
                 style={{ padding:"8px 18px", borderRadius:10,
                   border:"1.5px solid var(--card-border)", background:"transparent",
                   color:"var(--text-secondary)", fontSize:13, fontWeight:600,
                   cursor:"pointer", fontFamily:"inherit" }}>Cancel</button>
-              <button onClick={() => setModifyOpen(false)}
+              <button onClick={() => { setResults(preModifyResults); setModifyOpen(false); }}
                 style={{ background:"none", border:"none", cursor:"pointer",
                   color:"var(--text-tertiary)", fontSize:20, lineHeight:1,
                   padding:"4px 6px", borderRadius:6 }}>×</button>
@@ -809,9 +855,9 @@ export default function Campaigns() {
 
               {/* Quick options */}
               {[
-                { label:"Change Typography", icon:"T" },
-                { label:"Connect to Figma",  icon:"F", action: handleFigmaMcp },
-                { label:"Adjust Color Palette", icon:"◉" },
+                { label:"Change Typography",   icon:"T", action: () => setModifyText("Change the typography — use a more elegant, modern font style for the headline and body text.") },
+                { label:"Connect to Figma",    icon:"F", action: handleFigmaMcp },
+                { label:"Adjust Color Palette", icon:"◉", action: () => setModifyText("Adjust the color palette — make it more vibrant and on-brand while keeping the overall composition the same.") },
               ].map(opt => (
                 <button key={opt.label} onClick={opt.action}
                   style={{ display:"flex", alignItems:"center", gap:10,
@@ -839,10 +885,11 @@ export default function Campaigns() {
                     border:"1.5px solid var(--card-border)", background:"transparent",
                     cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
                     color:"var(--text-secondary)", fontSize:18, lineHeight:1 }}>+</button>
-                  <button style={{ width:28, height:28, borderRadius:8, border:"none",
+                  <button onClick={handleModifySubmit} disabled={!modifyText.trim() || modifyBusy}
+                    style={{ width:28, height:28, borderRadius:8, border:"none",
                     background:"linear-gradient(135deg,#7c3aed,#6366f1)",
-                    cursor: modifyText.trim() ? "pointer" : "not-allowed",
-                    opacity: modifyText.trim() ? 1 : 0.4,
+                    cursor: modifyText.trim() && !modifyBusy ? "pointer" : "not-allowed",
+                    opacity: modifyText.trim() && !modifyBusy ? 1 : 0.4,
                     display:"flex", alignItems:"center", justifyContent:"center" }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
                       stroke="white" strokeWidth="2.5" strokeLinecap="round">

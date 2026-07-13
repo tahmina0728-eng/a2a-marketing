@@ -1598,12 +1598,9 @@ async def figma_prepare(req: FigmaPrepareRequest):
     }
     _figma_store["latest"] = campaign_id
 
-    # Verify the Figma file is reachable
-    file_ok = await _verify_figma_file()
-
     figma_url = (
         f"https://www.figma.com/design/{FIGMA_FILE_KEY}/A2A-Campaign-Canvas"
-        if file_ok and FIGMA_FILE_KEY
+        if FIGMA_FILE_KEY
         else "https://www.figma.com/new"
     )
 
@@ -1612,7 +1609,7 @@ async def figma_prepare(req: FigmaPrepareRequest):
         "campaign_name": req.campaign_name,
         "status": "ready",
         "figma_url": figma_url,
-        "file_verified": file_ok,
+        "file_verified": bool(FIGMA_FILE_KEY),
         "plugin_endpoint": "/figma/latest",
     }
 

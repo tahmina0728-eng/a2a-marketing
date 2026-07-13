@@ -5467,10 +5467,12 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 
 // ── Sidebar ───────────────────────────────────────────────────
 
-function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSelectAgent,
+function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, savedCampaigns, activeAgentKey, onSelectAgent,
   brandHubSection, onBrandHubSection, brandAssets, activeBrand, publishingChannel, onPublishingChannel }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
   view: "app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing" | "campaigns") => void;
+  onSelectCampaign: (c: {id:string;name:string;brand:string}|null) => void;
+  savedCampaigns: {id:string;name:string;brand:string}[];
   activeAgentKey: string | null; onSelectAgent: (key: string) => void;
   brandHubSection: BrandHubSection; onBrandHubSection: (s: BrandHubSection) => void;
   brandAssets: Record<string, number>; activeBrand: string;
@@ -5528,10 +5530,6 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
           const [aiOpen, setAiOpen] = useState(view === "agent");
           const [brandHubOpen, setBrandHubOpen] = useState(view === "brand-hub");
           const [publishingOpen, setPublishingOpen] = useState(view === "publishing");
-          const [savedCampaigns] = useState<{id:string;name:string;brand:string}[]>(() => {
-            try { return JSON.parse(localStorage.getItem("a2a_campaigns") ?? "[]"); } catch { return []; }
-          });
-
           // Shared nav button style
           const nb = (active: boolean, indent = false): React.CSSProperties => ({
             display: "flex", alignItems: "center", gap: 10,
@@ -5695,7 +5693,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
                   textTransform: "uppercase" as const, color: "var(--text-tertiary)" }}>
                   Campaigns
                 </span>
-                <button onClick={() => onNavigate("campaigns")}
+                <button onClick={() => { onSelectCampaign(null); onNavigate("campaigns"); }}
                   style={{ background: "none", border: "none", cursor: "pointer",
                     color: "var(--text-tertiary)", fontSize: 16, lineHeight: 1,
                     padding: "0 2px", display: "flex", alignItems: "center",
@@ -5703,7 +5701,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, activeAgentKey, onSel
                   title="New campaign">+</button>
               </div>
               {savedCampaigns.slice(0, 3).map(c => (
-                <button key={c.id} onClick={() => onNavigate("campaigns")} style={nb(false, true)}>
+                <button key={c.id} onClick={() => { onSelectCampaign(c); onNavigate("campaigns"); }} style={nb(false, true)}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" strokeWidth="2" strokeLinecap="round"
                     strokeLinejoin="round" style={{ flexShrink: 0, opacity: 0.6 }}>
@@ -5977,6 +5975,7 @@ export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
   const { theme, toggleTheme } = useTheme();
   const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns">("app");
+  const [selectedCampaign, setSelectedCampaign] = useState<{id:string;name:string;brand:string}|null>(null);
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
   const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("guidelines");
   const [brandAssets, setBrandAssets] = useState<Record<string, number>>(() => {
@@ -5990,6 +5989,12 @@ export default function App() {
   );
   const [publishingChannel, setPublishingChannel] = useState<PublishingChannel>("instagram");
   const [campaignPrompt, setCampaignPrompt] = useState("");
+  const [savedCampaigns, setSavedCampaigns] = useState<{id:string;name:string;brand:string}[]>(() => {
+    try { return JSON.parse(localStorage.getItem("a2a_campaigns") ?? "[]"); } catch { return []; }
+  });
+  const refreshCampaigns = () => {
+    try { setSavedCampaigns(JSON.parse(localStorage.getItem("a2a_campaigns") ?? "[]")); } catch { /**/ }
+  };
 
   const [wizardStarted, setWizardStarted]   = useState(true);
   const [campaignName,  setCampaignName]    = useState("New Campaign");
@@ -6036,6 +6041,7 @@ export default function App() {
 
         {/* Left: Sidebar */}
         <Sidebar theme={theme} onToggleTheme={toggleTheme} view={view} onNavigate={setView}
+          onSelectCampaign={setSelectedCampaign} savedCampaigns={savedCampaigns}
           activeAgentKey={activeAgentKey}
           onSelectAgent={(key) => { setActiveAgentKey(key); setView("agent"); }}
           brandHubSection={brandHubSection} onBrandHubSection={setBrandHubSection}
@@ -6043,7 +6049,12 @@ export default function App() {
           publishingChannel={publishingChannel} onPublishingChannel={setPublishingChannel} />
 
         {view === "campaigns" ? (
-          <CampaignCreator />
+          <CampaignCreator
+            key={selectedCampaign?.id ?? "new"}
+            initialName={selectedCampaign?.name}
+            initialBrand={selectedCampaign?.brand}
+            initialResults={(() => { try { const r = localStorage.getItem(`a2a_results_${selectedCampaign?.id}`); return r ? JSON.parse(r) : undefined; } catch { return undefined; } })()}
+            onSaved={refreshCampaigns} />
         ) : view === "brand-hub" ? (
           <>
             <BgVideoPlayer fixed brightness={0.55} saturate={0.9} />

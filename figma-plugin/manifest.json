@@ -6,9 +6,8 @@
   "ui": "ui.html",
   "editorType": ["figma"],
   "networkAccess": {
-    "allowedDomains": [
-      "http://localhost:8000",
-      "https://*.run.app"
-    ]
+    "allowedDomains": ["https://*.run.app"],
+    "devAllowedDomains": ["http://localhost:8000"],
+    "reasoning": "Fetches generated campaign images from the A2A harness API to place on canvas"
   }
 }
