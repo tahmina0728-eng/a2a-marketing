@@ -1558,6 +1558,30 @@ async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
 # ── Figma Integration ─────────────────────────────────────────────────────────
 _figma_store: dict = {}  # {id: {image_b64, campaign_name}} + "latest" key
 
+FIGMA_API_TOKEN = os.getenv("FIGMA_API_TOKEN", "")
+FIGMA_FILE_KEY  = os.getenv("FIGMA_FILE_KEY", "")
+FIGMA_API_BASE  = "https://api.figma.com/v1"
+
+
+def _figma_headers() -> dict:
+    return {"X-Figma-Token": FIGMA_API_TOKEN, "Content-Type": "application/json"}
+
+
+async def _verify_figma_file() -> bool:
+    """Check the template file is accessible with our token."""
+    if not FIGMA_API_TOKEN or not FIGMA_FILE_KEY:
+        return False
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            r = await client.get(
+                f"{FIGMA_API_BASE}/files/{FIGMA_FILE_KEY}/nodes?ids=0%3A1",
+                headers=_figma_headers(),
+            )
+        return r.status_code == 200
+    except Exception:
+        return False
+
 
 class FigmaPrepareRequest(_BaseModel):
     image_b64: str
@@ -1566,31 +1590,55 @@ class FigmaPrepareRequest(_BaseModel):
 
 @app.post("/figma/prepare")
 async def figma_prepare(req: FigmaPrepareRequest):
-    """Store a generated image for Figma plugin pickup."""
+    """Store a generated image for Figma plugin pickup and return the file URL."""
     campaign_id = str(uuid.uuid4())[:8]
     _figma_store[campaign_id] = {
         "image_b64": req.image_b64,
         "campaign_name": req.campaign_name,
     }
     _figma_store["latest"] = campaign_id
+
+    # Verify the Figma file is reachable
+    file_ok = await _verify_figma_file()
+
+    figma_url = (
+        f"https://www.figma.com/design/{FIGMA_FILE_KEY}/A2A-Campaign-Canvas"
+        if file_ok and FIGMA_FILE_KEY
+        else "https://www.figma.com/new"
+    )
+
     return {
         "campaign_id": campaign_id,
         "campaign_name": req.campaign_name,
         "status": "ready",
-        "figma_url": "https://www.figma.com/new",
+        "figma_url": figma_url,
+        "file_verified": file_ok,
+        "plugin_endpoint": "/figma/latest",
     }
 
 
 @app.get("/figma/latest")
 async def figma_latest():
-    """Figma plugin polls this to get the most-recently prepared image."""
+    """Figma plugin fetches the most-recently prepared image from this endpoint."""
     latest_id = _figma_store.get("latest")
     if not latest_id or latest_id not in _figma_store:
-        raise HTTPException(status_code=404, detail="No image prepared")
+        raise HTTPException(status_code=404, detail="No image prepared yet")
     entry = _figma_store[latest_id]
     return {
         "campaign_name": entry["campaign_name"],
         "image_b64": entry["image_b64"],
+    }
+
+
+@app.get("/figma/status")
+async def figma_status():
+    """Check Figma connection status — used by the frontend to show connected state."""
+    file_ok = await _verify_figma_file()
+    return {
+        "connected": file_ok,
+        "file_key": FIGMA_FILE_KEY if FIGMA_FILE_KEY else None,
+        "figma_url": f"https://www.figma.com/design/{FIGMA_FILE_KEY}" if file_ok else None,
+        "has_pending_image": "latest" in _figma_store,
     }
 
 

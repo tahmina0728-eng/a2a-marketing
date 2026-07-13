@@ -1,0 +1,14 @@
+{
+  "name": "A2A Campaign Import",
+  "id": "a2a-campaign-import",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "networkAccess": {
+    "allowedDomains": [
+      "http://localhost:8000",
+      "https://*.run.app"
+    ]
+  }
+}
