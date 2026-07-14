@@ -18,6 +18,20 @@ function fileExt(item: ContentHubItem) {
   return item.kind === "reel" ? "mp4" : item.content_type.includes("png") ? "png" : "jpg";
 }
 
+async function downloadBlob(url: string, filename: string) {
+  try {
+    const blob = await fetch(url).then(r => r.blob());
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch { /* silent — user can still right-click save */ }
+}
+
 // ── Asset Card ─────────────────────────────────────────────────
 function AssetCard({ item, selected, onClick }: {
   item: ContentHubItem; selected: boolean; onClick: () => void;
@@ -84,19 +98,20 @@ function AssetCard({ item, selected, onClick }: {
         {hover && (
           <div style={{ position: "absolute" as const, top: 8, right: 8 }}
             onClick={e => e.stopPropagation()}>
-            <a href={url} download={`${item.brand}-${item.kind}.${fileExt(item)}`}
+            <button
               title="Download"
+              onClick={() => downloadBlob(url, `${item.brand}-${item.kind}.${fileExt(item)}`)}
               style={{ width: 28, height: 28, borderRadius: 8, display: "flex",
                 alignItems: "center", justifyContent: "center",
                 background: "rgba(255,255,255,0.15)", backdropFilter: "blur(8px)",
                 border: "1px solid rgba(255,255,255,0.2)", color: "white",
-                textDecoration: "none", fontSize: 12 }}>
+                cursor: "pointer", fontFamily: "inherit" }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2.5" strokeLinecap="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
-            </a>
+            </button>
           </div>
         )}
       </div>
@@ -212,18 +227,19 @@ function DetailModal({ item, onDelete, onClose }: {
 
           {/* Right: actions */}
           <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, flexShrink: 0 }}>
-            <a href={url} download={`${item.brand}-${item.kind}.${fileExt(item)}`}
+            <button
+              onClick={() => downloadBlob(url, `${item.brand}-${item.kind}.${fileExt(item)}`)}
               style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px",
                 borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent",
                 color: "var(--text-primary)", fontSize: 13, fontWeight: 600,
-                textDecoration: "none", whiteSpace: "nowrap" as const }}>
+                cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" as const }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2" strokeLinecap="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                 <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
               Download
-            </a>
+            </button>
             <button onClick={() => { onDelete(item.id); onClose(); }}
               style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px",
                 borderRadius: 10, border: "1.5px solid rgba(239,68,68,0.3)", background: "transparent",
