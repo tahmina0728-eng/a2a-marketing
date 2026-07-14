@@ -381,31 +381,32 @@ export default function ContentHub({ onStartCampaign }: { onStartCampaign?: () =
       {isEmpty ? (
         <EmptyState onStartCampaign={onStartCampaign} />
       ) : (
-        <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 24px 32px" }}>
-          {loading && (
-            <div style={{ color: "var(--text-secondary)", fontSize: 13, padding: "40px 0",
-              textAlign: "center" as const }}>Loading…</div>
-          )}
-          {!loading && filtered.length === 0 && (
-            <div style={{ color: "var(--text-secondary)", fontSize: 13, padding: "40px 0",
-              textAlign: "center" as const }}>No assets match your search.</div>
-          )}
-          <div style={{ display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-            gap: 16, alignContent: "start" }}>
-            {filtered.map(item => (
-              <AssetCard key={item.id} item={item}
-                selected={selectedId === item.id}
-                onClick={() => setSelectedId(prev => prev === item.id ? null : item.id)} />
-            ))}
+        <>
+          <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 24px 32px" }}>
+            {loading && (
+              <div style={{ color: "var(--text-secondary)", fontSize: 13, padding: "40px 0",
+                textAlign: "center" as const }}>Loading…</div>
+            )}
+            {!loading && filtered.length === 0 && (
+              <div style={{ color: "var(--text-secondary)", fontSize: 13, padding: "40px 0",
+                textAlign: "center" as const }}>No assets match your search.</div>
+            )}
+            <div style={{ display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: 16, alignContent: "start" }}>
+              {filtered.map(item => (
+                <AssetCard key={item.id} item={item}
+                  selected={selectedId === item.id}
+                  onClick={() => setSelectedId(prev => prev === item.id ? null : item.id)} />
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Detail modal — centred overlay */}
-        {selected && (
-          <DetailModal item={selected} onDelete={remove}
-            onClose={() => setSelectedId(null)} />
-        )}
+          {selected && (
+            <DetailModal item={selected} onDelete={remove}
+              onClose={() => setSelectedId(null)} />
+          )}
+        </>
       )}
     </div>
   );
