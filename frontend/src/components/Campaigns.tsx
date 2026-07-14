@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { saveToContentHub } from "../hooks/useContentHub";
 import { DEFAULT_VOICES, VOICE_STORAGE_KEY } from "../constants/brandVoices";
+import type { BrandVoice } from "../constants/brandVoices";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8000";
 
@@ -174,7 +175,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
   const [audience, setAudience] = useState("");
   const [platform, setPlatform] = useState("");
   const [voiceName, setVoiceName] = useState("");
-  const [voices] = useState(() => {
+  const [voices] = useState<BrandVoice[]>(() => {
     try {
       const stored = localStorage.getItem(VOICE_STORAGE_KEY);
       if (stored) return JSON.parse(stored);
@@ -451,7 +452,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
               {voices.length > 0 && (
                 <ChipSel label="Brand Voice" value={voiceName} onChange={setVoiceName}
-                  opts={voices.map(v => v.name)}
+                  opts={voices.map((v: BrandVoice) => v.name)}
                   icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>} />
               )}
             </div>
