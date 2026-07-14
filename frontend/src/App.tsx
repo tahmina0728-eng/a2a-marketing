@@ -5470,7 +5470,7 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, savedCampaigns, activeAgentKey, onSelectAgent,
   brandHubSection, onBrandHubSection, brandAssets, activeBrand, publishingChannel, onPublishingChannel, publishingContentType }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
-  view: "app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing" | "campaigns") => void;
+  view: "app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing" | "campaigns" | "campaign-list") => void;
   onSelectCampaign: (c: {id:string;name:string;brand:string}|null) => void;
   savedCampaigns: {id:string;name:string;brand:string}[];
   activeAgentKey: string | null; onSelectAgent: (key: string) => void;
@@ -5709,7 +5709,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
                   ))}
                 </>
               )}
-              <button onClick={() => onNavigate("campaigns")}
+              <button onClick={() => onNavigate("campaign-list")}
                 style={{ ...nb(false, true), color: "#7c3aed", fontWeight: 600, fontSize: 12 }}>
                 View all
               </button>
@@ -5981,7 +5981,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns">("app");
+  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list">("app");
   const [selectedCampaign, setSelectedCampaign] = useState<{id:string;name:string;brand:string}|null>(null);
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
   const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("guidelines");
@@ -6059,7 +6059,82 @@ export default function App() {
           publishingChannel={publishingChannel} onPublishingChannel={setPublishingChannel}
           publishingContentType={campaignPublishData?.contentType} />
 
-        {view === "campaigns" ? (
+        {view === "campaign-list" ? (
+          <div style={{ flex: 1, overflowY: "auto" as const, padding: "40px 32px",
+            background: "var(--page-bg)" }}>
+            <div style={{ maxWidth: 900, margin: "0 auto" }}>
+              {/* Header */}
+              <div style={{ display: "flex", alignItems: "center",
+                justifyContent: "space-between", marginBottom: 32 }}>
+                <div>
+                  <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800,
+                    letterSpacing: "-0.03em", color: "var(--text-primary)" }}>All Campaigns</h1>
+                  <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-secondary)" }}>
+                    {savedCampaigns.length} campaign{savedCampaigns.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+                <button onClick={() => { setSelectedCampaign(null); setView("campaigns"); }}
+                  style={{ padding: "10px 20px", borderRadius: 10, border: "none",
+                    cursor: "pointer", fontFamily: "inherit",
+                    background: "linear-gradient(135deg,#7c3aed,#a855f7)",
+                    color: "white", fontWeight: 700, fontSize: 13,
+                    boxShadow: "0 4px 16px rgba(124,58,237,0.35)",
+                    display: "flex", alignItems: "center", gap: 8 }}>
+                  + New Campaign
+                </button>
+              </div>
+
+              {savedCampaigns.length === 0 ? (
+                <div style={{ textAlign: "center" as const, padding: "80px 0",
+                  color: "var(--text-secondary)", fontSize: 14 }}>
+                  No campaigns yet — create your first one.
+                </div>
+              ) : (
+                <div style={{ display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
+                  {savedCampaigns.map(c => {
+                    const res = (() => { try { const r = localStorage.getItem(`a2a_results_${c.id}`); return r ? JSON.parse(r) : null; } catch { return null; } })();
+                    const thumb = res?.image?.image_b64;
+                    return (
+                      <div key={c.id}
+                        onClick={() => { setSelectedCampaign(c); setView("campaigns"); }}
+                        style={{ borderRadius: 16, overflow: "hidden", cursor: "pointer",
+                          background: "var(--card-bg)", border: "1px solid var(--card-border)",
+                          boxShadow: "0 2px 16px rgba(0,0,0,0.06)", transition: "all 0.2s" }}
+                        onMouseEnter={e => {
+                          (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)";
+                          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 32px rgba(0,0,0,0.12)";
+                        }}
+                        onMouseLeave={e => {
+                          (e.currentTarget as HTMLDivElement).style.transform = "none";
+                          (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 16px rgba(0,0,0,0.06)";
+                        }}>
+                        <div style={{ height: 160, background: "var(--card-bg-soft)",
+                          overflow: "hidden", display: "flex", alignItems: "center",
+                          justifyContent: "center" }}>
+                          {thumb ? (
+                            <img src={`data:image/jpeg;base64,${thumb}`}
+                              style={{ width: "100%", height: "100%", objectFit: "cover" as const }}
+                              alt="" />
+                          ) : (
+                            <span style={{ fontSize: 40, opacity: 0.25 }}>🎨</span>
+                          )}
+                        </div>
+                        <div style={{ padding: "14px 16px" }}>
+                          <div style={{ fontSize: 14, fontWeight: 700,
+                            color: "var(--text-primary)", marginBottom: 4,
+                            whiteSpace: "nowrap" as const, overflow: "hidden",
+                            textOverflow: "ellipsis" }}>{c.name || "Untitled Campaign"}</div>
+                          <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{c.brand}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : view === "campaigns" ? (
           <CampaignCreator
             key={selectedCampaign?.id ?? "new"}
             initialName={selectedCampaign?.name}

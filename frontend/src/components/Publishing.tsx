@@ -79,7 +79,10 @@ export default function Publishing({ channel, campaignImage="", campaignSubject=
     try {
       const res = await fetch(`${API_BASE}/agents/channel/run`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: fullPrompt }),
+        body: JSON.stringify({
+          prompt: fullPrompt,
+          ...(channel === "website" && campaignImage ? { image_b64: campaignImage } : {}),
+        }),
       });
       const data = await res.json();
       setResult(data);
