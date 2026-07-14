@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { saveToContentHub } from "../hooks/useContentHub";
+import { DEFAULT_VOICES, VOICE_STORAGE_KEY } from "../constants/brandVoices";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8000";
 
@@ -173,8 +174,13 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
   const [audience, setAudience] = useState("");
   const [platform, setPlatform] = useState("");
   const [voiceName, setVoiceName] = useState("");
-  const [voices] = useState<{id:string;name:string;description:string;traits:string[]}[]>(() => {
-    try { return JSON.parse(localStorage.getItem("brandhub_voices") ?? "[]"); } catch { return []; }
+  const [voices] = useState(() => {
+    try {
+      const stored = localStorage.getItem(VOICE_STORAGE_KEY);
+      if (stored) return JSON.parse(stored);
+      localStorage.setItem(VOICE_STORAGE_KEY, JSON.stringify(DEFAULT_VOICES));
+      return DEFAULT_VOICES;
+    } catch { return DEFAULT_VOICES; }
   });
 
   const [formats, setFormats] = useState<Set<FormatType>>(new Set());
