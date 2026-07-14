@@ -5468,7 +5468,7 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 // ── Sidebar ───────────────────────────────────────────────────
 
 function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, savedCampaigns, activeAgentKey, onSelectAgent,
-  brandHubSection, onBrandHubSection, brandAssets, activeBrand, publishingChannel, onPublishingChannel }: {
+  brandHubSection, onBrandHubSection, brandAssets, activeBrand, publishingChannel, onPublishingChannel, publishingContentType }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
   view: "app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing" | "campaigns") => void;
   onSelectCampaign: (c: {id:string;name:string;brand:string}|null) => void;
@@ -5477,6 +5477,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
   brandHubSection: BrandHubSection; onBrandHubSection: (s: BrandHubSection) => void;
   brandAssets: Record<string, number>; activeBrand: string;
   publishingChannel: PublishingChannel; onPublishingChannel: (c: PublishingChannel) => void;
+  publishingContentType?: "image" | "video";
 }) {
   return (
     <div style={{ width: 260, flexShrink: 0, height: "100vh",
@@ -5659,31 +5660,13 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
                 );
               })}
 
-              {/* Content Studio + Publishing */}
-              {midItems.map(item => (
-                <Fragment key={item.label}>
-                  <button onClick={item.onClick}
-                    style={item.label === "Publishing"
-                      ? { ...nb(item.active), justifyContent: "space-between" }
-                      : nb(item.active)}>
-                    <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      {item.icon}{item.label}
-                    </span>
-                    {item.label === "Publishing" && (
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                        strokeLinejoin="round"
-                        style={{ transform: publishingOpen ? "rotate(180deg)" : "none",
-                          transition: "transform 0.2s", flexShrink: 0 }}>
-                        <path d="M6 9l6 6 6-6"/>
-                      </svg>
-                    )}
-                  </button>
-                  {item.label === "Publishing" && publishingOpen && (
-                    <PublishingNav active={publishingChannel} onChange={onPublishingChannel}
-                      onPolyClick={() => onSelectAgent("channel")} />
-                  )}
-                </Fragment>
+              {/* Content Studio */}
+              {midItems.filter(i => i.label !== "Publishing").map(item => (
+                <button key={item.label} onClick={item.onClick} style={nb(item.active)}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {item.icon}{item.label}
+                  </span>
+                </button>
               ))}
 
               {/* ── Campaigns section ── */}
@@ -5730,6 +5713,30 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
                 style={{ ...nb(false, true), color: "#7c3aed", fontWeight: 600, fontSize: 12 }}>
                 View all
               </button>
+
+              {/* Publishing */}
+              {midItems.filter(i => i.label === "Publishing").map(item => (
+                <Fragment key={item.label}>
+                  <button onClick={item.onClick}
+                    style={{ ...nb(item.active), justifyContent: "space-between" }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {item.icon}{item.label}
+                    </span>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ transform: publishingOpen ? "rotate(180deg)" : "none",
+                        transition: "transform 0.2s", flexShrink: 0 }}>
+                      <path d="M6 9l6 6 6-6"/>
+                    </svg>
+                  </button>
+                  {publishingOpen && (
+                    <PublishingNav active={publishingChannel} onChange={onPublishingChannel}
+                      onPolyClick={() => onSelectAgent("channel")}
+                      contentFilter={publishingContentType} />
+                  )}
+                </Fragment>
+              ))}
 
               {/* ── Lower nav items ── */}
               {lowerItems.map(item => (
@@ -5988,6 +5995,9 @@ export default function App() {
     localStorage.getItem("brandHub_activeBrand") ?? ""
   );
   const [publishingChannel, setPublishingChannel] = useState<PublishingChannel>("instagram");
+  const [campaignPublishData, setCampaignPublishData] = useState<{
+    brand: string; brief: string; headline?: string; body?: string; image_b64?: string; contentType?: "image" | "video";
+  } | null>(null);
   const [campaignPrompt, setCampaignPrompt] = useState("");
   const [savedCampaigns, setSavedCampaigns] = useState<{id:string;name:string;brand:string}[]>(() => {
     try { return JSON.parse(localStorage.getItem("a2a_campaigns") ?? "[]"); } catch { return []; }
@@ -6046,7 +6056,8 @@ export default function App() {
           onSelectAgent={(key) => { setActiveAgentKey(key); setView("agent"); }}
           brandHubSection={brandHubSection} onBrandHubSection={setBrandHubSection}
           brandAssets={brandAssets} activeBrand={activeBrand}
-          publishingChannel={publishingChannel} onPublishingChannel={setPublishingChannel} />
+          publishingChannel={publishingChannel} onPublishingChannel={setPublishingChannel}
+          publishingContentType={campaignPublishData?.contentType} />
 
         {view === "campaigns" ? (
           <CampaignCreator
@@ -6054,7 +6065,13 @@ export default function App() {
             initialName={selectedCampaign?.name}
             initialBrand={selectedCampaign?.brand}
             initialResults={(() => { try { const r = localStorage.getItem(`a2a_results_${selectedCampaign?.id}`); return r ? JSON.parse(r) : undefined; } catch { return undefined; } })()}
-            onSaved={refreshCampaigns} />
+            onSaved={refreshCampaigns}
+            onPublish={(data) => {
+              setCampaignPublishData(data);
+              if (data.contentType === "video") setPublishingChannel("tiktok");
+              else setPublishingChannel("instagram");
+              setView("publishing");
+            }} />
         ) : view === "brand-hub" ? (
           <>
             <BgVideoPlayer fixed brightness={0.55} saturate={0.9} />
@@ -6076,14 +6093,14 @@ export default function App() {
             <div style={{ position: "relative" as const, zIndex: 2, flex: 1,
               display: "flex", flexDirection: "column" as const, overflow: "hidden" }}>
               <Publishing channel={publishingChannel}
-                campaignImage={(() => {
+                campaignImage={campaignPublishData?.image_b64 ?? (() => {
                   const cp = (state.pipeline_output as any)?.creative_pipeline;
                   return cp?.images_b64?.[0] ?? cp?.image_b64 ?? "";
                 })()}
                 campaignSubject={String((state.pipeline_output as any)?.campaign_copy?.channel_copy?.email_subject ?? "")}
-                campaignHeadline={String((state.pipeline_output as any)?.campaign_copy?.short?.headline ?? "")}
-                campaignBody={String((state.pipeline_output as any)?.campaign_copy?.long?.body ?? "")}
-                campaignBrand={String((state.pipeline_output as any)?.brand ?? "")}
+                campaignHeadline={campaignPublishData?.headline ?? String((state.pipeline_output as any)?.campaign_copy?.short?.headline ?? "")}
+                campaignBody={campaignPublishData?.brief ?? String((state.pipeline_output as any)?.campaign_copy?.long?.body ?? "")}
+                campaignBrand={campaignPublishData?.brand ?? String((state.pipeline_output as any)?.brand ?? "")}
               />
             </div>
           </>

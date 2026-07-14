@@ -165,7 +165,7 @@ function FormatCard({ label, desc, icon, selected, onClick, sizes, selSize, onSi
 }
 
 // ── Main Component ─────────────────────────────────────────────
-export default function Campaigns({ initialName, initialBrand, initialResults, onSaved }: { initialName?: string; initialBrand?: string; initialResults?: Partial<Record<FormatType, GeneratedResult>>; onSaved?: () => void } = {}) {
+export default function Campaigns({ initialName, initialBrand, initialResults, onSaved, onPublish }: { initialName?: string; initialBrand?: string; initialResults?: Partial<Record<FormatType, GeneratedResult>>; onSaved?: () => void; onPublish?: (data: { brand: string; brief: string; headline?: string; body?: string; image_b64?: string; contentType: "image" | "video" }) => void } = {}) {
   const [step, setStep]         = useState<1|2|3|4>(initialResults ? 4 : 1);
   const [campaignName, setCampaignName] = useState(initialName ?? "");
   const [brief, setBrief]       = useState("");
@@ -740,7 +740,30 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
                           Modify
                         </button>
                       </div>
-                      {/* Right: Save to Content Studio */}
+                      {/* Right: Publish + Save */}
+                      <div style={{ display:"flex", gap:8 }}>
+                      {onPublish && (
+                        <button onClick={() => onPublish({
+                          brand,
+                          brief,
+                          headline: copyRes?.headline ?? results.image?.headline,
+                          body: results.image?.body,
+                          image_b64: results.image?.image_b64,
+                          contentType: tab === "image" ? "image" : "video",
+                        })}
+                          style={{ display:"flex", alignItems:"center", gap:7,
+                            padding:"9px 18px", borderRadius:10, cursor:"pointer",
+                            fontFamily:"inherit", fontSize:13, fontWeight:600,
+                            border:"1.5px solid var(--card-border)",
+                            background:"var(--card-bg)", color:"var(--text-primary)",
+                            transition:"all 0.2s" }}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/>
+                          </svg>
+                          Publish
+                        </button>
+                      )}
                       <button onClick={() => saveAsset(tab)} disabled={saveState[tab]==="saving"}
                         style={{ display:"flex", alignItems:"center", gap:8,
                           padding:"9px 20px", borderRadius:10, border:"none",
@@ -772,6 +795,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
                           </>
                         )}
                       </button>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -14,6 +14,9 @@ interface ChannelItem {
   icon: React.ReactNode;
 }
 
+const IMAGE_CHANNEL_IDS: PublishingChannel[] = ["instagram", "facebook", "linkedin", "website", "email"];
+const VIDEO_CHANNEL_IDS: PublishingChannel[] = ["tiktok", "youtube", "instagram"];
+
 const CHANNELS: ChannelItem[] = [
   {
     id: "instagram",
@@ -116,9 +119,18 @@ interface PublishingNavProps {
   active: PublishingChannel;
   onChange: (c: PublishingChannel) => void;
   onPolyClick?: () => void;
+  contentFilter?: "image" | "video";
 }
 
-export default function PublishingNav({ active, onChange, onPolyClick }: PublishingNavProps) {
+export default function PublishingNav({ active, onChange, onPolyClick, contentFilter }: PublishingNavProps) {
+  const visibleChannels = contentFilter
+    ? CHANNELS.filter(ch =>
+        contentFilter === "image"
+          ? IMAGE_CHANNEL_IDS.includes(ch.id)
+          : VIDEO_CHANNEL_IDS.includes(ch.id)
+      )
+    : CHANNELS;
+
   return (
     <div style={{ padding: "0 8px" }}>
 
@@ -149,7 +161,7 @@ export default function PublishingNav({ active, onChange, onPolyClick }: Publish
       {/* Left border to show nesting under Poly */}
       <div style={{ marginLeft: 18, borderLeft: "1.5px solid var(--card-border)",
         paddingLeft: 6 }}>
-        {CHANNELS.map(ch => {
+        {visibleChannels.map(ch => {
           const isActive = ch.id === active;
           return (
             <button
