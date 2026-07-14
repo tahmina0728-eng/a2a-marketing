@@ -125,8 +125,8 @@ function AssetCard({ item, selected, onClick }: {
   );
 }
 
-// ── Detail Panel ───────────────────────────────────────────────
-function DetailPanel({ item, onDelete, onClose }: {
+// ── Detail Modal ───────────────────────────────────────────────
+function DetailModal({ item, onDelete, onClose }: {
   item: ContentHubItem; onDelete: (id: string) => void; onClose: () => void;
 }) {
   const url    = contentHubAssetUrl(item.id);
@@ -141,88 +141,103 @@ function DetailPanel({ item, onDelete, onClose }: {
   ];
 
   return (
-    <div style={{ width: 300, flexShrink: 0, borderLeft: "1px solid var(--card-border)",
-      background: "var(--card-bg)", display: "flex", flexDirection: "column" as const,
-      overflowY: "auto" as const }}>
+    /* Backdrop */
+    <div
+      onClick={onClose}
+      style={{ position: "fixed" as const, inset: 0, zIndex: 300,
+        background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "24px" }}>
 
-      {/* Close button */}
-      <div style={{ display: "flex", justifyContent: "flex-end", padding: "14px 16px 0" }}>
-        <button onClick={onClose} style={{ background: "none", border: "none",
-          cursor: "pointer", color: "var(--text-tertiary)", fontSize: 20,
-          padding: "2px 6px", borderRadius: 6, lineHeight: 1 }}>×</button>
-      </div>
+      {/* Card */}
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{ width: "100%", maxWidth: 780, borderRadius: 20,
+          background: "var(--card-bg)", border: "1.5px solid var(--card-border)",
+          boxShadow: "0 32px 80px rgba(0,0,0,0.4)",
+          overflow: "hidden", display: "flex", flexDirection: "column" as const }}>
 
-      {/* Preview */}
-      <div style={{ padding: "0 16px 16px" }}>
-        <div style={{ borderRadius: 10, overflow: "hidden", aspectRatio: "16/9", background: "#0a0a12" }}>
+        {/* Large image */}
+        <div style={{ position: "relative" as const, background: "#0a0a12" }}>
           {isReel
-            ? <video src={url} controls muted loop playsInline
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            ? <video src={url} controls autoPlay muted loop playsInline
+                style={{ width: "100%", maxHeight: 440, objectFit: "contain", display: "block" }} />
             : <img src={url} alt={item.headline || item.brand}
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                style={{ width: "100%", maxHeight: 440, objectFit: "contain", display: "block" }} />
           }
+          {/* Close button */}
+          <button onClick={onClose}
+            style={{ position: "absolute" as const, top: 14, right: 14,
+              width: 32, height: 32, borderRadius: "50%", border: "none",
+              background: "rgba(0,0,0,0.5)", backdropFilter: "blur(8px)",
+              color: "white", fontSize: 18, cursor: "pointer", lineHeight: 1,
+              display: "flex", alignItems: "center", justifyContent: "center" }}>×</button>
         </div>
-      </div>
 
-      {/* Content */}
-      <div style={{ padding: "0 16px 24px", flex: 1, display: "flex",
-        flexDirection: "column" as const, gap: 16 }}>
+        {/* Info row */}
+        <div style={{ padding: "20px 24px 24px", display: "flex",
+          gap: 24, alignItems: "flex-start" }}>
 
-        {/* Headline + format badge */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-          {item.headline && (
-            <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.35 }}>
-              {item.headline}
+          {/* Left: headline + meta */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              {item.headline && (
+                <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)",
+                  lineHeight: 1.3 }}>
+                  {item.headline}
+                </div>
+              )}
+              <span style={{ flexShrink: 0, padding: "3px 10px", borderRadius: 8,
+                background: `${accent}18`, color: accent,
+                fontSize: 10, fontWeight: 700, letterSpacing: ".05em",
+                textTransform: "uppercase" as const }}>
+                {fmtLabel(item)}
+              </span>
             </div>
-          )}
-          <span style={{ flexShrink: 0, padding: "2px 8px", borderRadius: 6,
-            background: `${accent}18`, color: accent,
-            fontSize: 10, fontWeight: 700, letterSpacing: ".04em",
-            textTransform: "uppercase" as const }}>
-            {fmtLabel(item)}
-          </span>
-        </div>
 
-        {/* Meta rows */}
-        <div style={{ display: "flex", flexDirection: "column" as const, gap: 8,
-          padding: "12px 14px", borderRadius: 10,
-          background: "var(--card-bg-soft)", border: "1px solid var(--card-border)" }}>
-          {meta.map(({ label, value }) => (
-            <div key={label} style={{ display: "flex", gap: 10 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)",
-                width: 60, flexShrink: 0 }}>{label}</div>
-              <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 }}>{value}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px" }}>
+              {meta.map(({ label, value }) => (
+                <div key={label}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-tertiary)",
+                    textTransform: "uppercase" as const, letterSpacing: ".06em", marginBottom: 2 }}>
+                    {label}
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                    {value}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+          </div>
 
-        {/* Actions */}
-        <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
-          <a href={url} download={`${item.brand}-${item.kind}.${fileExt(item)}`}
-            style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-              borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent",
-              color: "var(--text-primary)", fontSize: 13, fontWeight: 600,
-              textDecoration: "none", cursor: "pointer" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" strokeLinecap="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-              <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Download
-          </a>
-          <button onClick={() => { onDelete(item.id); onClose(); }}
-            style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px",
-              borderRadius: 10, border: "1.5px solid rgba(239,68,68,0.3)", background: "transparent",
-              color: "#ef4444", fontSize: 13, fontWeight: 600, cursor: "pointer",
-              fontFamily: "inherit" }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" strokeLinecap="round">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
-            </svg>
-            Delete
-          </button>
+          {/* Right: actions */}
+          <div style={{ display: "flex", flexDirection: "column" as const, gap: 8, flexShrink: 0 }}>
+            <a href={url} download={`${item.brand}-${item.kind}.${fileExt(item)}`}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px",
+                borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent",
+                color: "var(--text-primary)", fontSize: 13, fontWeight: 600,
+                textDecoration: "none", whiteSpace: "nowrap" as const }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Download
+            </a>
+            <button onClick={() => { onDelete(item.id); onClose(); }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px",
+                borderRadius: 10, border: "1.5px solid rgba(239,68,68,0.3)", background: "transparent",
+                color: "#ef4444", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                fontFamily: "inherit", whiteSpace: "nowrap" as const }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+              </svg>
+              Delete
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -366,35 +381,31 @@ export default function ContentHub({ onStartCampaign }: { onStartCampaign?: () =
       {isEmpty ? (
         <EmptyState onStartCampaign={onStartCampaign} />
       ) : (
-        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-
-          {/* Grid */}
-          <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 24px 32px" }}>
-            {loading && (
-              <div style={{ color: "var(--text-secondary)", fontSize: 13, padding: "40px 0",
-                textAlign: "center" as const }}>Loading…</div>
-            )}
-            {!loading && filtered.length === 0 && (
-              <div style={{ color: "var(--text-secondary)", fontSize: 13, padding: "40px 0",
-                textAlign: "center" as const }}>No assets match your search.</div>
-            )}
-            <div style={{ display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: 16, alignContent: "start" }}>
-              {filtered.map(item => (
-                <AssetCard key={item.id} item={item}
-                  selected={selectedId === item.id}
-                  onClick={() => setSelectedId(prev => prev === item.id ? null : item.id)} />
-              ))}
-            </div>
-          </div>
-
-          {/* Detail panel */}
-          {selected && (
-            <DetailPanel item={selected} onDelete={remove}
-              onClose={() => setSelectedId(null)} />
+        <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 24px 32px" }}>
+          {loading && (
+            <div style={{ color: "var(--text-secondary)", fontSize: 13, padding: "40px 0",
+              textAlign: "center" as const }}>Loading…</div>
           )}
+          {!loading && filtered.length === 0 && (
+            <div style={{ color: "var(--text-secondary)", fontSize: 13, padding: "40px 0",
+              textAlign: "center" as const }}>No assets match your search.</div>
+          )}
+          <div style={{ display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+            gap: 16, alignContent: "start" }}>
+            {filtered.map(item => (
+              <AssetCard key={item.id} item={item}
+                selected={selectedId === item.id}
+                onClick={() => setSelectedId(prev => prev === item.id ? null : item.id)} />
+            ))}
+          </div>
         </div>
+
+        {/* Detail modal — centred overlay */}
+        {selected && (
+          <DetailModal item={selected} onDelete={remove}
+            onClose={() => setSelectedId(null)} />
+        )}
       )}
     </div>
   );
