@@ -295,16 +295,23 @@ type Tab = "all" | "image" | "reel";
 
 export default function ContentHub({ onStartCampaign }: { onStartCampaign?: () => void }) {
   const { items, loading, error, remove } = useContentHub();
-  const [tab, setTab]         = useState<Tab>("all");
-  const [search, setSearch]   = useState("");
+  const [tab, setTab]               = useState<Tab>("all");
+  const [search, setSearch]         = useState("");
+  const [brandFilter, setBrandFilter] = useState<string>("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const kvCount   = items.filter(i => i.kind === "kv").length;
   const reelCount = items.filter(i => i.kind === "reel").length;
 
+  const brands = useMemo(
+    () => Array.from(new Set(items.map(i => i.brand))).sort(),
+    [items]
+  );
+
   const filtered = useMemo(() => items.filter(item => {
     if (tab === "image" && item.kind !== "kv")   return false;
     if (tab === "reel"  && item.kind !== "reel") return false;
+    if (brandFilter && item.brand !== brandFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
       return (
@@ -314,7 +321,7 @@ export default function ContentHub({ onStartCampaign }: { onStartCampaign?: () =
       );
     }
     return true;
-  }), [items, tab, search]);
+  }), [items, tab, search, brandFilter]);
 
   const selected = selectedId ? (items.find(i => i.id === selectedId) ?? null) : null;
 
@@ -346,21 +353,54 @@ export default function ContentHub({ onStartCampaign }: { onStartCampaign?: () =
             </p>
           </div>
 
-          {/* Search */}
-          <div style={{ position: "relative" as const }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-              stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round"
-              style={{ position: "absolute" as const, left: 12, top: "50%",
-                transform: "translateY(-50%)", pointerEvents: "none" as const }}>
-              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-            </svg>
-            <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search assets…"
-              style={{ padding: "9px 14px 9px 36px", borderRadius: 10, width: 220,
-                border: "1.5px solid var(--card-border)", background: "var(--card-bg)",
-                color: "var(--text-primary)", fontFamily: "inherit", fontSize: 13,
-                outline: "none", boxSizing: "border-box" as const }} />
+          {/* Filters row */}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {/* Brand dropdown */}
+            {brands.length > 0 && (
+              <div style={{ position: "relative" as const }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                  stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round"
+                  style={{ position: "absolute" as const, left: 10, top: "50%",
+                    transform: "translateY(-50%)", pointerEvents: "none" as const }}>
+                  <path d="M20 7H4M16 12H8M12 17H12"/>
+                </svg>
+                <select
+                  value={brandFilter}
+                  onChange={e => setBrandFilter(e.target.value)}
+                  style={{ padding: "9px 30px 9px 30px", borderRadius: 10, appearance: "none",
+                    border: `1.5px solid ${brandFilter ? "#7c3aed" : "var(--card-border)"}`,
+                    background: brandFilter ? "rgba(124,58,237,0.06)" : "var(--card-bg)",
+                    color: brandFilter ? "#7c3aed" : "var(--text-secondary)",
+                    fontFamily: "inherit", fontSize: 13, fontWeight: brandFilter ? 700 : 500,
+                    outline: "none", cursor: "pointer", minWidth: 140 }}>
+                  <option value="">All Brands</option>
+                  {brands.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                  stroke={brandFilter ? "#7c3aed" : "var(--text-tertiary)"} strokeWidth="2.5" strokeLinecap="round"
+                  style={{ position: "absolute" as const, right: 10, top: "50%",
+                    transform: "translateY(-50%)", pointerEvents: "none" as const }}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </div>
+            )}
+
+            {/* Search */}
+            <div style={{ position: "relative" as const }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                stroke="var(--text-tertiary)" strokeWidth="2" strokeLinecap="round"
+                style={{ position: "absolute" as const, left: 12, top: "50%",
+                  transform: "translateY(-50%)", pointerEvents: "none" as const }}>
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <input
+                value={search} onChange={e => setSearch(e.target.value)}
+                placeholder="Search assets…"
+                style={{ padding: "9px 14px 9px 36px", borderRadius: 10, width: 200,
+                  border: "1.5px solid var(--card-border)", background: "var(--card-bg)",
+                  color: "var(--text-primary)", fontFamily: "inherit", fontSize: 13,
+                  outline: "none", boxSizing: "border-box" as const }} />
+            </div>
           </div>
         </div>
 
