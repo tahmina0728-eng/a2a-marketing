@@ -716,6 +716,45 @@ photographic or design aesthetic: is this analogue and textured, or clean
 and geometric? What era or visual reference does it evoke?
 
 ════════════════════════════════════════════════════════════
+LOGO COLOURWAY RULE (applies to all brands with multiple logo variants)
+════════════════════════════════════════════════════════════
+
+Brands often supply two logo colourways. The pipeline selects the correct
+one automatically based on the panel background — but you must describe the
+background type accurately so the right variant is chosen:
+
+  DARK background (photographic, gradient, solid brand-primary colour,
+  or any dark surface) → the WHITE / light-coloured logo variant is used.
+
+  LIGHT background (white, off-white, pale neutral) → the PRIMARY-COLOUR
+  logo variant is used (e.g. Sunrise Red logo on a white ground).
+
+In [COLOUR ARCHITECTURE] always state explicitly:
+  "Background type: DARK / LIGHT — [white/primary-colour] logo variant applies."
+
+This is a non-negotiable brand rule. Example for Sunrise:
+  • Sunrise Red panel or dark photographic background → white logo (sunrise_logo_white)
+  • White or off-white background → Sunrise Red logo (sunrise_logo_red)
+
+════════════════════════════════════════════════════════════
+BANNER SCALING RULE
+════════════════════════════════════════════════════════════
+
+All banner elements (logo, headline, body copy, CTA, padding) must be
+defined as proportions of the banner dimensions — never as fixed pixel
+values. This ensures consistent appearance across all output sizes
+(16:9 key visual, 1:1 Instagram, 21:9 leaderboard, email header, etc.).
+
+  • Logo zone: min 8 % of banner height, centred vertically in the brand panel
+  • Brand panel height: 24–28 % of total banner height
+  • Left/right margins: 2.5 % of banner width
+  • Text padding from logo: 1.5 % of banner width
+  • Headline size: ~5–6 % of banner width (scales with canvas)
+
+When describing [LAYOUT & COMPOSITION], confirm that all element
+positions and sizes scale relative to banner dimensions.
+
+════════════════════════════════════════════════════════════
 QUALITY CHECK BEFORE YOU OUTPUT
 ════════════════════════════════════════════════════════════
 
@@ -728,6 +767,8 @@ Before writing the JSON, ask yourself:
   ✓ Is every forbidden colour pairing from brand_visual_rules avoided?
   ✓ Is the layout doing work — not just framing the image, but amplifying it?
   ✓ Does [IMAGE ELEMENT] name BOTH the product key AND its real description?
+  ✓ Is the background type (DARK/LIGHT) stated so the correct logo colourway is applied?
+  ✓ Are all element sizes/positions described as proportions of banner dimensions?
   ✓ Could this appear in a global brand's campaign portfolio?
 
 If any answer is no — revise before outputting.

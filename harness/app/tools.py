@@ -88,23 +88,54 @@ def _part_for_uri(path_or_uri: str) -> "types.Part | None":
 
 # ── BRAND ASSET COMPOSITING ───────────────────────────────────────────────
 
-def _pick_primary_logo(logo_paths: list[str]) -> str | None:
+def _pick_primary_logo(logo_paths: list[str], on_dark_bg: bool = False) -> str | None:
     """
     Choose the best logo from the available paths.
-    Prefer: PNG with transparency, no colour-variant suffix (green/red/yellow/…).
-    Falls back to the first PNG, then the first path of any type.
+
+    on_dark_bg=True  → prefer a white/light colourway variant (dark/gradient/photographic panels).
+    on_dark_bg=False → prefer the primary-colour variant, then neutral PNG, then any file.
+
+    Sunrise rule (and any brand with _white / _red variants):
+      dark background  → sunrise_logo_white.svg
+      light background → sunrise_logo_red.svg
     """
     if not logo_paths:
         return None
+
+    _light_keywords = {"white", "blanc", "light", "wht"}
+    _dark_keywords  = {"black", "dark", "noir"}
+
+    stems = {p: p.lower().rsplit(".", 1)[0].rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+             for p in logo_paths}
+
+    if on_dark_bg:
+        # Prefer white/light variant (for dark/gradient/photographic backgrounds)
+        light_variants = [p for p in logo_paths
+                          if any(stems[p].endswith(kw) for kw in _light_keywords)]
+        if light_variants:
+            return light_variants[0]
+    else:
+        # Prefer non-white primary-colour variant (for light/white backgrounds)
+        non_light = [p for p in logo_paths
+                     if not any(stems[p].endswith(kw) for kw in _light_keywords)]
+        if non_light:
+            # Among non-light: prefer neutral PNG (no colour suffix), then any PNG, then SVG
+            _colour_suffixes = {"green", "red", "yellow", "orange", "purple", "blue", "black"}
+            neutral_pngs = [p for p in non_light
+                            if p.lower().endswith(".png")
+                            and not any(stems[p].endswith(s) for s in _colour_suffixes)]
+            if neutral_pngs:
+                return neutral_pngs[0]
+            pngs = [p for p in non_light if p.lower().endswith(".png")]
+            return pngs[0] if pngs else non_light[0]
+
+    # Fallback: neutral PNG → any PNG → first file
     _colour_suffixes = {"green", "red", "yellow", "orange", "purple", "blue", "white", "black"}
-    # Prefer PNG files whose stem doesn't end with a colour variant name
-    candidates = [
-        p for p in logo_paths
-        if p.lower().rsplit(".", 1)[-1] == "png"
-        and not any(p.lower().rsplit(".", 1)[0].endswith(s) for s in _colour_suffixes)
-    ]
-    if candidates:
-        return candidates[0]
+    neutral_pngs = [p for p in logo_paths
+                    if p.lower().endswith(".png")
+                    and not any(stems[p].endswith(s) for s in _colour_suffixes)]
+    if neutral_pngs:
+        return neutral_pngs[0]
     pngs = [p for p in logo_paths if p.lower().endswith(".png")]
     return pngs[0] if pngs else logo_paths[0]
 
@@ -294,8 +325,11 @@ def _composite_brand_assets(
             pass
 
         # ── Load brand logo ────────────────────────────────────────────────
+        # Panel is drawn in brand primary colour; pick logo colourway accordingly:
+        # dark panel (text_color=white) → white/light logo; light panel → primary-colour logo
+        panel_is_dark = text_color[0] >= 128  # text_color is white when panel is dark
         logo_img: "Image.Image | None" = None
-        logo_path = _pick_primary_logo(loader.list_logos(brand))
+        logo_path = _pick_primary_logo(loader.list_logos(brand), on_dark_bg=panel_is_dark)
         if logo_path:
             logo_bytes = _load_asset_bytes(logo_path)
             if logo_bytes:
