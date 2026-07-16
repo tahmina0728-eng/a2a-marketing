@@ -15,10 +15,20 @@ interface GeneratedResult {
   tagline?:   string;
 }
 
-const BRANDS    = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank"];
+const BRANDS    = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank","Sunrise"];
 const GOALS     = ["Brand Awareness","Drive Sales","Lead Generation","Product Launch","Engagement"];
 const AUDIENCES = ["Women 18–35","Men 25–45","Gen Z 16–24","Professionals 30–50","Families"];
 const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Instagram, Facebook"];
+const MARKETS   = ["United Kingdom","Australia","United States","New Zealand","SEA","Switzerland","Global"];
+const MARKET_LANGUAGES: Record<string, string[]> = {
+  "United Kingdom": ["English"],
+  "Australia":      ["English"],
+  "United States":  ["English"],
+  "New Zealand":    ["English"],
+  "SEA":            ["English","Bahasa Indonesia","Thai","Vietnamese","Filipino"],
+  "Switzerland":    ["German (de-CH)","French (fr-CH)","Italian (it-CH)","English"],
+  "Global":         ["English"],
+};
 
 const BRAND_ICONS: Record<string, string> = {
   "Rnorr": "/brands/rnorr-logo.png",
@@ -175,6 +185,8 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
   const [audience, setAudience] = useState("");
   const [platform, setPlatform] = useState("");
   const [voiceName, setVoiceName] = useState("");
+  const [market, setMarket]       = useState("");
+  const [language, setLanguage]   = useState("");
   const [voices] = useState<BrandVoice[]>(() => {
     try {
       const stored = localStorage.getItem(VOICE_STORAGE_KEY);
@@ -224,6 +236,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
   };
 
   const selectedVoice = voices.find(v => v.name === voiceName);
+  const marketLangs = market ? (MARKET_LANGUAGES[market] ?? ["English"]) : [];
   const prompt = [
     brand && `Brand: ${brand}`,
     selectedVoice && `Tone of voice: ${selectedVoice.description}. Traits: ${selectedVoice.traits.join(", ")}`,
@@ -231,6 +244,8 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
     goal && `Goal: ${goal}`,
     audience && `Audience: ${audience}`,
     platform && `Platform: ${platform}`,
+    market && `Market: ${market}`,
+    language && `Language: ${language}`,
   ].filter(Boolean).join(". ");
   const anyRes = Object.values(results).some(r => r?.image_b64||r?.video_b64);
   const hasRes = (f: FormatType) => !!(results[f]?.image_b64 || results[f]?.video_b64);
@@ -450,6 +465,15 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>} />
               <ChipSel label="Platform" value={platform} onChange={setPlatform} opts={PLATFORMS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
+              <ChipSel label="Market" value={market} onChange={v => {
+                  setMarket(v);
+                  setLanguage((MARKET_LANGUAGES[v] ?? ["English"])[0]);
+                }} opts={MARKETS}
+                icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>} />
+              {marketLangs.length > 1 && (
+                <ChipSel label="Language" value={language} onChange={setLanguage} opts={marketLangs}
+                  icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>} />
+              )}
               {voices.length > 0 && (
                 <ChipSel label="Brand Voice" value={voiceName} onChange={setVoiceName}
                   opts={voices.map((v: BrandVoice) => v.name)}
