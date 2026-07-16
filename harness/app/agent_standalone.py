@@ -127,6 +127,8 @@ def _extract_brand(text: str) -> str | None:
 
 def _parse_json_loose(text: str) -> dict | None:
     """Pull a JSON object out of a model response that may have wrapping prose/markdown fences."""
+    # Strip markdown code fences first
+    text = re.sub(r"```(?:json)?\s*", "", text).strip()
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if not match:
         return None
@@ -134,6 +136,12 @@ def _parse_json_loose(text: str) -> dict | None:
         return json.loads(match.group(0))
     except Exception:
         return None
+
+
+def _extract_language(text: str) -> str:
+    """Extract language tag from prompt text, e.g. 'Language: German (de-CH)' -> 'German (de-CH)'."""
+    m = re.search(r"[Ll]anguage:\s*([^\.\n,]+)", text)
+    return m.group(1).strip() if m else ""
 
 
 def _generate(persona: str, brand: str, prompt: str, output_instructions: str) -> dict:
@@ -179,11 +187,18 @@ def run_strategy(brand: str, prompt: str) -> dict:
 
 
 def run_copy(brand: str, prompt: str) -> dict:
+    lang = _extract_language(prompt)
+    lang_rule = (
+        f" CRITICAL: ALL copy (headline, subline, body, cta) MUST be written in {lang}. "
+        f"Do not write any English. Output only the JSON — no preamble, no explanation."
+        if lang and lang.lower() != "english" else
+        " Output only the JSON — no preamble, no explanation."
+    )
     data = _generate(
         "You are Ideon, the copywriter for an AI marketing campaign system. "
         "You write campaign headlines and copy that sound like a human wrote them, not corporate marketing-speak.",
         brand, prompt,
-        'Respond ONLY with JSON, no markdown fences: '
+        'Respond ONLY with valid JSON, no markdown fences, no commentary:' + lang_rule + ' '
         '{"headline": "...", "subline": "...", "body": "1-2 sentences", "cta": "2-3 words"}',
     )
     return {"agent": "copy", **data}
