@@ -319,9 +319,16 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
         method:"POST", headers:{"Content-Type":"application/json"},
         body:JSON.stringify({ prompt }),
       });
+      if (!r.ok) throw new Error(`Copy agent returned ${r.status}`);
       const d = await r.json();
-      setCopyRes({ headline:d.short?.headline||d.headline||"", body:d.long?.body||d.body||"", cta:d.cta||"Learn More" });
-    } catch {} finally { setCopyBusy(false); }
+      if (d.error) throw new Error(d.error);
+      const headline = d.short?.headline || d.headline || "";
+      const body     = d.long?.body     || d.body     || "";
+      if (!headline && !body) throw new Error("Empty response from copy agent");
+      setCopyRes({ headline, body, cta: d.cta || "Learn More" });
+    } catch (e) {
+      setCopyRes({ headline: "", body: "", cta: `Error: ${(e as Error).message}` });
+    } finally { setCopyBusy(false); }
   };
 
   const genContent = async () => {

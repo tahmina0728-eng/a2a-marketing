@@ -152,11 +152,15 @@ def _generate(persona: str, brand: str, prompt: str, output_instructions: str) -
         f"CREATIVE DIRECTION from the user: \"{prompt}\"\n\n"
         f"{output_instructions}"
     )
-    resp = _genai_client().models.generate_content(
-        model=settings.gemini_model_reasoning, contents=full_prompt,
-    )
-    raw = (resp.text or "").strip()
-    return _parse_json_loose(raw) or {"raw": raw}
+    try:
+        resp = _genai_client().models.generate_content(
+            model=settings.gemini_model_reasoning, contents=full_prompt,
+        )
+        raw = (resp.text or "").strip()
+        return _parse_json_loose(raw) or {"raw": raw}
+    except Exception as _e:
+        logger.warning("standalone_generate_failed", brand=brand, error=str(_e))
+        return {"error": str(_e)}
 
 
 def run_briefing(brand: str, prompt: str) -> dict:
