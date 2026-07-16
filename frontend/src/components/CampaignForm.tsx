@@ -9,6 +9,7 @@ const BRANDS = [
   { id: "Boozt",       label: "Boozt",              logo: "/brands/boozt-logo.png" },
   { id: "Glenfiddich", label: "Glenfiddich × AMF1", logo: "/brands/glenfiddich-logo.png" },
   { id: "UBS Bank",    label: "UBS Bank",           logo: "/brands/ubs-bank-logo.png" },
+  { id: "sunrise",     label: "Sunrise",            logo: "/brands/sunrise-logo.svg" },
 ];
 const MARKETS  = ["United Kingdom","Australia","United States","New Zealand","SEA","Global"];
 const BUDGETS  = ["£50K – £150K","£150K – £500K","£500K – £1M","£1M – £5M","£5M+"];

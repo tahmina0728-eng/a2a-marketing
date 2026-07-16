@@ -558,6 +558,24 @@ def seed_fan_truths(cur):
         {"brand": "Glenfiddich", "statement": "People enjoy whisky", "category": "Generic", "verdict": "FAIL", "specific": 8, "shared": 88, "special": 10, "overall": 35},
 
 
+        # Sunrise - Swiss Telecom
+
+
+        {"brand": "sunrise", "statement": "That moment when the call holds and the signal doesn't drop — every connection is a sunrise", "category": "Mobile & Connectivity", "verdict": "PASS", "specific": 82, "shared": 78, "special": 76, "overall": 79},
+
+
+        {"brand": "sunrise", "statement": "Technology disappears when it works perfectly — and that silence is Sunrise", "category": "Digital Services", "verdict": "PASS", "specific": 80, "shared": 74, "special": 84, "overall": 79},
+
+
+        {"brand": "sunrise", "statement": "The pause before you press call — you know it'll connect, because it always does", "category": "Mobile & Connectivity", "verdict": "PASS", "specific": 76, "shared": 82, "special": 78, "overall": 79},
+
+
+        {"brand": "sunrise", "statement": "Staying connected isn't a luxury — it's the quiet infrastructure of every good day", "category": "Digital Services", "verdict": "PASS", "specific": 78, "shared": 80, "special": 72, "overall": 77},
+
+
+        {"brand": "sunrise", "statement": "We have good network coverage", "category": "Generic", "verdict": "FAIL", "specific": 8, "shared": 88, "special": 10, "overall": 35},
+
+
     ]
 
 
@@ -655,6 +673,18 @@ def seed_campaign_benchmarks(cur):
 
 
         {"brand": "Glenfiddich", "product_category": "Single Malt Scotch Whisky", "market": "UK", "season": "All Year", "channels": ["Instagram", "YouTube", "Meta Ads"], "reach": 4200000, "ctr_pct": 1.8, "roas": 3.6, "engagement_pct": 4.5, "budget_gbp": 320000, "notes": "Always-on premium spirits awareness - YouTube whisky education content (tasting notes, craft) drove highest dwell time and purchase intent"},
+
+
+        # Sunrise - Swiss Telecom
+
+
+        {"brand": "sunrise", "product_category": "Mobile Subscriptions", "market": "Switzerland", "season": "All Year", "channels": ["Instagram", "Facebook", "Website"], "reach": 2800000, "ctr_pct": 2.1, "roas": 3.4, "engagement_pct": 4.2, "budget_gbp": 420000, "notes": "Always-on consumer mobile - human lifestyle imagery (people in moments, not devices) outperformed tech-led creative 2:1. de-CH copy outperformed en-Global by 38% CTR"},
+
+
+        {"brand": "sunrise", "product_category": "Home Internet & TV", "market": "Switzerland", "season": "Winter", "channels": ["Instagram", "YouTube", "Email"], "reach": 1900000, "ctr_pct": 1.8, "roas": 4.1, "engagement_pct": 3.6, "budget_gbp": 310000, "notes": "Winter home connectivity push - warm family moments in Swiss homes drove 62% of conversions. YouTube 15s pre-roll with sunrise gradient outperformed static banners on brand recall"},
+
+
+        {"brand": "sunrise", "product_category": "Business Connectivity", "market": "Switzerland", "season": "Spring", "channels": ["LinkedIn", "Google Ads", "Email"], "reach": 480000, "ctr_pct": 2.6, "roas": 5.2, "engagement_pct": 3.1, "budget_gbp": 180000, "notes": "B2B SME campaign - outcome-first messaging (reliable connectivity = business continuity) outperformed feature-led. LinkedIn drove 70% of qualified leads"},
 
 
     ]
