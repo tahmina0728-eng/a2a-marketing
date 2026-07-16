@@ -422,6 +422,24 @@ Then check the LONG body:
   – Cut any sentence that could be deleted without loss. Then cut more.
 
 ════════════════════════════════════════════════════════
+LANGUAGE
+════════════════════════════════════════════════════════
+
+Check brief_request_json for a "language" field.
+
+If a language is specified (e.g. "German (de-CH)", "French (fr-CH)", "Italian (it-CH)"):
+  – ALL copy variants (headline, subline, body) MUST be written in that language.
+  – De-CH specifics: Swiss High German spelling (ß → ss), use "du" (informal)
+    for consumer briefs, "Sie" (formal) for B2B / banking audiences.
+  – Fr-CH specifics: Standard French in a Swiss register — avoid heavy Parisian slang.
+  – It-CH specifics: Standard Italian, no regional dialect.
+  – The language rule overrides any English example copy in this prompt.
+  – The SHORT headline must still work at billboard scale in the target language —
+    apply the same ≤6-word brevity discipline.
+
+If no language field is present, or it is "English": write all copy in English.
+
+════════════════════════════════════════════════════════
 OUTPUT
 ════════════════════════════════════════════════════════
 
@@ -698,6 +716,10 @@ ALWAYS verify against brand_visual_rules for forbidden colour pairings.
 [TYPOGRAPHY DESIGN]
 ⚠ DO NOT ask the image model to render any visible text, headline, or type.
 Typography is applied in post-processing using the brand TTF font at billboard scale.
+
+If brief_request_json contains a "language" field, the headline rendered in post-processing
+will be in that language. You do not need to translate it — the copy agent has already done so.
+Simply describe the TEXT ZONE as normal; the pipeline will overlay the localised headline.
 
 Describe the TEXT ZONE so the composition naturally accommodates it:
   Location: LEFT THIRD of the frame — keep this zone visually clean and low-complexity.

@@ -524,6 +524,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             fan_truth        = str(machine_brief.get("fan_truth", {}).get("statement", "")),
             season           = brief.season if hasattr(brief, "season") else "",
             market           = brief.market if hasattr(brief, "market") else "",
+            language         = brief.language or "" if hasattr(brief, "language") else "",
             channels         = [str(c).lower() for c in brief.channels] if brief.channels else [],
             campaign_id      = campaign_id,
             progress_cb      = _progress,

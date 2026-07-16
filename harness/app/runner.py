@@ -1393,6 +1393,7 @@ async def generate_campaign_reel(
     copy_headline: str = "",
     copy_cta: str = "",
     reasoning_model: str = "gemini-3.5-flash",
+    language: str = "",
 ) -> tuple[str, str]:
     """
     Generate a 6-second campaign reel using Veo via Vertex AI.
@@ -1621,9 +1622,16 @@ async def generate_campaign_reel(
             brand_scene = f"{brand_scene} {_mod}"  # append for non-festive seasons
 
     _gc = _veo_genai.Client(vertexai=True, project=gcp_project, location=gcp_region)
+    _lang_label = language.strip() if language else "English"
     _voiceover_line = (
-        f'A warm confident voiceover says: "{copy_headline}"' if copy_headline
-        else "A warm confident voiceover narrates the campaign tagline."
+        f'A warm confident voiceover says in {_lang_label}: "{copy_headline}"' if copy_headline
+        else f"A warm confident voiceover narrates the campaign tagline in {_lang_label}."
+    )
+    _language_rule = (
+        f"\nLanguage: {_lang_label} — the voiceover MUST be delivered entirely in {_lang_label}. "
+        "The script text in the prompt should be written in that language."
+        if _lang_label and _lang_label.lower() != "english"
+        else ""
     )
     video_prompt = await asyncio.get_event_loop().run_in_executor(None, lambda: _gc.models.generate_content(
         model=reasoning_model,
@@ -1635,7 +1643,7 @@ Campaign Big Idea: {big_idea}
 Fan Truth: {fan_truth}
 Season / Occasion: {season}  ← CRITICAL: make the seasonal/festive atmosphere visually central throughout the reel
 Audience: {audience}
-Campaign Headline (voiceover text): "{copy_headline or big_idea}"
+Campaign Headline (voiceover text): "{copy_headline or big_idea}"{_language_rule}
 
 Base visual direction (FOLLOW THIS CLOSELY): {brand_scene}
 
@@ -1782,6 +1790,7 @@ async def run_creative_pipeline_direct(
     fan_truth: str = "",
     season: str = "",
     market: str = "",
+    language: str = "",
     channels: list = None,
     campaign_id: str = "",
     progress_cb=None,
@@ -2744,6 +2753,7 @@ Output EXACTLY this format (nothing else):
                 copy_headline   = copy_headline,
                 copy_cta        = copy_cta,
                 reasoning_model = _settings_r.gemini_model_reasoning,
+                language        = language or "",
             )
             if video_b64:
                 # Send GCS URI immediately so frontend can stream directly from GCS.

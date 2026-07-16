@@ -76,6 +76,7 @@ class BriefRequest(BaseModel):
     fan_truth:        str              = Field(..., description="The real human insight — Fan Truth")
     channels:         list[str]        = Field(..., min_length=1)
     market:           str              = Field(default="UK")
+    language:         Optional[str]    = None
     season:           str
     moment_type:      MomentType       = Field(default=MomentType.DAY_TO_DAY)
     audience:         AudienceInput
