@@ -573,8 +573,6 @@ def seed_fan_truths(cur):
         {"brand": "sunrise", "statement": "Staying connected isn't a luxury — it's the quiet infrastructure of every good day", "category": "Digital Services", "verdict": "PASS", "specific": 78, "shared": 80, "special": 72, "overall": 77},
 
 
-        {"brand": "sunrise", "statement": "We have good network coverage", "category": "Generic", "verdict": "FAIL", "specific": 8, "shared": 88, "special": 10, "overall": 35},
-
 
     ]
 
