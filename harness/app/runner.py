@@ -738,6 +738,8 @@ def _apply_brand_overlay(
             "Rnorr":       ["Antonio", "Rubik"],
             "Boozt":       ["Rubik"],
             "Glenfiddich": ["Agrandir", "Aston Martin Flare"],
+            "sunrise":     ["Figtree"],
+            "Sunrise":     ["Figtree"],
         }
         font_dir  = _P(__file__).parent.parent / "bucket" / "brands" / brand / "Font"
         font_path = None
@@ -760,9 +762,11 @@ def _apply_brand_overlay(
 
         # ── Brand accent colour ───────────────────────────────────────────────
         BRAND_ACCENT = {
-            "Sunglow": (255, 199,  44),
-            "Rnorr":   (255, 222,   0),
-            "Boozt":   (  0, 134, 254),
+            "Sunglow":  (255, 199,  44),
+            "Rnorr":    (255, 222,   0),
+            "Boozt":    (  0, 134, 254),
+            "sunrise":  (227,   5,  27),   # Sunrise Red
+            "Sunrise":  (227,   5,  27),
             # Glenfiddich intentionally omitted — chartreuse blends with the AMF1 swirl background
         }
         accent_rgb = BRAND_ACCENT.get(brand, (255, 255, 255))
@@ -919,6 +923,8 @@ def _apply_brand_overlay(
                 "Boozt":       {"bg": ( 14,  16,  94, 220), "text": (255, 255, 255), "accent": (  0, 186, 254)},
                 # White bg so the stamp always pops against the dark teal/green image
                 "Glenfiddich": {"bg": (255, 255, 255, 225), "text": (  6,  75,  71), "accent": (  6,  75,  71)},
+                "sunrise":     {"bg": (227,   5,  27, 220), "text": (255, 255, 255), "accent": (255, 255, 255)},
+                "Sunrise":     {"bg": (227,   5,  27, 220), "text": (255, 255, 255), "accent": (255, 255, 255)},
             }
             _lc = _LABEL_COLORS.get(brand, {"bg": (20, 20, 20, 200), "text": (255, 255, 255), "accent": (255, 200, 0)})
             _sw = int(W * 0.17)
@@ -1477,11 +1483,38 @@ async def generate_campaign_reel(
             f"Premium Scotch whisky advertising quality — elegant, restrained, confident."
         )
 
+    def _sunrise_scene(p: str) -> str:
+        _pl = (p or "").lower()
+        if any(x in _pl for x in ["business", "enterprise", "b2b", "sme", "office"]):
+            return (
+                f"A confident Swiss professional in a sleek modern office switches seamlessly between "
+                f"a video call on their laptop and a {p}-powered smartphone without missing a beat. "
+                f"Floor-to-ceiling windows reveal a crisp Zurich skyline in golden morning light. "
+                f"Clean white interior, Sunrise Red accents, Swiss precision, dynamic energy — "
+                f"the network disappears so the work can breathe."
+            )
+        elif any(x in _pl for x in ["home", "internet", "tv", "fiber", "fibre", "broadband", "wifi"]):
+            return (
+                f"A warm Swiss family evening — a parent video-calling grandparents on a tablet in the kitchen "
+                f"while children stream on the TV in the living room, all seamlessly on {p}. "
+                f"Cosy modern Swiss apartment, soft amber light, the connection just works. "
+                f"Sunrise Red router glowing quietly, clean white and red palette, genuine human warmth."
+            )
+        else:
+            return (
+                f"A young Swiss professional strides confidently through Zurich's old town, "
+                f"phone in hand — a video call staying crystal-clear as they move through the crowd and under archways. "
+                f"Cobblestones and modern glass side by side, Sunrise Red on their jacket, "
+                f"warm human connection, Swiss urban energy, the signal never drops."
+            )
+
     _BRAND_SCENE_FN = {
         "Sunglow":     _sunglow_scene,
         "Rnorr":       _rnorr_scene,
         "Boozt":       _boozt_scene,
         "Glenfiddich": _glenfiddich_scene,
+        "sunrise":     _sunrise_scene,
+        "Sunrise":     _sunrise_scene,
     }
     brand_scene = _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN \
         else f"A premium advertising scene featuring {_prod} with dynamic energy and brand colours."
@@ -1590,6 +1623,27 @@ async def generate_campaign_reel(
                 "summer": f"A sophisticated man in a linen blazer on a sunlit outdoor terrace pouring {p} over ice — golden afternoon light, ocean or countryside vista behind him. Teal and chartreuse, premium summer leisure.",
             },
         }
+        # Sunrise — Swiss connectivity brand: warm human moments, mountain/urban Switzerland
+        if b in ("sunrise", "Sunrise"):
+            if _xmas:
+                return _rnd_r.choice([
+                    "A Swiss family gathered around the Christmas table video-calling faraway relatives on a tablet — grandparents' faces lit with joy on the screen, fairy lights twinkling, snow visible through the chalet window. The call holds perfectly. Sunrise Red glow on the device, warm golden Christmas light, Swiss mountain warmth.",
+                    "A woman in a Zurich Christmas market video-calling a friend abroad — her breath visible in the cold air, stall lights glowing around her, the call crystal-clear on her phone. Sunrise Red scarf, golden market lights, snow beginning to fall, warm human connection across distance.",
+                ])
+            if _ny:
+                return _rnd_r.choice([
+                    "Swiss friends on a rooftop in Zurich counting down to midnight — phones raised, video-calling loved ones as fireworks burst over the city. Every call connects. Sunrise Red and white, golden fireworks, Swiss New Year energy and warmth.",
+                    "A couple on a snowy Swiss hillside watching midnight fireworks — one video-calling family, the connection perfect on a clear winter night. Sunrise Red on their jacket, golden bursts, mountain silhouette, quiet Swiss magic.",
+                ])
+            if _val:
+                return "A couple on a candlelit Valentine's dinner video-calling their parents to share the news — warm Swiss apartment, soft pink bokeh, the call holding perfectly. Sunrise Red rose on the table, warm intimate light, human connection that matters."
+            if _summer:
+                return _rnd_r.choice([
+                    "A group of young Swiss hikers reaching a mountain summit — phones out, streaming a victory video call, signal perfect at the peak. Blue sky, Alpine panorama, Sunrise Red on their backpacks, pure Swiss summer euphoria.",
+                    "Swiss friends at a lakeside summer party — someone streaming music via their phone, another on a video call, all seamlessly connected. Golden lake light, Sunrise Red accents, warm summer energy.",
+                ])
+            return None
+
         # UBS Bank — pure lifestyle, zero financial/brand terms (RAI safe)
         if b == "UBS Bank":
             if _xmas:

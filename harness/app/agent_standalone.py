@@ -906,12 +906,85 @@ def run_reel(brand: str, prompt: str) -> dict:
             "Cinematic and uplifting, clean and modern.",
         ])
 
+    def _sunrise_scene(p: str) -> str:
+        _pl = (p or "").lower()
+        if any(x in _pl for x in ["business", "enterprise", "b2b", "sme", "office"]):
+            if _is_christmas:
+                return ("A Swiss professional video-calling their team remotely from a cosy home office on Christmas Eve — "
+                        "warm fairy lights behind them, snow outside the window, the call crystal-clear. "
+                        "Sunrise Red glow on the device, genuine connection across distance, Swiss warmth.")
+            if _is_new_year:
+                return ("A small business team video-calling across time zones as midnight strikes — "
+                        "champagne glasses raised to their screens, confetti in the office. "
+                        "Sunrise Red and white, seamless Swiss connectivity, shared celebration.")
+            if _is_summer:
+                return ("A Swiss professional working confidently from a sunny Alpine terrace — "
+                        "video call open, signal perfect at altitude, mountains in the background. "
+                        "Sunrise Red on their bag, clean blue sky, Swiss summer energy.")
+            return (_rnd.choice([
+                "A confident Swiss professional in a sleek Zurich office switches between a video call and their "
+                f"Sunrise {p}-powered phone without breaking stride. Floor-to-ceiling windows, golden morning light. "
+                "Sunrise Red accents, Swiss precision, the network invisible and perfect.",
+                "Three colleagues in a bright Swiss co-working space — one on a video call, one streaming a presentation, "
+                f"one checking analytics — all on Sunrise {p}, all seamless. Clean white and Sunrise Red palette, "
+                "modern Swiss design, productive and connected.",
+            ]))
+        elif any(x in _pl for x in ["home", "internet", "tv", "fiber", "fibre", "broadband", "wifi"]):
+            if _is_christmas:
+                return ("A Swiss family on Christmas morning video-calling grandparents abroad — "
+                        "children in pyjamas showing their presents to the screen, grandparents beaming. "
+                        "The connection holds perfectly. Sunrise Red router glowing, fairy lights, Swiss chalet warmth.")
+            if _is_summer:
+                return ("A Swiss family streaming an outdoor movie on their terrace on a warm summer evening — "
+                        "tablet propped up, wine on the table, neighbourhood sounds in the background. "
+                        "Sunrise Home Internet, seamless and invisible. Sunrise Red and white, warm golden hour light.")
+            return (_rnd.choice([
+                "A warm Swiss family evening — a parent video-calling grandparents on a tablet in the kitchen while "
+                f"children stream on the TV in the living room, all on Sunrise {p}. "
+                "Cosy modern apartment, soft amber light, Sunrise Red router quietly glowing. The connection just works.",
+                "A couple setting up their new Swiss apartment — unboxing the Sunrise router, watching their first "
+                f"movie together that same evening on {p}. Modern Swiss interior, warm lighting, Sunrise Red and white.",
+            ]))
+        else:
+            if _is_christmas:
+                return _rnd.choice([
+                    "A young Swiss woman in a Christmas market video-calling a friend abroad — her breath visible in the cold air, "
+                    "stall lights glowing warmly around her, the call crystal-clear. "
+                    "Sunrise Red scarf, golden market bokeh, snow beginning to fall, connection across distance.",
+                    "A Swiss family gathered at the Christmas table, a tablet propped up so distant relatives can join the dinner. "
+                    "Laughter across the screen, the signal never dropping. Sunrise Red and warm Christmas gold, Swiss chalet warmth.",
+                ])
+            if _is_new_year:
+                return _rnd.choice([
+                    "Swiss friends counting down to midnight on a Zurich rooftop — phones raised, video-calling loved ones "
+                    "as fireworks burst over the skyline. Every call connects. Sunrise Red and white, golden fireworks, NYE energy.",
+                    "A couple on a snowy Swiss hillside watching midnight fireworks — one video-calling family, "
+                    "signal perfect in the mountains. Sunrise Red, golden bursts, Alpine silhouette, quiet Swiss magic.",
+                ])
+            if _is_summer:
+                return _rnd.choice([
+                    "Young Swiss hikers reaching a mountain summit — phones out, streaming a victory video call, signal perfect. "
+                    "Blue Alpine sky, panorama view, Sunrise Red on their backpacks, pure summer freedom.",
+                    "Swiss friends at a lakeside party — someone streaming music via their phone, everyone effortlessly connected. "
+                    "Golden lake light, Sunrise Red accents, summer ease and warmth.",
+                ])
+            return _rnd.choice([
+                "A young Swiss professional strides confidently through Zurich's old town, phone in hand — a video call "
+                "staying crystal-clear as they move through the crowd and under archways. "
+                "Sunrise Red on their jacket, cobblestones and modern glass, warm human connection, the signal never drops.",
+                "A woman on a Swiss commuter train streams a video call smoothly as the Alps rush past the window — "
+                "the connection seamless, the view spectacular. Sunrise Red and white, cinematic mountain light, "
+                "the network as reliable as the Swiss railway.",
+            ])
+
     _BRAND_SCENE_FN = {
         "Sunglow":     _sunglow_scene,
         "Rnorr":       _rnorr_scene,
         "Boozt":       _boozt_scene,
         "Glenfiddich": _glenfiddich_scene,
         "UBS Bank":    _ubs_scene,
+        "sunrise":     _sunrise_scene,
+        "Sunrise":     _sunrise_scene,
     }
     brand_scene = (
         _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN
