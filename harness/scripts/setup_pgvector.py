@@ -174,10 +174,8 @@ def get_embedding(text: str) -> list[float]:
             client = genai.Client(
 
 
-                api_key      = api_key if api_key else None,
-
-
-                http_options = {"api_version": "v1"},
+                api_key  = api_key if api_key else None,
+                vertexai = False,
 
 
             )
@@ -186,7 +184,7 @@ def get_embedding(text: str) -> list[float]:
             result = client.models.embed_content(
 
 
-                model   = GEMINI_MODEL,
+                model   = "gemini-embedding-2",
 
 
                 contents= text,
@@ -1687,6 +1685,69 @@ def seed_customer_segments(cur):
             "kaggle_derivation": "Age 18-30, discovery-led purchasing, tutorial-influenced, education-seeking",
 
 
+        },
+
+
+        # Sunrise - Swiss Telecom segments
+
+
+        {
+            "brand": "sunrise",
+            "segment_name": "Connected Swiss Families",
+            "size_estimate": 580000,
+            "age_range": "30-50",
+            "income_band": "CHF70k-CHF120k",
+            "top_channels": ["Instagram", "Facebook", "Email"],
+            "avg_weekly_spend_gbp": 42.00,
+            "behavioural_notes": (
+                "Household decision-makers managing home internet, mobile, and TV bundles. "
+                "Purchase decisions driven by reliability and family coverage, not price alone. "
+                "High engagement with warm lifestyle content showing real Swiss family moments. "
+                "Respond strongly to before/after connectivity narratives — 'life runs smoother'. "
+                "Peak engagement: evenings and weekends; de-CH copy outperforms en by 38% CTR."
+            ),
+            "fan_truth_benchmark": "Fan Truth must score Shared > 80 — resonates across the whole family unit. 'Staying connected isn't a luxury — it's the quiet infrastructure of every good day' scores 77/100. Avoid tech-spec messaging; human benefit framing wins.",
+            "kaggle_derivation": "Household income CHF70k+, family unit, high digital service spend, retention-focused",
+        },
+
+
+        {
+            "brand": "sunrise",
+            "segment_name": "Swiss Urban Professionals",
+            "size_estimate": 340000,
+            "age_range": "25-40",
+            "income_band": "CHF60k-CHF110k",
+            "top_channels": ["Instagram", "LinkedIn", "YouTube"],
+            "avg_weekly_spend_gbp": 28.50,
+            "behavioural_notes": (
+                "City-based, mobile-first professionals who treat reliable connectivity as a baseline expectation. "
+                "Switchers motivated by seamless digital experience — not offers or bundles. "
+                "High NumWebPurchases; self-serve digital journey preferred over in-store. "
+                "Respond to simplicity and premium cues: 'technology that disappears when it works'. "
+                "Content that celebrates the moment made possible (not the network behind it) wins."
+            ),
+            "fan_truth_benchmark": "Fan Truth must score Specific > 78. 'That moment when the call holds and the signal doesn't drop' scores 82/100. Performance and reliability framing outperforms price or feature messaging for this segment.",
+            "kaggle_derivation": "Age 25-40, urban, high mobile data usage, low deal-sensitivity, high brand-loyalty potential",
+        },
+
+
+        {
+            "brand": "sunrise",
+            "segment_name": "Swiss SME Decision Makers",
+            "size_estimate": 120000,
+            "age_range": "35-55",
+            "income_band": "CHF90k-CHF160k",
+            "top_channels": ["LinkedIn", "Google Ads", "Email"],
+            "avg_weekly_spend_gbp": 85.00,
+            "behavioural_notes": (
+                "Business owners and IT managers selecting connectivity for their teams. "
+                "Purchase criteria: uptime guarantees, Swiss data sovereignty, local support. "
+                "Low NumDealsPurchases — value-driven not discount-driven. "
+                "Outcome-first messaging ('your business stays on') outperforms feature lists 3:1. "
+                "LinkedIn and email are the primary touchpoints; de-CH and en-GB copy both perform."
+            ),
+            "fan_truth_benchmark": "Fan Truth must score Specific > 76 and Special > 78. 'Technology disappears when it works perfectly — that silence is Sunrise' scores 80/100. Decision-makers want confidence, not complexity. Generic reliability claims score below 40.",
+            "kaggle_derivation": "B2B, high income, outcome-focused buyer, low churn, high LTV, Swiss compliance-sensitive",
         },
 
 
