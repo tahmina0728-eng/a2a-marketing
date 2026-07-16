@@ -44,6 +44,7 @@ export interface HarnessBriefRequest {
   fan_truth: string;
   channels: string[];
   market: string;
+  language?: string;
   season: string;
   moment_type: string;
   audience: HarnessAudience;

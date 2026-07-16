@@ -11,7 +11,17 @@ const BRANDS = [
   { id: "UBS Bank",    label: "UBS Bank",           logo: "/brands/ubs-bank-logo.png" },
   { id: "sunrise",     label: "Sunrise",            logo: "/brands/sunrise-logo.svg" },
 ];
-const MARKETS  = ["United Kingdom","Australia","United States","New Zealand","SEA","Global"];
+const MARKETS  = ["United Kingdom","Australia","United States","New Zealand","SEA","Switzerland","Global"];
+
+const MARKET_LANGUAGES: Record<string, string[]> = {
+  "United Kingdom": ["English"],
+  "Australia":      ["English"],
+  "United States":  ["English"],
+  "New Zealand":    ["English"],
+  "SEA":            ["English","Bahasa Indonesia","Thai","Vietnamese","Filipino"],
+  "Switzerland":    ["German (de-CH)","French (fr-CH)","Italian (it-CH)","English"],
+  "Global":         ["English"],
+};
 const BUDGETS  = ["£50K – £150K","£150K – £500K","£500K – £1M","£1M – £5M","£5M+"];
 const CHANNELS = ["Instagram","TikTok","YouTube","OOH","Google Ads","Meta Ads","Website","Email"];
 const SEASONS  = ["Evergreen","Spring","Summer","Autumn","Winter","Christmas","Valentine's Day","Easter","Diwali","New Year"];
@@ -19,10 +29,10 @@ const MOMENTS  = ["Day-to-Day","Brand Moment","Partnership Moment"];
 const AGES     = ["13–17","18–24","25–34","35–44","45–54","55+"];
 
 interface FD {
-  brand: string; objective: string; market: string; budget: string;
+  brand: string; objective: string; market: string; language: string; budget: string;
   channels: string[]; age: string[]; season: string; moment: string; campaignName: string;
 }
-const INIT: FD = { brand:"", objective:"", market:"", budget:"", channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"" };
+const INIT: FD = { brand:"", objective:"", market:"", language:"", budget:"", channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"" };
 const toggle = <T,>(arr: T[], v: T): T[] => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
 /** Detect a seasonal/festive moment from free-text objective so Kinetik/Morphis can use it. */
@@ -68,7 +78,8 @@ const chipOn: React.CSSProperties = {
 function Page1({ data, onChange, onNext }: {
   data: FD; onChange: (k: keyof FD, v: string) => void; onNext: () => void;
 }) {
-  const ok = data.brand && data.objective.trim() && data.market && data.budget;
+  const langs = data.market ? (MARKET_LANGUAGES[data.market] ?? ["English"]) : [];
+  const ok = data.brand && data.objective.trim() && data.market && data.language && data.budget;
 
   const brandOptions = BRANDS.map(b => ({
     value: b.id,
@@ -119,12 +130,23 @@ function Page1({ data, onChange, onNext }: {
             />
           </div>
 
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+          <div style={{ display:"grid", gridTemplateColumns: langs.length > 1 ? "1fr 1fr 1fr" : "1fr 1fr", gap:16 }}>
             <div>
               <span style={label}>Market</span>
-              <FormSelect value={data.market} onChange={v => onChange("market", v)}
+              <FormSelect value={data.market} onChange={v => {
+                  const defaultLang = (MARKET_LANGUAGES[v] ?? ["English"])[0];
+                  onChange("market", v);
+                  onChange("language", defaultLang);
+                }}
                 placeholder="Select market" options={MARKETS} />
             </div>
+            {langs.length > 1 && (
+              <div>
+                <span style={label}>Language</span>
+                <FormSelect value={data.language} onChange={v => onChange("language", v)}
+                  placeholder="Select language" options={langs} />
+              </div>
+            )}
             <div>
               <span style={label}>Budget Range</span>
               <FormSelect value={data.budget} onChange={v => onChange("budget", v)}
@@ -277,6 +299,7 @@ export default function CampaignForm({ onFullCampaign }: {
       fan_truth:        fanTruth,
       channels:         data.channels,
       market:           data.market,
+      language:         data.language || undefined,
       season:           resolvedSeason,
       moment_type:      data.moment as any,
       audience: {
