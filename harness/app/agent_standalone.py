@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 import uuid
 
 import structlog
@@ -152,15 +153,23 @@ def _generate(persona: str, brand: str, prompt: str, output_instructions: str) -
         f"CREATIVE DIRECTION from the user: \"{prompt}\"\n\n"
         f"{output_instructions}"
     )
-    try:
-        resp = _genai_client().models.generate_content(
-            model=settings.gemini_model_reasoning, contents=full_prompt,
-        )
-        raw = (resp.text or "").strip()
-        return _parse_json_loose(raw) or {"raw": raw}
-    except Exception as _e:
-        logger.warning("standalone_generate_failed", brand=brand, error=str(_e))
-        return {"error": str(_e)}
+    for attempt in range(3):
+        try:
+            resp = _genai_client().models.generate_content(
+                model=settings.gemini_model_reasoning, contents=full_prompt,
+            )
+            raw = (resp.text or "").strip()
+            return _parse_json_loose(raw) or {"raw": raw}
+        except Exception as _e:
+            err = str(_e)
+            if "429" in err and attempt < 2:
+                wait = 30 * (attempt + 1)
+                logger.warning("standalone_generate_429_retry", brand=brand, attempt=attempt + 1, wait=wait)
+                time.sleep(wait)
+            else:
+                logger.warning("standalone_generate_failed", brand=brand, error=err)
+                return {"error": err}
+    return {"error": "quota exhausted after retries"}
 
 
 def run_briefing(brand: str, prompt: str) -> dict:
@@ -296,7 +305,7 @@ def run_channel(brand: str, prompt: str, provided_image_b64: str = "") -> dict:
                 if getattr(_part, "inline_data", None) is not None:
                     _raw = _part.inline_data.data
                     from app.runner import _apply_brand_overlay
-                    _raw = _apply_brand_overlay(_raw, brand, headline, _products[:1], "")
+                    _raw = _apply_brand_overlay(_raw, brand, headline, _products[:1], product_name, market)
                     image_b64 = _b64.b64encode(_raw).decode()
                     break
         except Exception as _ie:
@@ -350,7 +359,7 @@ def run_channel(brand: str, prompt: str, provided_image_b64: str = "") -> dict:
     return {"agent": "channel", **result}
 
 
-def run_kv(brand: str, prompt: str) -> dict:
+def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") -> dict:
     """
     Standalone Morphis: one text call for a headline + visual scene, one image
     call for the actual key visual, then the same Pillow brand-overlay
@@ -362,15 +371,35 @@ def run_kv(brand: str, prompt: str) -> dict:
     Gemini call for marginal quality gain) and any upstream big-idea/copy
     context — same standalone tradeoff already accepted for the other agents.
     """
-    data = _generate(
-        "You are Morphis, the key visual designer for an AI marketing campaign system. "
-        "You write a short campaign headline and describe a visual scene for an image generator.",
-        brand, prompt,
-        'Respond ONLY with JSON, no markdown fences: '
-        '{"headline": "short punchy campaign headline, 4-8 words", '
-        '"scene": "2-3 sentences describing the visual scene — setting, subject(s), mood, lighting. '
-        'Do not mention any text, words, or logos that should appear in the image."}',
-    )
+    if product_name:
+        _morphis_sys = (
+            "You are Morphis, the key visual designer for an AI marketing campaign system. "
+            "You specialise in product offer advertising — your images must feel exciting, "
+            "energetic, and celebratory. The campaign is about a special deal or plan, "
+            "so the mood should convey joy, freedom, achievement, and the thrill of a great offer."
+        )
+        _morphis_instr = (
+            f'The product being promoted is: "{product_name}". '
+            'Respond ONLY with JSON, no markdown fences: '
+            '{"headline": "bold 4-7 word offer headline — exciting, benefit-driven, action-oriented", '
+            '"scene": "2-3 sentences describing a vibrant, high-energy scene: an excited or joyful '
+            'person (celebrating, laughing, fist-pump, arms wide open, triumphant expression), '
+            'dynamic lighting (warm sunlight, golden hour, bright studio flash), bold vivid colours, '
+            'sense of freedom and motion. Person on the RIGHT HALF of frame, lighter open space left. '
+            'Do not mention any text, words, logos, or price figures."}'
+        )
+    else:
+        _morphis_sys = (
+            "You are Morphis, the key visual designer for an AI marketing campaign system. "
+            "You write a short campaign headline and describe a visual scene for an image generator."
+        )
+        _morphis_instr = (
+            'Respond ONLY with JSON, no markdown fences: '
+            '{"headline": "short punchy campaign headline, 4-8 words", '
+            '"scene": "2-3 sentences describing the visual scene — setting, subject(s), mood, lighting. '
+            'Do not mention any text, words, or logos that should appear in the image."}'
+        )
+    data = _generate(_morphis_sys, brand, prompt, _morphis_instr)
     headline = data.get("headline", "") or prompt
     scene    = data.get("scene", "") or prompt
 
@@ -400,7 +429,9 @@ def run_kv(brand: str, prompt: str) -> dict:
 
         contents: list = []
         logos = loader.list_logos(brand)
-        # Prefer a logo that contains the brand name and isn't a pure-white variant
+        # Prefer a logo that contains the brand name and isn't a pure-white variant.
+        # Sunrise logo is skipped entirely — its distinctive S-circle causes Gemini to
+        # reproduce the logo in the generated image; we composite it in post-production.
         _bslug = brand.split()[0].lower()
         _ref_logo = (
             next((p for p in logos if _bslug in p.lower() and "_dark" in p.lower()), None) or
@@ -408,15 +439,76 @@ def run_kv(brand: str, prompt: str) -> dict:
             next((p for p in logos if _bslug in p.lower()), None) or
             (logos[0] if logos else None)
         )
-        if _ref_logo and (part := _part_for_uri(_ref_logo)):
+        if _ref_logo and brand.lower() not in ("sunrise",) and (part := _part_for_uri(_ref_logo)):
             contents.append(f"BRAND IDENTITY REFERENCE for {brand} — colour palette and style "
                              f"only, do not render this logo in the image.")
             contents.append(part)
         products = loader.list_products(brand)
+        # For brands with no Products folder (e.g. Sunrise), use a campaign asset
+        # from the Assets folder as a visual style reference so Gemini can match
+        # the brand's actual photography style, palette, and mood.
+        _style_refs = [] if products else [
+            a for a in loader.list_assets(brand)
+            if not a.lower().endswith((".mp4", ".svg"))
+        ][:1]
+
         if products and (part := _part_for_uri(products[0])):
             contents.append(f"PRODUCT REFERENCE for {brand} — match shape and colours if products "
                              f"are shown in the scene.")
             contents.append(part)
+        elif _style_refs:
+            try:
+                from app.creative_pipeline import _load_bytes as _clb
+                from google.genai import types as _gt2
+                from PIL import Image as _PILr
+                from io import BytesIO as _BIOr
+                _raw = _clb(_style_refs[0])
+                if _raw:
+                    _ri = _PILr.open(_BIOr(_raw)).convert("RGB")
+                    if max(_ri.size) > 1024:
+                        _sc = 1024 / max(_ri.size)
+                        _ri = _ri.resize(
+                            (int(_ri.width * _sc), int(_ri.height * _sc)), _PILr.LANCZOS
+                        )
+                    _rb = _BIOr()
+                    _ri.save(_rb, format="JPEG", quality=85)
+                    contents.append(
+                        f"BRAND CAMPAIGN STYLE REFERENCE for {brand} — match this exact visual style: "
+                        f"photography approach, colour palette, mood, lighting, and composition. "
+                        f"Generate the new image in the same aesthetic as this reference campaign."
+                    )
+                    contents.append(_gt2.Part.from_bytes(data=_rb.getvalue(), mime_type="image/jpeg"))
+            except Exception as _sre:
+                logger.warning("kv_style_ref_failed", brand=brand, error=str(_sre))
+
+        # Sunrise-specific composition rule — differs by mode
+        if brand.lower() in ("sunrise",):
+            if product_name:
+                # Offer mode: high-energy celebratory scene, person right-half
+                image_prompt = (
+                    "MOOD & ENERGY: This is a product offer advertisement — the image must feel "
+                    "exciting, joyful, and celebratory. Convey the thrill of a great deal: freedom, "
+                    "achievement, and genuine happiness. Use dynamic, bold, high-contrast lighting "
+                    "(warm golden light, bright sunshine, or vivid studio flash). Avoid neutral or "
+                    "muted tones — the image should pop with energy and optimism.\n"
+                    "COMPOSITION RULE: The subject (a joyful, energetic person — laughing, arms wide, "
+                    "triumphant, or looking excitedly at a smartphone) must be positioned on the "
+                    "RIGHT HALF of the frame, facing slightly left. "
+                    "The LEFT HALF must be open, clean, and lighter in tone — "
+                    "this area receives the offer headline and price overlay in post-production. "
+                    "Do NOT render any text, numbers, logos, or brand symbols in the image.\n\n"
+                ) + image_prompt
+            else:
+                # Lifestyle mode: full-bleed, left third clear for white text overlay
+                image_prompt = (
+                    "COMPOSITION RULE: The subject, action, and visual interest must be "
+                    "concentrated in the CENTRE to RIGHT two-thirds of the frame. "
+                    "The LEFT THIRD of the image should be relatively uncluttered and "
+                    "slightly darker in tone — this area will receive large white text overlay. "
+                    "Swiss landscape, Swiss urban, or Swiss lifestyle context. "
+                    "Premium Swiss telecommunications advertising photography style.\n\n"
+                ) + image_prompt
+
         contents.append(image_prompt)
 
         resp = _genai_client().models.generate_content(
@@ -435,7 +527,7 @@ def run_kv(brand: str, prompt: str) -> dict:
 
         if raw_bytes:
             from app.runner import _apply_brand_overlay
-            overlaid = _apply_brand_overlay(raw_bytes, brand, headline, products[:1], "")
+            overlaid = _apply_brand_overlay(raw_bytes, brand, headline, products[:1], product_name, market)
             import base64
             image_b64 = base64.b64encode(overlaid).decode("utf-8")
     except Exception as e:
@@ -1760,7 +1852,14 @@ _RUNNERS = {
 }
 
 
-def run_agent_standalone(agent_key: str, text: str, duration: int = 30, image_b64: str = "") -> dict:
+def run_agent_standalone(
+    agent_key: str,
+    text: str,
+    duration: int = 30,
+    image_b64: str = "",
+    product_name: str = "",
+    market: str = "",
+) -> dict:
     """text is the whole free-text prompt, e.g. "UBS Bank for UK market, festive: christmas" —
     the brand is detected from it automatically rather than passed separately."""
     runner = _RUNNERS.get(agent_key)
@@ -1777,4 +1876,6 @@ def run_agent_standalone(agent_key: str, text: str, duration: int = 30, image_b6
         return runner(brand, text, duration)
     if agent_key == "channel" and image_b64:
         return runner(brand, text, image_b64)
+    if agent_key == "kv":
+        return runner(brand, text, product_name=product_name, market=market)
     return runner(brand, text)

@@ -77,6 +77,9 @@ def _part_for_uri(path_or_uri: str) -> "types.Part | None":
     """
     if not path_or_uri:
         return None
+    # SVG is not supported by the Gemini image model — skip silently
+    if path_or_uri.lower().endswith(".svg"):
+        return None
     mime = _guess_image_mime(path_or_uri)
     if path_or_uri.startswith("gs://"):
         return types.Part.from_uri(file_uri=path_or_uri, mime_type=mime)
@@ -330,7 +333,15 @@ def _composite_brand_assets(
         panel_is_dark = text_color[0] >= 128  # text_color is white when panel is dark
         logo_img: "Image.Image | None" = None
         logo_path = _pick_primary_logo(loader.list_logos(brand), on_dark_bg=panel_is_dark)
-        if logo_path:
+        if logo_path and str(logo_path).lower().endswith(".svg"):
+            # SVG logos can't be opened by Pillow — draw Sunrise logo programmatically
+            if brand.lower() in ("sunrise",):
+                try:
+                    from app.runner import _draw_sunrise_logo_img
+                    logo_img = _draw_sunrise_logo_img(int(max(90, h * 0.26) * 0.55), display_fp)
+                except Exception as e:
+                    logger.warning("logo_programmatic_failed", brand=brand, error=str(e))
+        elif logo_path:
             logo_bytes = _load_asset_bytes(logo_path)
             if logo_bytes:
                 try:
@@ -515,14 +526,42 @@ async def generate_and_save_kv_image(
         # layout should leave clean flat-color zones at the intended text placement
         # positions that match the brand palette — Pillow compositing will apply the
         # brand font on top in post-processing.
-        typography_note = (
-            "TYPOGRAPHY STYLE: Do not render any text, letters, or numbers anywhere. "
-            "Instead, reserve a clean graphic panel at the bottom of the image using the "
-            "brand primary color as a flat background — this area will receive the brand "
-            "name, product name, and campaign headline in post-production using the brand's "
-            "official typeface. The panel should feel consistent with the typographic style "
-            "visible in the brand reference images above.\n\n"
-        )
+        # Sunrise: full-bleed lifestyle or right-side person for offer/product mode.
+        if brand.lower() in ("sunrise",):
+            _offer_mode = bool(tool_context.state.get("product_name", ""))
+            if _offer_mode:
+                typography_note = (
+                    "TYPOGRAPHY STYLE: Do not render any text, letters, numbers, logos, "
+                    "circle icons, wordmarks, or brand symbols anywhere in the image.\n"
+                    "MOOD & ENERGY: This is a product offer advertisement — the image must feel "
+                    "exciting, joyful, and celebratory. Convey the thrill of a great deal: "
+                    "freedom, achievement, and genuine happiness. Use dynamic bold lighting "
+                    "(warm golden hour, bright sunshine, or vivid studio flash). Avoid neutral "
+                    "or muted tones — the image should pop with energy and optimism.\n"
+                    "COMPOSITION: A joyful energetic person (laughing, arms wide, triumphant, "
+                    "or looking excitedly at a smartphone) positioned on the RIGHT HALF of the "
+                    "frame, facing slightly left. The LEFT HALF must be open and lighter in tone "
+                    "— this area receives the offer headline and price badge in post-production. "
+                    "Pure photographic scene, no graphic overlays.\n\n"
+                )
+            else:
+                typography_note = (
+                    "TYPOGRAPHY STYLE: Do not render any text, letters, numbers, logos, "
+                    "circle icons, wordmarks, or brand symbols anywhere in the image. "
+                    "The image must be a pure full-bleed photographic scene with no graphic "
+                    "overlays. All text and brand elements will be composited in post-production. "
+                    "The LEFT THIRD of the frame should be relatively uncluttered and slightly "
+                    "darker in tone — this zone receives large white text overlay in post-processing.\n\n"
+                )
+        else:
+            typography_note = (
+                "TYPOGRAPHY STYLE: Do not render any text, letters, or numbers anywhere. "
+                "Instead, reserve a clean graphic panel at the bottom of the image using the "
+                "brand primary color as a flat background — this area will receive the brand "
+                "name, product name, and campaign headline in post-production using the brand's "
+                "official typeface. The panel should feel consistent with the typographic style "
+                "visible in the brand reference images above.\n\n"
+            )
 
         # Prepend a brand-protection prefix to prevent the image model from defaulting
         # to visually similar real-world brands (e.g. rendering "Rnorr" as "Knorr").
@@ -581,9 +620,11 @@ async def generate_and_save_kv_image(
                     logger.info("colour_swatch_included", uri=cp)
 
         # ── 4. Brand logo — colour/style reference only; NOT reproduced in image ────
+        # Sunrise logo is excluded entirely — its distinctive S-circle causes Gemini to
+        # reproduce the logo in the output; we composite it programmatically instead.
         logo_paths   = loader.list_logos(brand)
         primary_logo = _pick_primary_logo(logo_paths)
-        if primary_logo:
+        if primary_logo and brand.lower() not in ("sunrise",):
             contents.append(
                 "BRAND IDENTITY REFERENCE: This is the official brand logo. "
                 "DO NOT render or place this logo anywhere in the generated image — "
@@ -634,7 +675,7 @@ async def generate_and_save_kv_image(
         if image_data is None:
             raise ValueError("Gemini returned no image data")
 
-        # ── Post-process: composite brand panel (logo + name + product + headline) ──
+        # ── Post-process: brand overlay ───────────────────────────────────────────
         product_name = tool_context.state.get("product_name", "")
         brand_locks  = {}
         try:
@@ -643,13 +684,35 @@ async def generate_and_save_kv_image(
             pass
         campaign_copy_json = tool_context.state.get("campaign_copy", "{}")
 
-        image_data = _composite_brand_assets(
-            image_data         = image_data,
-            brand              = brand,
-            brand_locks        = brand_locks,
-            campaign_copy_json = campaign_copy_json,
-            product_name       = product_name,
-        )
+        # Extract headline for brands that use the full-bleed overlay
+        _headline_text = ""
+        try:
+            _copy_dict   = json.loads(campaign_copy_json) if campaign_copy_json else {}
+            _headline_text = _copy_dict.get("short", {}).get("headline", "")
+        except Exception:
+            pass
+
+        # Sunrise uses full-bleed billboard overlay — matches brand's campaign visual style.
+        # Other brands use bottom colour-panel composite layout.
+        if brand.lower() in ("sunrise",):
+            from app.runner import _apply_brand_overlay
+            _market = tool_context.state.get("market", "")
+            image_data = _apply_brand_overlay(
+                img_data     = image_data,
+                brand        = brand,
+                headline     = _headline_text,
+                product_uris = [],
+                product_name = product_name,
+                market       = _market,
+            )
+        else:
+            image_data = _composite_brand_assets(
+                image_data         = image_data,
+                brand              = brand,
+                brand_locks        = brand_locks,
+                campaign_copy_json = campaign_copy_json,
+                product_name       = product_name,
+            )
         mime_type = "image/jpeg"  # always JPEG after compositing
 
         # Save via ADK artifact service — InMemory locally, GCS in production.

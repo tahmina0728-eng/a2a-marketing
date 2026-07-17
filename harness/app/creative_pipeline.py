@@ -92,6 +92,10 @@ def _part_for_uri(path_or_uri: str) -> "types.Part | None":
     """GCS URIs use Part.from_uri; local paths fall back to Part.from_bytes."""
     if not path_or_uri:
         return None
+    # SVG is not supported by the Gemini image model — skip silently so callers
+    # that iterate logos/products don't send unusable data and get 400 INVALID_ARGUMENT.
+    if path_or_uri.lower().endswith(".svg"):
+        return None
     mime = _mime_for(path_or_uri)
     if path_or_uri.startswith("gs://"):
         return types.Part.from_uri(file_uri=path_or_uri, mime_type=mime)
