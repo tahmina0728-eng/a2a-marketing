@@ -797,15 +797,15 @@ def _apply_brand_overlay(
             hits = [f for f in sorted(font_dir.glob("*.ttf")) if "italic" not in f.name.lower()]
             font_path = str(hits[0]) if hits else None
 
-        def _font(size: int):
+        def _font(size: int, weight: int | None = None):
             if font_path:
                 try:
                     _fnt = ImageFont.truetype(font_path, size)
-                    # Figtree is a variable font. Brand spec (§3.5): hero headlines in Light (300).
-                    # The impact comes from large SIZE, not heavy weight.
                     if brand.lower() in ("sunrise",):
                         try:
-                            _fnt.set_variation_by_axes([300])
+                            # Default 300 (Light) for taglines/labels; callers pass an
+                            # explicit weight for headline text (lifestyle=700, offer=800).
+                            _fnt.set_variation_by_axes([weight if weight is not None else 300])
                         except Exception:
                             pass
                     return _fnt
@@ -853,11 +853,11 @@ def _apply_brand_overlay(
             _parts = sentences[0].split(",", 1)
             sentences = [_parts[0].strip() + ",", _parts[1].strip()]
 
-        # Final fallback: split at the word-count midpoint for headlines with 3+ words
-        # that have no punctuation or comma. Without this, a 5-word headline like
-        # "GRENZENLOSE FREIHEIT FÜR IHREN SOMMER" stays as one shrunken line instead
-        # of two large billboard lines.
-        if len(sentences) == 1 and len(raw_words) >= 3:
+        # Final fallback: split at the word-count midpoint for headlines with 2+ words
+        # that have no punctuation or comma. Without this, a short headline like
+        # "GRENZENLOSE FREIHEIT" stays as one shrunken line instead of two bold lines.
+        # Sunrise lifestyle always targets 2 headline lines + tagline = 3 visible lines.
+        if len(sentences) == 1 and len(raw_words) >= 2:
             _mid = (len(raw_words) + 1) // 2  # round up — first line gets the extra word
             sentences = [
                 " ".join(raw_words[:_mid]),
@@ -866,20 +866,23 @@ def _apply_brand_overlay(
 
         # Auto-fit each line: shrink font until it fits within allowed width.
         # Sunrise uses wider text zone (70%) to match their large-headline campaign style.
-        _measure = Image.new("RGBA", (1, 1))
-        _md      = ImageDraw.Draw(_measure)
+        # Lifestyle headlines use Bold (700) — matches the impactful billboard reference.
+        # The weight is only applied to Sunrise via _font()'s set_variation_by_axes call.
+        _measure   = Image.new("RGBA", (1, 1))
+        _md        = ImageDraw.Draw(_measure)
         max_line_w = int(W * (0.70 if brand.lower() in ("sunrise",) else 0.55))
         base_sz    = max(44, W // 10)
+        _hl_weight = 700 if brand.lower() in ("sunrise",) and not _sunrise_offer else None
         lines_spec = []
         for line_text in sentences:
             sz = base_sz
             while sz > 18:
-                fnt = _font(sz)
+                fnt = _font(sz, _hl_weight)
                 bb  = _md.textbbox((0, 0), line_text.upper(), font=fnt)
                 if (bb[2] - bb[0]) <= max_line_w:
                     break
                 sz = max(18, int(sz * 0.88))
-            lines_spec.append((line_text.upper(), sz, _font(sz)))
+            lines_spec.append((line_text.upper(), sz, _font(sz, _hl_weight)))
 
         _tmp = Image.new("RGBA", (W, 4))
         _td  = ImageDraw.Draw(_tmp)
