@@ -1218,11 +1218,13 @@ def _apply_brand_overlay(
                 _ax = _bx + _br - (_amt_bb[2] - _amt_bb[0]) // 2 - _amt_bb[0]
                 draw_c.text((_ax, _ty - _amt_bb[1]), _pr_amt, font=_amt_fnt, fill=(*_SR, 255))
 
-            # ── Red bottom strip + Sunrise logo right-aligned ─────────────────────
+            # ── Red bottom strip + Sunrise logo ───────────────────────────────────
+            # Logo sits in the right quarter of the strip with equal padding left/right,
+            # matching the reference ad layout (not flush to the edge).
             draw_c.rectangle([0, H - _strip_h, W, H], fill=(*_SR, 255))
-            _sl   = _draw_sunrise_logo_img(int(_strip_h * 0.68), font_path)
-            _sl_x = W - _sl.width - _lm
-            _sl_y = H - _strip_h + (_strip_h - _sl.height) // 2
+            _sl    = _draw_sunrise_logo_img(int(_strip_h * 0.68), font_path)
+            _sl_x  = W - _sl.width - max(_lm * 2, int(W * 0.04))
+            _sl_y  = H - _strip_h + (_strip_h - _sl.height) // 2
             canvas.alpha_composite(_sl, (_sl_x, _sl_y))
 
             img = canvas
