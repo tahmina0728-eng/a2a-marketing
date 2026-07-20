@@ -872,7 +872,8 @@ def _apply_brand_overlay(
         _md        = ImageDraw.Draw(_measure)
         max_line_w = int(W * (0.70 if brand.lower() in ("sunrise",) else 0.55))
         base_sz    = max(44, W // 10)
-        _hl_weight = 700 if brand.lower() in ("sunrise",) and not _sunrise_offer else None
+        # _sunrise_offer is defined later but its value is just brand+product_name; inline here.
+        _hl_weight = 700 if brand.lower() in ("sunrise",) and not bool(product_name) else None
         lines_spec = []
         for line_text in sentences:
             sz = base_sz
