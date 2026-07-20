@@ -359,7 +359,14 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
       try {
         const body: Record<string,unknown> = { prompt };
         if (fmt==="tvc") body.duration = parseInt(tvcLen);
-        if (product) body.product_name = product;
+        if (product) {
+          // product stores just the plan name ("Easy Internet"); build the full
+          // formatted string with the current market's currency at send time so
+          // a market switch never silently sends a stale currency symbol.
+          const _sym = MARKET_CURRENCY_SYMBOL[market] ?? "CHF";
+          const _plan = SUNRISE_PRODUCT_PLANS.find(p => p.name === product);
+          body.product_name = _plan ? `${product} – ${_sym} ${_plan.amount}/mth` : product;
+        }
         if (market) body.market = market;
         const key = fmt==="image"?"kv":fmt==="tvc"?"tvc":"reel";
         const r = await fetch(`${API_BASE}/agents/${key}/run`, {
@@ -492,13 +499,21 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
               {brand === "Sunrise" && (() => {
                 const sym = MARKET_CURRENCY_SYMBOL[market] ?? "CHF";
                 const LIFESTYLE_OPT = "Lifestyle KV";
+                // opts show formatted label; we store only the plan name in state
+                // so a market switch never stales the stored currency symbol.
                 const sunriseOpts = [
                   LIFESTYLE_OPT,
                   ...SUNRISE_PRODUCT_PLANS.map(p => `${p.name} – ${sym} ${p.amount}/mth`),
                 ];
+                const selPlan = SUNRISE_PRODUCT_PLANS.find(p => p.name === product);
+                const chipVal = selPlan ? `${selPlan.name} – ${sym} ${selPlan.amount}/mth` : LIFESTYLE_OPT;
                 return (
-                  <ChipSel label="Sunrise Mode" value={product || LIFESTYLE_OPT}
-                    onChange={v => setProduct(v === LIFESTYLE_OPT ? "" : v)}
+                  <ChipSel label="Sunrise Mode" value={chipVal}
+                    onChange={v => {
+                      if (v === LIFESTYLE_OPT) { setProduct(""); return; }
+                      const plan = SUNRISE_PRODUCT_PLANS.find(p => `${p.name} – ${sym} ${p.amount}/mth` === v);
+                      setProduct(plan ? plan.name : "");
+                    }}
                     opts={sunriseOpts}
                     icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
                 );
@@ -512,7 +527,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
               <ChipSel label="Market" value={market} onChange={v => {
                   setMarket(v);
                   setLanguage((MARKET_LANGUAGES[v] ?? ["English"])[0]);
-                  setProduct("");  // clear Sunrise product — currency symbol changes with market
+                  // product stores only the plan name (no currency) so no clearing needed
                 }} opts={MARKETS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>} />
               {marketLangs.length > 1 && (
