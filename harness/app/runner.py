@@ -1158,14 +1158,14 @@ def _apply_brand_overlay(
                 _sz3 = _head_sz
                 while _sz3 > 13:
                     _fnt3 = _font(_sz3)
-                    try: _fnt3.set_variation_by_axes([700])
+                    try: _fnt3.set_variation_by_axes([800])  # ExtraBold — matches ref ad style
                     except: pass
                     _bb3 = _md3.textbbox((0, 0), _lt.upper(), font=_fnt3)
                     if (_bb3[2] - _bb3[0]) <= _head_max_w:
                         break
                     _sz3 = max(13, int(_sz3 * 0.88))
                 _fnt3 = _font(_sz3)
-                try: _fnt3.set_variation_by_axes([700])
+                try: _fnt3.set_variation_by_axes([800])
                 except: pass
                 _offer_specs.append((_lt.upper(), _fnt3, _sz3))
 
@@ -1220,7 +1220,7 @@ def _apply_brand_overlay(
 
             # ── Red bottom strip + Sunrise logo right-aligned ─────────────────────
             draw_c.rectangle([0, H - _strip_h, W, H], fill=(*_SR, 255))
-            _sl   = _draw_sunrise_logo_img(int(_strip_h * 0.60), font_path)
+            _sl   = _draw_sunrise_logo_img(int(_strip_h * 0.68), font_path)
             _sl_x = W - _sl.width - _lm
             _sl_y = H - _strip_h + (_strip_h - _sl.height) // 2
             canvas.alpha_composite(_sl, (_sl_x, _sl_y))
