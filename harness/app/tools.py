@@ -590,8 +590,11 @@ async def generate_and_save_kv_image(
         contents: list = []
 
         # ── 1. Brand style reference images (Assets/) — earliest = strongest influence ──
+        # Sunrise is excluded: campaign banner assets contain the S-circle logo and Gemini
+        # reproduces it in the generated image, causing a duplicate when the programmatic
+        # logo is composited in post-production via _apply_brand_overlay.
         loader      = _get_loader()
-        asset_paths = loader.list_assets(brand)[:2]  # cap at 2 style refs
+        asset_paths = [] if brand.lower() in ("sunrise",) else loader.list_assets(brand)[:2]
         if asset_paths:
             contents.append(
                 "BRAND VISUAL STYLE REFERENCE: The following image(s) show this brand's "

@@ -447,7 +447,10 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") ->
         # For brands with no Products folder (e.g. Sunrise), use a campaign asset
         # from the Assets folder as a visual style reference so Gemini can match
         # the brand's actual photography style, palette, and mood.
-        _style_refs = [] if products else [
+        # Sunrise is excluded: its campaign banner assets show the S-circle logo, and
+        # Gemini reproduces it in the generated image — causing a duplicate when we
+        # composite the programmatic logo in post-production via _apply_brand_overlay.
+        _style_refs = [] if products or brand.lower() in ("sunrise",) else [
             a for a in loader.list_assets(brand)
             if not a.lower().endswith((".mp4", ".svg"))
         ][:1]
@@ -483,9 +486,18 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") ->
 
         # Sunrise-specific composition rule — differs by mode
         if brand.lower() in ("sunrise",):
+            # Applied to both modes: Sunrise campaign banners contain the S-circle; we
+            # skip those as references, but Gemini still knows the brand from guidelines.
+            # Explicitly forbid reproducing any circular brand marks or logo elements.
+            _no_logo_rule = (
+                "CRITICAL RULE: Do NOT render any S-circle icons, Sunrise logos, sun icons, "
+                "circular brand marks, semicircle symbols, or any recognisable brand symbols "
+                "anywhere in the image. All brand elements are composited in post-production.\n"
+            )
             if product_name:
                 # Offer mode: high-energy celebratory scene, person right-half
                 image_prompt = (
+                    _no_logo_rule +
                     "MOOD & ENERGY: This is a product offer advertisement — the image must feel "
                     "exciting, joyful, and celebratory. Convey the thrill of a great deal: freedom, "
                     "achievement, and genuine happiness. Use dynamic, bold, high-contrast lighting "
@@ -501,6 +513,7 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") ->
             else:
                 # Lifestyle mode: full-bleed, left third clear for white text overlay
                 image_prompt = (
+                    _no_logo_rule +
                     "COMPOSITION RULE: The subject, action, and visual interest must be "
                     "concentrated in the CENTRE to RIGHT two-thirds of the frame. "
                     "The LEFT THIRD of the image should be relatively uncluttered and "
@@ -527,6 +540,8 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") ->
 
         if raw_bytes:
             from app.runner import _apply_brand_overlay
+            logger.info("kv_overlay", brand=brand, product_name=product_name, market=market,
+                        offer_mode=bool(product_name))
             overlaid = _apply_brand_overlay(raw_bytes, brand, headline, products[:1], product_name, market)
             import base64
             image_b64 = base64.b64encode(overlaid).decode("utf-8")
