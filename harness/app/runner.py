@@ -866,24 +866,22 @@ def _apply_brand_overlay(
 
         # Auto-fit each line: shrink font until it fits within allowed width.
         # Sunrise uses wider text zone (70%) to match their large-headline campaign style.
-        # Lifestyle headlines use Bold (700) — matches the impactful billboard reference.
-        # The weight is only applied to Sunrise via _font()'s set_variation_by_axes call.
+        # Sunrise lifestyle headlines: Light (300) — large SIZE carries the impact, not weight.
+        # Offer mode: font weight is handled separately in section 6 (ExtraBold 800).
         _measure   = Image.new("RGBA", (1, 1))
         _md        = ImageDraw.Draw(_measure)
         max_line_w = int(W * (0.70 if brand.lower() in ("sunrise",) else 0.55))
         base_sz    = max(44, W // 10)
-        # _sunrise_offer is defined later but its value is just brand+product_name; inline here.
-        _hl_weight = 700 if brand.lower() in ("sunrise",) and not bool(product_name) else None
         lines_spec = []
         for line_text in sentences:
             sz = base_sz
             while sz > 18:
-                fnt = _font(sz, _hl_weight)
+                fnt = _font(sz)  # Light (300) for Sunrise via _font() default
                 bb  = _md.textbbox((0, 0), line_text.upper(), font=fnt)
                 if (bb[2] - bb[0]) <= max_line_w:
                     break
                 sz = max(18, int(sz * 0.88))
-            lines_spec.append((line_text.upper(), sz, _font(sz, _hl_weight)))
+            lines_spec.append((line_text.upper(), sz, _font(sz)))
 
         _tmp = Image.new("RGBA", (W, 4))
         _td  = ImageDraw.Draw(_tmp)
@@ -953,7 +951,7 @@ def _apply_brand_overlay(
             if brand.lower() in ("sunrise",):
                 _tg     = "DREAM BIG. DO BIG."
                 _tg_sz  = max(16, int(lines_spec[0][1] * 0.30))
-                _tg_fnt = _font(_tg_sz)
+                _tg_fnt = _font(_tg_sz, 400)  # Regular (400) — slightly heavier than headline Light
                 _tg_y   = y + max(6, int(_tg_sz * 0.30))
                 for _dx, _dy in [(-1,-1),(1,-1),(-1,1),(1,1)]:
                     draw.text((text_x+_dx, _tg_y+_dy), _tg, font=_tg_fnt, fill=(0,0,0,80))
