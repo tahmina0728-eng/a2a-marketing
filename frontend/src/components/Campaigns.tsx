@@ -488,6 +488,20 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
                 icon={brand&&BRAND_ICONS[brand]
                   ? <img src={BRAND_ICONS[brand]} style={{ width:14, height:14, objectFit:"contain" as const }} alt="" />
                   : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>} />
+              {brand === "Sunrise" && (() => {
+                const sym = MARKET_CURRENCY_SYMBOL[market] ?? "CHF";
+                const LIFESTYLE_OPT = "Lifestyle KV";
+                const sunriseOpts = [
+                  LIFESTYLE_OPT,
+                  ...SUNRISE_PRODUCT_PLANS.map(p => `${p.name} – ${sym} ${p.amount}/mth`),
+                ];
+                return (
+                  <ChipSel label="Sunrise Mode" value={product || LIFESTYLE_OPT}
+                    onChange={v => setProduct(v === LIFESTYLE_OPT ? "" : v)}
+                    opts={sunriseOpts}
+                    icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
+                );
+              })()}
               <ChipSel label="Campaign Goal" value={goal} onChange={setGoal} opts={GOALS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/></svg>} />
               <ChipSel label="Target Audience" value={audience} onChange={setAudience} opts={AUDIENCES}
@@ -508,20 +522,6 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
                   opts={voices.map((v: BrandVoice) => v.name)}
                   icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>} />
               )}
-              {brand === "Sunrise" && (() => {
-                const sym = MARKET_CURRENCY_SYMBOL[market] ?? "CHF";
-                const LIFESTYLE_OPT = "Lifestyle KV";
-                const sunriseOpts = [
-                  LIFESTYLE_OPT,
-                  ...SUNRISE_PRODUCT_PLANS.map(p => `${p.name} – ${sym} ${p.amount}/mth`),
-                ];
-                return (
-                  <ChipSel label="Sunrise Mode" value={product || LIFESTYLE_OPT}
-                    onChange={v => setProduct(v === LIFESTYLE_OPT ? "" : v)}
-                    opts={sunriseOpts}
-                    icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
-                );
-              })()}
             </div>
 
             {/* Action buttons — right-aligned to match card edge */}
