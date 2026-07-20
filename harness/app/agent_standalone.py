@@ -382,10 +382,10 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") ->
             f'The product being promoted is: "{product_name}". '
             'Respond ONLY with JSON, no markdown fences: '
             '{"headline": "bold 4-7 word offer headline — exciting, benefit-driven, action-oriented", '
-            '"scene": "2-3 sentences describing a vibrant, high-energy scene: an excited or joyful '
-            'person (celebrating, laughing, fist-pump, arms wide open, triumphant expression), '
-            'dynamic lighting (warm sunlight, golden hour, bright studio flash), bold vivid colours, '
-            'sense of freedom and motion. Person on the RIGHT HALF of frame, lighter open space left. '
+            '"scene": "2-3 sentences: a confident, happy person actively holding or using a smartphone '
+            '(talking on it, smiling at the screen, or showing it). The person occupies the RIGHT HALF '
+            'of the frame. The upper-left area of the frame is naturally light, airy, and uncluttered — '
+            'bright sky, soft background, or blurred environment. Clean, aspirational, professional. '
             'Do not mention any text, words, logos, or price figures."}'
         )
     else:
@@ -495,19 +495,20 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") ->
                 "anywhere in the image. All brand elements are composited in post-production.\n"
             )
             if product_name:
-                # Offer mode: high-energy celebratory scene, person right-half
+                # Offer mode: full-bleed, person with phone/device on right, light upper-left
                 image_prompt = (
                     _no_logo_rule +
-                    "MOOD & ENERGY: This is a product offer advertisement — the image must feel "
-                    "exciting, joyful, and celebratory. Convey the thrill of a great deal: freedom, "
-                    "achievement, and genuine happiness. Use dynamic, bold, high-contrast lighting "
-                    "(warm golden light, bright sunshine, or vivid studio flash). Avoid neutral or "
-                    "muted tones — the image should pop with energy and optimism.\n"
-                    "COMPOSITION RULE: The subject (a joyful, energetic person — laughing, arms wide, "
-                    "triumphant, or looking excitedly at a smartphone) must be positioned on the "
-                    "RIGHT HALF of the frame, facing slightly left. "
-                    "The LEFT HALF must be open, clean, and lighter in tone — "
-                    "this area receives the offer headline and price overlay in post-production. "
+                    "SUBJECT: A confident, happy person actively using a smartphone or mobile device — "
+                    "holding it to their ear, smiling at the screen, or gesturing with it naturally. "
+                    "The device must be clearly and prominently visible. Professional, aspirational. "
+                    "Swiss lifestyle or business context.\n"
+                    "COMPOSITION: Full-bleed portrait or landscape frame. Person positioned on the "
+                    "RIGHT HALF of the frame, facing slightly left or toward camera. "
+                    "The UPPER-LEFT area of the frame must be naturally light, airy, and uncluttered "
+                    "(bright sky, soft blurred background, or open space) — this area will receive "
+                    "the headline and price overlay in post-production. "
+                    "LIGHTING: Bright, clean, natural daylight or soft studio light. Avoid dark or "
+                    "heavily shadowed backgrounds in the upper-left quadrant. "
                     "Do NOT render any text, numbers, logos, or brand symbols in the image.\n\n"
                 ) + image_prompt
             else:

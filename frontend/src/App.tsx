@@ -6002,9 +6002,9 @@ export default function App() {
   const [savedCampaigns, setSavedCampaigns] = useState<{id:string;name:string;brand:string}[]>(() => {
     try { return JSON.parse(localStorage.getItem("a2a_campaigns") ?? "[]"); } catch { return []; }
   });
-  const refreshCampaigns = () => {
+  const refreshCampaigns = useCallback(() => {
     try { setSavedCampaigns(JSON.parse(localStorage.getItem("a2a_campaigns") ?? "[]")); } catch { /**/ }
-  };
+  }, []);
 
   const [wizardStarted, setWizardStarted]   = useState(true);
   const [campaignName,  setCampaignName]    = useState("New Campaign");

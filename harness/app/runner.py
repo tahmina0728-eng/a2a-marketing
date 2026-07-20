@@ -707,19 +707,19 @@ def _draw_sunrise_logo_img(height_px: int, font_path: str | None) -> "Image":
     from PIL import Image as _PI, ImageDraw as _PID, ImageFont as _PIF
 
     h = max(28, height_px)
-    stroke = max(2, h // 9)
+    stroke = max(2, h // 14)   # ~7% stroke — matches reference
     icon = _PI.new("RGBA", (h, h), (0, 0, 0, 0))
     d = _PID.Draw(icon)
-    bb = [stroke, stroke, h - stroke - 1, h - stroke - 1]
+    bb = [0, 0, h - 1, h - 1]  # full bbox for both so fill is solid at bottom
     d.ellipse(bb, outline=(255, 255, 255, 255), width=stroke)
-    d.chord(bb, start=0, end=180, fill=(255, 255, 255, 255))
+    d.chord(bb, start=15, end=165, fill=(255, 255, 255, 255))
 
     fs = max(12, int(h * 0.72))
     try:
         fnt = _PIF.truetype(font_path, fs) if font_path else _PIF.load_default(size=fs)
         if font_path:
             try:
-                fnt.set_variation_by_axes([500])  # Medium weight for the wordmark
+                fnt.set_variation_by_axes([700])  # Bold weight for the wordmark
             except Exception:
                 pass
     except Exception:
@@ -1080,13 +1080,16 @@ def _apply_brand_overlay(
         except Exception as _stamp_err:
             logger.debug("product_stamp_skipped", brand=brand, error=str(_stamp_err))
 
-        # ── 6. Sunrise offer: product-ad layout ──────────────────────────────────
-        # White canvas split: dark bold headline + price badge (left) / person photo (right)
-        # + Sunrise Red strip at bottom. Matches sunrise.ch product-ad style.
+        # ── 6. Sunrise offer: 4 layout types, one per product plan ──────────────
+        # A: Business Dark  — photo + white vignette + dark text + circle badge + logo right
+        # B: Pink Gradient  — photo + rose overlay  + white text + big price right + logo left
+        # C: Warm Gradient  — photo + warm overlay  + white text + big price left  + logo left
+        # D: Sunrise Red    — photo + red overlay   + white text + big price right + logo left
         if _sunrise_offer:
             import re as _re
-            _SR = (218, 41, 28)  # Sunrise Red #DA291C
-            _strip_h = max(60, int(H * 0.15))
+
+            _SR      = (218, 41, 28)              # Sunrise Red #DA291C
+            _strip_h = max(55, int(H * 0.15))
 
             # ── Currency / plan label ─────────────────────────────────────────────
             _MARKET_CURRENCY: dict = {
@@ -1106,12 +1109,12 @@ def _apply_brand_overlay(
                 r'(CHF|EUR|GBP|USD|CAD|AUD|£|€|\$|Fr\.?)\s*(\d{1,4}[.,]\d{2})',
                 product_name, _re.IGNORECASE,
             )
-            _price_str = ""
+            _price_str  = ""
             _plan_label = product_name
             if _inline:
-                _amount = _inline.group(2).replace(",", ".")
-                _mk_cur = _MARKET_CURRENCY.get(market.lower().strip(), "") if market.strip() else ""
-                _currency = _mk_cur if _mk_cur else _SYM_MAP.get(_inline.group(1).lower(), _inline.group(1).upper())
+                _amount    = _inline.group(2).replace(",", ".")
+                _mk_cur    = _MARKET_CURRENCY.get(market.lower().strip(), "") if market.strip() else ""
+                _currency  = _mk_cur if _mk_cur else _SYM_MAP.get(_inline.group(1).lower(), _inline.group(1).upper())
                 _price_str = f"{_currency} {_amount}"
                 _plan_label = _re.sub(
                     r'(CHF|EUR|GBP|USD|CAD|AUD|£|€|\$|Fr\.?)\s*\d{1,4}[.,]\d{2}.*',
@@ -1120,117 +1123,215 @@ def _apply_brand_overlay(
             else:
                 _pm2 = _re.search(r'(\d{1,4}[.,]\d{2})', product_name)
                 if _pm2:
-                    _currency  = _MARKET_CURRENCY.get(market.lower().strip(), "CHF")
-                    _price_str = f"{_currency} {_pm2.group(1).replace(',', '.')}"
+                    _currency   = _MARKET_CURRENCY.get(market.lower().strip(), "CHF")
+                    _price_str  = f"{_currency} {_pm2.group(1).replace(',', '.')}"
                     _plan_label = _re.sub(r'\d{1,4}[.,]\d{2}.*', '', product_name).strip().rstrip("–-/").strip()
 
-            # ── White canvas ──────────────────────────────────────────────────────
-            canvas = Image.new("RGBA", (W, H), (255, 255, 255, 255))
+            # ── Select layout type by plan name ──────────────────────────────────
+            _PLAN_TYPES: dict = {
+                "mobile unlimited":  "B",   # Pink gradient  — vibrant consumer mobile
+                "easy internet":     "C",   # Warm gradient  — friendly home browsing
+                "5g home internet":  "D",   # Red gradient   — bold speed/technology
+                "business connect":  "A",   # Business dark  — professional, like Offer1
+            }
+            _otype = _PLAN_TYPES.get(_plan_label.lower().strip(), "B")
+
+            # ── Full-bleed canvas: AI photo as background ─────────────────────────
+            canvas = img.convert("RGBA")
             draw_c = ImageDraw.Draw(canvas)
+            _md3   = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
 
-            # ── Person photo on right 58% (crop Gemini image to fit) ──────────────
-            _split_x = int(W * 0.42)
-            _right_w = W - _split_x
-            _photo_h = H - _strip_h
-            _ph      = img.convert("RGBA")
-            _sc      = max(_right_w / max(1, _ph.width), _photo_h / max(1, _ph.height))
-            _ph_r    = _ph.resize((max(1, int(_ph.width * _sc)), max(1, int(_ph.height * _sc))), Image.LANCZOS)
-            _cx_off  = (_ph_r.width  - _right_w) // 2
-            _cy_off  = max(0, (_ph_r.height - _photo_h) // 2)
-            _photo_crop = _ph_r.crop((_cx_off, _cy_off, _cx_off + _right_w, _cy_off + _photo_h))
-            canvas.alpha_composite(_photo_crop, (_split_x, 0))
+            if _otype == "A":
+                # White vignette upper-left so dark headline reads on any photo
+                _txt_col = (46, 46, 46, 255)    # #2E2E2E
+                _lbl_col = (*_SR, 255)
+                _vw, _vh = int(W * 0.65), H - _strip_h
+                _vg = Image.new("RGBA", (_vw, _vh), (0, 0, 0, 0))
+                _vd = ImageDraw.Draw(_vg)
+                for _row in range(_vh):
+                    _va = int(115 * (1.0 - _row / _vh) ** 0.65)
+                    _vd.line([(0, _row), (_vw, _row)], fill=(255, 255, 255, _va))
+                canvas.alpha_composite(_vg, (0, 0))
+            else:
+                # Coloured gradient overlay left-to-right; white text on top
+                _txt_col = (255, 255, 255, 255)
+                _lbl_col = (255, 255, 255, 210)
+                _GRAD: dict = {
+                    "B": (215, 95, 135),    # rose/pink  — Mobile Unlimited
+                    "C": (155, 135, 112),   # warm beige — Easy Internet
+                    "D": (218,  41,  28),   # Sunrise Red — 5G Home Internet
+                }
+                _gc   = _GRAD.get(_otype, (155, 135, 112))
+                _gw, _gh = int(W * 0.72), H
+                _gd   = Image.new("RGBA", (_gw, _gh), (0, 0, 0, 0))
+                _gdrw = ImageDraw.Draw(_gd)
+                for _gx in range(_gw):
+                    _ga = int(210 * (1.0 - _gx / _gw) ** 0.55)
+                    _gdrw.line([(_gx, 0), (_gx, _gh)], fill=(*_gc, _ga))
+                canvas.alpha_composite(_gd, (0, 0))
 
-            # Soft white fade on the left edge of the photo (blends into white background)
-            _fade_w = int(W * 0.09)
-            _fade   = Image.new("RGBA", (_fade_w, _photo_h), (0, 0, 0, 0))
-            _fdrw   = ImageDraw.Draw(_fade)
-            for _fx in range(_fade_w):
-                _fa = int(255 * (1.0 - _fx / _fade_w) ** 0.6)
-                _fdrw.line([(_fx, 0), (_fx, _photo_h)], fill=(255, 255, 255, _fa))
-            canvas.alpha_composite(_fade, (_split_x, 0))
+            # ── Headline (uniform size/weight across all lines) ───────────────────
+            _lm         = max(36, int(W * 0.05))
+            _head_max_w = int(W * 0.52)
+            _head_sz    = max(20, int(H * 0.115))
 
-            # ── Offer headline — dark bold on white left panel ────────────────────
-            _lm       = max(20, int(W * 0.04))
-            _head_max_w = int(_split_x * 0.90)
-            _head_sz  = max(20, int(H * 0.105))
-            _dark_col = (12, 12, 12, 255)
-            _md3      = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
-            _offer_specs = []
+            def _tracked_w(text, fnt, tracking):
+                total = sum(
+                    (_md3.textbbox((0, 0), ch, font=fnt)[2]
+                     - _md3.textbbox((0, 0), ch, font=fnt)[0]) + tracking
+                    for ch in text
+                )
+                return max(0, total - tracking)
+
+            def _draw_tracked(drw, xy, text, fnt, fill, tracking):
+                x, y = xy
+                for ch in text:
+                    drw.text((x, y), ch, font=fnt, fill=fill)
+                    cb = _md3.textbbox((0, 0), ch, font=fnt)
+                    x += (cb[2] - cb[0]) + tracking
+
+            # Pass 1: most-constrained size so all lines match
+            _sz_uni = _head_sz
             for _lt in sentences:
                 _sz3 = _head_sz
                 while _sz3 > 13:
-                    _fnt3 = _font(_sz3)
-                    try: _fnt3.set_variation_by_axes([800])  # ExtraBold — matches ref ad style
+                    _f3 = _font(_sz3)
+                    try: _f3.set_variation_by_axes([300])
                     except: pass
-                    _bb3 = _md3.textbbox((0, 0), _lt.upper(), font=_fnt3)
-                    if (_bb3[2] - _bb3[0]) <= _head_max_w:
+                    if _tracked_w(_lt.upper(), _f3, max(1, int(_sz3 * 0.02))) <= _head_max_w:
                         break
                     _sz3 = max(13, int(_sz3 * 0.88))
-                _fnt3 = _font(_sz3)
-                try: _fnt3.set_variation_by_axes([800])
-                except: pass
-                _offer_specs.append((_lt.upper(), _fnt3, _sz3))
+                _sz_uni = min(_sz_uni, _sz3)
 
-            _hy = int(H * 0.06)
-            for _lt3, _fnt3, _sz3 in _offer_specs:
-                _bb3 = draw_c.textbbox((0, 0), _lt3, font=_fnt3)
-                draw_c.text((_lm, _hy), _lt3, font=_fnt3, fill=_dark_col)
-                _hy += (_bb3[3] - _bb3[1]) + int(_sz3 * 0.18)
+            _fnt_uni = _font(_sz_uni)
+            try: _fnt_uni.set_variation_by_axes([300])   # Light (300)
+            except: pass
 
-            # ── Plan label (Sunrise Red, semibold) ────────────────────────────────
+            _hy = max(40, int(H * 0.08))
+            for _lt3 in sentences:
+                _bb3 = _md3.textbbox((0, 0), _lt3.upper(), font=_fnt_uni)
+                _draw_tracked(draw_c, (_lm, _hy), _lt3.upper(), _fnt_uni,
+                              _txt_col, max(1, int(_sz_uni * 0.02)))
+                _hy += (_bb3[3] - _bb3[1]) + int(_sz_uni * 0.08)
+
+            # ── Plan label ────────────────────────────────────────────────────────
             _hy += int(H * 0.025)
-            _lbl_sz  = max(11, int(H * 0.032))
-            _lbl_fnt = _font(_lbl_sz)
+            _lbl_fnt = _font(max(11, int(H * 0.032)))
             try: _lbl_fnt.set_variation_by_axes([600])
             except: pass
-            draw_c.text((_lm, _hy), _plan_label.upper(), font=_lbl_fnt, fill=(*_SR, 255))
+            _lbl_bb3 = _md3.textbbox((0, 0), _plan_label.upper(), font=_lbl_fnt)
+            draw_c.text((_lm, _hy), _plan_label.upper(), font=_lbl_fnt, fill=_lbl_col)
+            _hy += (_lbl_bb3[3] - _lbl_bb3[1]) + int(H * 0.015)  # advance past label
 
-            # ── Price badge — white circle, red border + Sunrise Red price text ────
+            # ── Price ─────────────────────────────────────────────────────────────
             if _price_str:
-                _br  = max(38, int(min(W, H) * 0.13))
-                _bx  = _lm
-                _by  = H - _strip_h - _br * 2 - int(H * 0.025)
-                _bdg = Image.new("RGBA", (_br * 2, _br * 2), (0, 0, 0, 0))
-                _bdrw = ImageDraw.Draw(_bdg)
-                _bdrw.ellipse(
-                    [0, 0, _br * 2 - 1, _br * 2 - 1],
-                    fill=(255, 255, 255, 255),
-                    outline=(*_SR, 255),
-                    width=max(2, _br // 14),
-                )
-                canvas.alpha_composite(_bdg, (_bx, _by))
-                # Price split into currency label + amount for two-line layout inside badge
-                _pparts  = _price_str.split(" ", 1)
-                _pr_lbl  = _pparts[0] if len(_pparts) > 1 else ""
-                _pr_amt  = _pparts[1] if len(_pparts) > 1 else _price_str
-                _amt_sz  = max(10, int(_br * 0.50))
-                _lbl2_sz = max(7,  int(_br * 0.24))
-                _amt_fnt = _font(_amt_sz)
-                try: _amt_fnt.set_variation_by_axes([700])
-                except: pass
-                _lbl2_fnt = _font(_lbl2_sz)
-                _amt_bb   = draw_c.textbbox((0, 0), _pr_amt, font=_amt_fnt)
-                _lbl2_bb  = draw_c.textbbox((0, 0), _pr_lbl, font=_lbl2_fnt) if _pr_lbl else (0, 0, 0, 0)
-                _txt_h    = (_amt_bb[3] - _amt_bb[1]) + ((_lbl2_bb[3] - _lbl2_bb[1]) + 3 if _pr_lbl else 0)
-                _ty       = _by + _br - _txt_h // 2
-                if _pr_lbl:
-                    _lx = _bx + _br - (_lbl2_bb[2] - _lbl2_bb[0]) // 2 - _lbl2_bb[0]
-                    draw_c.text((_lx, _ty - _lbl2_bb[1]), _pr_lbl, font=_lbl2_fnt, fill=(*_SR, 255))
-                    _ty += (_lbl2_bb[3] - _lbl2_bb[1]) + 3
-                _ax = _bx + _br - (_amt_bb[2] - _amt_bb[0]) // 2 - _amt_bb[0]
-                draw_c.text((_ax, _ty - _amt_bb[1]), _pr_amt, font=_amt_fnt, fill=(*_SR, 255))
+                _pp      = _price_str.split(" ", 1)
+                _pr_curr = _pp[0] if len(_pp) > 1 else ""
+                _pr_amt  = _pp[1] if len(_pp) > 1 else _price_str
 
-            # ── Red bottom strip + Sunrise logo ───────────────────────────────────
-            # Logo sits in the right quarter of the strip with equal padding left/right,
-            # matching the reference ad layout (not flush to the edge).
+                if _otype == "A":
+                    # ── Circle badge (Offer1 / Business Dark style) ───────────────
+                    _br   = max(38, int(min(W, H) * 0.13))
+                    _bx   = _lm
+                    _by   = H - _strip_h - _br * 2 - int(H * 0.025)
+                    _bdg  = Image.new("RGBA", (_br * 2, _br * 2), (0, 0, 0, 0))
+                    _bdrw = ImageDraw.Draw(_bdg)
+                    _bdrw.ellipse(
+                        [0, 0, _br * 2 - 1, _br * 2 - 1],
+                        fill=(255, 255, 255, 255),
+                        outline=(185, 185, 185, 255), width=max(1, _br // 22),
+                    )
+                    canvas.alpha_composite(_bdg, (_bx, _by))
+                    _amt_fnt  = _font(max(10, int(_br * 0.50)))
+                    try: _amt_fnt.set_variation_by_axes([700])
+                    except: pass
+                    _cur_fnt  = _font(max(7, int(_br * 0.24)))
+                    _amt_bb   = draw_c.textbbox((0, 0), _pr_amt,  font=_amt_fnt)
+                    _cur_bb   = draw_c.textbbox((0, 0), _pr_curr, font=_cur_fnt) if _pr_curr else (0, 0, 0, 0)
+                    _badge_th = (_amt_bb[3]-_amt_bb[1]) + ((_cur_bb[3]-_cur_bb[1]+3) if _pr_curr else 0)
+                    _ty = _by + _br - _badge_th // 2
+                    _dk = (46, 46, 46, 255)
+                    if _pr_curr:
+                        _lx = _bx + _br - (_cur_bb[2]-_cur_bb[0]) // 2 - _cur_bb[0]
+                        draw_c.text((_lx, _ty - _cur_bb[1]), _pr_curr, font=_cur_fnt, fill=_dk)
+                        _ty += (_cur_bb[3]-_cur_bb[1]) + 3
+                    _ax = _bx + _br - (_amt_bb[2]-_amt_bb[0]) // 2 - _amt_bb[0]
+                    draw_c.text((_ax, _ty - _amt_bb[1]), _pr_amt, font=_amt_fnt, fill=_dk)
+
+                else:
+                    # ── Hero price: large floating ExtraBold (Offer2 / Offer3 style) ─
+                    _big_sz  = max(30, int(H * 0.33))
+                    _big_fnt = _font(_big_sz)
+                    try: _big_fnt.set_variation_by_axes([800])
+                    except: pass
+                    _cur_sz  = max(10, int(_big_sz * 0.22))
+                    _cur_fnt = _font(_cur_sz)
+                    try: _cur_fnt.set_variation_by_axes([300])
+                    except: pass
+
+                    _amt_bb = _md3.textbbox((0, 0), _pr_amt,  font=_big_fnt)
+                    _cur_bb = _md3.textbbox((0, 0), _pr_curr, font=_cur_fnt)
+                    _amt_w  = _amt_bb[2] - _amt_bb[0]
+                    _cur_h  = _cur_bb[3] - _cur_bb[1]
+
+                    if _otype == "C":
+                        # Left side below plan label (Offer3 style)
+                        _px    = _lm
+                        _cur_x = _lm  # left-align CHF
+                        # Reserve space for full price block: CHF label + gap + number
+                        _price_block_h = _cur_h + int(_big_sz * 0.08) + int(_big_sz * 1.05)
+                        _safe_top = H - _strip_h - _price_block_h - int(H * 0.02)
+                        _py = min(_hy + int(H * 0.02), _safe_top)
+                    else:
+                        # Right side, top-aligned (Offer2 / Brand Red style)
+                        _px    = W - _lm - _amt_w
+                        _py    = max(36, int(H * 0.07))
+                        # Right-align CHF to the same right edge as the amount number
+                        _cur_x = W - _lm - _cur_bb[2]
+
+                    # Currency label above amount — right-aligned to price right edge
+                    draw_c.text((_cur_x, _py), _pr_curr, font=_cur_fnt, fill=(255, 255, 255, 200))
+                    _py_amt = _py + _cur_h + int(_big_sz * 0.08)
+                    draw_c.text((_px - _amt_bb[0], _py_amt - _amt_bb[1]),
+                                _pr_amt, font=_big_fnt, fill=(255, 255, 255, 255))
+
+            # ── Red footer strip ──────────────────────────────────────────────────
             draw_c.rectangle([0, H - _strip_h, W, H], fill=(*_SR, 255))
-            _sl    = _draw_sunrise_logo_img(int(_strip_h * 0.68), font_path)
-            _sl_x  = W - _sl.width - max(_lm * 2, int(W * 0.04))
-            _sl_y  = H - _strip_h + (_strip_h - _sl.height) // 2
-            canvas.alpha_composite(_sl, (_sl_x, _sl_y))
+
+            # ── Sunrise logo: S-circle straddles footer, "Sunrise" stacked below ──
+            _logo_mg = max(20, int(W * 0.025))
+            _ic_d2   = max(28, _strip_h)
+            # Circle center x: left-aligned (B/C/D) or right-aligned (A)
+            _ic_cx   = (_logo_mg + _ic_d2 // 2) if _otype != "A" else (W - _logo_mg - _ic_d2 // 2)
+
+            _ic_img2 = Image.new("RGBA", (_ic_d2, _ic_d2), (0, 0, 0, 0))
+            _ic_drw2 = ImageDraw.Draw(_ic_img2)
+            _ic_stk2 = max(2, _ic_d2 // 14)
+            _ic_bb2  = [0, 0, _ic_d2-1, _ic_d2-1]
+            _ic_drw2.ellipse(_ic_bb2, outline=(255, 255, 255, 255), width=_ic_stk2)
+            _ic_drw2.chord(_ic_bb2, start=15, end=165, fill=(255, 255, 255, 255))
+            _ic_x2   = _ic_cx - _ic_d2 // 2
+            _ic_y2   = H - _strip_h - _ic_d2 // 2
+            canvas.alpha_composite(_ic_img2, (max(0, _ic_x2), max(0, _ic_y2)))
+
+            # "Sunrise" wordmark: centered horizontally under circle, inside footer
+            _rem     = _strip_h - _ic_d2 // 2          # footer height below circle centre
+            _wm_sz   = max(11, int(_rem * 0.75))
+            _wm_fnt2 = _font(_wm_sz)
+            try: _wm_fnt2.set_variation_by_axes([700])
+            except: pass
+            _wm_bb2  = _md3.textbbox((0, 0), "Sunrise", font=_wm_fnt2)
+            _wm_w2   = _wm_bb2[2] - _wm_bb2[0]
+            _wm_h2   = _wm_bb2[3] - _wm_bb2[1]
+            # Centre text in the strip area below the circle's lower half
+            _wm_cy   = H - _strip_h + _ic_d2 // 2 + max(0, (_rem - _wm_h2) // 2)
+            _wm_x2   = _ic_cx - _wm_w2 // 2 - _wm_bb2[0]
+            _wm_y2   = _wm_cy - _wm_bb2[1]
+            draw_c.text((_wm_x2, _wm_y2), "Sunrise", font=_wm_fnt2, fill=(255, 255, 255, 255))
 
             img = canvas
-            logger.info("sunrise_offer_layout_applied", product=product_name, price=_price_str)
+            logger.info("sunrise_offer_layout_applied",
+                        product=product_name, price=_price_str, layout=_otype)
 
         result = img.convert("RGB")
         buf = io.BytesIO()

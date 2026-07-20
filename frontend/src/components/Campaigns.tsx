@@ -17,7 +17,37 @@ interface GeneratedResult {
 
 const BRANDS    = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank","Sunrise"];
 const GOALS     = ["Brand Awareness","Drive Sales","Lead Generation","Product Launch","Engagement"];
-const AUDIENCES = ["Women 18–35","Men 25–45","Gen Z 16–24","Professionals 30–50","Families"];
+const DEFAULT_AUDIENCES = ["Women 18–35","Men 25–45","Gen Z 16–24","Professionals 30–50","Families"];
+const BRAND_AUDIENCES: Record<string, string[]> = {
+  "Sunrise": [
+    "Young Adults 18–35",
+    "Families",
+    "Business Professionals",
+    "SME & Entrepreneurs",
+    "Digital Natives 16–24",
+  ],
+  "UBS Bank": [
+    "Affluent Professionals 30–55",
+    "HNW Investors 45+",
+    "Young Professionals 25–40",
+    "Business Owners",
+    "Retirees 60+",
+  ],
+  "Glenfiddich": [
+    "Whisky Enthusiasts 30–55",
+    "Luxury Consumers 35–60",
+    "Gift Buyers 25–50",
+    "Connoisseurs 40+",
+    "On-Trade Professionals",
+  ],
+  "Boozt": [
+    "Fashion-Forward Women 20–40",
+    "Men's Style Seekers 25–45",
+    "Trend-Conscious Gen Z 18–28",
+    "Premium Shoppers 30–50",
+    "Active Lifestyle 20–40",
+  ],
+};
 const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Instagram, Facebook"];
 const MARKETS   = ["United Kingdom","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 const MARKET_LANGUAGES: Record<string, string[]> = {
@@ -59,6 +89,26 @@ const BRAND_ICONS: Record<string, string> = {
 };
 
 const G = "linear-gradient(135deg,#7c3aed,#a855f7,#6366f1)";
+
+// Compress a base64 JPEG to ≤800 px wide at 80 % quality so it fits in localStorage
+function compressImageForStorage(b64: string): Promise<string> {
+  return new Promise<string>((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX_W = 800;
+      const scale = Math.min(1, MAX_W / img.width);
+      const canvas = document.createElement("canvas");
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext("2d");
+      if (!ctx) { resolve(b64); return; }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL("image/jpeg", 0.80).split(",")[1] ?? b64);
+    };
+    img.onerror = () => resolve(b64);
+    img.src = `data:image/jpeg;base64,${b64}`;
+  });
+}
 
 // ── Horizontal Step Progress ───────────────────────────────────
 function StepProgress({ current }: { current: 1|2|3|4 }) {
@@ -203,6 +253,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
   const [brand, setBrand]       = useState(initialBrand ?? "");
   const [goal, setGoal]       = useState("");
   const [audience, setAudience] = useState("");
+  const audiences = BRAND_AUDIENCES[brand] ?? DEFAULT_AUDIENCES;
   const [platform, setPlatform] = useState("");
   const [voiceName, setVoiceName] = useState("");
   const [market, setMarket]       = useState("");
@@ -280,18 +331,24 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
     })();
     const existingId = stored.find(c => c.name === name)?.id;
     const id = existingId ?? `c_${Date.now()}`;
-    if (!existingId) {
-      const updated = [{ id, name, brand }, ...stored.filter(c => c.name !== name)].slice(0, 10);
-      localStorage.setItem("a2a_campaigns", JSON.stringify(updated));
-      onSaved?.();
-    }
-    // Persist results (image only — keep localStorage size manageable)
-    try {
-      const toSave: Partial<Record<FormatType, GeneratedResult>> = {};
-      if (results.image) toSave.image = { image_b64: results.image.image_b64, headline: results.image.headline, tagline: results.image.tagline };
-      localStorage.setItem(`a2a_results_${id}`, JSON.stringify(toSave));
-    } catch {}
-  }, [anyRes, campaignName, brief, brand, onSaved, results]);
+    // Always move campaign to front (covers new + re-generated campaigns)
+    const updated = [{ id, name, brand }, ...stored.filter(c => c.id !== id)].slice(0, 10);
+    localStorage.setItem("a2a_campaigns", JSON.stringify(updated));
+    onSaved?.();
+    // Compress image then persist — avoids QuotaExceededError from raw base64
+    (async () => {
+      try {
+        const toSave: Partial<Record<FormatType, GeneratedResult>> = {};
+        if (results.image?.image_b64) {
+          const compressed = await compressImageForStorage(results.image.image_b64);
+          toSave.image = { image_b64: compressed, headline: results.image.headline, tagline: results.image.tagline };
+        }
+        localStorage.setItem(`a2a_results_${id}`, JSON.stringify(toSave));
+      } catch (e) {
+        console.warn("campaign result save failed:", e);
+      }
+    })();
+  }, [anyRes, campaignName, brand, onSaved, results]);
 
   const [modifyBusy, setModifyBusy] = useState(false);
 
@@ -492,7 +549,12 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
 
             {/* Chip selectors */}
             <div style={{ display:"flex", gap:10, marginTop:16, flexWrap:"wrap" as const }}>
-              <ChipSel label="Brand" value={brand} onChange={v => { setBrand(v); if (v !== "Sunrise") setProduct(""); }} opts={BRANDS}
+              <ChipSel label="Brand" value={brand} onChange={v => {
+                  setBrand(v);
+                  if (v !== "Sunrise") setProduct("");
+                  const newAudiences = BRAND_AUDIENCES[v] ?? DEFAULT_AUDIENCES;
+                  if (audience && !newAudiences.includes(audience)) setAudience("");
+                }} opts={BRANDS}
                 icon={brand&&BRAND_ICONS[brand]
                   ? <img src={BRAND_ICONS[brand]} style={{ width:14, height:14, objectFit:"contain" as const }} alt="" />
                   : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>} />
@@ -520,7 +582,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
               })()}
               <ChipSel label="Campaign Goal" value={goal} onChange={setGoal} opts={GOALS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/></svg>} />
-              <ChipSel label="Target Audience" value={audience} onChange={setAudience} opts={AUDIENCES}
+              <ChipSel label="Target Audience" value={audience} onChange={setAudience} opts={audiences}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>} />
               <ChipSel label="Platform" value={platform} onChange={setPlatform} opts={PLATFORMS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
