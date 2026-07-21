@@ -322,9 +322,9 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   const anyRes = Object.values(results).some(r => r?.image_b64||r?.video_b64);
   const hasRes = (f: FormatType) => !!(results[f]?.image_b64 || results[f]?.video_b64);
 
-  // Save campaign name + results to localStorage once generation is done.
-  // onSaved (sidebar refresh) fires AFTER the async image save so the campaign
-  // is only visible in the list once results are actually persisted.
+  // Save campaign + results to localStorage when generation is done.
+  // Strategy: write synchronously first (guarantees data is there even if
+  // compression fails), then replace with a smaller compressed copy async.
   useEffect(() => {
     if (!anyRes) return;
     const name = campaignName.trim() || brand || "Untitled Campaign";
@@ -334,23 +334,40 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
     const existingId = stored.find(c => c.name === name)?.id;
     const id = existingId ?? `c_${Date.now()}`;
     const updated = [{ id, name, brand }, ...stored.filter(c => c.id !== id)].slice(0, 10);
-    localStorage.setItem("a2a_campaigns", JSON.stringify(updated));
-    (async () => {
-      try {
-        const toSave: Partial<Record<FormatType, GeneratedResult>> = {};
-        if (results.image?.image_b64) {
-          const compressed = await compressImageForStorage(results.image.image_b64);
-          toSave.image = { image_b64: compressed, headline: results.image.headline, tagline: results.image.tagline };
-        }
-        localStorage.setItem(`a2a_results_${id}`, JSON.stringify(toSave));
-        // Save brief + audience so they can be restored when re-opening the campaign
-        if (brief.trim()) localStorage.setItem(`a2a_brief_${id}`, JSON.stringify({ brief, audience, market, language, product }));
-      } catch (e) {
-        console.warn("campaign result save failed:", e);
-      } finally {
-        onSaved?.();  // refresh sidebar only after results are persisted
+
+    try {
+      // 1. Campaign list — always write first
+      localStorage.setItem("a2a_campaigns", JSON.stringify(updated));
+
+      // 2. Results — write synchronously so clicking the campaign immediately works
+      const toSaveSync: Partial<Record<FormatType, GeneratedResult>> = {};
+      if (results.image?.image_b64) {
+        toSaveSync.image = { image_b64: results.image.image_b64, headline: results.image.headline };
       }
-    })();
+      localStorage.setItem(`a2a_results_${id}`, JSON.stringify(toSaveSync));
+
+      // 3. Brief context — always write if we have a brief
+      if (brief.trim()) {
+        localStorage.setItem(`a2a_brief_${id}`, JSON.stringify({ brief, audience, market, language, product }));
+      }
+    } catch (e) {
+      console.warn("campaign save failed:", e);
+    }
+
+    // 4. Notify sidebar (safe even if save failed — user sees campaign with empty results)
+    onSaved?.();
+
+    // 5. Replace stored image with compressed copy to save space (fire-and-forget)
+    if (results.image?.image_b64) {
+      compressImageForStorage(results.image.image_b64).then(compressed => {
+        try {
+          const toSaveCompressed: Partial<Record<FormatType, GeneratedResult>> = {
+            image: { image_b64: compressed, headline: results.image!.headline },
+          };
+          localStorage.setItem(`a2a_results_${id}`, JSON.stringify(toSaveCompressed));
+        } catch { /* original already saved — quota issue on compressed is fine to ignore */ }
+      });
+    }
   }, [anyRes, campaignName, brand, brief, audience, market, language, product, onSaved, results]);
 
   const [modifyBusy, setModifyBusy] = useState(false);
