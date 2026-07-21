@@ -2115,7 +2115,7 @@ function BriefingPanel({ m, liveMsg, brand }: { m?: Record<string,unknown>; live
   const ft      = (m?.fan_truth ?? {}) as any;
   const aud     = (m?.audience  ?? {}) as any;
   const kpis    = (m?.kpis      ?? []) as any[];
-  const hasData = !!ft?.overall;
+  const hasData = !!(ft?.overall && ft.overall > 0);
 
   const score      = hasData ? (ft.overall ?? 0) : 0;
   const scoreColor = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
@@ -3827,13 +3827,14 @@ function ResultsView({ output, campaignId }: {
         {brief && (() => {
           const n = S();
           const score   = brief.fan_truth?.overall ?? 0;
+          const showScore = score > 0;
           const sc = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
           return (
             <StageCard step={n} label="Brief Validation" color="#7c3aed">
               {/* Score + statement row */}
-              <div style={{ display: "grid", gridTemplateColumns: "180px 1fr" }}>
-                {/* Left: score pill */}
-                <div style={{
+              <div style={{ display: "grid", gridTemplateColumns: showScore ? "180px 1fr" : "1fr" }}>
+                {/* Left: score pill — only when score > 0 */}
+                {showScore && <div style={{
                   display: "flex", flexDirection: "column" as const, alignItems: "center",
                   justifyContent: "center", gap: 10, padding: "28px 16px",
                   borderRight: "1px solid rgba(255,255,255,0.07)",
@@ -3853,7 +3854,7 @@ function ResultsView({ output, campaignId }: {
                       }}>PASS</span>
                     )}
                   </div>
-                </div>
+                </div>}
                 {/* Right: statement + KPIs */}
                 <div style={{ padding: "22px 22px 18px" }}>
                   {brief.fan_truth?.statement && (

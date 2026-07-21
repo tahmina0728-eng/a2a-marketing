@@ -369,9 +369,22 @@ export default function CampaignForm({ onFullCampaign }: {
       }
     }
 
-    const fanTruth = `${brandLabel} customers in ${data.market} seek authentic value`
-      + (resolvedSeason !== "Evergreen" ? ` during ${resolvedSeason}` : " in everyday moments")
-      + `, and reward brands that understand their lives, not just their wallets.`;
+    // Build a specific, brand-and-product-aware fan truth so Logos scores it well
+    let fanTruth: string;
+    if (isSunrise && data.sunrisePlan === "Business Connect") {
+      const audience = data.sunriseAudience || "business professionals";
+      fanTruth = `${audience} in ${data.market} need uninterrupted, always-on connectivity to run their business with confidence — they choose Sunrise Business Connect because downtime is not an option.`;
+    } else if (isSunrise && data.sunrisePlan) {
+      const audience = data.sunriseAudience || "customers";
+      fanTruth = `${audience} in ${data.market} want the freedom to stay connected without limits or hidden costs — they trust Sunrise ${data.sunrisePlan} because it gives them exactly what they pay for.`;
+    } else if (isSunrise) {
+      const audience = data.sunriseAudience || "customers";
+      fanTruth = `${audience} in ${data.market} seek a brand that genuinely reflects their lifestyle — Sunrise earns their loyalty by showing up authentically in the moments that matter most to them.`;
+    } else {
+      fanTruth = `${brandLabel} fans in ${data.market} reward brands that understand the specific moments of their lives`
+        + (resolvedSeason !== "Evergreen" ? ` — especially during ${resolvedSeason}` : "")
+        + `, not just their demographic profile.`;
+    }
 
     onFullCampaign({
       campaign_name:    data.campaignName.trim(),
