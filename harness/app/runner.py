@@ -1286,10 +1286,9 @@ def _apply_brand_overlay(
             draw_c.rectangle([0, H - _strip_h, W, H], fill=(*_SR, 255))
 
             # ── Sunrise logo: S-circle straddles footer, "Sunrise" beside it in red strip ──
-            # Reference layout: [S-circle (straddling clearly)] [Sunrise text] — horizontal
-            # Circle is 1.5× footer height so it protrudes well above the footer edge
+            # Reference: circle 1.2× footer height, centre exactly at footer top edge (50% straddle)
             _logo_mg = max(20, int(W * 0.025))
-            _ic_d2 = max(26, int(_strip_h * 0.82))
+            _ic_d2   = max(28, int(_strip_h * 1.2))
             # Circle centre x: left side for B/C/D, right side for A
             _ic_cx   = (_logo_mg + _ic_d2 // 2) if _otype != "A" else (W - _logo_mg - _ic_d2 // 2)
 
@@ -1300,7 +1299,7 @@ def _apply_brand_overlay(
             _ic_drw2.ellipse(_ic_bb2, outline=(255, 255, 255, 255), width=_ic_stk2)
             _ic_drw2.chord(_ic_bb2, start=15, end=165, fill=(255, 255, 255, 255))
             _ic_x2 = _ic_cx - _ic_d2 // 2
-            _ic_y2 = H - _strip_h - int(_ic_d2 * 0.38)   # centre at footer top edge — 50% straddle
+            _ic_y2 = H - _strip_h - _ic_d2 // 2  # true 50% straddle: centre exactly at footer edge
             canvas.alpha_composite(_ic_img2, (max(0, _ic_x2), max(0, _ic_y2)))
 
             # "Sunrise" wordmark — large Bold, vertically centred in the footer strip
