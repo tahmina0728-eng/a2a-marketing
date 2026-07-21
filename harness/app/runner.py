@@ -1268,7 +1268,7 @@ def _apply_brand_overlay(
                     _bdrw = ImageDraw.Draw(_bdg)
                     _bdrw.ellipse(
                         [0, 0, _br * 2 - 1, _br * 2 - 1],
-                        fill=(28, 28, 28, 220),
+                        fill=(255, 255, 255, 245),
                     )
                     canvas.alpha_composite(_bdg, (_bx, _by))
                     _amt_fnt  = _font(max(10, int(_br * 0.50)))
@@ -1279,13 +1279,13 @@ def _apply_brand_overlay(
                     _cur_bb   = _md3.textbbox((0, 0), _pr_curr, font=_cur_fnt) if _pr_curr else (0, 0, 0, 0)
                     _badge_th = (_amt_bb[3]-_amt_bb[1]) + ((_cur_bb[3]-_cur_bb[1]+3) if _pr_curr else 0)
                     _ty = _by + _br - _badge_th // 2
-                    _wh = (255, 255, 255, 255)
+                    _dk = (46, 46, 46, 255)
                     if _pr_curr:
                         _lx = _bx + _br - (_cur_bb[2]-_cur_bb[0]) // 2 - _cur_bb[0]
-                        draw_c.text((_lx, _ty - _cur_bb[1]), _pr_curr, font=_cur_fnt, fill=_wh)
+                        draw_c.text((_lx, _ty - _cur_bb[1]), _pr_curr, font=_cur_fnt, fill=_dk)
                         _ty += (_cur_bb[3]-_cur_bb[1]) + 3
                     _ax = _bx + _br - (_amt_bb[2]-_amt_bb[0]) // 2 - _amt_bb[0]
-                    draw_c.text((_ax, _ty - _amt_bb[1]), _pr_amt, font=_amt_fnt, fill=_wh)
+                    draw_c.text((_ax, _ty - _amt_bb[1]), _pr_amt, font=_amt_fnt, fill=_dk)
 
             # ── Red footer strip ──────────────────────────────────────────────────
             draw_c.rectangle([0, H - _strip_h, W, H], fill=(*_SR, 255))
