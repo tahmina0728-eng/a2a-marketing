@@ -1162,11 +1162,11 @@ def _apply_brand_overlay(
                     "D": (218,  41,  28),   # Sunrise Red — 5G Home Internet
                 }
                 _gc   = _GRAD.get(_otype, (155, 135, 112))
-                _gw, _gh = int(W * 0.72), H
+                _gw, _gh = int(W * 0.60), H
                 _gd   = Image.new("RGBA", (_gw, _gh), (0, 0, 0, 0))
                 _gdrw = ImageDraw.Draw(_gd)
                 for _gx in range(_gw):
-                    _ga = int(210 * (1.0 - _gx / _gw) ** 0.55)
+                    _ga = int(140 * (1.0 - _gx / _gw) ** 0.80)
                     _gdrw.line([(_gx, 0), (_gx, _gh)], fill=(*_gc, _ga))
                 canvas.alpha_composite(_gd, (0, 0))
 
@@ -2951,18 +2951,36 @@ Output EXACTLY this format (nothing else):
             f"\n\nBRAND VISUAL STYLE (match this aesthetic):\n{style_analysis}"
             if style_analysis else ""
         )
-        # UBS composition: cinematic wide scenes matching their actual ad reference images —
-        # aerial/overhead perspectives, groups in environments, action metaphors, NOT portraits.
-        _composition_rule = (
-            "\n\nCOMPOSITION RULE (UBS Bank visual style): "
-            "Create a CINEMATIC, wide-angle scene — NOT a portrait or close-up of one person. "
-            "Use an unexpected perspective: aerial/overhead view, low angle, wide establishing shot, or dramatic crop. "
-            "The subject(s) should be SMALL within a large environment — a landscape, arena, rooftop, coastline, city skyline, or stadium. "
-            "Groups of 2-4 people are welcome — athletes, professionals, families. "
-            "People can be in motion (running, skating, swimming, climbing) or contemplative (sitting on a cliff, overlooking a view). "
-            "Dramatic lighting: deep shadows with strong highlights, golden hour warmth, or bold architectural contrast. "
-            "The LEFT THIRD of the frame must stay relatively open — sky, horizon, or soft negative space — to allow headline text overlay in post-production."
-        ) if brand == "UBS Bank" else ""
+        # Brand-specific composition rules
+        if brand.lower() == "sunrise":
+            _composition_rule = (
+                "\n\nCOMPOSITION RULE (Sunrise mobile telecom offer ad): "
+                "Sunrise is a Swiss mobile network — the scene must celebrate mobile connectivity in real-world locations. "
+                "Show 1-3 people confidently using a smartphone or smart device in a vivid outdoor or scenic setting. "
+                "Choose locations that feel aspirational and connected: Swiss Alpine mountain peaks, lakeside beaches, "
+                "ski slopes, hiking trails, snowy winter landscapes, sunrise viewpoints, vibrant city streets, or coastal cliffs. "
+                "The people should look happy, energised, and connected — smiling at a phone, video-calling, or sharing content. "
+                "Absolutely NO dark shadows, NO vignette, NO moody or low-key lighting. "
+                "Use bright natural daylight — vivid, saturated colours, crisp sharp details, luminous and powerful. "
+                "The LEFT THIRD of the frame must stay open (soft sky, bokeh, or landscape background) "
+                "so headline text can be placed there in post-production. "
+                "Overall mood: bright, bold, free, and modern. High energy. NO shadows."
+            )
+        elif brand == "UBS Bank":
+            # Cinematic wide scenes matching UBS actual ad reference images —
+            # aerial/overhead perspectives, groups in environments, action metaphors, NOT portraits.
+            _composition_rule = (
+                "\n\nCOMPOSITION RULE (UBS Bank visual style): "
+                "Create a CINEMATIC, wide-angle scene — NOT a portrait or close-up of one person. "
+                "Use an unexpected perspective: aerial/overhead view, low angle, wide establishing shot, or dramatic crop. "
+                "The subject(s) should be SMALL within a large environment — a landscape, arena, rooftop, coastline, city skyline, or stadium. "
+                "Groups of 2-4 people are welcome — athletes, professionals, families. "
+                "People can be in motion (running, skating, swimming, climbing) or contemplative (sitting on a cliff, overlooking a view). "
+                "Dramatic lighting: deep shadows with strong highlights, golden hour warmth, or bold architectural contrast. "
+                "The LEFT THIRD of the frame must stay relatively open — sky, horizon, or soft negative space — to allow headline text overlay in post-production."
+            )
+        else:
+            _composition_rule = ""
         enriched_concepts = [
             f"{_no_text_rule}{p}{_style_suffix}{_composition_rule}" for p in concept_prompts
         ]
