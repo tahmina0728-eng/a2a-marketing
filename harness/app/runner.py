@@ -341,7 +341,7 @@ _CHANNEL_COPY_SPEC: dict = {
 
 
 async def run_copy_agent(machine_brief: dict, strategy: dict, brand_locks: str,
-                         channels: list = None) -> dict:
+                         channels: list = None, language: str = "") -> dict:
     """Generate copy scoped to selected channels using Vertex AI."""
     from app.instructions import COPY_AGENT_INSTRUCTIONS
     import google.genai as _g2
@@ -362,7 +362,15 @@ async def run_copy_agent(machine_brief: dict, strategy: dict, brand_locks: str,
         f'  "{key}": "<{desc}>",' for key, desc in channel_fields
     )
 
-    prompt = f"""{COPY_AGENT_INSTRUCTIONS}
+    _lang = (language or "").strip()
+    _lang_rule = (
+        f"\n\nCRITICAL LANGUAGE REQUIREMENT: ALL copy MUST be written entirely in {_lang}. "
+        "Do NOT use English anywhere. Every headline, subline, body, and cta must be in this language."
+        if _lang and _lang.lower() not in ("english", "en")
+        else ""
+    )
+
+    prompt = f"""{COPY_AGENT_INSTRUCTIONS}{_lang_rule}
 
 CREATIVE STRATEGY:
 {json.dumps(strategy, indent=2)[:2000]}

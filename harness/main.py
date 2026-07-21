@@ -442,7 +442,8 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         _channels_list = [str(c).lower() for c in brief.channels] if brief.channels else []
         try:
             copy = await run_copy_agent(machine_brief, strategy, brand_locks,
-                                        channels=_channels_list)
+                                        channels=_channels_list,
+                                        language=brief.language or "" if hasattr(brief, "language") else "")
         finally:
             hb3.cancel()
         short_hl  = (copy.get("short")  or {}).get("headline", "")
