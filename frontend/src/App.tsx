@@ -2118,7 +2118,7 @@ function BriefingPanel({ m, liveMsg, brand }: { m?: Record<string,unknown>; live
   const hasData = !!ft?.overall;
 
   const score      = hasData ? (ft.overall ?? 0) : 0;
-  const scoreColor = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#7c3aed";
+  const scoreColor = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
 
   return (
     <div style={{ width: "100%" }}>
@@ -2168,8 +2168,10 @@ function BriefingPanel({ m, liveMsg, brand }: { m?: Record<string,unknown>; live
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <span style={{ fontSize: 28, fontWeight: 900, color: scoreColor }}>{score}</span>
                   <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text-muted)" }}>/100</span>
-                  <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 10px", borderRadius: 20,
-                    background: "#dcfce7", color: "#065f46", border: "1px solid #86efac" }}>PASS</span>
+                  {score >= 70 && (
+                    <span style={{ fontSize: 10, fontWeight: 800, padding: "2px 10px", borderRadius: 20,
+                      background: "#dcfce7", color: "#065f46", border: "1px solid #86efac" }}>PASS</span>
+                  )}
                 </div>
                 <div style={{ fontSize: 9, color: "var(--text-tertiary)", fontWeight: 700, letterSpacing: "0.08em",
                   textTransform: "uppercase" as const, marginBottom: 3 }}>Fan Truth Score</div>
@@ -3825,7 +3827,7 @@ function ResultsView({ output, campaignId }: {
         {brief && (() => {
           const n = S();
           const score   = brief.fan_truth?.overall ?? 0;
-          const sc = score >= 75 ? "#10b981" : score >= 60 ? "#f59e0b" : "#7c3aed";
+          const sc = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
           return (
             <StageCard step={n} label="Brief Validation" color="#7c3aed">
               {/* Score + statement row */}
@@ -3843,11 +3845,13 @@ function ResultsView({ output, campaignId }: {
                   </div>
                   <div style={{ textAlign: "center" as const }}>
                     <div style={{ fontSize: 9, color: "#334155", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, marginBottom: 5 }}>Fan Truth</div>
-                    <span style={{
-                      fontSize: 11, fontWeight: 800, padding: "3px 14px", borderRadius: 99,
-                      background: "rgba(16,185,129,0.14)", color: "#10b981",
-                      border: "1px solid rgba(16,185,129,0.3)",
-                    }}>PASS</span>
+                    {score >= 70 && (
+                      <span style={{
+                        fontSize: 11, fontWeight: 800, padding: "3px 14px", borderRadius: 99,
+                        background: "rgba(16,185,129,0.14)", color: "#10b981",
+                        border: "1px solid rgba(16,185,129,0.3)",
+                      }}>PASS</span>
+                    )}
                   </div>
                 </div>
                 {/* Right: statement + KPIs */}
@@ -4598,13 +4602,15 @@ function BriefIntakeView({
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{ fontSize: 32, fontWeight: 900,
-                  color: ft.overall >= 70 ? "#10b981" : ft.overall >= 50 ? "#f59e0b" : "#7c3aed" }}>
+                  color: ft.overall >= 70 ? "#10b981" : ft.overall >= 55 ? "#f59e0b" : "#ef4444" }}>
                   {ft.overall}/100
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 12px", borderRadius: 99,
-                  background: "rgba(16,185,129,0.18)", color: "#34d399" }}>
-                  PASS
-                </span>
+                {ft.overall >= 70 && (
+                  <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 12px", borderRadius: 99,
+                    background: "rgba(16,185,129,0.18)", color: "#34d399" }}>
+                    PASS
+                  </span>
+                )}
               </div>
               {ft.statement && (
                 <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-tertiary)", fontStyle: "italic" }}>
@@ -4632,7 +4638,7 @@ function BriefIntakeView({
     </div>
   );
 
-  const scoreColor = ft?.overall >= 70 ? "#10b981" : ft?.overall >= 50 ? "#f59e0b" : "#ef4444";
+  const scoreColor = ft?.overall >= 70 ? "#10b981" : ft?.overall >= 55 ? "#f59e0b" : "#ef4444";
   const interestTags = [
     ...(brief?.audience?.age_range ? [brief.audience.age_range] : []),
     ...(brief?.audience?.interests ? brief.audience.interests.split(", ").filter(Boolean) : []),
@@ -4725,10 +4731,12 @@ function BriefIntakeView({
                 <span style={{ fontSize: 28, fontWeight: 800, color: scoreColor }}>
                   {ft.overall}/100
                 </span>
-                <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
-                  background: "rgba(16,185,129,0.18)", color: "#34d399" }}>
-                  PASS
-                </span>
+                {ft.overall >= 70 && (
+                  <span style={{ fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 99,
+                    background: "rgba(16,185,129,0.18)", color: "#34d399" }}>
+                    PASS
+                  </span>
+                )}
               </div>
               {ft.statement && (
                 <div style={{ fontSize: 13, color: "var(--text-tertiary)", fontStyle: "italic", lineHeight: 1.5 }}>
