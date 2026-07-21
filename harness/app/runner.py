@@ -2961,12 +2961,18 @@ Output EXACTLY this format (nothing else):
             if "famil" in _al:
                 _who = "a family — two parents in their 30s-40s and one or two children aged 8-14"
                 _who_activity = "together at home or outdoors"
-            elif "gen z" in _al or ("16" in _al and "24" in _al):
-                _who = "two Gen Z friends aged 18-24, diverse and stylish"
-                _who_activity = "energetic and spontaneous, phones in hand"
-            elif "professional" in _al or ("30" in _al and "50" in _al):
-                _who = "two professionals aged 30-50, confident and polished"
-                _who_activity = "in a business or urban context"
+            elif "sme" in _al or "entrepreneur" in _al:
+                _who = "two entrepreneurs aged 25-45, driven and ambitious"
+                _who_activity = "in a dynamic modern business setting, always connected"
+            elif "business prof" in _al or "professional" in _al:
+                _who = "two business professionals aged 30-50, confident and polished"
+                _who_activity = "in a sleek office or urban professional context"
+            elif "digital native" in _al or ("16" in _al and "24" in _al):
+                _who = "two digital natives aged 16-24, creative and expressive"
+                _who_activity = "energetic and spontaneous, phones always in hand"
+            elif "young adult" in _al or ("18" in _al and "35" in _al):
+                _who = "two young adults aged 18-35, stylish and vibrant"
+                _who_activity = "laughing and enjoying life, full of energy"
             elif "women" in _al or "woman" in _al:
                 _who = "two women aged 18-35, stylish and modern"
                 _who_activity = "laughing and connected"

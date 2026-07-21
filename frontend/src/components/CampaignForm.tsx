@@ -22,17 +22,31 @@ const MARKET_LANGUAGES: Record<string, string[]> = {
   "Switzerland":    ["German (de-CH)","French (fr-CH)","Italian (it-CH)","English"],
   "Global":         ["English"],
 };
-const BUDGETS  = ["£50K – £150K","£150K – £500K","£500K – £1M","£1M – £5M","£5M+"];
-const CHANNELS = ["Instagram","TikTok","YouTube","OOH","Google Ads","Meta Ads","Website","Email"];
-const SEASONS  = ["Evergreen","Spring","Summer","Autumn","Winter","Christmas","Valentine's Day","Easter","Diwali","New Year"];
-const MOMENTS  = ["Day-to-Day","Brand Moment","Partnership Moment"];
-const AGES     = ["13–17","18–24","25–34","35–44","45–54","55+"];
+const BUDGETS   = ["£50K – £150K","£150K – £500K","£500K – £1M","£1M – £5M","£5M+"];
+const CHANNELS  = ["Instagram","TikTok","YouTube","OOH","Google Ads","Meta Ads","Website","Email"];
+const SEASONS   = ["Evergreen","Spring","Summer","Autumn","Winter","Christmas","Valentine's Day","Easter","Diwali","New Year"];
+const MOMENTS   = ["Day-to-Day","Brand Moment","Partnership Moment"];
+const AGES      = ["13–17","18–24","25–34","35–44","45–54","55+"];
+
+// Sunrise-specific — must match BRAND_AUDIENCES["sunrise"] in Campaigns.tsx exactly
+const SUNRISE_AUDIENCES  = ["Young Adults 18–35","Families","Business Professionals","SME & Entrepreneurs","Digital Natives 16–24"];
+const SUNRISE_CURRENCIES = ["CHF","EUR","GBP","USD"];
 
 interface FD {
   brand: string; objective: string; market: string; language: string; budget: string;
   channels: string[]; age: string[]; season: string; moment: string; campaignName: string;
+  // Sunrise-specific
+  sunriseMode: "lifestyle" | "offer";
+  sunriseAudience: string;
+  productName: string;
+  productCurrency: string;
+  productPrice: string;
 }
-const INIT: FD = { brand:"", objective:"", market:"", language:"", budget:"", channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"" };
+const INIT: FD = {
+  brand:"", objective:"", market:"", language:"", budget:"",
+  channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"",
+  sunriseMode:"lifestyle", sunriseAudience:"", productName:"", productCurrency:"CHF", productPrice:"",
+};
 const toggle = <T,>(arr: T[], v: T): T[] => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
 /** Detect a seasonal/festive moment from free-text objective so Kinetik/Morphis can use it. */
@@ -71,6 +85,13 @@ const chipBase: React.CSSProperties = {
 const chipOn: React.CSSProperties = {
   ...chipBase, background: BRAND_GRADIENT, color: "#fff", borderColor: "transparent",
   boxShadow: "0 2px 12px rgba(124,58,237,0.35)",
+};
+
+const inputStyle: React.CSSProperties = {
+  width: "100%", height: 44, borderRadius: 12, border: "1px solid #d0d0e0",
+  background: "rgba(255,255,255,0.9)", padding: "0 14px",
+  fontSize: 13, fontFamily: F, color: "#0f0f0f", outline: "none",
+  boxSizing: "border-box" as const,
 };
 
 
@@ -180,7 +201,13 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
   onToggle: (k: "channels"|"age", v: string) => void;
   onBack: () => void; onLaunch: () => void;
 }) {
-  const ok = data.channels.length > 0 && data.campaignName.trim();
+  const isSunrise = data.brand === "sunrise";
+
+  const ok = isSunrise
+    ? data.campaignName.trim().length > 0
+      && data.sunriseAudience.length > 0
+      && (data.sunriseMode === "lifestyle" || data.productName.trim().length > 0)
+    : data.channels.length > 0 && data.campaignName.trim().length > 0;
 
   return (
     <div style={{ flex:1, overflowY:"auto", display:"flex", flexDirection:"column",
@@ -194,11 +221,15 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
             {" "}Campaign Brief
           </h3>
           <p style={{ fontFamily:F, fontSize:13, color:"var(--text-secondary,#475569)", margin:0, lineHeight:1.5 }}>
-            Choose your channels, audience and give your campaign a name.
+            {isSunrise
+              ? "Choose your Sunrise mode, target audience and give your campaign a name."
+              : "Choose your channels, audience and give your campaign a name."}
           </p>
         </div>
 
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+          {/* ── Channels (all brands) ── */}
           <div>
             <span style={label}>Channels</span>
             <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
@@ -209,16 +240,75 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
             </div>
           </div>
 
-          <div>
-            <span style={label}>Target Age Groups</span>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-              {AGES.map(a => (
-                <button key={a} onClick={() => onToggle("age", a)}
-                  style={data.age.includes(a) ? chipOn : chipBase}>{a}</button>
-              ))}
-            </div>
-          </div>
+          {isSunrise ? (
+            <>
+              {/* ── Sunrise Mode toggle ── */}
+              <div>
+                <span style={label}>Sunrise Mode</span>
+                <div style={{ display:"flex", gap:8 }}>
+                  {(["lifestyle","offer"] as const).map(m => (
+                    <button key={m} onClick={() => onChange("sunriseMode", m)}
+                      style={{
+                        ...(data.sunriseMode === m ? chipOn : chipBase),
+                        flex: 1, display:"flex", justifyContent:"center", alignItems:"center",
+                        padding: "10px 0",
+                      }}>
+                      {m === "lifestyle" ? "Lifestyle KV" : "Offer Mode"}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
+              {/* ── Sunrise Target Audience ── */}
+              <div>
+                <span style={label}>Target Audience</span>
+                <FormSelect value={data.sunriseAudience} onChange={v => onChange("sunriseAudience", v)}
+                  placeholder="Select audience" options={SUNRISE_AUDIENCES} />
+              </div>
+
+              {/* ── Product Name ── */}
+              <div>
+                <span style={label}>
+                  Product Name
+                  {data.sunriseMode === "lifestyle" && (
+                    <span style={{ fontWeight:400, color:"#aaa", marginLeft:6, textTransform:"none", letterSpacing:0 }}>(optional)</span>
+                  )}
+                </span>
+                <input value={data.productName} onChange={e => onChange("productName", e.target.value)}
+                  placeholder={data.sunriseMode === "lifestyle" ? "e.g. Sunrise Mobile" : "e.g. Mobile Unlimited"}
+                  style={inputStyle} />
+              </div>
+
+              {/* ── Offer Price — Offer Mode only ── */}
+              {data.sunriseMode === "offer" && (
+                <div>
+                  <span style={label}>Offer Price</span>
+                  <div style={{ display:"flex", gap:8 }}>
+                    <div style={{ width:100, flexShrink:0 }}>
+                      <FormSelect value={data.productCurrency} onChange={v => onChange("productCurrency", v)}
+                        placeholder="CHF" options={SUNRISE_CURRENCIES} />
+                    </div>
+                    <input value={data.productPrice} onChange={e => onChange("productPrice", e.target.value)}
+                      placeholder="39.90"
+                      style={{ ...inputStyle, flex:1, width:"auto" }} />
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            /* ── Generic: Target Age Groups ── */
+            <div>
+              <span style={label}>Target Age Groups</span>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+                {AGES.map(a => (
+                  <button key={a} onClick={() => onToggle("age", a)}
+                    style={data.age.includes(a) ? chipOn : chipBase}>{a}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Season / Moment (all brands) ── */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
             <div>
               <span style={label}>Season / Occasion</span>
@@ -232,14 +322,12 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
             </div>
           </div>
 
+          {/* ── Campaign Name (all brands) ── */}
           <div>
             <span style={label}>Campaign Name</span>
             <input value={data.campaignName} onChange={e => onChange("campaignName", e.target.value)}
               placeholder="Give your campaign a name"
-              style={{ width:"100%", height:44, borderRadius:12, border:"1px solid #d0d0e0",
-                background:"rgba(255,255,255,0.9)", padding:"0 14px",
-                fontSize:13, fontFamily:F, color:"#0f0f0f", outline:"none",
-                boxSizing:"border-box" as const }} />
+              style={inputStyle} />
           </div>
         </div>
 
@@ -279,11 +367,28 @@ export default function CampaignForm({ onFullCampaign }: {
     setData(d => ({...d, [k]: toggle(d[k] as string[], v)}));
 
   const handleLaunch = () => {
-    // Resolve season: explicit dropdown pick wins; else infer from objective text
     const resolvedSeason = data.season || detectSeason(data.objective) || "Evergreen";
-    const brandLabel     = BRANDS.find(b => b.id === data.brand)?.label ?? data.brand;
-    // fan_truth = consumer insight; goal = business objective. Keep them separate
-    // so briefing agent, Morphis and Kinetik all receive the right context.
+    const brandLabel = BRANDS.find(b => b.id === data.brand)?.label ?? data.brand;
+    const isSunrise  = data.brand === "sunrise";
+
+    // Build product string for Sunrise:
+    // Offer mode  → "Mobile Unlimited CHF 39.90" — runner.py regex splits price from label
+    // Lifestyle   → empty or name only (no numeric price → stays in lifestyle render path)
+    let product = "";
+    let audienceSegment = data.age.join(", ") || "General audience";
+
+    if (isSunrise) {
+      audienceSegment = data.sunriseAudience || "General audience";
+      if (data.sunriseMode === "offer") {
+        const priceStr = data.productPrice.trim()
+          ? `${data.productCurrency} ${data.productPrice.trim()}`
+          : "";
+        product = [data.productName.trim(), priceStr].filter(Boolean).join(" ");
+      } else {
+        product = data.productName.trim(); // no price → runner.py lifestyle path
+      }
+    }
+
     const fanTruth = `${brandLabel} customers in ${data.market} seek authentic value`
       + (resolvedSeason !== "Evergreen" ? ` during ${resolvedSeason}` : " in everyday moments")
       + `, and reward brands that understand their lives, not just their wallets.`;
@@ -294,7 +399,7 @@ export default function CampaignForm({ onFullCampaign }: {
       goal:             data.objective,
       budget:           data.budget,
       kpis:             "reach, ctr, roas",
-      product:          "",
+      product:          product,
       product_category: brandLabel,
       fan_truth:        fanTruth,
       channels:         data.channels,
@@ -303,9 +408,9 @@ export default function CampaignForm({ onFullCampaign }: {
       season:           resolvedSeason,
       moment_type:      data.moment as any,
       audience: {
-        segment:   data.age.join(", ") || "General audience",
+        segment:   audienceSegment,
         location:  data.market,
-        age_range: data.age[0]?.replace("–","-") ?? "All ages",
+        age_range: isSunrise ? audienceSegment : (data.age[0]?.replace("–","-") ?? "All ages"),
         gender:    "All genders",
       },
       tone: "Warm & friendly",

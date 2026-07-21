@@ -375,10 +375,14 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
     _al = (audience or "").lower()
     if "famil" in _al:
         _who = "a family (parents in their 30s-40s with one or two children aged 8-14)"
-    elif "gen z" in _al or ("16" in _al and "24" in _al):
-        _who = "two Gen Z friends aged 18-24, diverse and stylish"
-    elif "professional" in _al or ("30" in _al and "50" in _al):
-        _who = "two professionals aged 30-50, confident and polished"
+    elif "sme" in _al or "entrepreneur" in _al:
+        _who = "two entrepreneurs aged 25-45, driven and ambitious"
+    elif "business prof" in _al or "professional" in _al:
+        _who = "two business professionals aged 30-50, confident and polished"
+    elif "digital native" in _al or ("16" in _al and "24" in _al):
+        _who = "two digital natives aged 16-24, creative and expressive, phones in hand"
+    elif "young adult" in _al or ("18" in _al and "35" in _al):
+        _who = "two young adults aged 18-35, stylish and vibrant"
     elif "women" in _al or "woman" in _al:
         _who = "two women aged 18-35, stylish and modern"
     elif "men" in _al or "man" in _al:
