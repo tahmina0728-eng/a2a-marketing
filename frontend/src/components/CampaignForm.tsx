@@ -28,24 +28,33 @@ const SEASONS   = ["Evergreen","Spring","Summer","Autumn","Winter","Christmas","
 const MOMENTS   = ["Day-to-Day","Brand Moment","Partnership Moment"];
 const AGES      = ["13–17","18–24","25–34","35–44","45–54","55+"];
 
-// Sunrise-specific — must match BRAND_AUDIENCES["sunrise"] in Campaigns.tsx exactly
-const SUNRISE_AUDIENCES  = ["Young Adults 18–35","Families","Business Professionals","SME & Entrepreneurs","Digital Natives 16–24"];
-const SUNRISE_CURRENCIES = ["CHF","EUR","GBP","USD"];
+// Sunrise-specific — must match Campaigns.tsx exactly
+const SUNRISE_AUDIENCES = ["Young Adults 18–35","Families","Business Professionals","SME & Entrepreneurs","Digital Natives 16–24"];
+
+const SUNRISE_PRODUCT_PLANS = [
+  { name: "Mobile Unlimited",  amount: "39.90" },
+  { name: "Easy Internet",     amount: "39.90" },
+  { name: "5G Home Internet",  amount: "29.90" },
+  { name: "Business Connect",  amount: "49.90" },
+];
+
+const MARKET_CURRENCY_SYMBOL: Record<string, string> = {
+  "United Kingdom": "£", "Australia": "A$", "United States": "$",
+  "New Zealand": "NZ$", "Switzerland": "CHF", "Germany": "€",
+  "Austria": "€", "France": "€", "Global": "CHF", "SEA": "$",
+};
 
 interface FD {
   brand: string; objective: string; market: string; language: string; budget: string;
   channels: string[]; age: string[]; season: string; moment: string; campaignName: string;
   // Sunrise-specific
-  sunriseMode: "lifestyle" | "offer";
+  sunrisePlan: string;      // "Lifestyle KV" | plan name e.g. "Mobile Unlimited"
   sunriseAudience: string;
-  productName: string;
-  productCurrency: string;
-  productPrice: string;
 }
 const INIT: FD = {
   brand:"", objective:"", market:"", language:"", budget:"",
   channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"",
-  sunriseMode:"lifestyle", sunriseAudience:"", productName:"", productCurrency:"CHF", productPrice:"",
+  sunrisePlan:"Lifestyle KV", sunriseAudience:"",
 };
 const toggle = <T,>(arr: T[], v: T): T[] => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
@@ -204,9 +213,7 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
   const isSunrise = data.brand === "sunrise";
 
   const ok = isSunrise
-    ? data.campaignName.trim().length > 0
-      && data.sunriseAudience.length > 0
-      && (data.sunriseMode === "lifestyle" || data.productName.trim().length > 0)
+    ? data.campaignName.trim().length > 0 && data.sunriseAudience.length > 0
     : data.channels.length > 0 && data.campaignName.trim().length > 0;
 
   return (
@@ -242,22 +249,27 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
 
           {isSunrise ? (
             <>
-              {/* ── Sunrise Mode toggle ── */}
-              <div>
-                <span style={label}>Sunrise Mode</span>
-                <div style={{ display:"flex", gap:8 }}>
-                  {(["lifestyle","offer"] as const).map(m => (
-                    <button key={m} onClick={() => onChange("sunriseMode", m)}
-                      style={{
-                        ...(data.sunriseMode === m ? chipOn : chipBase),
-                        flex: 1, display:"flex", justifyContent:"center", alignItems:"center",
-                        padding: "10px 0",
-                      }}>
-                      {m === "lifestyle" ? "Lifestyle KV" : "Offer Mode"}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              {/* ── Sunrise Mode — single dropdown matching Campaigns section ── */}
+              {(() => {
+                const sym  = MARKET_CURRENCY_SYMBOL[data.market] ?? "CHF";
+                const opts = [
+                  "Lifestyle KV",
+                  ...SUNRISE_PRODUCT_PLANS.map(p => `${p.name} – ${sym} ${p.amount}/mth`),
+                ];
+                const selPlan = SUNRISE_PRODUCT_PLANS.find(p => p.name === data.sunrisePlan);
+                const chipVal = selPlan ? `${selPlan.name} – ${sym} ${selPlan.amount}/mth` : "Lifestyle KV";
+                return (
+                  <div>
+                    <span style={label}>Sunrise Mode</span>
+                    <FormSelect value={chipVal} onChange={v => {
+                        if (v === "Lifestyle KV") { onChange("sunrisePlan", "Lifestyle KV"); return; }
+                        const plan = SUNRISE_PRODUCT_PLANS.find(p => `${p.name} – ${sym} ${p.amount}/mth` === v);
+                        onChange("sunrisePlan", plan ? plan.name : "Lifestyle KV");
+                      }}
+                      placeholder="Select mode" options={opts} />
+                  </div>
+                );
+              })()}
 
               {/* ── Sunrise Target Audience ── */}
               <div>
@@ -265,35 +277,6 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
                 <FormSelect value={data.sunriseAudience} onChange={v => onChange("sunriseAudience", v)}
                   placeholder="Select audience" options={SUNRISE_AUDIENCES} />
               </div>
-
-              {/* ── Product Name ── */}
-              <div>
-                <span style={label}>
-                  Product Name
-                  {data.sunriseMode === "lifestyle" && (
-                    <span style={{ fontWeight:400, color:"#aaa", marginLeft:6, textTransform:"none", letterSpacing:0 }}>(optional)</span>
-                  )}
-                </span>
-                <input value={data.productName} onChange={e => onChange("productName", e.target.value)}
-                  placeholder={data.sunriseMode === "lifestyle" ? "e.g. Sunrise Mobile" : "e.g. Mobile Unlimited"}
-                  style={inputStyle} />
-              </div>
-
-              {/* ── Offer Price — Offer Mode only ── */}
-              {data.sunriseMode === "offer" && (
-                <div>
-                  <span style={label}>Offer Price</span>
-                  <div style={{ display:"flex", gap:8 }}>
-                    <div style={{ width:100, flexShrink:0 }}>
-                      <FormSelect value={data.productCurrency} onChange={v => onChange("productCurrency", v)}
-                        placeholder="CHF" options={SUNRISE_CURRENCIES} />
-                    </div>
-                    <input value={data.productPrice} onChange={e => onChange("productPrice", e.target.value)}
-                      placeholder="39.90"
-                      style={{ ...inputStyle, flex:1, width:"auto" }} />
-                  </div>
-                </div>
-              )}
             </>
           ) : (
             /* ── Generic: Target Age Groups ── */
@@ -372,20 +355,17 @@ export default function CampaignForm({ onFullCampaign }: {
     const isSunrise  = data.brand === "sunrise";
 
     // Build product string for Sunrise:
-    // Offer mode  → "Mobile Unlimited CHF 39.90" — runner.py regex splits price from label
-    // Lifestyle   → empty or name only (no numeric price → stays in lifestyle render path)
+    // Offer plan  → "Mobile Unlimited CHF 39.90" — runner.py regex splits price from label
+    // Lifestyle KV → "" (empty → runner.py lifestyle render path)
     let product = "";
     let audienceSegment = data.age.join(", ") || "General audience";
 
     if (isSunrise) {
       audienceSegment = data.sunriseAudience || "General audience";
-      if (data.sunriseMode === "offer") {
-        const priceStr = data.productPrice.trim()
-          ? `${data.productCurrency} ${data.productPrice.trim()}`
-          : "";
-        product = [data.productName.trim(), priceStr].filter(Boolean).join(" ");
-      } else {
-        product = data.productName.trim(); // no price → runner.py lifestyle path
+      const plan = SUNRISE_PRODUCT_PLANS.find(p => p.name === data.sunrisePlan);
+      if (plan) {
+        const sym = MARKET_CURRENCY_SYMBOL[data.market] ?? "CHF";
+        product = `${plan.name} ${sym} ${plan.amount}`;
       }
     }
 
