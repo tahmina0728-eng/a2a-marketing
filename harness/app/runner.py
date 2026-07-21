@@ -1310,12 +1310,15 @@ def _apply_brand_overlay(
             _ic_bb2  = [0, 0, _ic_d2-1, _ic_d2-1]
             _ic_drw2.ellipse(_ic_bb2, outline=(255, 255, 255, 255), width=_ic_stk2)
             _ic_drw2.chord(_ic_bb2, start=15, end=165, fill=(255, 255, 255, 255))
-            _ic_x2   = _ic_cx - _ic_d2 // 2
-            _ic_y2   = H - _strip_h - _ic_d2 // 2
+            _ic_x2    = _ic_cx - _ic_d2 // 2
+            # 75% of circle protrudes above footer edge, 25% sits inside the red strip
+            _ic_above = int(_ic_d2 * 0.75)
+            _ic_below = _ic_d2 - _ic_above
+            _ic_y2    = H - _strip_h - _ic_above
             canvas.alpha_composite(_ic_img2, (max(0, _ic_x2), max(0, _ic_y2)))
 
-            # "Sunrise" wordmark: centered horizontally under circle, inside footer
-            _rem     = _strip_h - _ic_d2 // 2          # footer height below circle centre
+            # "Sunrise" wordmark: centered in footer space below the circle's lower edge
+            _rem     = _strip_h - _ic_below
             _wm_sz   = max(11, int(_rem * 0.75))
             _wm_fnt2 = _font(_wm_sz)
             try: _wm_fnt2.set_variation_by_axes([700])
@@ -1323,8 +1326,7 @@ def _apply_brand_overlay(
             _wm_bb2  = _md3.textbbox((0, 0), "Sunrise", font=_wm_fnt2)
             _wm_w2   = _wm_bb2[2] - _wm_bb2[0]
             _wm_h2   = _wm_bb2[3] - _wm_bb2[1]
-            # Centre text in the strip area below the circle's lower half
-            _wm_cy   = H - _strip_h + _ic_d2 // 2 + max(0, (_rem - _wm_h2) // 2)
+            _wm_cy   = H - _strip_h + _ic_below + max(0, (_rem - _wm_h2) // 2)
             _wm_x2   = _ic_cx - _wm_w2 // 2 - _wm_bb2[0]
             _wm_y2   = _wm_cy - _wm_bb2[1]
             draw_c.text((_wm_x2, _wm_y2), "Sunrise", font=_wm_fnt2, fill=(255, 255, 255, 255))
