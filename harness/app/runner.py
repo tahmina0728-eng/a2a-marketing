@@ -1661,9 +1661,10 @@ def _overlay_reel(
             loader = get_asset_loader()
             logos  = loader.list_logos(brand)
             if logos:
-                # FFmpeg cannot decode SVG — only consider raster formats
+                # FFmpeg cannot decode SVG — prefer raster; fall back to SVG→PNG conversion
                 _raster_logos = [p for p in logos if not p.lower().endswith(".svg")]
-                _logo_pool = _raster_logos if _raster_logos else []
+                _svg_logos    = [p for p in logos if p.lower().endswith(".svg")]
+                _logo_pool    = _raster_logos if _raster_logos else []
                 def _pick_logo(ps):
                     _bslug = brand.split()[0].lower()
                     return (
@@ -1677,7 +1678,35 @@ def _overlay_reel(
                         (ps[0] if ps else None)
                     )
                 _chosen = _pick_logo(_logo_pool)
-                _logo_bytes_raw = _load_bytes(_chosen) if _chosen else None
+                if _chosen:
+                    _logo_bytes_raw = _load_bytes(_chosen)
+                elif _svg_logos:
+                    # No raster logo — convert best SVG to PNG using rsvg-convert
+                    _svg_chosen = (
+                        next((p for p in _svg_logos if "white" in p.lower()), None) or
+                        _svg_logos[0]
+                    )
+                    _svg_bytes = _load_bytes(_svg_chosen)
+                    if _svg_bytes:
+                        try:
+                            import subprocess as _sp, tempfile as _tf2
+                            with _tf2.TemporaryDirectory() as _td2:
+                                _svg_in  = _P(_td2) / "logo.svg"
+                                _png_out = _P(_td2) / "logo.png"
+                                _svg_in.write_bytes(_svg_bytes)
+                                _r = _sp.run(
+                                    ["rsvg-convert", "-w", "400", "-h", "400",
+                                     "--keep-aspect-ratio",
+                                     str(_svg_in), "-o", str(_png_out)],
+                                    capture_output=True, timeout=15,
+                                )
+                                if _r.returncode == 0 and _png_out.exists():
+                                    _logo_bytes_raw = _png_out.read_bytes()
+                                else:
+                                    logger.warning("reel_svg_convert_failed",
+                                                   brand=brand, stderr=_r.stderr.decode()[:200])
+                        except Exception as _ce:
+                            logger.warning("reel_svg_convert_error", brand=brand, error=str(_ce))
         except Exception as _le:
             logger.warning("reel_logo_load_failed", brand=brand, error=str(_le))
 

@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libfreetype6-dev \
     ffmpeg \
     fonts-liberation \
+    librsvg2-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
