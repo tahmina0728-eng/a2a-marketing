@@ -1310,36 +1310,34 @@ def _apply_brand_overlay(
             _ic_y2 = H - _strip_h - int(_ic_d2 * 0.63)
             canvas.alpha_composite(_ic_img2, (max(0, _ic_x2), max(0, _ic_y2)))
 
-            # "Sunrise" wordmark — to the RIGHT of circle, vertically centred in footer strip
-            _wm_sz   = max(11, int(_strip_h * 0.45))
+            # "Sunrise" wordmark — centred BELOW the circle inside the red strip
+            _wm_sz   = max(11, int(_strip_h * 0.38))
             _wm_fnt2 = _font(_wm_sz)
             try: _wm_fnt2.set_variation_by_axes([700])
             except: pass
-            _wm_bb2 = _md3.textbbox((0, 0), "Sunrise", font=_wm_fnt2)
-            _wm_w2  = _wm_bb2[2] - _wm_bb2[0]
-            _wm_h2  = _wm_bb2[3] - _wm_bb2[1]
-            _wm_gap = max(6, int(_ic_d2 * 0.10))
+            _wm_bb2     = _md3.textbbox((0, 0), "Sunrise", font=_wm_fnt2)
+            _wm_w2      = _wm_bb2[2] - _wm_bb2[0]
+            _wm_h2      = _wm_bb2[3] - _wm_bb2[1]
+            _circle_bot = _ic_y2 + _ic_d2                          # bottom of circle (inside footer)
+            _wm_gap     = max(3, int(_ic_d2 * 0.05))               # small gap between circle and text
+            _wm_x2      = _ic_cx - _wm_w2 // 2 - _wm_bb2[0]       # horizontally centred on circle
+            _wm_y2      = _circle_bot + _wm_gap - _wm_bb2[1]       # just below circle bottom
 
             if _otype == "A":
-                # Type A: "Sunrise" + "BUSINESS" stacked to the right of circle
+                # Type A: "Sunrise" + "BUSINESS" stacked below circle, both centred
                 _sub_sz  = max(7, int(_wm_sz * 0.42))
                 _sub_fnt = _font(_sub_sz)
                 try: _sub_fnt.set_variation_by_axes([400])
                 except: pass
                 _sub_bb  = _md3.textbbox((0, 0), "BUSINESS", font=_sub_fnt)
-                _sub_h   = _sub_bb[3] - _sub_bb[1]
-                _sub_gap = max(2, int(_wm_sz * 0.10))
-                _blk_h   = _wm_h2 + _sub_gap + _sub_h
-                _blk_top = H - _strip_h + (_strip_h - _blk_h) // 2
-                _txt_x   = _ic_cx + _ic_d2 // 2 + _wm_gap
-                draw_c.text((_txt_x - _wm_bb2[0], _blk_top - _wm_bb2[1]),
-                            "Sunrise", font=_wm_fnt2, fill=(255, 255, 255, 255))
-                draw_c.text((_txt_x - _sub_bb[0], _blk_top + _wm_h2 + _sub_gap - _sub_bb[1]),
-                            "BUSINESS", font=_sub_fnt, fill=(255, 255, 255, 210))
+                _sub_w   = _sub_bb[2] - _sub_bb[0]
+                _sub_gap = max(2, int(_wm_sz * 0.08))
+                draw_c.text((_wm_x2, _wm_y2), "Sunrise", font=_wm_fnt2, fill=(255, 255, 255, 255))
+                _sub_x = _ic_cx - _sub_w // 2 - _sub_bb[0]
+                _sub_y = _circle_bot + _wm_gap + _wm_h2 + _sub_gap - _sub_bb[1]
+                draw_c.text((_sub_x, _sub_y), "BUSINESS", font=_sub_fnt, fill=(255, 255, 255, 210))
             else:
                 # B/C/D: "Sunrise" to the right of circle, centred in footer strip
-                _wm_x2 = _ic_cx + _ic_d2 // 2 + _wm_gap - _wm_bb2[0]
-                _wm_y2 = H - _strip_h + (_strip_h - _wm_h2) // 2 - _wm_bb2[1]
                 draw_c.text((_wm_x2, _wm_y2), "Sunrise", font=_wm_fnt2, fill=(255, 255, 255, 255))
 
             img = canvas
