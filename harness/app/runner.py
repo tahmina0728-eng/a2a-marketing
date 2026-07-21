@@ -1221,7 +1221,7 @@ def _apply_brand_overlay(
             except: pass
             _lbl_bb3 = _md3.textbbox((0, 0), _plan_label.upper(), font=_lbl_fnt)
             draw_c.text((_lm, _hy), _plan_label.upper(), font=_lbl_fnt, fill=_lbl_col)
-            _hy += (_lbl_bb3[3] - _lbl_bb3[1]) + int(H * 0.015)  # advance past label
+            _hy += (_lbl_bb3[3] - _lbl_bb3[1]) + int(H * 0.04)  # advance past label
 
             # ── Price ─────────────────────────────────────────────────────────────
             if _price_str:
