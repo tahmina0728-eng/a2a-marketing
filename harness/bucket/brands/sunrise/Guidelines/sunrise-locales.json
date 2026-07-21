@@ -1,0 +1,112 @@
+{
+  "meta": {
+    "brand": "Sunrise",
+    "defined_locales": [
+      "de-CH",
+      "en"
+    ],
+    "default": "de-CH",
+    "global": "en",
+    "swiss_variants_follow_de_CH": [
+      "fr-CH",
+      "it-CH"
+    ],
+    "note": "de-CH is the default for the Swiss home market; en is the international/corporate locale and the fallback. The English platform endline is never translated."
+  },
+  "conventions": {
+    "de-CH": {
+      "language": "Swiss High German",
+      "spelling": "ss (never ß)",
+      "address": {
+        "consumer": "du",
+        "business": "Sie"
+      },
+      "currency": "CHF 29.90",
+      "currency_round": "CHF 59.–",
+      "number": "1'299.00",
+      "date": "15.07.2026",
+      "time": "14:30",
+      "quotes": "«…»",
+      "html_lang": "de-CH"
+    },
+    "en": {
+      "language": "International English",
+      "spelling": "en-GB (colour, -ise)",
+      "address": {
+        "all": "you"
+      },
+      "currency": "CHF 29.90",
+      "currency_round": "CHF 59.–",
+      "number": "1,299.00",
+      "date": "15 July 2026",
+      "time": "14:30",
+      "quotes": "“…”",
+      "html_lang": "en"
+    }
+  },
+  "strings": {
+    "core_promise": {
+      "en": "Connecting people, businesses, and possibilities.",
+      "de-CH": "Wir verbinden Menschen, Unternehmen und Möglichkeiten."
+    },
+    "signature_line": {
+      "en": "Connecting people, businesses, and possibilities.",
+      "de-CH": "Wir verbinden Menschen, Unternehmen und Möglichkeiten."
+    },
+    "platform_endline": {
+      "en": "DREAM BIG. DO BIG.",
+      "de-CH": "DREAM BIG. DO BIG.",
+      "_note": "Always English in every locale — never translated."
+    },
+    "example_consumer": {
+      "en": "Stay connected to what matters.",
+      "de-CH": "Bleib verbunden mit dem, was zählt."
+    },
+    "example_digital_future": {
+      "en": "Powering your digital future.",
+      "de-CH": "Wir treiben deine digitale Zukunft an."
+    },
+    "example_quality": {
+      "en": "Connectivity without compromise.",
+      "de-CH": "Konnektivität ohne Kompromisse."
+    },
+    "example_network": {
+      "en": "The network that keeps up with your day.",
+      "de-CH": "Das Netz, das mit deinem Tag mithält."
+    },
+    "example_future_ready": {
+      "en": "Built for what's next.",
+      "de-CH": "Gemacht für das, was kommt."
+    },
+    "cta_plans": {
+      "en": "See Plans",
+      "de-CH": "Angebote ansehen"
+    },
+    "cta_connect": {
+      "en": "Get Connected",
+      "de-CH": "Jetzt verbinden"
+    },
+    "cta_switch": {
+      "en": "Switch Today",
+      "de-CH": "Jetzt wechseln"
+    },
+    "cta_discover": {
+      "en": "Discover Sunrise",
+      "de-CH": "Sunrise entdecken"
+    },
+    "cta_business": {
+      "en": "Talk to Sunrise Business",
+      "de-CH": "Sunrise Business kontaktieren"
+    },
+    "cta_learn": {
+      "en": "Learn More",
+      "de-CH": "Mehr erfahren"
+    }
+  },
+  "rules": [
+    "Never mix locales in one asset, except the fixed English endline.",
+    "Never machine-translate public-facing work; native adaptation only.",
+    "Translate meaning, not words; keep the warm, plain, optimistic voice.",
+    "Set <html lang> and provide hreflang alternates for de-CH and en (plus fr-CH/it-CH where published) with x-default = en."
+  ]
+}

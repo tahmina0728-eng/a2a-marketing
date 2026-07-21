@@ -36,12 +36,14 @@ COPY bucket/brands/Sunglow/Guidelines/         ./bucket/brands/Sunglow/Guideline
 COPY bucket/brands/Boozt/Guidelines/           ./bucket/brands/Boozt/Guidelines/
 COPY bucket/brands/Glenfiddich/Guidelines/     ./bucket/brands/Glenfiddich/Guidelines/
 COPY ["bucket/brands/UBS Bank/Guidelines/", "./bucket/brands/UBS Bank/Guidelines/"]
+COPY bucket/brands/sunrise/Guidelines/         ./bucket/brands/sunrise/Guidelines/
 
 # Copy brand fonts (used by Pillow for KV image overlay at runtime)
 COPY bucket/brands/Sunglow/Font/       ./bucket/brands/Sunglow/Font/
 COPY bucket/brands/Rnorr/Font/         ./bucket/brands/Rnorr/Font/
 COPY bucket/brands/Boozt/Font/         ./bucket/brands/Boozt/Font/
 COPY ["bucket/brands/UBS Bank/Font/",  "./bucket/brands/UBS Bank/Font/"]
+COPY bucket/brands/sunrise/Font/       ./bucket/brands/sunrise/Font/
 
 ENV PORT=8080
 EXPOSE 8080

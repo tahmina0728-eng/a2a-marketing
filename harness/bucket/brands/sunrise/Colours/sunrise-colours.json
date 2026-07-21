@@ -1,0 +1,64 @@
+{
+  "primary": [
+    {
+      "name": "Sunrise Red",
+      "hex": "#DA291C",
+      "rgb": "218, 41, 28",
+      "role": "The brand colour \u2014 the Sun Mark, primary accent, CTAs"
+    },
+    {
+      "name": "Black",
+      "hex": "#000000",
+      "rgb": "0, 0, 0",
+      "role": "Primary type, structure, premium contrast"
+    }
+  ],
+  "secondary": [
+    {
+      "name": "Charcoal",
+      "hex": "#2A2A2A",
+      "rgb": "42, 42, 42",
+      "role": "Body type, dark UI surfaces, secondary structure"
+    },
+    {
+      "name": "Warm Gray",
+      "hex": "#5F5955",
+      "rgb": "95, 89, 85",
+      "role": "Captions, secondary type, subtle dividers"
+    }
+  ],
+  "tertiary": [
+    {
+      "name": "Dawn Pink",
+      "hex": "#DE849E",
+      "rgb": "222, 132, 158",
+      "role": "Soft accent, warmth, human/lifestyle moments \u2014 never CTA or brand-primary"
+    },
+    {
+      "name": "White",
+      "hex": "#FFFFFF",
+      "rgb": "255, 255, 255",
+      "role": "Primary background, breathing room, type on dark/red"
+    }
+  ],
+  "gradient": {
+    "name": "Sunrise Gradient",
+    "from": "#DA291C",
+    "to": "#FF8A00",
+    "role": "Hero backgrounds, the rising-sun motion, brand moments \u2014 warm/rising, never inverted, no third colour"
+  },
+  "functional": [
+    {
+      "name": "Off-White",
+      "hex": "#F9F9F9",
+      "rgb": "249, 249, 249",
+      "role": "Soft background alternative to pure white"
+    },
+    {
+      "name": "Line Gray",
+      "hex": "#E5E3E1",
+      "rgb": "229, 227, 225",
+      "role": "UI dividers, card borders, table rules"
+    }
+  ]
+}
