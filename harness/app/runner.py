@@ -1642,6 +1642,9 @@ def _overlay_reel(
             loader = get_asset_loader()
             logos  = loader.list_logos(brand)
             if logos:
+                # FFmpeg cannot decode SVG — only consider raster formats
+                _raster_logos = [p for p in logos if not p.lower().endswith(".svg")]
+                _logo_pool = _raster_logos if _raster_logos else []
                 def _pick_logo(ps):
                     _bslug = brand.split()[0].lower()
                     return (
@@ -1652,9 +1655,10 @@ def _overlay_reel(
                         next((p for p in ps if p.lower().endswith(".png")
                               and not any(p.lower().rsplit(".",1)[0].endswith(s)
                                           for s in {"green","red","yellow","orange","purple","blue"})), None) or
-                        ps[0]
+                        (ps[0] if ps else None)
                     )
-                _logo_bytes_raw = _load_bytes(_pick_logo(logos))
+                _chosen = _pick_logo(_logo_pool)
+                _logo_bytes_raw = _load_bytes(_chosen) if _chosen else None
         except Exception as _le:
             logger.warning("reel_logo_load_failed", brand=brand, error=str(_le))
 
