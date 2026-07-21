@@ -81,10 +81,12 @@ def _load_bytes(path_or_uri: str) -> bytes | None:
 def _mime_for(uri: str) -> str:
     ext = uri.rsplit(".", 1)[-1].lower()
     return {
-        "jpg": "image/jpeg",
+        "jpg":  "image/jpeg",
         "jpeg": "image/jpeg",
-        "png": "image/png",
+        "png":  "image/png",
         "webp": "image/webp",
+        "gif":  "image/gif",
+        "svg":  "image/svg+xml",   # not supported by Gemini — callers skip via SUPPORTED_MIME check
     }.get(ext, "image/jpeg")
 
 
