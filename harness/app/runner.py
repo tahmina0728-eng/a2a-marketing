@@ -2953,19 +2953,50 @@ Output EXACTLY this format (nothing else):
         )
         # Brand-specific composition rules
         if brand.lower() == "sunrise":
-            _composition_rule = (
-                "\n\nCOMPOSITION RULE (Sunrise mobile telecom offer ad): "
-                "Sunrise is a Swiss mobile network — the scene must celebrate mobile connectivity in real-world locations. "
-                "Show 1-3 people confidently using a smartphone or smart device in a vivid outdoor or scenic setting. "
-                "Choose locations that feel aspirational and connected: Swiss Alpine mountain peaks, lakeside beaches, "
-                "ski slopes, hiking trails, snowy winter landscapes, sunrise viewpoints, vibrant city streets, or coastal cliffs. "
-                "The people should look happy, energised, and connected — smiling at a phone, video-calling, or sharing content. "
-                "Absolutely NO dark shadows, NO vignette, NO moody or low-key lighting. "
-                "Use bright natural daylight — vivid, saturated colours, crisp sharp details, luminous and powerful. "
-                "The LEFT THIRD of the frame must stay open (soft sky, bokeh, or landscape background) "
-                "so headline text can be placed there in post-production. "
-                "Overall mood: bright, bold, free, and modern. High energy. NO shadows."
+            _pn = _product_ctx.lower()
+            _sunrise_base = (
+                " Absolutely NO dark shadows, NO vignette, NO moody lighting. "
+                "Bright natural daylight — vivid saturated colours, crisp details, luminous and powerful. "
+                "LEFT THIRD of the frame must stay open (sky, bokeh, or negative space) for headline text overlay. "
+                "NO text, logos, or numbers anywhere in the image. Bright, bold, modern mood."
             )
+            if not _product_ctx:
+                # Lifestyle KV — brand awareness, no specific product
+                _sunrise_scene = (
+                    "Vibrant Sunrise brand lifestyle image: 1-2 people enjoying life in Switzerland — "
+                    "laughing with friends outdoors, exploring a scenic location, or relaxing at a viewpoint "
+                    "with a smartphone. Free, optimistic, modern energy."
+                )
+            elif "mobile unlimited" in _pn:
+                _sunrise_scene = (
+                    "1-2 people using a smartphone in an exciting outdoor location — "
+                    "hiking in the Swiss Alps, skiing down a slope, at a mountain lake, on a beach, "
+                    "or exploring a vibrant city. Captures unlimited mobile connectivity anywhere, always on the go."
+                )
+            elif "easy internet" in _pn:
+                _sunrise_scene = (
+                    "Person relaxed and happy browsing on a smartphone or tablet — "
+                    "cosy Swiss café, sunlit balcony with mountain view, or bright modern living room. "
+                    "Effortless everyday internet connection."
+                )
+            elif "5g" in _pn or "home internet" in _pn:
+                _sunrise_scene = (
+                    "Person or family in a bright modern Swiss home enjoying blazing-fast internet — "
+                    "streaming on a large screen, video calling on a laptop, or using multiple smart devices. "
+                    "Large windows with Alpine landscape view outside. Speed, power, and home comfort."
+                )
+            elif "business" in _pn:
+                _sunrise_scene = (
+                    "Confident business professional using a smartphone in a dynamic setting — "
+                    "modern city office with floor-to-ceiling windows, business travel at an airport, "
+                    "or an outdoor meeting in a Swiss city. Sharp, professional, always connected."
+                )
+            else:
+                _sunrise_scene = (
+                    "1-2 people confidently using a smartphone in an aspirational Swiss setting — "
+                    "mountains, lake, city street, or scenic landscape."
+                )
+            _composition_rule = f"\n\nCOMPOSITION RULE (Sunrise): {_sunrise_scene}{_sunrise_base}"
         elif brand == "UBS Bank":
             # Cinematic wide scenes matching UBS actual ad reference images —
             # aerial/overhead perspectives, groups in environments, action metaphors, NOT portraits.
