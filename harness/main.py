@@ -285,7 +285,8 @@ async def run_brief_full(brief: BriefRequest):
             except Exception:
                 pass
 
-        strategy = await run_strategy_with_groq(machine_brief, brand_guidelines, brand_locks)
+        strategy = await run_strategy_with_groq(machine_brief, brand_guidelines, brand_locks,
+                                                 language=brief.language or "" if hasattr(brief, "language") else "")
 
         # Stage 3: Campaign copy
         copy = await run_copy_with_groq(machine_brief, strategy, brand_locks)
@@ -389,7 +390,8 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "Defining strategic framework & messaging pillars…",
         ], interval=20))
         try:
-            strategy = await run_strategy_with_groq(machine_brief, brand_guidelines, brand_locks)
+            strategy = await run_strategy_with_groq(machine_brief, brand_guidelines, brand_locks,
+                                                     language=brief.language or "" if hasattr(brief, "language") else "")
         finally:
             hb2.cancel()
         # Try to load a brand asset thumbnail for the strategy visual

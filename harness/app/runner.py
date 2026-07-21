@@ -286,12 +286,23 @@ async def run_agent(
     return result, ms
 
 
-async def run_strategy_with_groq(machine_brief: dict, brand_guidelines: str, brand_locks: str) -> dict:
+async def run_strategy_with_groq(machine_brief: dict, brand_guidelines: str, brand_locks: str, language: str = "") -> dict:
     """Generate creative strategy from validated machine brief."""
     import litellm
     from app.instructions import STRATEGY_AGENT_INSTRUCTIONS
 
-    prompt = f"""{STRATEGY_AGENT_INSTRUCTIONS}
+    _lang_s = (language or "").strip()
+    _lang_rule_s = (
+        f"
+
+CRITICAL LANGUAGE REQUIREMENT: ALL text output (big_idea, tagline, strategic_framework, "
+        f"hero_message, tone_of_voice, messaging_pillars, culture_context, handoff_message) "
+        f"MUST be written entirely in {_lang_s}. Do NOT use English anywhere."
+        if _lang_s and _lang_s.lower() not in ("english", "en")
+        else ""
+    )
+
+    prompt = f"""{STRATEGY_AGENT_INSTRUCTIONS}{_lang_rule_s}
 
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 MACHINE BRIEF (validated):
