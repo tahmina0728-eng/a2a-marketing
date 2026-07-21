@@ -1260,13 +1260,13 @@ def _apply_brand_overlay(
 
                 else:
                     # ── Hero price: large floating ExtraBold (Offer2 / Offer3 style) ─
-                    _big_sz  = max(30, int(H * 0.33))
+                    _big_sz  = max(30, int(H * 0.30))   # 30% of H — enough room for right margin
                     _big_fnt = _font(_big_sz)
                     try: _big_fnt.set_variation_by_axes([800])
                     except: pass
-                    _cur_sz  = max(10, int(_big_sz * 0.22))
+                    _cur_sz  = max(12, int(_big_sz * 0.28))   # larger CHF label — clearly visible
                     _cur_fnt = _font(_cur_sz)
-                    try: _cur_fnt.set_variation_by_axes([300])
+                    try: _cur_fnt.set_variation_by_axes([400])
                     except: pass
 
                     _amt_bb = _md3.textbbox((0, 0), _pr_amt,  font=_big_fnt)
@@ -1298,10 +1298,11 @@ def _apply_brand_overlay(
             # ── Red footer strip ──────────────────────────────────────────────────
             draw_c.rectangle([0, H - _strip_h, W, H], fill=(*_SR, 255))
 
-            # ── Sunrise logo: S-circle straddles footer, "Sunrise" stacked below ──
+            # ── Sunrise logo: S-circle straddles footer, "Sunrise" beside it in red strip ──
+            # Reference layout: [S-circle (straddling)] [Sunrise text] — horizontal, in footer
             _logo_mg = max(20, int(W * 0.025))
             _ic_d2   = max(28, _strip_h)
-            # Circle center x: left-aligned (B/C/D) or right-aligned (A)
+            # Circle centre x: left side for B/C/D, right side for A
             _ic_cx   = (_logo_mg + _ic_d2 // 2) if _otype != "A" else (W - _logo_mg - _ic_d2 // 2)
 
             _ic_img2 = Image.new("RGBA", (_ic_d2, _ic_d2), (0, 0, 0, 0))
@@ -1310,25 +1311,28 @@ def _apply_brand_overlay(
             _ic_bb2  = [0, 0, _ic_d2-1, _ic_d2-1]
             _ic_drw2.ellipse(_ic_bb2, outline=(255, 255, 255, 255), width=_ic_stk2)
             _ic_drw2.chord(_ic_bb2, start=15, end=165, fill=(255, 255, 255, 255))
-            _ic_x2    = _ic_cx - _ic_d2 // 2
-            # 75% of circle protrudes above footer edge, 25% sits inside the red strip
-            _ic_above = int(_ic_d2 * 0.75)
-            _ic_below = _ic_d2 - _ic_above
-            _ic_y2    = H - _strip_h - _ic_above
+            _ic_x2 = _ic_cx - _ic_d2 // 2
+            _ic_y2 = H - _strip_h - _ic_d2 // 2   # centre at footer top edge — 50% straddle
             canvas.alpha_composite(_ic_img2, (max(0, _ic_x2), max(0, _ic_y2)))
 
-            # "Sunrise" wordmark: centered in footer space below the circle's lower edge
-            _rem     = _strip_h - _ic_below
-            _wm_sz   = max(11, int(_rem * 0.75))
+            # "Sunrise" wordmark: beside the circle, vertically centred in the red footer strip
+            _wm_sz   = max(11, int(_strip_h * 0.45))
             _wm_fnt2 = _font(_wm_sz)
-            try: _wm_fnt2.set_variation_by_axes([700])
+            try: _wm_fnt2.set_variation_by_axes([700])   # Bold — all 4 offer modes
             except: pass
             _wm_bb2  = _md3.textbbox((0, 0), "Sunrise", font=_wm_fnt2)
             _wm_w2   = _wm_bb2[2] - _wm_bb2[0]
             _wm_h2   = _wm_bb2[3] - _wm_bb2[1]
-            _wm_cy   = H - _strip_h + _ic_below + max(0, (_rem - _wm_h2) // 2)
-            _wm_x2   = _ic_cx - _wm_w2 // 2 - _wm_bb2[0]
-            _wm_y2   = _wm_cy - _wm_bb2[1]
+            _wm_gap  = max(6, int(_ic_d2 * 0.15))
+            if _otype == "A":
+                # Right-aligned logo: "Sunrise" sits to the LEFT of the circle
+                _wm_x2 = _ic_cx - _ic_d2 // 2 - _wm_gap - _wm_w2 - _wm_bb2[0]
+            else:
+                # Left-aligned logo: "Sunrise" sits to the RIGHT of the circle
+                _wm_x2 = _ic_cx + _ic_d2 // 2 + _wm_gap - _wm_bb2[0]
+            # Vertically centre within the full footer strip
+            _wm_cy = H - _strip_h + (_strip_h - _wm_h2) // 2
+            _wm_y2 = _wm_cy - _wm_bb2[1]
             draw_c.text((_wm_x2, _wm_y2), "Sunrise", font=_wm_fnt2, fill=(255, 255, 255, 255))
 
             img = canvas
