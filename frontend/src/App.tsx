@@ -6140,6 +6140,7 @@ export default function App() {
             initialName={selectedCampaign?.name}
             initialBrand={selectedCampaign?.brand}
             initialResults={(() => { try { const r = localStorage.getItem(`a2a_results_${selectedCampaign?.id}`); return r ? JSON.parse(r) : undefined; } catch { return undefined; } })()}
+            initialContext={(() => { try { const r = localStorage.getItem(`a2a_brief_${selectedCampaign?.id}`); return r ? JSON.parse(r) : undefined; } catch { return undefined; } })()}
             onSaved={refreshCampaigns}
             onPublish={(data) => {
               setCampaignPublishData(data);

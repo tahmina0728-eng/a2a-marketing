@@ -246,19 +246,19 @@ function FormatCard({ label, desc, icon, selected, onClick, sizes, selSize, onSi
 }
 
 // ── Main Component ─────────────────────────────────────────────
-export default function Campaigns({ initialName, initialBrand, initialResults, onSaved, onPublish }: { initialName?: string; initialBrand?: string; initialResults?: Partial<Record<FormatType, GeneratedResult>>; onSaved?: () => void; onPublish?: (data: { brand: string; brief: string; headline?: string; body?: string; image_b64?: string; contentType: "image" | "video" }) => void } = {}) {
+export default function Campaigns({ initialName, initialBrand, initialResults, initialContext, onSaved, onPublish }: { initialName?: string; initialBrand?: string; initialResults?: Partial<Record<FormatType, GeneratedResult>>; initialContext?: { brief?: string; audience?: string; market?: string; language?: string; product?: string }; onSaved?: () => void; onPublish?: (data: { brand: string; brief: string; headline?: string; body?: string; image_b64?: string; contentType: "image" | "video" }) => void } = {}) {
   const [step, setStep]         = useState<1|2|3|4>(initialResults ? 4 : 1);
   const [campaignName, setCampaignName] = useState(initialName ?? "");
-  const [brief, setBrief]       = useState("");
+  const [brief, setBrief]       = useState(initialContext?.brief ?? "");
   const [brand, setBrand]       = useState(initialBrand ?? "");
   const [goal, setGoal]       = useState("");
-  const [audience, setAudience] = useState("");
+  const [audience, setAudience] = useState(initialContext?.audience ?? "");
   const audiences = BRAND_AUDIENCES[brand] ?? DEFAULT_AUDIENCES;
   const [platform, setPlatform] = useState("");
   const [voiceName, setVoiceName] = useState("");
-  const [market, setMarket]       = useState("");
-  const [language, setLanguage]   = useState("");
-  const [product, setProduct]     = useState("");
+  const [market, setMarket]       = useState(initialContext?.market ?? "");
+  const [language, setLanguage]   = useState(initialContext?.language ?? "");
+  const [product, setProduct]     = useState(initialContext?.product ?? "");
   const [voices] = useState<BrandVoice[]>(() => {
     try {
       const stored = localStorage.getItem(VOICE_STORAGE_KEY);
@@ -322,7 +322,9 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
   const anyRes = Object.values(results).some(r => r?.image_b64||r?.video_b64);
   const hasRes = (f: FormatType) => !!(results[f]?.image_b64 || results[f]?.video_b64);
 
-  // Save campaign name + results to localStorage once generation is done
+  // Save campaign name + results to localStorage once generation is done.
+  // onSaved (sidebar refresh) fires AFTER the async image save so the campaign
+  // is only visible in the list once results are actually persisted.
   useEffect(() => {
     if (!anyRes) return;
     const name = campaignName.trim() || brand || "Untitled Campaign";
@@ -331,11 +333,8 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
     })();
     const existingId = stored.find(c => c.name === name)?.id;
     const id = existingId ?? `c_${Date.now()}`;
-    // Always move campaign to front (covers new + re-generated campaigns)
     const updated = [{ id, name, brand }, ...stored.filter(c => c.id !== id)].slice(0, 10);
     localStorage.setItem("a2a_campaigns", JSON.stringify(updated));
-    onSaved?.();
-    // Compress image then persist — avoids QuotaExceededError from raw base64
     (async () => {
       try {
         const toSave: Partial<Record<FormatType, GeneratedResult>> = {};
@@ -344,11 +343,15 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
           toSave.image = { image_b64: compressed, headline: results.image.headline, tagline: results.image.tagline };
         }
         localStorage.setItem(`a2a_results_${id}`, JSON.stringify(toSave));
+        // Save brief + audience so they can be restored when re-opening the campaign
+        if (brief.trim()) localStorage.setItem(`a2a_brief_${id}`, JSON.stringify({ brief, audience, market, language, product }));
       } catch (e) {
         console.warn("campaign result save failed:", e);
+      } finally {
+        onSaved?.();  // refresh sidebar only after results are persisted
       }
     })();
-  }, [anyRes, campaignName, brand, onSaved, results]);
+  }, [anyRes, campaignName, brand, brief, audience, market, language, product, onSaved, results]);
 
   const [modifyBusy, setModifyBusy] = useState(false);
 
@@ -425,6 +428,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, o
           body.product_name = _plan ? `${product} – ${_sym} ${_plan.amount}/mth` : product;
         }
         if (market) body.market = market;
+        if (audience) body.audience = audience;
         const key = fmt==="image"?"kv":fmt==="tvc"?"tvc":"reel";
         const r = await fetch(`${API_BASE}/agents/${key}/run`, {
           method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body),

@@ -359,7 +359,7 @@ def run_channel(brand: str, prompt: str, provided_image_b64: str = "") -> dict:
     return {"agent": "channel", **result}
 
 
-def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") -> dict:
+def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", audience: str = "") -> dict:
     """
     Standalone Morphis: one text call for a headline + visual scene, one image
     call for the actual key visual, then the same Pillow brand-overlay
@@ -371,6 +371,21 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") ->
     Gemini call for marginal quality gain) and any upstream big-idea/copy
     context — same standalone tradeoff already accepted for the other agents.
     """
+    # Derive audience descriptor for scene persona
+    _al = (audience or "").lower()
+    if "famil" in _al:
+        _who = "a family (parents in their 30s-40s with one or two children aged 8-14)"
+    elif "gen z" in _al or ("16" in _al and "24" in _al):
+        _who = "two Gen Z friends aged 18-24, diverse and stylish"
+    elif "professional" in _al or ("30" in _al and "50" in _al):
+        _who = "two professionals aged 30-50, confident and polished"
+    elif "women" in _al or "woman" in _al:
+        _who = "two women aged 18-35, stylish and modern"
+    elif "men" in _al or "man" in _al:
+        _who = "two men aged 25-45, active and confident"
+    else:
+        _who = "two or three people of diverse ages"
+
     if product_name:
         _morphis_sys = (
             "You are Morphis, the key visual designer for an AI marketing campaign system. "
@@ -380,12 +395,13 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") ->
         )
         _morphis_instr = (
             f'The product being promoted is: "{product_name}". '
+            f'The target audience is: {_who}. '
             'Respond ONLY with JSON, no markdown fences: '
             '{"headline": "bold 4-7 word offer headline — exciting, benefit-driven, action-oriented", '
-            '"scene": "2-3 sentences: a confident, happy person actively holding or using a smartphone '
-            '(talking on it, smiling at the screen, or showing it). The person occupies the RIGHT HALF '
-            'of the frame. The upper-left area of the frame is naturally light, airy, and uncluttered — '
-            'bright sky, soft background, or blurred environment. Clean, aspirational, professional. '
+            f'"scene": "2-3 sentences: show {_who} actively using a smartphone together — '
+            'holding it, smiling at the screen, or sharing the display. They occupy the RIGHT HALF '
+            'of the frame. The upper-left area is naturally light, airy, and uncluttered — '
+            'bright sky, soft background, or blurred environment. Clean, aspirational, joyful. '
             'Do not mention any text, words, logos, or price figures."}'
         )
     else:
@@ -394,10 +410,11 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "") ->
             "You write a short campaign headline and describe a visual scene for an image generator."
         )
         _morphis_instr = (
+            f'The target audience is: {_who}. '
             'Respond ONLY with JSON, no markdown fences: '
             '{"headline": "short punchy campaign headline, 4-8 words", '
-            '"scene": "2-3 sentences describing the visual scene — setting, subject(s), mood, lighting. '
-            'Do not mention any text, words, or logos that should appear in the image."}'
+            f'"scene": "2-3 sentences: show {_who} in a vibrant, aspirational setting. '
+            'Setting, mood, lighting — no text, words, or logos in the image."}'
         )
     data = _generate(_morphis_sys, brand, prompt, _morphis_instr)
     headline = data.get("headline", "") or prompt
@@ -1875,6 +1892,7 @@ def run_agent_standalone(
     image_b64: str = "",
     product_name: str = "",
     market: str = "",
+    audience: str = "",
 ) -> dict:
     """text is the whole free-text prompt, e.g. "UBS Bank for UK market, festive: christmas" —
     the brand is detected from it automatically rather than passed separately."""
@@ -1893,5 +1911,5 @@ def run_agent_standalone(
     if agent_key == "channel" and image_b64:
         return runner(brand, text, image_b64)
     if agent_key == "kv":
-        return runner(brand, text, product_name=product_name, market=market)
+        return runner(brand, text, product_name=product_name, market=market, audience=audience)
     return runner(brand, text)
