@@ -6093,7 +6093,10 @@ export default function App() {
                 <div style={{ display: "grid",
                   gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
                   {savedCampaigns.map(c => {
-                    const res = (() => { try { const r = localStorage.getItem(`a2a_results_${c.id}`); return r ? JSON.parse(r) : null; } catch { return null; } })();
+                    const res = (() => {
+                      try { const s = sessionStorage.getItem(`a2a_results_${c.id}`); if (s) return JSON.parse(s); } catch { /**/ }
+                      try { const l = localStorage.getItem(`a2a_results_${c.id}`); return l ? JSON.parse(l) : null; } catch { return null; }
+                    })();
                     const thumb = res?.image?.image_b64;
                     return (
                       <div key={c.id}
@@ -6139,7 +6142,20 @@ export default function App() {
             key={selectedCampaign?.id ?? "new"}
             initialName={selectedCampaign?.name}
             initialBrand={selectedCampaign?.brand}
-            initialResults={(() => { try { const r = localStorage.getItem(`a2a_results_${selectedCampaign?.id}`); return r ? JSON.parse(r) : undefined; } catch { return undefined; } })()}
+            initialResults={(() => {
+              const sid = selectedCampaign?.id;
+              if (!sid) return undefined;
+              try {
+                // sessionStorage = full-quality image, current tab session
+                const s = sessionStorage.getItem(`a2a_results_${sid}`);
+                if (s) return JSON.parse(s);
+              } catch { /**/ }
+              try {
+                // localStorage = compressed thumbnail, cross-session fallback
+                const l = localStorage.getItem(`a2a_results_${sid}`);
+                return l ? JSON.parse(l) : undefined;
+              } catch { return undefined; }
+            })()}
             initialContext={(() => { try { const r = localStorage.getItem(`a2a_brief_${selectedCampaign?.id}`); return r ? JSON.parse(r) : undefined; } catch { return undefined; } })()}
             onSaved={refreshCampaigns}
             onPublish={(data) => {

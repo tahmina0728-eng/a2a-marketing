@@ -322,9 +322,9 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   const anyRes = Object.values(results).some(r => r?.image_b64||r?.video_b64);
   const hasRes = (f: FormatType) => !!(results[f]?.image_b64 || results[f]?.video_b64);
 
-  // Save campaign + results to localStorage when generation is done.
-  // Strategy: write synchronously first (guarantees data is there even if
-  // compression fails), then replace with a smaller compressed copy async.
+  // Save campaign + results when generation is done.
+  // sessionStorage holds the full-quality image for the current tab session (no size limit).
+  // localStorage holds a compressed thumbnail for cross-session persistence.
   useEffect(() => {
     if (!anyRes) return;
     const name = campaignName.trim() || brand || "Untitled Campaign";
@@ -336,36 +336,38 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
     const updated = [{ id, name, brand }, ...stored.filter(c => c.id !== id)].slice(0, 10);
 
     try {
-      // 1. Campaign list — always write first
+      // 1. Campaign list (small, always fits)
       localStorage.setItem("a2a_campaigns", JSON.stringify(updated));
-
-      // 2. Results — write synchronously so clicking the campaign immediately works
-      const toSaveSync: Partial<Record<FormatType, GeneratedResult>> = {};
-      if (results.image?.image_b64) {
-        toSaveSync.image = { image_b64: results.image.image_b64, headline: results.image.headline };
-      }
-      localStorage.setItem(`a2a_results_${id}`, JSON.stringify(toSaveSync));
-
-      // 3. Brief context — always write if we have a brief
+      // 2. Brief context (small, always fits)
       if (brief.trim()) {
         localStorage.setItem(`a2a_brief_${id}`, JSON.stringify({ brief, audience, market, language, product }));
       }
     } catch (e) {
-      console.warn("campaign save failed:", e);
+      console.warn("campaign metadata save failed:", e);
     }
 
-    // 4. Notify sidebar (safe even if save failed — user sees campaign with empty results)
+    // 3. Full-quality image → sessionStorage (survives same-tab navigation, no quota issues)
+    if (results.image?.image_b64) {
+      try {
+        sessionStorage.setItem(`a2a_results_${id}`, JSON.stringify({
+          image: { image_b64: results.image.image_b64, headline: results.image.headline },
+        }));
+      } catch (e) {
+        console.warn("session image save failed:", e);
+      }
+    }
+
+    // 4. Notify sidebar
     onSaved?.();
 
-    // 5. Replace stored image with compressed copy to save space (fire-and-forget)
+    // 5. Compressed thumbnail → localStorage (persists across sessions, fire-and-forget)
     if (results.image?.image_b64) {
       compressImageForStorage(results.image.image_b64).then(compressed => {
         try {
-          const toSaveCompressed: Partial<Record<FormatType, GeneratedResult>> = {
+          localStorage.setItem(`a2a_results_${id}`, JSON.stringify({
             image: { image_b64: compressed, headline: results.image!.headline },
-          };
-          localStorage.setItem(`a2a_results_${id}`, JSON.stringify(toSaveCompressed));
-        } catch { /* original already saved — quota issue on compressed is fine to ignore */ }
+          }));
+        } catch { /* quota exceeded — cross-session thumbnail won't persist, current session still works */ }
       });
     }
   }, [anyRes, campaignName, brand, brief, audience, market, language, product, onSaved, results]);
