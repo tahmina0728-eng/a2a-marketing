@@ -1259,28 +1259,33 @@ def _apply_brand_overlay(
                     draw_c.text((_ax, _ty - _amt_bb[1]), _pr_amt, font=_amt_fnt, fill=_dk)
 
                 else:
-                    # ── Hero price: large floating ExtraBold (Offer2 / Offer3 style) ─
-                    # Reference ads show the price number only — no separate CHF label
-                    _big_sz  = max(30, int(H * 0.30))
-                    _big_fnt = _font(_big_sz)
-                    try: _big_fnt.set_variation_by_axes([800])
+                    # ── Dark circle price badge (Types B/C/D) ─────────────────────────
+                    # Same badge style as Type A but right-aligned, so it clears the logo
+                    _br   = max(38, int(min(W, H) * 0.13))
+                    _bx   = W - _lm - _br * 2   # right side
+                    _by   = H - _strip_h - _br * 2 - int(H * 0.025)
+                    _bdg  = Image.new("RGBA", (_br * 2, _br * 2), (0, 0, 0, 0))
+                    _bdrw = ImageDraw.Draw(_bdg)
+                    _bdrw.ellipse(
+                        [0, 0, _br * 2 - 1, _br * 2 - 1],
+                        fill=(28, 28, 28, 220),
+                    )
+                    canvas.alpha_composite(_bdg, (_bx, _by))
+                    _amt_fnt  = _font(max(10, int(_br * 0.50)))
+                    try: _amt_fnt.set_variation_by_axes([700])
                     except: pass
-
-                    _amt_bb = _md3.textbbox((0, 0), _pr_amt, font=_big_fnt)
-                    _amt_w  = _amt_bb[2] - _amt_bb[0]
-
-                    if _otype == "C":
-                        # Left side below plan label (Offer3 / Easy Internet style)
-                        _px       = _lm
-                        _safe_top = H - _strip_h - int(_big_sz * 1.05) - int(H * 0.02)
-                        _py       = min(_hy + int(H * 0.02), _safe_top)
-                    else:
-                        # Right side, top-aligned (Offer2 / Brand Red / 5G style)
-                        _px = W - _lm - _amt_w
-                        _py = max(36, int(H * 0.07))
-
-                    draw_c.text((_px - _amt_bb[0], _py - _amt_bb[1]),
-                                _pr_amt, font=_big_fnt, fill=(255, 255, 255, 255))
+                    _cur_fnt  = _font(max(7, int(_br * 0.24)))
+                    _amt_bb   = _md3.textbbox((0, 0), _pr_amt,  font=_amt_fnt)
+                    _cur_bb   = _md3.textbbox((0, 0), _pr_curr, font=_cur_fnt) if _pr_curr else (0, 0, 0, 0)
+                    _badge_th = (_amt_bb[3]-_amt_bb[1]) + ((_cur_bb[3]-_cur_bb[1]+3) if _pr_curr else 0)
+                    _ty = _by + _br - _badge_th // 2
+                    _wh = (255, 255, 255, 255)
+                    if _pr_curr:
+                        _lx = _bx + _br - (_cur_bb[2]-_cur_bb[0]) // 2 - _cur_bb[0]
+                        draw_c.text((_lx, _ty - _cur_bb[1]), _pr_curr, font=_cur_fnt, fill=_wh)
+                        _ty += (_cur_bb[3]-_cur_bb[1]) + 3
+                    _ax = _bx + _br - (_amt_bb[2]-_amt_bb[0]) // 2 - _amt_bb[0]
+                    draw_c.text((_ax, _ty - _amt_bb[1]), _pr_amt, font=_amt_fnt, fill=_wh)
 
             # ── Red footer strip ──────────────────────────────────────────────────
             draw_c.rectangle([0, H - _strip_h, W, H], fill=(*_SR, 255))
@@ -1289,7 +1294,7 @@ def _apply_brand_overlay(
             # Reference layout: circle ~90% of footer height; filled S-arc (bottom ~37%)
             # sits inside the red strip; outline-only top 63% peeks above footer border.
             # "Sunrise" text to the RIGHT of circle; "BUSINESS" below it (Type A only).
-            _logo_mg = max(16, int(W * 0.02))
+            _logo_mg = max(24, int(W * 0.04))
             _ic_d2   = max(36, int(_strip_h * 0.90))
             _ic_cx   = (_logo_mg + _ic_d2 // 2) if _otype != "A" else (W - _logo_mg - _ic_d2 // 2)
 
