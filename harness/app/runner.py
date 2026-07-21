@@ -1294,7 +1294,7 @@ def _apply_brand_overlay(
             # Reference layout: circle ~90% of footer height; filled S-arc (bottom ~37%)
             # sits inside the red strip; outline-only top 63% peeks above footer border.
             # "Sunrise" text to the RIGHT of circle; "BUSINESS" below it (Type A only).
-            _logo_mg = max(24, int(W * 0.04))
+            _logo_mg = max(40, int(W * 0.08))
             _ic_d2   = max(36, int(_strip_h * 0.90))
             _ic_cx   = (_logo_mg + _ic_d2 // 2) if _otype != "A" else (W - _logo_mg - _ic_d2 // 2)
 
