@@ -1173,7 +1173,7 @@ def _apply_brand_overlay(
             # ── Headline (uniform size/weight across all lines) ───────────────────
             _lm         = max(36, int(W * 0.05))
             _head_max_w = int(W * 0.45)
-            _head_sz    = max(20, int(H * 0.115))
+            _head_sz    = max(22, int(H * 0.135))
 
             def _tracked_w(text, fnt, tracking):
                 total = sum(
@@ -1212,7 +1212,7 @@ def _apply_brand_overlay(
                 _bb3 = _md3.textbbox((0, 0), _lt3.upper(), font=_fnt_uni)
                 _draw_tracked(draw_c, (_lm, _hy), _lt3.upper(), _fnt_uni,
                               _txt_col, max(1, int(_sz_uni * 0.02)))
-                _hy += (_bb3[3] - _bb3[1]) + int(_sz_uni * 0.08)
+                _hy += (_bb3[3] - _bb3[1]) + int(_sz_uni * 0.38)
 
             # ── Plan label ────────────────────────────────────────────────────────
             _hy += int(H * 0.025)
@@ -1259,11 +1259,10 @@ def _apply_brand_overlay(
                     draw_c.text((_ax, _ty - _amt_bb[1]), _pr_amt, font=_amt_fnt, fill=_dk)
 
                 else:
-                    # ── Dark circle price badge (Types B/C/D) ─────────────────────────
-                    # Same badge style as Type A but right-aligned, so it clears the logo
+                    # ── White circle price badge (Types B/C/D) — below headline on left
                     _br   = max(38, int(min(W, H) * 0.13))
-                    _bx   = W - _lm - _br * 2   # right side
-                    _by   = H - _strip_h - _br * 2 - int(H * 0.025)
+                    _bx   = _lm                  # left-aligned with headline
+                    _by   = _hy                  # directly below plan label
                     _bdg  = Image.new("RGBA", (_br * 2, _br * 2), (0, 0, 0, 0))
                     _bdrw = ImageDraw.Draw(_bdg)
                     _bdrw.ellipse(
@@ -1865,25 +1864,22 @@ async def generate_campaign_reel(
         _pl = (p or "").lower()
         if any(x in _pl for x in ["business", "enterprise", "b2b", "sme", "office"]):
             return (
-                f"A confident Swiss professional in a sleek modern office switches seamlessly between "
-                f"a video call on their laptop and a {p}-powered smartphone without missing a beat. "
+                f"Two Swiss business professionals in a sleek modern office — one on a video call on their laptop, "
+                f"the other checking messages on a {p}-powered smartphone. "
                 f"Floor-to-ceiling windows reveal a crisp Zurich skyline in golden morning light. "
-                f"Clean white interior, Sunrise Red accents, Swiss precision, dynamic energy — "
-                f"the network disappears so the work can breathe."
+                f"Clean white interior, Swiss precision, dynamic professional energy."
             )
         elif any(x in _pl for x in ["home", "internet", "tv", "fiber", "fibre", "broadband", "wifi"]):
             return (
-                f"A warm Swiss family evening — a parent video-calling grandparents on a tablet in the kitchen "
-                f"while children stream on the TV in the living room, all seamlessly on {p}. "
-                f"Cosy modern Swiss apartment, soft amber light, the connection just works. "
-                f"Sunrise Red router glowing quietly, clean white and red palette, genuine human warmth."
+                f"A Swiss family of 2-3 people — a parent on a video call on a tablet, "
+                f"a teenager streaming on a laptop, all connected seamlessly on {p}. "
+                f"Bright modern Swiss apartment, soft natural light through large windows, genuine warmth."
             )
         else:
             return (
-                f"A young Swiss professional strides confidently through Zurich's old town, "
-                f"phone in hand — a video call staying crystal-clear as they move through the crowd and under archways. "
-                f"Cobblestones and modern glass side by side, Sunrise Red on their jacket, "
-                f"warm human connection, Swiss urban energy, the signal never drops."
+                f"Two young Swiss friends walk confidently through Zurich's old town, "
+                f"both with phones in hand — sharing content, laughing, video calling while on the move. "
+                f"Cobblestones and modern glass side by side, warm human connection, Swiss urban energy."
             )
 
     _BRAND_SCENE_FN = {
@@ -2960,41 +2956,64 @@ Output EXACTLY this format (nothing else):
                 "LEFT THIRD of the frame must stay open (sky, bokeh, or negative space) for headline text overlay. "
                 "NO text, logos, or numbers anywhere in the image. Bright, bold, modern mood."
             )
+            # Derive WHO appears in the scene from the selected target audience
+            _al = _aud_ctx.lower()
+            if "famil" in _al:
+                _who = "a family — two parents in their 30s-40s and one or two children aged 8-14"
+                _who_activity = "together at home or outdoors"
+            elif "gen z" in _al or ("16" in _al and "24" in _al):
+                _who = "two Gen Z friends aged 18-24, diverse and stylish"
+                _who_activity = "energetic and spontaneous, phones in hand"
+            elif "professional" in _al or ("30" in _al and "50" in _al):
+                _who = "two professionals aged 30-50, confident and polished"
+                _who_activity = "in a business or urban context"
+            elif "women" in _al or "woman" in _al:
+                _who = "two women aged 18-35, stylish and modern"
+                _who_activity = "laughing and connected"
+            elif "men" in _al or "man" in _al:
+                _who = "two men aged 25-45, active and confident"
+                _who_activity = "energetic and on the go"
+            else:
+                _who = "two or three people, diverse ages"
+                _who_activity = "engaged with smartphones, smiling"
+
             if not _product_ctx:
                 # Lifestyle KV — brand awareness, no specific product
                 _sunrise_scene = (
-                    "Vibrant Sunrise brand lifestyle image: 1-2 people enjoying life in Switzerland — "
-                    "laughing with friends outdoors, exploring a scenic location, or relaxing at a viewpoint "
-                    "with a smartphone. Free, optimistic, modern energy."
+                    f"Show {_who} laughing and enjoying life outdoors in Switzerland, {_who_activity}. "
+                    "Scenic Swiss location: mountain viewpoint, lakeside promenade, or vibrant city street. "
+                    "Free, optimistic, modern energy."
                 )
             elif "mobile unlimited" in _pn:
                 _sunrise_scene = (
-                    "1-2 people using a smartphone in an exciting outdoor location — "
-                    "hiking in the Swiss Alps, skiing down a slope, at a mountain lake, on a beach, "
-                    "or exploring a vibrant city. Captures unlimited mobile connectivity anywhere, always on the go."
+                    f"Show {_who} using smartphones together in an exciting outdoor Swiss location — "
+                    "hiking in the Alps, skiing down a slope, at a turquoise mountain lake, or exploring a vibrant city. "
+                    f"{_who_activity.capitalize()}, both engaged with their phones, full of energy. "
+                    "Unlimited mobile connectivity anywhere, always on the go."
                 )
             elif "easy internet" in _pn:
                 _sunrise_scene = (
-                    "Person relaxed and happy browsing on a smartphone or tablet — "
-                    "cosy Swiss café, sunlit balcony with mountain view, or bright modern living room. "
+                    f"Show {_who} relaxed and happy browsing on smartphones or a tablet together, {_who_activity}. "
+                    "Setting: cosy Swiss café with large windows, a sunlit balcony with mountain view, "
+                    "or a bright modern living room. Both smiling, at ease. "
                     "Effortless everyday internet connection."
                 )
             elif "5g" in _pn or "home internet" in _pn:
                 _sunrise_scene = (
-                    "Person or family in a bright modern Swiss home enjoying blazing-fast internet — "
-                    "streaming on a large screen, video calling on a laptop, or using multiple smart devices. "
+                    f"Show {_who} in a bright modern Swiss home enjoying blazing-fast internet — "
+                    "one streaming on a large screen, another video calling on a laptop or tablet. "
                     "Large windows with Alpine landscape view outside. Speed, power, and home comfort."
                 )
             elif "business" in _pn:
                 _sunrise_scene = (
-                    "Confident business professional using a smartphone in a dynamic setting — "
-                    "modern city office with floor-to-ceiling windows, business travel at an airport, "
-                    "or an outdoor meeting in a Swiss city. Sharp, professional, always connected."
+                    f"Show {_who} using smartphones in a dynamic professional setting — "
+                    "modern Swiss city office with floor-to-ceiling windows, or an outdoor business meeting. "
+                    f"{_who_activity.capitalize()}, sharp and always connected."
                 )
             else:
                 _sunrise_scene = (
-                    "1-2 people confidently using a smartphone in an aspirational Swiss setting — "
-                    "mountains, lake, city street, or scenic landscape."
+                    f"Show {_who} confidently using smartphones together in an aspirational Swiss setting — "
+                    "mountains, lake, city street, or scenic landscape. Energetic, modern, connected."
                 )
             _composition_rule = f"\n\nCOMPOSITION RULE (Sunrise): {_sunrise_scene}{_sunrise_base}"
         elif brand == "UBS Bank":
