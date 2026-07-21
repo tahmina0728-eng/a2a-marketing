@@ -1316,32 +1316,37 @@ def _apply_brand_overlay(
             _ic_y2 = H - _strip_h - int(_ic_d2 * 0.38)   # centre at footer top edge — 50% straddle
             canvas.alpha_composite(_ic_img2, (max(0, _ic_x2), max(0, _ic_y2)))
 
-            # "Sunrise" wordmark: beside the circle, vertically centred in the lower arc
-            # (the portion of the circle that sits inside the red footer strip)
-            _wm_sz   = max(11, int(_strip_h * 0.50))
+            # "Sunrise" wordmark — large Bold, vertically centred in the footer strip
+            _wm_sz   = max(11, int(_strip_h * 0.65))   # 65% of footer height — matches reference
             _wm_fnt2 = _font(_wm_sz)
-            try: _wm_fnt2.set_variation_by_axes([600])   # Bold — all 4 offer modes
+            try: _wm_fnt2.set_variation_by_axes([700])
             except: pass
             _wm_bb2  = _md3.textbbox((0, 0), "Sunrise", font=_wm_fnt2)
             _wm_w2   = _wm_bb2[2] - _wm_bb2[0]
             _wm_h2   = _wm_bb2[3] - _wm_bb2[1]
-            _wm_gap = max(8, int(_ic_d2 * 0.20))
+            _wm_gap  = max(6, int(_ic_d2 * 0.12))
+
             if _otype == "A":
-                # Right-aligned logo: "Sunrise" sits to the LEFT of the circle
-                _wm_x2 = _ic_cx - _ic_d2 // 2 - _wm_gap - _wm_w2 - _wm_bb2[0]
+                # Business Connect: "Sunrise" + "BUSINESS" stacked, LEFT of the circle
+                _sub_sz  = max(7, int(_wm_sz * 0.42))
+                _sub_fnt = _font(_sub_sz)
+                try: _sub_fnt.set_variation_by_axes([400])
+                except: pass
+                _sub_bb  = _md3.textbbox((0, 0), "BUSINESS", font=_sub_fnt)
+                _sub_h   = _sub_bb[3] - _sub_bb[1]
+                _sub_gap = max(2, int(_wm_sz * 0.08))
+                _blk_h   = _wm_h2 + _sub_gap + _sub_h
+                _blk_top = H - _strip_h + (_strip_h - _blk_h) // 2
+                _txt_x   = _ic_cx - _ic_d2 // 2 - _wm_gap - max(_wm_w2, _sub_bb[2] - _sub_bb[0])
+                draw_c.text((_txt_x - _wm_bb2[0], _blk_top - _wm_bb2[1]),
+                            "Sunrise", font=_wm_fnt2, fill=(255, 255, 255, 255))
+                draw_c.text((_txt_x - _sub_bb[0], _blk_top + _wm_h2 + _sub_gap - _sub_bb[1]),
+                            "BUSINESS", font=_sub_fnt, fill=(255, 255, 255, 210))
             else:
-                # Left-aligned logo: "Sunrise" sits to the RIGHT of the circle
+                # B/C/D: "Sunrise" to the RIGHT of circle, centred in the footer strip
                 _wm_x2 = _ic_cx + _ic_d2 // 2 + _wm_gap - _wm_bb2[0]
-            # Centre "Sunrise" vertically within the lower half of the circle (inside footer)
-            # _wm_cy = H - _strip_h + _ic_d2 // 4
-            # _wm_y2 = _wm_cy - _wm_h2 // 2 - _wm_bb2[1]
-            _wm_y2 = (
-                H
-                - _strip_h
-                + (_strip_h - _wm_h2) // 2
-                - _wm_bb2[1]
-            )
-            draw_c.text((_wm_x2, _wm_y2), "Sunrise", font=_wm_fnt2, fill=(255, 255, 255, 255))
+                _wm_y2 = H - _strip_h + (_strip_h - _wm_h2) // 2 - _wm_bb2[1]
+                draw_c.text((_wm_x2, _wm_y2), "Sunrise", font=_wm_fnt2, fill=(255, 255, 255, 255))
 
             img = canvas
             logger.info("sunrise_offer_layout_applied",
