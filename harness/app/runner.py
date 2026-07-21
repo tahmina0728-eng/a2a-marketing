@@ -1172,7 +1172,7 @@ def _apply_brand_overlay(
 
             # ── Headline (uniform size/weight across all lines) ───────────────────
             _lm         = max(36, int(W * 0.05))
-            _head_max_w = int(W * 0.52)
+            _head_max_w = int(W * 0.45)
             _head_sz    = max(20, int(H * 0.115))
 
             def _tracked_w(text, fnt, tracking):
@@ -1196,7 +1196,7 @@ def _apply_brand_overlay(
                 _sz3 = _head_sz
                 while _sz3 > 13:
                     _f3 = _font(_sz3)
-                    try: _f3.set_variation_by_axes([300])
+                    try: _f3.set_variation_by_axes([600])
                     except: pass
                     if _tracked_w(_lt.upper(), _f3, max(1, int(_sz3 * 0.02))) <= _head_max_w:
                         break
@@ -1204,7 +1204,7 @@ def _apply_brand_overlay(
                 _sz_uni = min(_sz_uni, _sz3)
 
             _fnt_uni = _font(_sz_uni)
-            try: _fnt_uni.set_variation_by_axes([300])   # Light (300)
+            try: _fnt_uni.set_variation_by_axes([600])   # SemiBold — matches reference weight
             except: pass
 
             _hy = max(40, int(H * 0.08))
@@ -1260,39 +1260,26 @@ def _apply_brand_overlay(
 
                 else:
                     # ── Hero price: large floating ExtraBold (Offer2 / Offer3 style) ─
-                    _big_sz  = max(30, int(H * 0.30))   # 30% of H — enough room for right margin
+                    # Reference ads show the price number only — no separate CHF label
+                    _big_sz  = max(30, int(H * 0.30))
                     _big_fnt = _font(_big_sz)
                     try: _big_fnt.set_variation_by_axes([800])
                     except: pass
-                    _cur_sz  = max(12, int(_big_sz * 0.28))   # larger CHF label — clearly visible
-                    _cur_fnt = _font(_cur_sz)
-                    try: _cur_fnt.set_variation_by_axes([400])
-                    except: pass
 
-                    _amt_bb = _md3.textbbox((0, 0), _pr_amt,  font=_big_fnt)
-                    _cur_bb = _md3.textbbox((0, 0), _pr_curr, font=_cur_fnt)
+                    _amt_bb = _md3.textbbox((0, 0), _pr_amt, font=_big_fnt)
                     _amt_w  = _amt_bb[2] - _amt_bb[0]
-                    _cur_h  = _cur_bb[3] - _cur_bb[1]
 
                     if _otype == "C":
-                        # Left side below plan label (Offer3 style)
-                        _px    = _lm
-                        _cur_x = _lm  # left-align CHF
-                        # Reserve space for full price block: CHF label + gap + number
-                        _price_block_h = _cur_h + int(_big_sz * 0.08) + int(_big_sz * 1.05)
-                        _safe_top = H - _strip_h - _price_block_h - int(H * 0.02)
-                        _py = min(_hy + int(H * 0.02), _safe_top)
+                        # Left side below plan label (Offer3 / Easy Internet style)
+                        _px       = _lm
+                        _safe_top = H - _strip_h - int(_big_sz * 1.05) - int(H * 0.02)
+                        _py       = min(_hy + int(H * 0.02), _safe_top)
                     else:
-                        # Right side, top-aligned (Offer2 / Brand Red style)
-                        _px    = W - _lm - _amt_w
-                        _py    = max(36, int(H * 0.07))
-                        # Left-align CHF to the same left edge as the amount number
-                        _cur_x = _px - _cur_bb[0]
+                        # Right side, top-aligned (Offer2 / Brand Red / 5G style)
+                        _px = W - _lm - _amt_w
+                        _py = max(36, int(H * 0.07))
 
-                    # Currency label above amount, left-aligned to price left edge
-                    draw_c.text((_cur_x, _py - _cur_bb[1]), _pr_curr, font=_cur_fnt, fill=(255, 255, 255, 200))
-                    _py_amt = _py - _cur_bb[1] + _cur_h + int(_big_sz * 0.06)
-                    draw_c.text((_px - _amt_bb[0], _py_amt - _amt_bb[1]),
+                    draw_c.text((_px - _amt_bb[0], _py - _amt_bb[1]),
                                 _pr_amt, font=_big_fnt, fill=(255, 255, 255, 255))
 
             # ── Red footer strip ──────────────────────────────────────────────────
