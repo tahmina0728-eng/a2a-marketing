@@ -3309,7 +3309,7 @@ async def run_performance_forecast(
     _ss  = _gs()
     _gc  = _g.Client(vertexai=True, project=_ss.gcp_project, location=_ss.gcp_region)
 
-    ft       = machine_brief.get("fan_truth", {})
+    ft       = machine_brief.get("fan_truth_score", machine_brief.get("fan_truth", {}))
     ft_score = ft.get("overall", 70) if isinstance(ft, dict) else 70
     brand    = machine_brief.get("brand", "")
     market   = machine_brief.get("market", "")

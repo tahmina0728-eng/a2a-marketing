@@ -77,7 +77,7 @@ async def _bq_log_machine_brief(campaign_id: str, machine_brief: dict, brief) ->
         client = _bq.Client(project=GCP_PROJECT)
         table_id = f"{GCP_PROJECT}.{BQ_OUTPUT_DATASET}.machine_briefs"
 
-        ft = machine_brief.get("fan_truth", {})
+        ft = machine_brief.get("fan_truth_score", machine_brief.get("fan_truth", {}))
         if isinstance(ft, str):
             try: ft = json.loads(ft)
             except Exception: ft = {}
@@ -356,7 +356,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             except Exception as _ge:
                 logger.warning("brand_guidelines_gcs_fallback_failed", error=str(_ge))
 
-        ft = machine_brief.get("fan_truth", {})
+        ft = machine_brief.get("fan_truth_score", machine_brief.get("fan_truth", {}))
         ft_score   = ft.get("overall", 0)   if isinstance(ft, dict) else 0
         ft_verdict = ft.get("verdict", "—") if isinstance(ft, dict) else "—"
         aud_lines  = [l for l in audience_insights.split("\n") if l.strip()]
@@ -521,7 +521,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             copy_headlines   = [short_hl or medium_hl, medium_hl or short_hl],
             copy_cta         = copy.get("cta", ""),
             product_name     = brief.product if hasattr(brief, "product") else "",
-            fan_truth        = str(machine_brief.get("fan_truth", {}).get("statement", "")),
+            fan_truth        = str(machine_brief.get("fan_truth_score", machine_brief.get("fan_truth", {})).get("statement", "")),
             season           = brief.season if hasattr(brief, "season") else "",
             market           = brief.market if hasattr(brief, "market") else "",
             language         = brief.language or "" if hasattr(brief, "language") else "",
