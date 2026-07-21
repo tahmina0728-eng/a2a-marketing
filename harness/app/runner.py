@@ -1286,12 +1286,12 @@ def _apply_brand_overlay(
                         # Right side, top-aligned (Offer2 / Brand Red style)
                         _px    = W - _lm - _amt_w
                         _py    = max(36, int(H * 0.07))
-                        # Right-align CHF to the same right edge as the amount number
-                        _cur_x = W - _lm - _cur_bb[2]
+                        # Left-align CHF to the same left edge as the amount number
+                        _cur_x = _px - _cur_bb[0]
 
-                    # Currency label above amount — right-aligned to price right edge
-                    draw_c.text((_cur_x, _py), _pr_curr, font=_cur_fnt, fill=(255, 255, 255, 200))
-                    _py_amt = _py + _cur_h + int(_big_sz * 0.08)
+                    # Currency label above amount, left-aligned to price left edge
+                    draw_c.text((_cur_x, _py - _cur_bb[1]), _pr_curr, font=_cur_fnt, fill=(255, 255, 255, 200))
+                    _py_amt = _py - _cur_bb[1] + _cur_h + int(_big_sz * 0.06)
                     draw_c.text((_px - _amt_bb[0], _py_amt - _amt_bb[1]),
                                 _pr_amt, font=_big_fnt, fill=(255, 255, 255, 255))
 
