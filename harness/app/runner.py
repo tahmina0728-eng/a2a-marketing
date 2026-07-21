@@ -1302,7 +1302,7 @@ def _apply_brand_overlay(
             # Reference layout: [S-circle (straddling clearly)] [Sunrise text] — horizontal
             # Circle is 1.5× footer height so it protrudes well above the footer edge
             _logo_mg = max(20, int(W * 0.025))
-            _ic_d2   = max(28, int(_strip_h * 1.5))
+            _ic_d2 = max(26, int(_strip_h * 0.82))
             # Circle centre x: left side for B/C/D, right side for A
             _ic_cx   = (_logo_mg + _ic_d2 // 2) if _otype != "A" else (W - _logo_mg - _ic_d2 // 2)
 
@@ -1313,19 +1313,19 @@ def _apply_brand_overlay(
             _ic_drw2.ellipse(_ic_bb2, outline=(255, 255, 255, 255), width=_ic_stk2)
             _ic_drw2.chord(_ic_bb2, start=15, end=165, fill=(255, 255, 255, 255))
             _ic_x2 = _ic_cx - _ic_d2 // 2
-            _ic_y2 = H - _strip_h - _ic_d2 // 2   # centre at footer top edge — 50% straddle
+            _ic_y2 = H - _strip_h - int(_ic_d2 * 0.38)   # centre at footer top edge — 50% straddle
             canvas.alpha_composite(_ic_img2, (max(0, _ic_x2), max(0, _ic_y2)))
 
             # "Sunrise" wordmark: beside the circle, vertically centred in the lower arc
             # (the portion of the circle that sits inside the red footer strip)
             _wm_sz   = max(11, int(_strip_h * 0.50))
             _wm_fnt2 = _font(_wm_sz)
-            try: _wm_fnt2.set_variation_by_axes([700])   # Bold — all 4 offer modes
+            try: _wm_fnt2.set_variation_by_axes([600])   # Bold — all 4 offer modes
             except: pass
             _wm_bb2  = _md3.textbbox((0, 0), "Sunrise", font=_wm_fnt2)
             _wm_w2   = _wm_bb2[2] - _wm_bb2[0]
             _wm_h2   = _wm_bb2[3] - _wm_bb2[1]
-            _wm_gap  = max(6, int(_ic_d2 * 0.12))
+            _wm_gap = max(8, int(_ic_d2 * 0.20))
             if _otype == "A":
                 # Right-aligned logo: "Sunrise" sits to the LEFT of the circle
                 _wm_x2 = _ic_cx - _ic_d2 // 2 - _wm_gap - _wm_w2 - _wm_bb2[0]
@@ -1333,8 +1333,14 @@ def _apply_brand_overlay(
                 # Left-aligned logo: "Sunrise" sits to the RIGHT of the circle
                 _wm_x2 = _ic_cx + _ic_d2 // 2 + _wm_gap - _wm_bb2[0]
             # Centre "Sunrise" vertically within the lower half of the circle (inside footer)
-            _wm_cy = H - _strip_h + _ic_d2 // 4
-            _wm_y2 = _wm_cy - _wm_h2 // 2 - _wm_bb2[1]
+            # _wm_cy = H - _strip_h + _ic_d2 // 4
+            # _wm_y2 = _wm_cy - _wm_h2 // 2 - _wm_bb2[1]
+            _wm_y2 = (
+                H
+                - _strip_h
+                + (_strip_h - _wm_h2) // 2
+                - _wm_bb2[1]
+            )
             draw_c.text((_wm_x2, _wm_y2), "Sunrise", font=_wm_fnt2, fill=(255, 255, 255, 255))
 
             img = canvas
@@ -2923,12 +2929,14 @@ Output EXACTLY this format (nothing else):
             "boozt":   "NOT 'Monster', NOT 'Red Bull', NOT 'Lucozade', NOT any real energy drink brand",
         }
         _real_brand_warn = _REAL_BRAND_WARNINGS.get(brand.lower(), "NOT any real-world brand")
-        if brand == "UBS Bank":
-            # UBS is a financial services brand — no product packaging.
-            # Pure lifestyle/scene imagery matching their cinematic ad style.
+        if brand in ("UBS Bank",) or brand.lower() == "sunrise":
+            # Service/telecom brands — no physical product packaging to show.
+            # Strictly no text in the image; all prices, headlines, logos added in post-production.
             _no_text_rule = (
-                "TYPOGRAPHY RULE: Absolutely NO text, logos, numbers, or words anywhere in the image. "
-                "Zero headlines, zero slogans — all copy is added in post-production.\n\n"
+                "TYPOGRAPHY RULE: Absolutely NO text, logos, numbers, currency symbols, "
+                "or words anywhere in the image — including prices, CHF amounts, plan names, "
+                "or any other copy. Zero headlines, zero slogans. All copy is added in "
+                "post-production.\n\n"
             )
         else:
             _no_text_rule = (
