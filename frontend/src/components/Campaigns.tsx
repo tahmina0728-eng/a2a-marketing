@@ -448,6 +448,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         }
         if (market) body.market = market;
         if (audience) body.audience = audience;
+        if (copyRes?.headline && fmt === "image") body.copy_headline = copyRes.headline;
         const key = fmt==="image"?"kv":fmt==="tvc"?"tvc":"reel";
         const r = await fetch(`${API_BASE}/agents/${key}/run`, {
           method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body),

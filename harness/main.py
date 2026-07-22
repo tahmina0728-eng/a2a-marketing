@@ -1536,12 +1536,13 @@ async def finalize_brand_upload(brand_name: str, req: _FinalizeUpload):
 
 
 class AgentStandaloneRequest(_BaseModel):
-    prompt:       str       # e.g. "UBS Bank for UK market, festive: christmas"
-    duration:     int = 30  # TVC duration in seconds (15 or 30); ignored by other agents
-    image_b64:    str = ""  # optional pre-generated image (channel agent skips Imagen if set)
-    product_name: str = ""  # Sunrise product selection (triggers offer-mode layout)
-    market:       str = ""  # Market/region for currency resolution
-    audience:     str = ""  # Target audience (drives scene people in Sunrise offer images)
+    prompt:        str       # e.g. "UBS Bank for UK market, festive: christmas"
+    duration:      int = 30  # TVC duration in seconds (15 or 30); ignored by other agents
+    image_b64:     str = ""  # optional pre-generated image (channel agent skips Imagen if set)
+    product_name:  str = ""  # Sunrise product selection (triggers offer-mode layout)
+    market:        str = ""  # Market/region for currency resolution
+    audience:      str = ""  # Target audience (drives scene people in Sunrise offer images)
+    copy_headline: str = ""  # Headline from Copy Agent step — used instead of generating a new one
 
 
 @app.post("/agents/{agent_key}/run")
@@ -1556,7 +1557,7 @@ async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
         result = await asyncio.to_thread(
             agent_standalone.run_agent_standalone,
             agent_key, req.prompt, req.duration, req.image_b64,
-            req.product_name, req.market, req.audience,
+            req.product_name, req.market, req.audience, req.copy_headline,
         )
         return result
     except ValueError as e:

@@ -359,7 +359,7 @@ def run_channel(brand: str, prompt: str, provided_image_b64: str = "") -> dict:
     return {"agent": "channel", **result}
 
 
-def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", audience: str = "") -> dict:
+def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", audience: str = "", copy_headline: str = "") -> dict:
     """
     Standalone Morphis: one text call for a headline + visual scene, one image
     call for the actual key visual, then the same Pillow brand-overlay
@@ -421,7 +421,8 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
             'Setting, mood, lighting — no text, words, or logos in the image."}'
         )
     data = _generate(_morphis_sys, brand, prompt, _morphis_instr)
-    headline = data.get("headline", "") or prompt
+    # Use copy agent's headline if provided; otherwise use LLM-generated one
+    headline = copy_headline.strip() if copy_headline and copy_headline.strip() else (data.get("headline", "") or prompt)
     scene    = data.get("scene", "") or prompt
 
     image_b64 = ""
@@ -1897,6 +1898,7 @@ def run_agent_standalone(
     product_name: str = "",
     market: str = "",
     audience: str = "",
+    copy_headline: str = "",
 ) -> dict:
     """text is the whole free-text prompt, e.g. "UBS Bank for UK market, festive: christmas" —
     the brand is detected from it automatically rather than passed separately."""
@@ -1915,5 +1917,5 @@ def run_agent_standalone(
     if agent_key == "channel" and image_b64:
         return runner(brand, text, image_b64)
     if agent_key == "kv":
-        return runner(brand, text, product_name=product_name, market=market, audience=audience)
+        return runner(brand, text, product_name=product_name, market=market, audience=audience, copy_headline=copy_headline)
     return runner(brand, text)

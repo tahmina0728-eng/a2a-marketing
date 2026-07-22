@@ -997,8 +997,9 @@ def _apply_brand_overlay(
         y = text_y_start
         if not _sunrise_offer:
             for i, (word, fnt, lh, tw) in enumerate(line_data):
+                _sh_alpha = 40 if _is_sr_life else 80  # lighter shadow for Sunrise lifestyle
                 for dx, dy in [(-1,-1),(1,-1),(-1,1),(1,1),(0,2),(2,0)]:
-                    draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,80))
+                    draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,_sh_alpha))
                 _all_white = brand.lower() in ("sunrise",)
                 color = (255, 255, 255, 255) if _all_white else (
                     (*accent_rgb, 255) if i == 0 and len(line_data) > 1 else (255, 255, 255, 255)
