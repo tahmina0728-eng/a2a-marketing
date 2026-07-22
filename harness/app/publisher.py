@@ -257,26 +257,28 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
 
     # Plan comparison cards
     plans = [
-        ("Business S",  "CHF 29.–/mo",  ["5 GB Data", "Unlimited CH Calls", "1 SIM"], False),
-        ("Business M",  "CHF 49.–/mo",  ["Unlimited Data", "Unlimited CH + EU Calls", "Up to 5 SIMs"], True),
-        ("Business L",  "CHF 79.–/mo",  ["Unlimited Data + 5G", "Unlimited Worldwide", "Up to 20 SIMs"], False),
+        ("Mobile Unlimited",  "CHF 39.90/mth", ["Unlimited Mobile Data", "Unlimited CH Calls & SMS", "5G included"], False),
+        ("Easy Internet",     "CHF 39.90/mth", ["Home Internet · Up to 1 Gbps", "Free installation", "No lock-in period"], False),
+        ("5G Home Internet",  "CHF 29.90/mth", ["Up to 10 Gbps Download", "No router rental fee", "Cancel anytime"], False),
+        ("Business Connect",  "CHF 49.90/mth", ["Unlimited Data + 5G", "Unlimited CH + EU Calls", "Up to 5 SIMs · 24/7 support"], True),
     ]
     plan_cards = ""
     for pname, price, perks, featured in plans:
         border  = "border:2px solid #DA291C;" if featured else "border:2px solid #e5e7eb;"
-        badge   = '<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#DA291C;color:white;font-size:11px;font-weight:700;letter-spacing:0.1em;padding:4px 16px;border-radius:99px;white-space:nowrap;">MOST POPULAR</div>' if featured else ""
+        # Badge sits inside the card (padding-top accounts for it) — not absolutely above, avoids overflow into sibling sections
+        badge   = '<div style="display:inline-block;background:#DA291C;color:white;font-size:11px;font-weight:700;letter-spacing:0.1em;padding:4px 16px;border-radius:99px;white-space:nowrap;margin-bottom:16px;">MOST POPULAR</div>' if featured else '<div style="height:29px;margin-bottom:16px;"></div>'
         btn_bg  = "background:#DA291C;color:white;" if featured else "background:white;color:#DA291C;border:2px solid #DA291C;"
         perks_html = "".join(f'<li style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#444;"><span style="color:#DA291C;font-size:16px;">✓</span>{p}</li>' for p in perks)
         plan_cards += f"""
-        <div style="position:relative;background:white;border-radius:20px;padding:36px 28px 28px;{border}box-shadow:0 4px 20px rgba(0,0,0,0.07);transition:transform 0.2s,box-shadow 0.2s;"
+        <div style="background:white;border-radius:20px;padding:24px 28px 28px;{border}box-shadow:0 4px 20px rgba(0,0,0,0.07);transition:transform 0.2s,box-shadow 0.2s;"
              onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 16px 40px rgba(218,41,28,0.15)'"
              onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 20px rgba(0,0,0,0.07)'">
           {badge}
           <div style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#DA291C;margin-bottom:8px;">{pname}</div>
           <div style="font-size:32px;font-weight:800;color:#1a1a1a;margin-bottom:4px;">{price}</div>
-          <div style="font-size:12px;color:#888;margin-bottom:24px;">excl. VAT · 24 month contract</div>
+          <div style="font-size:12px;color:#888;margin-bottom:24px;">excl. VAT · cancel anytime</div>
           <ul style="list-style:none;margin-bottom:28px;">{perks_html}</ul>
-          <a href="#" style="display:block;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none;{btn_bg}transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">{cta or 'Get started'}</a>
+          <a href="#" style="display:block;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none;{btn_bg}transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">{cta or 'Get unlimited now'}</a>
         </div>"""
 
     hero_style = (
@@ -356,7 +358,7 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     .feat-link{{font-size:13px;font-weight:700;color:#DA291C}}
 
     /* Plans grid */
-    .plans-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-top:48px;align-items:start}}
+    .plans-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-top:48px;align-items:start}}
 
     /* Campaign image card */
     .campaign-image{{width:100%;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.12);aspect-ratio:16/9;object-fit:cover;display:block}}

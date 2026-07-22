@@ -305,7 +305,7 @@ def run_channel(brand: str, prompt: str, provided_image_b64: str = "") -> dict:
                 if getattr(_part, "inline_data", None) is not None:
                     _raw = _part.inline_data.data
                     from app.runner import _apply_brand_overlay
-                    _raw = _apply_brand_overlay(_raw, brand, headline, _products[:1], product_name, market)
+                    _raw = _apply_brand_overlay(_raw, brand, headline, _products[:1], "", "")
                     image_b64 = _b64.b64encode(_raw).decode()
                     break
         except Exception as _ie:
