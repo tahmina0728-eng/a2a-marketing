@@ -308,11 +308,7 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
           <a href="#" style="display:block;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none;{btn_bg}transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">{cta or 'Get unlimited now'}</a>
         </div>"""
 
-    # Center the image so baked-in headline and faces are both fully visible.
-    hero_style = (
-        f"background:url('{hero_bg_src}') center top/cover no-repeat;" if hero_bg_src
-        else "background:linear-gradient(135deg,#1a1a1a 0%,#333 100%);"
-    )
+    hero_style = ""  # no longer used — hero now uses <img> tag, not CSS background
 
     reel_section = f"""
 <section style="background:#1a1a1a;padding:72px 0;text-align:center;">
@@ -351,8 +347,9 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     .nav-cta:hover{{background:#b81f14}}
 
     /* Hero */
-    .hero{{position:relative;min-height:460px;display:flex;align-items:center;overflow:hidden;{hero_style}}}
-    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.45) 0%,rgba(0,0,0,0.25) 50%,rgba(0,0,0,0.05) 100%)}}
+    .hero{{position:relative;overflow:hidden;display:block;}}
+    .hero img.hero-img{{width:100%;height:auto;display:block;}}
+    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0.15) 50%,rgba(0,0,0,0.02) 100%)}}
     .hero-content{{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:52px 40px;width:100%}}
     .hero-tag{{display:inline-block;background:#DA291C;color:white;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:6px 16px;border-radius:99px;margin-bottom:20px}}
     .hero-title{{font-size:clamp(32px,5vw,56px);font-weight:800;color:white;line-height:1.1;max-width:580px;text-wrap:balance;margin-bottom:16px}}
@@ -447,8 +444,9 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     </div>
   </nav>
 
-  <!-- Hero — image with light wash so baked-in text is fully visible -->
+  <!-- Hero — full natural-height image so baked-in headline is never cropped -->
   <div class="hero">
+    {f'<img class="hero-img" src="{hero_bg_src}" alt="Campaign hero">' if hero_bg_src else '<div style="height:420px;background:linear-gradient(135deg,#1a1a1a,#333);"></div>'}
     <div class="hero-overlay"></div>
   </div>
 
