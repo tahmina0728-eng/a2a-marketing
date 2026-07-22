@@ -521,28 +521,23 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     </div>
   </section>
 
-  <!-- Campaign image + Plans side by side -->
+  <!-- Campaign image — full width -->
+  {f'''<section style="padding:0 40px 0;background:#f5f5f5;">
+    <div style="max-width:1140px;margin:0 auto;">
+      <img src="{camp_src}" alt="Campaign visual"
+           style="width:100%;height:auto;display:block;border-radius:20px;
+                  box-shadow:0 8px 40px rgba(0,0,0,0.14);">
+    </div>
+  </section>''' if camp_src else ""}
+
+  <!-- Plans — all 4 in one row -->
   <section class="section" id="plans" style="background:#f5f5f5">
     <div class="section-inner">
-      <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;">
-
-        {f'''<!-- Left: campaign image, fixed width ~40% -->
-        <div style="flex:0 0 38%;min-width:260px;max-width:440px;">
-          <img src="{camp_src}" alt="Campaign visual"
-               style="width:100%;height:auto;display:block;border-radius:20px;
-                      box-shadow:0 8px 40px rgba(0,0,0,0.14);position:sticky;top:88px;">
-        </div>''' if camp_src else ""}
-
-        <!-- Right: pricing — 2-column plan grid -->
-        <div style="flex:1 1 0;min-width:320px;">
-          <div class="section-label">Pricing</div>
-          <h2 class="section-title">Simple plans. No surprises.</h2>
-          <p class="section-sub" style="margin-bottom:28px;">All plans include a dedicated account manager, 24/7 support, and free onboarding.</p>
-          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
-            {plan_cards}
-          </div>
-        </div>
-
+      <div class="section-label">Pricing</div>
+      <h2 class="section-title">Simple plans. No surprises.</h2>
+      <p class="section-sub" style="margin-bottom:32px;">All plans include a dedicated account manager, 24/7 support, and free onboarding.</p>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+        {plan_cards}
       </div>
     </div>
   </section>
