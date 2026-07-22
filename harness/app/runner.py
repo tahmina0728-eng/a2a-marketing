@@ -997,9 +997,14 @@ def _apply_brand_overlay(
         y = text_y_start
         if not _sunrise_offer:
             for i, (word, fnt, lh, tw) in enumerate(line_data):
-                _sh_alpha = 40 if _is_sr_life else 80  # lighter shadow for Sunrise lifestyle
-                for dx, dy in [(-1,-1),(1,-1),(-1,1),(1,1),(0,2),(2,0)]:
-                    draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,_sh_alpha))
+                if _is_sr_life:
+                    # Thin outline (all 8 directions, 1px) for readability on bright alpine
+                    # backgrounds — matches Sunrise reference ad style (white with dark stroke)
+                    for dx, dy in [(-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1)]:
+                        draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,100))
+                else:
+                    for dx, dy in [(-1,-1),(1,-1),(-1,1),(1,1),(0,2),(2,0)]:
+                        draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,80))
                 _all_white = brand.lower() in ("sunrise",)
                 color = (255, 255, 255, 255) if _all_white else (
                     (*accent_rgb, 255) if i == 0 and len(line_data) > 1 else (255, 255, 255, 255)
@@ -1013,9 +1018,9 @@ def _apply_brand_overlay(
                 _tg_sz  = max(16, int(lines_spec[0][1] * 0.30))
                 _tg_fnt = _font(_tg_sz, 400)  # Regular (400) — slightly heavier than headline Light
                 _tg_y   = y + max(6, int(_tg_sz * 0.30))
-                for _dx, _dy in [(-1,-1),(1,-1),(-1,1),(1,1)]:
-                    draw.text((text_x+_dx, _tg_y+_dy), _tg, font=_tg_fnt, fill=(0,0,0,80))
-                draw.text((text_x, _tg_y), _tg, font=_tg_fnt, fill=(255, 255, 255, 200))
+                for _dx, _dy in [(-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1)]:
+                    draw.text((text_x+_dx, _tg_y+_dy), _tg, font=_tg_fnt, fill=(0,0,0,100))
+                draw.text((text_x, _tg_y), _tg, font=_tg_fnt, fill=(255, 255, 255, 255))
 
         # ── 4. Brand logo — top-right ─────────────────────────────────────────
         try:
