@@ -323,9 +323,9 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     .nav-cta:hover{{background:#b81f14}}
 
     /* Hero */
-    .hero{{position:relative;min-height:580px;display:flex;align-items:center;overflow:hidden;{hero_style}}}
-    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.25) 60%,transparent 100%)}}
-    .hero-content{{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:80px 40px;width:100%}}
+    .hero{{position:relative;min-height:360px;display:flex;align-items:center;overflow:hidden;{hero_style}}}
+    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.65) 0%,rgba(0,0,0,0.2) 55%,transparent 100%)}}
+    .hero-content{{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:52px 40px;width:100%}}
     .hero-tag{{display:inline-block;background:#DA291C;color:white;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:6px 16px;border-radius:99px;margin-bottom:20px}}
     .hero-title{{font-size:clamp(32px,5vw,56px);font-weight:800;color:white;line-height:1.1;max-width:580px;text-wrap:balance;margin-bottom:16px}}
     .hero-sub{{font-size:18px;color:rgba(255,255,255,0.85);max-width:480px;margin-bottom:36px;line-height:1.6}}
@@ -410,7 +410,6 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
   <div class="hero">
     <div class="hero-overlay"></div>
     <div class="hero-content">
-      <div class="hero-tag">Business Connect</div>
       <h1 class="hero-title">{hero_message or 'Your business. Without limits.'}</h1>
       <p class="hero-sub">{body_copy or "Switzerland's leading network for businesses — mobile, internet, and cloud in one seamless solution."}</p>
       <div class="hero-btns">
@@ -433,7 +432,10 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
   <!-- Features -->
   <section class="section" id="features" style="background:#fff">
     <div class="section-inner">
-      <div class="section-label">Why Sunrise Business</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <span style="display:inline-block;background:#DA291C;color:white;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:5px 14px;border-radius:99px;">Business Connect</span>
+        <span class="section-label" style="margin-bottom:0;">Why Sunrise Business</span>
+      </div>
       <h2 class="section-title">Everything your business needs, in one place.</h2>
       <p class="section-sub">From mobile and internet to cloud and security — simplified billing, one dedicated contact.</p>
       <div class="feat-grid">
