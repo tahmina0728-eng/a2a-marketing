@@ -2885,8 +2885,8 @@ Create a Big Idea for this campaign. Output:
     )
 
     _creative_director_intro = (
-        "You are a world-class outdoor lifestyle and telecoms advertising creative director.\n"
-        "Reference visual styles: Sunrise Switzerland brand campaigns, Red Bull outdoor, Patagonia alpine photography, Nike outdoor — dramatic landscapes, peak human moments, no products."
+        "You are a world-class outdoor adventure advertising creative director.\n"
+        "Reference visual styles: Red Bull extreme sports, Patagonia alpine photography, Nike trail running, The North Face mountain campaigns — dramatic landscapes, solo peak moments, extreme athletic action, zero products in scene."
         if _sr_life
         else (
             "You are a world-class FMCG advertising creative director.\n"
@@ -3065,11 +3065,17 @@ Output EXACTLY this format (nothing else):
         if brand in ("UBS Bank",) or brand.lower() == "sunrise":
             # Service/telecom brands — no physical product packaging to show.
             # Strictly no text in the image; all prices, headlines, logos added in post-production.
+            _sr_lifestyle_no_product = (
+                "PRODUCT BAN: Zero shopping bags, zero gift bags, zero Sunrise-branded bags, "
+                "zero product boxes, zero packaged merchandise, zero objects carrying any logo or brand name. "
+                "This is a pure people-and-nature image — no objects of any kind.\n"
+                if _sr_life else ""
+            )
             _no_text_rule = (
                 "TYPOGRAPHY RULE: Absolutely NO text, logos, numbers, currency symbols, "
                 "or words anywhere in the image — including prices, CHF amounts, plan names, "
                 "or any other copy. Zero headlines, zero slogans. All copy is added in "
-                "post-production.\n\n"
+                f"post-production.\n{_sr_lifestyle_no_product}\n"
             )
         else:
             _no_text_rule = (
@@ -3125,16 +3131,25 @@ Output EXACTLY this format (nothing else):
                 _who_activity = "engaged with smartphones, smiling"
 
             if not _product_ctx:
-                # Lifestyle KV — brand awareness, no specific product
+                # Lifestyle KV — brand awareness, no product. Pick ONE specific
+                # adventure activity so the image AI cannot default to "couple on terrace".
+                import random as _rnd_act
+                _activity_pool = [
+                    "ONE SOLO HIKER in bright performance outdoor gear stands on a rugged Swiss mountain SUMMIT with both arms raised triumphantly toward the sky. Snow-dusted rock underfoot, a sea of sharp alpine peaks stretching to the horizon. HEROIC LOW-ANGLE shot looking UP at the figure silhouetted against vivid blue sky. Dramatic, majestic, solitary peak moment.",
+                    "TWO TRAIL RUNNERS in vibrant sportswear sprint along a razor-thin mountain ridge with a breathtaking valley drop on both sides. Motion blur on their feet conveys speed. Peaks all around, golden morning light behind them. Dynamic wide side-angle shot capturing pure athletic momentum.",
+                    "A LONE SNOWBOARDER launches off a natural alpine jump and hangs suspended MID-AIR above a steep snow slope, bright sky behind them, snowy peaks in the distance. Captured at the exact peak of the jump — maximum airtime, arms wide, pure freedom.",
+                    "TWO MOUNTAIN BIKERS descend a rugged alpine singletrack at high speed, leaning hard into a hairpin bend, helmets and colourful jerseys visible, pine forest blurred around them in motion. Wide-angle chase shot from behind/side — pure velocity and control.",
+                    "A SOLO ROCK CLIMBER grips a sheer cliff face, body stretched across the rock, with a crystal-clear alpine lake shimmering 150 metres directly below in the valley. Low-angle upward shot with the climber small against the scale of the rock and sky above.",
+                    "A SWIMMER dives off a high alpine cliff into a vivid turquoise mountain lake far below, suspended mid-air in a perfect swan dive, rocky peaks all around, golden hour sun flaring. Moment of pure exhilaration and fearless freedom.",
+                ]
+                _chosen_activity = _activity_pool[hash(big_idea_seed or audience) % len(_activity_pool)]
                 _sunrise_scene = (
-                    f"Show {_who} in an epic outdoor adventure in the Swiss Alps — "
-                    "hiking on a dramatic mountain ridge with panoramic valley views, trail running above the clouds, "
-                    "mountain biking through alpine meadows, or standing triumphant on a rocky summit. "
-                    f"{_who_activity.capitalize()}, radiating joy and freedom, vibrant athletic outdoor gear. "
-                    "CINEMATIC wide shot: towering rocky peaks, lush green valley far below, vivid blue sky. "
-                    "Golden hour light, crisp alpine atmosphere. Premium outdoor advertising quality — "
-                    "dramatic, aspirational, powerful — like a Red Bull or Patagonia campaign. "
-                    "LEFT THIRD of frame must be open sky or soft bokeh for headline text overlay."
+                    f"MANDATORY SCENE — THIS EXACT ACTIVITY ONLY: {_chosen_activity} "
+                    "STRICTLY FORBIDDEN in this image: terrace, balcony, rooftop, café, selfie, phone, smartphone, "
+                    "shopping bag, gift bag, Sunrise bag, branded merchandise, packaged product, bag with logo, "
+                    "restaurant, couch, furniture, urban street scene, couple posing. "
+                    "The image contains ONLY: people and dramatic Swiss alpine nature. Zero objects. Zero items with text or logos. "
+                    "Photorealistic advertising photography, vivid saturated colours, cinematic composition."
                 )
             elif "mobile unlimited" in _pn:
                 _sunrise_scene = (
