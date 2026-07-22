@@ -349,8 +349,8 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     /* Hero */
     .hero{{position:relative;overflow:hidden;display:block;}}
     .hero img.hero-img{{width:100%;height:480px;object-fit:cover;object-position:center center;display:block;}}
-    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0.15) 50%,rgba(0,0,0,0.02) 100%)}}
-    .hero-content{{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:52px 40px;width:100%}}
+    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 45%,rgba(0,0,0,0.05) 100%)}}
+    .hero-content{{position:absolute;bottom:0;left:0;right:0;z-index:2;max-width:1140px;margin:0 auto;padding:40px 40px 48px;width:100%}}
     .hero-tag{{display:inline-block;background:#DA291C;color:white;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:6px 16px;border-radius:99px;margin-bottom:20px}}
     .hero-title{{font-size:clamp(32px,5vw,56px);font-weight:800;color:white;line-height:1.1;max-width:580px;text-wrap:balance;margin-bottom:16px}}
     .hero-sub{{font-size:18px;color:rgba(255,255,255,0.85);max-width:480px;margin-bottom:36px;line-height:1.6}}
@@ -444,10 +444,18 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     </div>
   </nav>
 
-  <!-- Hero — full natural-height image so baked-in headline is never cropped -->
+  <!-- Hero — image with HTML headline overlay so text always shows -->
   <div class="hero">
-    {f'<img class="hero-img" src="{hero_bg_src}" alt="Campaign hero">' if hero_bg_src else '<div style="height:420px;background:linear-gradient(135deg,#1a1a1a,#333);"></div>'}
+    {f'<img class="hero-img" src="{hero_bg_src}" alt="Campaign hero">' if hero_bg_src else '<div style="height:480px;background:linear-gradient(135deg,#1a1a1a,#333);"></div>'}
     <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1 class="hero-title">{hero_message or 'Your business. Without limits.'}</h1>
+      <p class="hero-sub">{body_copy or "Switzerland’s leading network — mobile, internet, and cloud in one seamless solution."}</p>
+      <div class="hero-btns">
+        <a href="#plans" class="btn-primary">{cta or 'View plans'}</a>
+        <a href="#features" class="btn-secondary">Learn more</a>
+      </div>
+    </div>
   </div>
 
   <!-- Trust bar -->

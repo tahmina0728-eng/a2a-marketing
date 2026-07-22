@@ -81,7 +81,7 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
 interface FD {
   brand: string; objective: string; market: string; language: string; budget: string;
   channels: string[]; age: string[]; season: string; moment: string; campaignName: string;
-  fanTruth: string;
+  fanTruth: string; kpiTargets: string;
   // Sunrise-specific
   sunrisePlan: string;      // "Lifestyle KV" | plan name e.g. "Mobile Unlimited"
   sunriseAudience: string;
@@ -89,7 +89,7 @@ interface FD {
 const INIT: FD = {
   brand:"", objective:"", market:"", language:"", budget:"",
   channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"",
-  fanTruth:"",
+  fanTruth:"", kpiTargets:"",
   sunrisePlan:"Lifestyle KV", sunriseAudience:"",
 };
 const toggle = <T,>(arr: T[], v: T): T[] => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
@@ -189,6 +189,25 @@ function Page1({ data, onChange, onNext }: {
                 background: "var(--card-bg,#ffffff)",
                 fontFamily: F, fontSize: 13, lineHeight: 1.6,
                 color: "var(--text-primary,#0f172a)", resize: "none", outline: "none",
+                boxSizing: "border-box" as const, transition: "border-color 0.15s",
+              }}
+              onFocus={e => e.currentTarget.style.borderColor = BRAND_COLOR}
+              onBlur={e => e.currentTarget.style.borderColor = "var(--card-border,rgba(15,23,42,0.08))"}
+            />
+          </div>
+
+          <div>
+            <span style={label}>KPI Targets <span style={{fontWeight:400,color:"var(--text-secondary,#64748b)"}}>(optional)</span></span>
+            <input
+              value={data.kpiTargets}
+              onChange={e => onChange("kpiTargets", e.target.value)}
+              placeholder="e.g. Reach: 500k, CTR: 2%, ROAS: 3x, Engagement: 4%"
+              style={{
+                width: "100%", borderRadius: 12, padding: "12px 16px",
+                border: "1px solid var(--card-border,rgba(15,23,42,0.08))",
+                background: "var(--card-bg,#ffffff)",
+                fontFamily: F, fontSize: 13,
+                color: "var(--text-primary,#0f172a)", outline: "none",
                 boxSizing: "border-box" as const, transition: "border-color 0.15s",
               }}
               onFocus={e => e.currentTarget.style.borderColor = BRAND_COLOR}
@@ -442,7 +461,7 @@ export default function CampaignForm({ onFullCampaign }: {
       brand:            data.brand,
       goal:             data.objective,
       budget:           data.budget,
-      kpis:             "reach, ctr, roas",
+      kpis:             data.kpiTargets.trim() || "reach, ctr, roas",
       product:          product,
       product_category: brandLabel,
       fan_truth:        fanTruth,
