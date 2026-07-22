@@ -352,17 +352,36 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             except Exception:
                 pass
 
-        # ADK briefing_agent uses fan_truth_score; Groq fallback and frontend use fan_truth
-        if "fan_truth" not in machine_brief and "fan_truth_score" in machine_brief:
-            _fts = machine_brief["fan_truth_score"]
-            machine_brief["fan_truth"] = {
-                **(_fts if isinstance(_fts, dict) else {}),
-                "statement": (_fts.get("statement") if isinstance(_fts, dict) else None)
-                             or brief.fan_truth or "",
-            }
+        # Resolve fan_truth for the frontend (reads fan_truth, not fan_truth_score).
+        # Override whenever the current value is absent, null, or a dict with no useful overall.
+        _ft_cur = machine_brief.get("fan_truth")
+        _fts    = machine_brief.get("fan_truth_score", {})
+        if not isinstance(_ft_cur, dict) or not _ft_cur.get("overall"):
+            if isinstance(_fts, dict) and _fts:
+                # Compute overall from sub-scores if the LLM omitted it or returned 0
+                _raw_overall = _fts.get("overall") or 0
+                if not _raw_overall:
+                    _raw_overall = round(
+                        ((_fts.get("specific") or 0) + (_fts.get("shared") or 0) + (_fts.get("special") or 0)) / 3
+                    )
+                machine_brief["fan_truth"] = {
+                    **_fts,
+                    "overall":   _raw_overall,
+                    "statement": ((_ft_cur.get("statement") if isinstance(_ft_cur, dict) else None)
+                                  or _fts.get("statement") or brief.fan_truth or ""),
+                }
+
+        # Last resort: if fan_truth is still not a dict, bootstrap from user's brief input
+        if not isinstance(machine_brief.get("fan_truth"), dict):
+            machine_brief["fan_truth"] = {"statement": brief.fan_truth or "", "overall": 0}
+
+        # Always ensure statement is populated from the user's brief input as a fallback
+        _ft = machine_brief["fan_truth"]
+        if not _ft.get("statement"):
+            _ft["statement"] = brief.fan_truth or ""
 
         # ADK briefing_agent uses kpi_flags; Groq fallback and frontend use kpis
-        if "kpis" not in machine_brief and "kpi_flags" in machine_brief:
+        if not machine_brief.get("kpis") and machine_brief.get("kpi_flags"):
             machine_brief["kpis"] = [
                 {
                     "metric": (f.get("kpi") or f.get("metric") or "") if isinstance(f, dict) else "",
