@@ -3,7 +3,7 @@ import type { PublishingChannel } from "./PublishingNav";
 import MailchimpPanel from "./Mailchimp";
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE ?? "http://localhost:8000";
-const BRANDS = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank"];
+const BRANDS = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank","Sunrise"];
 
 const CHANNEL_META: Record<PublishingChannel, {
   label: string; color: string; desc: string; emoji: string;
