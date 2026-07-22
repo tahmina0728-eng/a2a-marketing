@@ -3054,7 +3054,11 @@ Output EXACTLY this format (nothing else):
         from app.creative_pipeline import _load_bytes, _mime_for
         SUPPORTED_MIME = {"image/jpeg", "image/png", "image/gif", "image/webp"}
         ref_parts = []
-        for uri in (asset_uris or [])[:4]:
+        # Sunrise lifestyle: skip banner reference images — they show the "couple on rooftop"
+        # official Sunrise ads; passing them to Vision produces a style analysis that
+        # overrides our hard-coded adventure concept prompts downstream.
+        _skip_banner_refs = _sr_life
+        for uri in ([] if _skip_banner_refs else (asset_uris or []))[:4]:
             mime = _mime_for(uri)
             if mime not in SUPPORTED_MIME:
                 log.debug("p2_asset_skipped", uri=uri, mime=mime)
@@ -3151,9 +3155,12 @@ Output EXACTLY this format (nothing else):
                 "TYPOGRAPHY RULE: No text anywhere in the image EXCEPT on the product packaging labels themselves. "
                 "Zero headlines, zero slogans, zero copy on backgrounds — all added in post-production.\n\n"
             )
+        # Sunrise lifestyle: skip brand style injection — GCS reference images are the
+        # "couple on rooftop with phones" official ads; injecting that analysis after our
+        # hard-coded adventure concepts overrides them and causes the wrong scene.
         _style_suffix = (
             f"\n\nBRAND VISUAL STYLE (match this aesthetic):\n{style_analysis}"
-            if style_analysis else ""
+            if style_analysis and not _sr_life else ""
         )
         # Brand-specific composition rules
         if brand.lower() == "sunrise":
