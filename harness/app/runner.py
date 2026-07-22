@@ -1256,12 +1256,13 @@ def _apply_brand_overlay(
                     x += (cb[2] - cb[0]) + tracking
 
             # Pass 1: most-constrained size so all lines match
+            # Use Light weight (300) — matches Sunrise ad reference style
             _sz_uni = _head_sz
             for _lt in sentences:
                 _sz3 = _head_sz
                 while _sz3 > 13:
                     _f3 = _font(_sz3)
-                    try: _f3.set_variation_by_axes([600])
+                    try: _f3.set_variation_by_axes([300])
                     except: pass
                     if _tracked_w(_lt.upper(), _f3, max(1, int(_sz3 * 0.02))) <= _head_max_w:
                         break
@@ -1269,7 +1270,7 @@ def _apply_brand_overlay(
                 _sz_uni = min(_sz_uni, _sz3)
 
             _fnt_uni = _font(_sz_uni)
-            try: _fnt_uni.set_variation_by_axes([600])   # SemiBold — matches reference weight
+            try: _fnt_uni.set_variation_by_axes([300])   # Light — matches Sunrise reference ad weight
             except: pass
 
             _hy = max(40, int(H * 0.08))
@@ -1282,7 +1283,7 @@ def _apply_brand_overlay(
             # ── Plan label ────────────────────────────────────────────────────────
             _hy += int(H * 0.025)
             _lbl_fnt = _font(max(11, int(H * 0.032)))
-            try: _lbl_fnt.set_variation_by_axes([600])
+            try: _lbl_fnt.set_variation_by_axes([400])
             except: pass
             _lbl_bb3 = _md3.textbbox((0, 0), _plan_label.upper(), font=_lbl_fnt)
             draw_c.text((_lm, _hy), _plan_label.upper(), font=_lbl_fnt, fill=_lbl_col)
