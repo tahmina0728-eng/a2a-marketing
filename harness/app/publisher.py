@@ -348,7 +348,7 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
 
     /* Hero */
     .hero{{position:relative;overflow:hidden;display:block;}}
-    .hero img.hero-img{{width:100%;height:auto;display:block;}}
+    .hero img.hero-img{{width:100%;height:480px;object-fit:cover;object-position:center center;display:block;}}
     .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.35) 0%,rgba(0,0,0,0.15) 50%,rgba(0,0,0,0.02) 100%)}}
     .hero-content{{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:52px 40px;width:100%}}
     .hero-tag{{display:inline-block;background:#DA291C;color:white;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:6px 16px;border-radius:99px;margin-bottom:20px}}
