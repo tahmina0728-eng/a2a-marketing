@@ -1755,6 +1755,18 @@ def _overlay_reel(
         except Exception as _le:
             logger.warning("reel_logo_load_failed", brand=brand, error=str(_le))
 
+        # Sunrise fallback: draw the logo programmatically (circle + wordmark)
+        # when no raster PNG was found in GCS (Sunrise may only have SVG files).
+        if not _logo_bytes_raw and brand.lower() in ("sunrise",):
+            try:
+                _sr_logo_pil = _draw_sunrise_logo_img(90, _ttf)
+                _sr_buf = BytesIO()
+                _sr_logo_pil.save(_sr_buf, format="PNG")
+                _logo_bytes_raw = _sr_buf.getvalue()
+                logger.info("reel_sunrise_logo_drawn_programmatically")
+            except Exception as _sle:
+                logger.warning("reel_sunrise_logo_draw_failed", error=str(_sle))
+
         def _esc(s: str) -> str:
             return s.replace("\\","\\\\").replace("'","\\'").replace(":","\\:")
 
@@ -1823,19 +1835,22 @@ def _overlay_reel(
                         f"box=1:boxcolor=black@0.40:boxborderw=12"
                     )
 
-            # format=auto on overlay lets FFmpeg use the PNG alpha channel so
-            # the logo composites directly onto the video with no background card
+            # Logo: bottom-right end card — appears in the final ~1.8s of the reel.
+            # format=auto lets FFmpeg use the PNG alpha channel for clean compositing.
+            # Headline text sits bottom-left so logo bottom-right avoids overlap.
+            _logo_x = "W-w-40"
+            _logo_y = "H-h-40"
             if _logo_bytes_raw and _txt_f:
                 _fc  = (f"[0:v]{_txt_f}[txt];"
                         f"[1:v]scale={_logo_w}:-1[logo];"
-                        f"[txt][logo]overlay=W-w-24:24:format=auto:"
+                        f"[txt][logo]overlay={_logo_x}:{_logo_y}:format=auto:"
                         f"enable=between(t\\,{logo_start_sec}\\,6)[vout]")
                 _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo.png",
                         "-filter_complex",_fc,"-map","[vout]","-map","0:a?",
                         "-c:v","libx264","-preset","fast","-crf","20","-c:a","copy","output.mp4"]
             elif _logo_bytes_raw:
                 _fc  = (f"[1:v]scale={_logo_w}:-1[logo];"
-                        f"[0:v][logo]overlay=W-w-24:24:format=auto:"
+                        f"[0:v][logo]overlay={_logo_x}:{_logo_y}:format=auto:"
                         f"enable=between(t\\,{logo_start_sec}\\,6)[vout]")
                 _cmd = ["ffmpeg","-y","-i","input.mp4","-i","logo.png",
                         "-filter_complex",_fc,"-map","[vout]","-map","0:a?",
@@ -1987,8 +2002,53 @@ async def generate_campaign_reel(
         "sunrise":     _sunrise_scene,
         "Sunrise":     _sunrise_scene,
     }
-    brand_scene = _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN \
-        else f"A premium advertising scene featuring {_prod} with dynamic energy and brand colours."
+    # Sunrise lifestyle (no product selected): use hard-coded adventure scenes.
+    # _sunrise_scene defaults to "friends in Zurich with phones" which Veo
+    # reproduces as lake parties / rooftop scenes — bypass it entirely.
+    if brand.lower() in ("sunrise",) and not product_name:
+        _sr_reel_pool = [
+            (
+                "Cinematic 6-second drone shot: a SOLO HIKER in a vivid orange jacket reaches the rocky "
+                "SUMMIT of a Swiss alpine peak at golden sunrise — BOTH ARMS RAISED wide against a blazing "
+                "gold and deep blue sky. Ultra-wide 14mm pull-back reveals endless snow-capped peaks. "
+                "Triumphant and breathtaking. No phones, no products. Red Bull / GoPro campaign quality."
+            ),
+            (
+                "Cinematic 6-second tracking shot: TWO TRAIL RUNNERS in vivid sportswear sprint at full "
+                "pace along a knife-edge alpine ridge, sheer drop on both sides, emerald valley far below. "
+                "Dynamic side-angle tracking — feet blur, hair streams in the wind, peaks fill the horizon. "
+                "No phones, no products. Patagonia / The North Face campaign quality."
+            ),
+            (
+                "Cinematic 6-second slow-motion shot: a LONE SNOWBOARDER launches off a natural alpine "
+                "cornice and hangs suspended fully MID-AIR above a steep Swiss snow slope — board "
+                "beneath them, arms spread wide, brilliant blue sky and snowy peaks behind. "
+                "Captured at maximum airtime. No products. Red Bull / Burton campaign quality."
+            ),
+            (
+                "Cinematic 6-second POV + chase shot: TWO MOUNTAIN BIKERS in vivid helmets blast down "
+                "a rugged alpine singletrack at high speed, pine forest blurred around them in motion, "
+                "leaning into hairpin bends. Pure velocity, total control in Swiss mountain forest. "
+                "No phones, no products. GoPro / Red Bull campaign quality."
+            ),
+            (
+                "Cinematic 6-second drone pull-out: a SOLO ROCK CLIMBER in vivid gear clings to a sheer "
+                "granite cliff face, one hand reaching for the next hold. Drone slowly pulls back to "
+                "reveal a turquoise Swiss alpine lake shimmering 200 metres below in the valley. "
+                "Heroic scale. No products. Patagonia / Black Diamond campaign quality."
+            ),
+            (
+                "Cinematic 6-second slow-motion shot: a SWIMMER leaps off a high granite cliff into a "
+                "vivid turquoise alpine lake below — perfect arc mid-air, golden sunset light flaring "
+                "behind jagged rocky peaks. Wide shot captures the figure SMALL against the vast alpine "
+                "landscape. Pure fearless freedom. No products. Red Bull / GoPro campaign quality."
+            ),
+        ]
+        _reel_idx = hash(big_idea or audience or brand) % len(_sr_reel_pool)
+        brand_scene = _sr_reel_pool[_reel_idx]
+    else:
+        brand_scene = _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN \
+            else f"A premium advertising scene featuring {_prod} with dynamic energy and brand colours."
 
     # ── Season/occasion visual overlay ────────────────────────────────────────
     # Appended to brand_scene so every brand gets the right festive/seasonal
