@@ -97,6 +97,22 @@ BRAND_CONFIG: dict[str, dict] = {
         "copy":       "UBS delivers integrated wealth and investment solutions to high-net-worth individuals, families, and institutions — combining Swiss precision with global reach to make your financial future feel clear and within reach.",
         "features":   ["Wealth Management", "Private Banking", "Asset Management", "Global Reach"],
     },
+    # Sunrise: #DA291C Red (accent/CTA only) | #FFFFFF White (body) | #1A1A1A Charcoal | Source Sans / system-ui
+    "Sunrise": {
+        "primary":    "#DA291C",   # Sunrise Red — CTA, badges, highlights only
+        "secondary":  "#b81f14",   # Deeper red for hover states
+        "accent":     "#DA291C",   # Same red — consistent accent system
+        "accent2":    "#f5f5f5",   # Light grey for alternating section backgrounds
+        "text":       "#ffffff",
+        "body_bg":    "#ffffff",   # White — dominant brand background
+        "section_bg": "#f5f5f5",   # Near-white for card/section alternation
+        "font":       "'Source Sans Pro', system-ui, -apple-system, sans-serif",
+        "font_url":   "",
+        "tagline":    "Sunrise. Simply the best.",
+        "hero_tag":   "🌅 Business Connect",
+        "copy":       "Switzerland's leading communications provider — combining high-speed internet, mobile, and TV in one seamless package for your business.",
+        "features":   ["Business Mobile", "High-Speed Internet", "Cloud Solutions", "24/7 Support"],
+    },
 }
 DEFAULT_BRAND = {"primary": "#0055A4", "secondary": "#003d7a", "accent": "#f59e0b",
                  "accent2": "#fbbf24", "text": "#ffffff", "body_bg": "#f8f9fa",
@@ -197,8 +213,306 @@ def generate_brand_website(brand: str, hero_message: str = "", tagline: str = ""
         return generate_boozt_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     if brand.lower() == "glenfiddich":
         return generate_glenfiddich_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
+    if brand.lower() == "sunrise":
+        return generate_sunrise_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     return _generate_sunglow_website(brand, hero_message, tagline, body_copy, cta,
                                      campaign_image_b64, campaign_id, hero_image_b64, video_b64)
+
+
+def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = "",
+                              hero_message: str = "", body_copy: str = "", cta: str = "",
+                              hero_image_b64: str = "", video_b64: str = "") -> str:
+    """Sunrise brand landing page — white body, #DA291C red accents, modern Swiss telecom aesthetic."""
+    from app.brand_assets import get_asset_loader
+    cfg    = BRAND_CONFIG["Sunrise"]
+    loader = get_asset_loader()
+    logos    = loader.list_logos("Sunrise")
+    products = loader.list_products("Sunrise")
+    assets   = loader.list_assets("Sunrise")
+
+    _gcs_hero   = next((_gcs_to_b64(a, "image/jpeg", 1200) for a in assets[:3] if a), "")
+    hero_bg_src = _make_bg_src(hero_image_b64) or _make_bg_src(campaign_image_b64) or _gcs_hero
+    camp_src    = _make_bg_src(campaign_image_b64) or _gcs_hero
+
+    logo_html = '<img src="/brand-logo/Sunrise" alt="Sunrise" style="height:36px;object-fit:contain;">'
+    if not logos:
+        logo_html = '<span style="font-size:22px;font-weight:900;color:#DA291C;letter-spacing:-0.03em;">sunrise</span>'
+
+    # Feature cards — based on actual sunrise.ch product categories
+    features = [
+        ("Business Mobile",    "Flexible SIM-only plans and device bundles for teams of any size.",         "📱"),
+        ("High-Speed Internet", "Fibre and cable broadband with symmetric speeds up to 10 Gbps.",           "⚡"),
+        ("Cloud & Security",   "Microsoft 365, backup, and managed security — all on one invoice.",          "☁️"),
+        ("TV & Streaming",     "Premium TV packages with live sport, news, and on-demand content.",          "📺"),
+    ]
+    feat_cards = ""
+    for icon, name, desc in [(f[2], f[0], f[1]) for f in features]:
+        feat_cards += f"""
+        <div class="feat-card">
+          <div class="feat-icon">{icon}</div>
+          <div class="feat-name">{name}</div>
+          <div class="feat-desc">{desc}</div>
+          <a href="#" class="feat-link">Learn more →</a>
+        </div>"""
+
+    # Plan comparison cards
+    plans = [
+        ("Business S",  "CHF 29.–/mo",  ["5 GB Data", "Unlimited CH Calls", "1 SIM"], False),
+        ("Business M",  "CHF 49.–/mo",  ["Unlimited Data", "Unlimited CH + EU Calls", "Up to 5 SIMs"], True),
+        ("Business L",  "CHF 79.–/mo",  ["Unlimited Data + 5G", "Unlimited Worldwide", "Up to 20 SIMs"], False),
+    ]
+    plan_cards = ""
+    for pname, price, perks, featured in plans:
+        border  = "border:2px solid #DA291C;" if featured else "border:2px solid #e5e7eb;"
+        badge   = '<div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);background:#DA291C;color:white;font-size:11px;font-weight:700;letter-spacing:0.1em;padding:4px 16px;border-radius:99px;white-space:nowrap;">MOST POPULAR</div>' if featured else ""
+        btn_bg  = "background:#DA291C;color:white;" if featured else "background:white;color:#DA291C;border:2px solid #DA291C;"
+        perks_html = "".join(f'<li style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:14px;color:#444;"><span style="color:#DA291C;font-size:16px;">✓</span>{p}</li>' for p in perks)
+        plan_cards += f"""
+        <div style="position:relative;background:white;border-radius:20px;padding:36px 28px 28px;{border}box-shadow:0 4px 20px rgba(0,0,0,0.07);transition:transform 0.2s,box-shadow 0.2s;"
+             onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 16px 40px rgba(218,41,28,0.15)'"
+             onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 20px rgba(0,0,0,0.07)'">
+          {badge}
+          <div style="font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#DA291C;margin-bottom:8px;">{pname}</div>
+          <div style="font-size:32px;font-weight:800;color:#1a1a1a;margin-bottom:4px;">{price}</div>
+          <div style="font-size:12px;color:#888;margin-bottom:24px;">excl. VAT · 24 month contract</div>
+          <ul style="list-style:none;margin-bottom:28px;">{perks_html}</ul>
+          <a href="#" style="display:block;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none;{btn_bg}transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">{cta or 'Get started'}</a>
+        </div>"""
+
+    hero_style = (
+        f"background:url('{hero_bg_src}') center/cover no-repeat;" if hero_bg_src
+        else "background:linear-gradient(135deg,#1a1a1a 0%,#333 100%);"
+    )
+
+    reel_section = f"""
+<section style="background:#1a1a1a;padding:72px 0;text-align:center;">
+  <div style="max-width:1140px;margin:0 auto;padding:0 40px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#DA291C;margin-bottom:12px;">Campaign Reel</div>
+    <h2 style="font-size:32px;font-weight:800;color:white;margin-bottom:32px;text-wrap:balance;">{hero_message}</h2>
+    <div style="border-radius:20px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+      <video controls autoplay loop muted playsinline style="width:100%;display:block;"
+             src="data:video/mp4;base64,{video_b64}"></video>
+    </div>
+    <a href="#plans" style="display:inline-block;margin-top:32px;background:#DA291C;color:white;padding:16px 44px;border-radius:99px;font-weight:700;font-size:15px;text-decoration:none;">{cta or 'View plans'}</a>
+  </div>
+</section>""" if video_b64 else ""
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Sunrise Business — {hero_message or 'Simply the best.'}</title>
+  <style>
+    *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+    body{{font-family:system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;background:#fff;color:#1a1a1a;line-height:1.5}}
+    a{{text-decoration:none;color:inherit}}
+
+    /* Top announcement bar */
+    .top-bar{{background:#DA291C;color:white;text-align:center;padding:10px 20px;font-size:13px;font-weight:600;letter-spacing:0.02em}}
+
+    /* Navigation */
+    nav{{position:sticky;top:0;z-index:100;background:white;border-bottom:1px solid #e5e7eb;height:64px;display:flex;align-items:center;padding:0 40px;box-shadow:0 1px 8px rgba(0,0,0,0.06)}}
+    .nav-inner{{max-width:1140px;width:100%;margin:0 auto;display:flex;align-items:center;justify-content:space-between}}
+    .nav-links{{display:flex;gap:24px}}
+    .nav-links a{{font-size:14px;font-weight:500;color:#444;padding:4px 0;border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s}}
+    .nav-links a:hover{{color:#DA291C;border-color:#DA291C}}
+    .nav-cta{{background:#DA291C;color:white;padding:10px 24px;border-radius:8px;font-weight:700;font-size:13px;transition:background 0.15s}}
+    .nav-cta:hover{{background:#b81f14}}
+
+    /* Hero */
+    .hero{{position:relative;min-height:580px;display:flex;align-items:center;overflow:hidden;{hero_style}}}
+    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.7) 0%,rgba(0,0,0,0.25) 60%,transparent 100%)}}
+    .hero-content{{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:80px 40px;width:100%}}
+    .hero-tag{{display:inline-block;background:#DA291C;color:white;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:6px 16px;border-radius:99px;margin-bottom:20px}}
+    .hero-title{{font-size:clamp(32px,5vw,56px);font-weight:800;color:white;line-height:1.1;max-width:580px;text-wrap:balance;margin-bottom:16px}}
+    .hero-sub{{font-size:18px;color:rgba(255,255,255,0.85);max-width:480px;margin-bottom:36px;line-height:1.6}}
+    .hero-btns{{display:flex;gap:16px;flex-wrap:wrap}}
+    .btn-primary{{background:#DA291C;color:white;padding:16px 36px;border-radius:10px;font-weight:700;font-size:15px;transition:background 0.15s,transform 0.15s}}
+    .btn-primary:hover{{background:#b81f14;transform:translateY(-1px)}}
+    .btn-secondary{{background:rgba(255,255,255,0.15);color:white;padding:16px 36px;border-radius:10px;font-weight:600;font-size:15px;border:1.5px solid rgba(255,255,255,0.5);backdrop-filter:blur(6px);transition:background 0.15s}}
+    .btn-secondary:hover{{background:rgba(255,255,255,0.25)}}
+
+    /* Trust bar */
+    .trust-bar{{background:#f9f9f9;border-bottom:1px solid #e5e7eb;padding:20px 40px}}
+    .trust-inner{{max-width:1140px;margin:0 auto;display:flex;justify-content:space-around;align-items:center;gap:20px;flex-wrap:wrap}}
+    .trust-item{{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:600;color:#444}}
+    .trust-icon{{font-size:20px}}
+
+    /* Section layout */
+    .section{{padding:80px 40px}}
+    .section-inner{{max-width:1140px;margin:0 auto}}
+    .section-label{{font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;color:#DA291C;margin-bottom:12px}}
+    .section-title{{font-size:clamp(24px,3.5vw,38px);font-weight:800;color:#1a1a1a;margin-bottom:12px;text-wrap:balance}}
+    .section-sub{{font-size:16px;color:#666;max-width:580px;line-height:1.7}}
+
+    /* Feature cards */
+    .feat-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;margin-top:48px}}
+    .feat-card{{background:#f9f9f9;border-radius:16px;padding:32px 28px;border:1.5px solid transparent;transition:border-color 0.2s,box-shadow 0.2s,transform 0.2s}}
+    .feat-card:hover{{border-color:#DA291C;box-shadow:0 8px 28px rgba(218,41,28,0.12);transform:translateY(-3px)}}
+    .feat-icon{{font-size:32px;margin-bottom:16px}}
+    .feat-name{{font-size:17px;font-weight:700;color:#1a1a1a;margin-bottom:8px}}
+    .feat-desc{{font-size:14px;color:#666;line-height:1.6;margin-bottom:16px}}
+    .feat-link{{font-size:13px;font-weight:700;color:#DA291C}}
+
+    /* Plans grid */
+    .plans-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-top:48px;align-items:start}}
+
+    /* Campaign image card */
+    .campaign-image{{width:100%;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.12);aspect-ratio:16/9;object-fit:cover;display:block}}
+
+    /* CTA band */
+    .cta-band{{background:#DA291C;padding:72px 40px;text-align:center}}
+    .cta-band h2{{font-size:clamp(24px,3.5vw,38px);font-weight:800;color:white;margin-bottom:12px;text-wrap:balance}}
+    .cta-band p{{font-size:16px;color:rgba(255,255,255,0.85);margin-bottom:32px}}
+    .cta-band a{{display:inline-block;background:white;color:#DA291C;padding:16px 44px;border-radius:10px;font-weight:800;font-size:15px;transition:transform 0.15s}}
+    .cta-band a:hover{{transform:translateY(-2px)}}
+
+    /* Footer */
+    footer{{background:#1a1a1a;color:#aaa;padding:56px 40px 32px}}
+    .foot-inner{{max-width:1140px;margin:0 auto}}
+    .foot-top{{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px}}
+    .foot-brand{{color:white;font-size:24px;font-weight:900;letter-spacing:-0.03em;margin-bottom:12px}}
+    .foot-brand span{{color:#DA291C}}
+    .foot-tagline{{font-size:13px;color:#aaa;line-height:1.6;max-width:260px}}
+    .foot-col h4{{font-size:12px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:white;margin-bottom:16px}}
+    .foot-col a{{display:block;font-size:13px;color:#888;margin-bottom:10px;transition:color 0.15s}}
+    .foot-col a:hover{{color:white}}
+    .foot-bottom{{border-top:1px solid #333;padding-top:24px;display:flex;justify-content:space-between;align-items:center;font-size:12px;flex-wrap:wrap;gap:12px}}
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">New: Business Connect M — Unlimited data + 5G from CHF 49.–/mo &nbsp;·&nbsp; <strong>Limited offer</strong></div>
+
+  <nav>
+    <div class="nav-inner">
+      <div style="display:flex;align-items:center;gap:32px">
+        {logo_html}
+        <div class="nav-links">
+          <a href="#">Mobile</a>
+          <a href="#">Internet</a>
+          <a href="#plans">Business</a>
+          <a href="#">TV</a>
+          <a href="#">Support</a>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px">
+        <a href="#" style="font-size:13px;font-weight:600;color:#444">My Sunrise</a>
+        <a href="#plans" class="nav-cta">{cta or 'View plans'}</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="hero-tag">Business Connect</div>
+      <h1 class="hero-title">{hero_message or 'Your business. Without limits.'}</h1>
+      <p class="hero-sub">{body_copy or "Switzerland's leading network for businesses — mobile, internet, and cloud in one seamless solution."}</p>
+      <div class="hero-btns">
+        <a href="#plans" class="btn-primary">{cta or 'View plans'}</a>
+        <a href="#features" class="btn-secondary">Learn more</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Trust bar -->
+  <div class="trust-bar">
+    <div class="trust-inner">
+      <div class="trust-item"><span class="trust-icon">🏅</span>Switzerland's #1 Network 2025</div>
+      <div class="trust-item"><span class="trust-icon">⚡</span>5G in 99% of Switzerland</div>
+      <div class="trust-item"><span class="trust-icon">🔒</span>ISO 27001 Certified Security</div>
+      <div class="trust-item"><span class="trust-icon">📞</span>24/7 Dedicated Business Support</div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <section class="section" id="features" style="background:#fff">
+    <div class="section-inner">
+      <div class="section-label">Why Sunrise Business</div>
+      <h2 class="section-title">Everything your business needs, in one place.</h2>
+      <p class="section-sub">From mobile and internet to cloud and security — simplified billing, one dedicated contact.</p>
+      <div class="feat-grid">
+        {feat_cards}
+      </div>
+    </div>
+  </section>
+
+  {f'''
+  <!-- Campaign visual -->
+  <section class="section" style="background:#f5f5f5;padding-top:0;padding-bottom:64px">
+    <div class="section-inner">
+      <img src="{camp_src}" alt="Campaign visual" class="campaign-image">
+    </div>
+  </section>
+  ''' if camp_src else ""}
+
+  <!-- Plans -->
+  <section class="section" id="plans" style="background:#f5f5f5">
+    <div class="section-inner">
+      <div class="section-label">Pricing</div>
+      <h2 class="section-title">Simple plans. No surprises.</h2>
+      <p class="section-sub">All plans include a dedicated account manager, 24/7 support, and free onboarding.</p>
+      <div class="plans-grid">
+        {plan_cards}
+      </div>
+    </div>
+  </section>
+
+  {reel_section}
+
+  <!-- CTA band -->
+  <div class="cta-band">
+    <h2>Ready to connect your business?</h2>
+    <p>Talk to a Sunrise Business advisor today — no commitment required.</p>
+    <a href="#">Request a free consultation</a>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="foot-inner">
+      <div class="foot-top">
+        <div>
+          <div class="foot-brand">sun<span>rise</span></div>
+          <p class="foot-tagline">Sunrise is Switzerland's leading communications provider for businesses and private customers.</p>
+        </div>
+        <div class="foot-col">
+          <h4>Business</h4>
+          <a href="#">Mobile Plans</a>
+          <a href="#">Internet</a>
+          <a href="#">Cloud Solutions</a>
+          <a href="#">Business TV</a>
+        </div>
+        <div class="foot-col">
+          <h4>Support</h4>
+          <a href="#">Help Centre</a>
+          <a href="#">Contact Us</a>
+          <a href="#">Coverage Map</a>
+          <a href="#">My Sunrise</a>
+        </div>
+        <div class="foot-col">
+          <h4>Company</h4>
+          <a href="#">About Sunrise</a>
+          <a href="#">Newsroom</a>
+          <a href="#">Careers</a>
+          <a href="#">Sustainability</a>
+        </div>
+      </div>
+      <div class="foot-bottom">
+        <span>© 2025 Sunrise Communications AG. All rights reserved.</span>
+        <div style="display:flex;gap:20px">
+          <a href="#" style="color:#888">Privacy</a>
+          <a href="#" style="color:#888">Legal</a>
+          <a href="#" style="color:#888">Cookies</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>"""
 
 
 def generate_glenfiddich_website(campaign_image_b64: str = "", campaign_id: str = "",
