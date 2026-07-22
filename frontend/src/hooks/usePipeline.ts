@@ -117,7 +117,7 @@ export function usePipeline() {
             ..._flatMB,
             creative_strategy:    result.creative_strategy,
             campaign_copy:        result.campaign_copy,
-            audience_insights:    (_flatMB.audience_insights as string | undefined) ?? result.machine_brief?.audience_insights,
+            audience_insights:    (_flatMB.audience_insights as string | undefined) ?? (result.audience_insights as string | undefined) ?? result.machine_brief?.audience_insights,
             creative_pipeline:    result.creative_pipeline,
             performance_forecast: result.performance_forecast,
           };

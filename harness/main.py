@@ -340,6 +340,39 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         machine_brief.setdefault("campaign_id", campaign_id)
         machine_brief.setdefault("brand", brief.brand)
 
+        # ── Normalize machine_brief for frontend compatibility ─────────────
+        # ADK Workflow state-dict path returns the full session state dict with
+        # the actual MachineBrief JSON stored under a nested "machine_brief" key.
+        # Extract and merge it so all top-level fields are accessible.
+        _nested_mb = machine_brief.get("machine_brief")
+        if isinstance(_nested_mb, str) and _nested_mb.strip().startswith("{"):
+            try:
+                for _k, _v in json.loads(_nested_mb).items():
+                    machine_brief.setdefault(_k, _v)
+            except Exception:
+                pass
+
+        # ADK briefing_agent uses fan_truth_score; Groq fallback and frontend use fan_truth
+        if "fan_truth" not in machine_brief and "fan_truth_score" in machine_brief:
+            _fts = machine_brief["fan_truth_score"]
+            machine_brief["fan_truth"] = {
+                **(_fts if isinstance(_fts, dict) else {}),
+                "statement": (_fts.get("statement") if isinstance(_fts, dict) else None)
+                             or brief.fan_truth or "",
+            }
+
+        # ADK briefing_agent uses kpi_flags; Groq fallback and frontend use kpis
+        if "kpis" not in machine_brief and "kpi_flags" in machine_brief:
+            machine_brief["kpis"] = [
+                {
+                    "metric": (f.get("kpi") or f.get("metric") or "") if isinstance(f, dict) else "",
+                    "target": f.get("target", "") if isinstance(f, dict) else "",
+                    "flag":   f.get("flag",   "OK") if isinstance(f, dict) else "OK",
+                    "note":   f.get("note",   "") if isinstance(f, dict) else "",
+                }
+                for f in machine_brief["kpi_flags"]
+            ]
+
         # ── Extract context fields from final machine_brief ────────────────
         brand_guidelines  = machine_brief.pop("brand_guidelines", "")
         brand_locks       = machine_brief.pop("brand_locks_json", "{}")
@@ -626,6 +659,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "machine_brief":      machine_brief,
             "creative_strategy":  strategy,
             "campaign_copy":      copy,
+            "audience_insights":  audience_insights,
             "creative_pipeline":  creative_result,
             "performance_forecast": perf_forecast,
             "processing_time_ms": int((time.time() - t_start) * 1000),
