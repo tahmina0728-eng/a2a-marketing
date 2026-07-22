@@ -866,9 +866,10 @@ def _apply_brand_overlay(
             sentences = [brand.upper()]
 
         _is_sr_life = brand.lower() in ("sunrise",) and not bool(product_name)
+        _is_sunrise = brand.lower() in ("sunrise",)
 
-        # Sunrise lifestyle → target 3 lines at uniform size; others → 2 lines
-        max_lines = 3 if _is_sr_life else 2
+        # Sunrise (lifestyle OR offer) → target 3 lines; others → 2 lines
+        max_lines = 3 if _is_sunrise else 2
 
         # Collapse into at most max_lines display lines
         if len(sentences) > max_lines:
@@ -1237,8 +1238,8 @@ def _apply_brand_overlay(
 
             # ── Headline (uniform size/weight across all lines) ───────────────────
             _lm         = max(36, int(W * 0.05))
-            _head_max_w = int(W * 0.45)
-            _head_sz    = max(22, int(H * 0.135))
+            _head_max_w = int(W * 0.60)
+            _head_sz    = max(28, int(H * 0.18))
 
             def _tracked_w(text, fnt, tracking):
                 total = sum(
@@ -1304,7 +1305,6 @@ def _apply_brand_overlay(
                     _bdrw.ellipse(
                         [0, 0, _br * 2 - 1, _br * 2 - 1],
                         fill=(255, 255, 255, 255),
-                        outline=(185, 185, 185, 255), width=max(1, _br // 22),
                     )
                     canvas.alpha_composite(_bdg, (_bx, _by))
                     _amt_fnt  = _font(max(10, int(_br * 0.50)))
