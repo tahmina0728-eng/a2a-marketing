@@ -44,9 +44,44 @@ const MARKET_CURRENCY_SYMBOL: Record<string, string> = {
   "Austria": "€", "France": "€", "Global": "CHF", "SEA": "$",
 };
 
+const BRAND_FAN_TRUTHS: Record<string, string[]> = {
+  sunrise: [
+    "Young adventurers need a network that never drops at the moment that matters most — on the summit, mid-ride, or mid-call.",
+    "Swiss families feel closest when they can share every moment in real time, wherever life takes them.",
+    "Business professionals see dropped connections as dropped deals — they choose Sunrise because reliability is non-negotiable.",
+    "Digital natives judge a brand by how invisibly it keeps up with their life — Sunrise earns loyalty by never slowing them down.",
+  ],
+  Rnorr: [
+    "Home cooks feel proud when a simple weeknight meal becomes a moment the family talks about — Rnorr makes that effortless.",
+    "Busy parents need shortcuts that don't feel like shortcuts — Rnorr lets them serve love on a plate even on the hardest days.",
+    "Food lovers believe real flavour shouldn't require hours — Rnorr proves that bold taste and convenience can be the same thing.",
+  ],
+  Sunglow: [
+    "Women know their hair is the first thing they see each morning — Sunglow makes that moment a confidence boost, not a battle.",
+    "Beauty fans believe great hair shouldn't cost a salon visit — Sunglow gives them the result without the price tag.",
+    "On-the-go women want one product that actually works — Sunglow earns trust by delivering on that promise every wash.",
+  ],
+  Boozt: [
+    "Young achievers fuel their ambitions relentlessly and need energy that matches their pace without the crash.",
+    "Athletes demand more from their energy source — Boozt delivers clean, sustained power exactly when it counts.",
+    "Gen Z rejects artificial hype — they want a brand that gives them real performance fuel they can actually trust.",
+  ],
+  Glenfiddich: [
+    "Whisky lovers believe the best experiences deserve the best whisky — Glenfiddich is the standard they share with those who get it.",
+    "Ambitious professionals see whisky as an earned reward — Glenfiddich marks the milestones worth remembering.",
+    "Collectors want a whisky with a story worth telling — Glenfiddich's 130-year heritage gives them a reason to open a bottle.",
+  ],
+  "UBS Bank": [
+    "High achievers believe their financial choices should be as bold as their ambitions — UBS helps them build a future worthy of their vision.",
+    "Entrepreneurs need a financial partner who sees potential, not just risk — UBS backs the person, not just the plan.",
+    "Families want financial security without sacrificing their dreams — UBS makes both possible without having to choose.",
+  ],
+};
+
 interface FD {
   brand: string; objective: string; market: string; language: string; budget: string;
   channels: string[]; age: string[]; season: string; moment: string; campaignName: string;
+  fanTruth: string;
   // Sunrise-specific
   sunrisePlan: string;      // "Lifestyle KV" | plan name e.g. "Mobile Unlimited"
   sunriseAudience: string;
@@ -54,6 +89,7 @@ interface FD {
 const INIT: FD = {
   brand:"", objective:"", market:"", language:"", budget:"",
   channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"",
+  fanTruth:"",
   sunrisePlan:"Lifestyle KV", sunriseAudience:"",
 };
 const toggle = <T,>(arr: T[], v: T): T[] => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
@@ -291,6 +327,19 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
             </div>
           )}
 
+          {/* ── Fan Truth ── */}
+          {(BRAND_FAN_TRUTHS[data.brand] ?? []).length > 0 && (
+            <div>
+              <span style={label}>Fan Truth</span>
+              <FormSelect
+                value={data.fanTruth}
+                onChange={v => onChange("fanTruth", v)}
+                placeholder="Select a fan truth (optional)"
+                options={BRAND_FAN_TRUTHS[data.brand] ?? []}
+              />
+            </div>
+          )}
+
           {/* ── Season / Moment (all brands) ── */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
             <div>
@@ -369,21 +418,23 @@ export default function CampaignForm({ onFullCampaign }: {
       }
     }
 
-    // Build a specific, brand-and-product-aware fan truth so Logos scores it well
-    let fanTruth: string;
-    if (isSunrise && data.sunrisePlan === "Business Connect") {
-      const audience = data.sunriseAudience || "business professionals";
-      fanTruth = `${audience} in ${data.market} need uninterrupted, always-on connectivity to run their business with confidence — they choose Sunrise Business Connect because downtime is not an option.`;
-    } else if (isSunrise && data.sunrisePlan) {
-      const audience = data.sunriseAudience || "customers";
-      fanTruth = `${audience} in ${data.market} want the freedom to stay connected without limits or hidden costs — they trust Sunrise ${data.sunrisePlan} because it gives them exactly what they pay for.`;
-    } else if (isSunrise) {
-      const audience = data.sunriseAudience || "customers";
-      fanTruth = `${audience} in ${data.market} seek a brand that genuinely reflects their lifestyle — Sunrise earns their loyalty by showing up authentically in the moments that matter most to them.`;
-    } else {
-      fanTruth = `${brandLabel} fans in ${data.market} reward brands that understand the specific moments of their lives`
-        + (resolvedSeason !== "Evergreen" ? ` — especially during ${resolvedSeason}` : "")
-        + `, not just their demographic profile.`;
+    // Fan truth: user-selected takes priority; fall back to auto-generated
+    let fanTruth: string = data.fanTruth.trim();
+    if (!fanTruth) {
+      if (isSunrise && data.sunrisePlan === "Business Connect") {
+        const audience = data.sunriseAudience || "business professionals";
+        fanTruth = `${audience} in ${data.market} need uninterrupted, always-on connectivity to run their business with confidence — they choose Sunrise Business Connect because downtime is not an option.`;
+      } else if (isSunrise && data.sunrisePlan) {
+        const audience = data.sunriseAudience || "customers";
+        fanTruth = `${audience} in ${data.market} want the freedom to stay connected without limits or hidden costs — they trust Sunrise ${data.sunrisePlan} because it gives them exactly what they pay for.`;
+      } else if (isSunrise) {
+        const audience = data.sunriseAudience || "customers";
+        fanTruth = `${audience} in ${data.market} seek a brand that genuinely reflects their lifestyle — Sunrise earns their loyalty by showing up authentically in the moments that matter most to them.`;
+      } else {
+        fanTruth = `${brandLabel} fans in ${data.market} reward brands that understand the specific moments of their lives`
+          + (resolvedSeason !== "Evergreen" ? ` — especially during ${resolvedSeason}` : "")
+          + `, not just their demographic profile.`;
+      }
     }
 
     onFullCampaign({
