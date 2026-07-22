@@ -865,27 +865,52 @@ def _apply_brand_overlay(
         if not sentences:
             sentences = [brand.upper()]
 
-        # Collapse into at most 2 display lines
-        if len(sentences) > 2:
-            mid = len(sentences) // 2
-            sentences = [" ".join(sentences[:mid]), " ".join(sentences[mid:])]
+        _is_sr_life = brand.lower() in ("sunrise",) and not bool(product_name)
 
-        # If still a single long sentence, split at the first comma so the
-        # headline always reads as two lines (e.g. "Summer flavor, zero kitchen sweat.")
+        # Sunrise lifestyle → target 3 lines at uniform size; others → 2 lines
+        max_lines = 3 if _is_sr_life else 2
+
+        # Collapse into at most max_lines display lines
+        if len(sentences) > max_lines:
+            mid = len(sentences) // max_lines
+            if max_lines == 3:
+                sentences = [
+                    " ".join(sentences[:mid]),
+                    " ".join(sentences[mid:mid*2]),
+                    " ".join(sentences[mid*2:]),
+                ]
+            else:
+                sentences = [" ".join(sentences[:mid]), " ".join(sentences[mid:])]
+
+        # If still a single long sentence, split at the first comma
         if len(sentences) == 1 and "," in sentences[0]:
             _parts = sentences[0].split(",", 1)
             sentences = [_parts[0].strip() + ",", _parts[1].strip()]
 
-        # Final fallback: split at the word-count midpoint for headlines with 2+ words
-        # that have no punctuation or comma. Without this, a short headline like
-        # "GRENZENLOSE FREIHEIT" stays as one shrunken line instead of two bold lines.
-        # Sunrise lifestyle always targets 2 headline lines + tagline = 3 visible lines.
+        # Fallback: split at word-count thirds (Sunrise lifestyle) or midpoint (others)
         if len(sentences) == 1 and len(raw_words) >= 2:
-            _mid = (len(raw_words) + 1) // 2  # round up — first line gets the extra word
-            sentences = [
-                " ".join(raw_words[:_mid]),
-                " ".join(raw_words[_mid:]),
-            ]
+            if _is_sr_life and len(raw_words) >= 3:
+                _t = len(raw_words)
+                _a, _b = _t // 3, (_t * 2) // 3
+                sentences = [
+                    " ".join(raw_words[:_a]) or raw_words[0],
+                    " ".join(raw_words[_a:_b]),
+                    " ".join(raw_words[_b:]),
+                ]
+                sentences = [s for s in sentences if s]  # drop empty
+            else:
+                _mid = (len(raw_words) + 1) // 2
+                sentences = [
+                    " ".join(raw_words[:_mid]),
+                    " ".join(raw_words[_mid:]),
+                ]
+        elif len(sentences) == 2 and _is_sr_life and len(raw_words) >= 4:
+            # Already 2 lines — split the longer one to get 3
+            _longest = max(range(2), key=lambda i: len(sentences[i].split()))
+            _words = sentences[_longest].split()
+            _half = (len(_words) + 1) // 2
+            _split = [" ".join(_words[:_half]), " ".join(_words[_half:])]
+            sentences = (sentences[:_longest] + _split + sentences[_longest+1:])
 
         # Auto-fit each line: shrink font until it fits within allowed width.
         # Sunrise uses wider text zone (70%) to match their large-headline campaign style.
@@ -895,16 +920,33 @@ def _apply_brand_overlay(
         _md        = ImageDraw.Draw(_measure)
         max_line_w = int(W * (0.70 if brand.lower() in ("sunrise",) else 0.55))
         base_sz    = max(44, W // 10)
-        lines_spec = []
-        for line_text in sentences:
-            sz = base_sz
-            while sz > 18:
-                fnt = _font(sz)  # Light (300) for Sunrise via _font() default
-                bb  = _md.textbbox((0, 0), line_text.upper(), font=fnt)
-                if (bb[2] - bb[0]) <= max_line_w:
+        _is_sunrise_lifestyle = brand.lower() in ("sunrise",) and not bool(product_name)
+        if _is_sunrise_lifestyle:
+            # Uniform font size across all lines — find the size that fits the longest line
+            # so all 3 lines render at the same scale (no one short line becoming huge)
+            uniform_sz = base_sz
+            while uniform_sz > 18:
+                fnt = _font(uniform_sz)
+                fits = all(
+                    (_md.textbbox((0, 0), t.upper(), font=fnt)[2]
+                     - _md.textbbox((0, 0), t.upper(), font=fnt)[0]) <= max_line_w
+                    for t in sentences
+                )
+                if fits:
                     break
-                sz = max(18, int(sz * 0.88))
-            lines_spec.append((line_text.upper(), sz, _font(sz)))
+                uniform_sz = max(18, int(uniform_sz * 0.88))
+            lines_spec = [(t.upper(), uniform_sz, _font(uniform_sz)) for t in sentences]
+        else:
+            lines_spec = []
+            for line_text in sentences:
+                sz = base_sz
+                while sz > 18:
+                    fnt = _font(sz)  # Light (300) for Sunrise via _font() default
+                    bb  = _md.textbbox((0, 0), line_text.upper(), font=fnt)
+                    if (bb[2] - bb[0]) <= max_line_w:
+                        break
+                    sz = max(18, int(sz * 0.88))
+                lines_spec.append((line_text.upper(), sz, _font(sz)))
 
         _tmp = Image.new("RGBA", (W, 4))
         _td  = ImageDraw.Draw(_tmp)
