@@ -719,7 +719,8 @@ def _apply_ubs_overlay(
 def _draw_sunrise_logo_img(height_px: int, font_path: str | None) -> "Image":
     """
     Render the Sunrise telecom logo using Pillow primitives:
-    circle ring outline + filled lower semicircle (the sunrise icon) + 'Sunrise' wordmark.
+    circle ring outline + filled lower semicircle (the sunrise icon) stacked
+    vertically above the 'Sunrise' wordmark — icon centered on top, text below.
     Returns an RGBA image with transparent background — composite directly, no pill needed.
     """
     from PIL import Image as _PI, ImageDraw as _PID, ImageFont as _PIF
@@ -728,11 +729,12 @@ def _draw_sunrise_logo_img(height_px: int, font_path: str | None) -> "Image":
     stroke = max(2, h // 14)   # ~7% stroke — matches reference
     icon = _PI.new("RGBA", (h, h), (0, 0, 0, 0))
     d = _PID.Draw(icon)
-    bb = [0, 0, h - 1, h - 1]  # full bbox for both so fill is solid at bottom
+    bb = [0, 0, h - 1, h - 1]
     d.ellipse(bb, outline=(255, 255, 255, 255), width=stroke)
     d.chord(bb, start=15, end=165, fill=(255, 255, 255, 255))
 
-    fs = max(12, int(h * 0.72))
+    # Wordmark sized to roughly match icon width
+    fs = max(12, int(h * 0.55))
     try:
         fnt = _PIF.truetype(font_path, fs) if font_path else _PIF.load_default(size=fs)
         if font_path:
@@ -746,14 +748,17 @@ def _draw_sunrise_logo_img(height_px: int, font_path: str | None) -> "Image":
     _tmp = _PI.new("RGBA", (1, 1))
     _tbb = _PID.Draw(_tmp).textbbox((0, 0), "Sunrise", font=fnt)
     tw, th = _tbb[2] - _tbb[0], _tbb[3] - _tbb[1]
-    gap = max(6, int(h * 0.18))
-    total_w = h + gap + tw
-    total_h = max(h, th + 4)
+    gap = max(4, int(h * 0.10))          # small gap between circle and text
+
+    total_w = max(h, tw + 4)             # width = wider of icon vs text
+    total_h = h + gap + th + 4
 
     logo = _PI.new("RGBA", (total_w, total_h), (0, 0, 0, 0))
-    logo.paste(icon, (0, (total_h - h) // 2), icon)
+    # Icon: horizontally centered at top
+    logo.paste(icon, ((total_w - h) // 2, 0), icon)
+    # Wordmark: horizontally centered directly below icon
     _PID.Draw(logo).text(
-        (h + gap - _tbb[0], (total_h - th) // 2 - _tbb[1]),
+        ((total_w - tw) // 2 - _tbb[0], h + gap - _tbb[1]),
         "Sunrise", font=fnt, fill=(255, 255, 255, 255),
     )
     return logo
@@ -3003,9 +3008,10 @@ Output EXACTLY this format (nothing else):
             _pn = _product_ctx.lower()
             _sunrise_base = (
                 " Absolutely NO dark shadows, NO vignette, NO moody lighting. "
-                "Bright natural daylight — vivid saturated colours, crisp details, luminous and powerful. "
-                "LEFT THIRD of the frame must stay open (sky, bokeh, or negative space) for headline text overlay. "
-                "NO text, logos, or numbers anywhere in the image. Bright, bold, modern mood."
+                "Bright natural daylight — vivid saturated colours, crisp alpine details, luminous and powerful. "
+                "Shoot from a slightly low angle to make subjects look heroic against the sky. "
+                "LEFT THIRD of the frame must stay open (sky, peaks, or soft bokeh) for headline text overlay. "
+                "NO text, logos, or numbers anywhere in the image. Bold, epic, modern outdoor mood."
             )
             # Derive WHO appears in the scene from the selected target audience
             _al = _aud_ctx.lower()
@@ -3037,9 +3043,14 @@ Output EXACTLY this format (nothing else):
             if not _product_ctx:
                 # Lifestyle KV — brand awareness, no specific product
                 _sunrise_scene = (
-                    f"Show {_who} laughing and enjoying life outdoors in Switzerland, {_who_activity}. "
-                    "Scenic Swiss location: mountain viewpoint, lakeside promenade, or vibrant city street. "
-                    "Free, optimistic, modern energy."
+                    f"Show {_who} in an epic outdoor adventure in the Swiss Alps — "
+                    "hiking on a dramatic mountain ridge with panoramic valley views, trail running above the clouds, "
+                    "mountain biking through alpine meadows, or standing triumphant on a rocky summit. "
+                    f"{_who_activity.capitalize()}, radiating joy and freedom, vibrant athletic outdoor gear. "
+                    "CINEMATIC wide shot: towering rocky peaks, lush green valley far below, vivid blue sky. "
+                    "Golden hour light, crisp alpine atmosphere. Premium outdoor advertising quality — "
+                    "dramatic, aspirational, powerful — like a Red Bull or Patagonia campaign. "
+                    "LEFT THIRD of frame must be open sky or soft bokeh for headline text overlay."
                 )
             elif "mobile unlimited" in _pn:
                 _sunrise_scene = (
