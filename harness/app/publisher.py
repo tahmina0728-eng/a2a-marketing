@@ -360,8 +360,8 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     /* Plans grid */
     .plans-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-top:48px;align-items:start}}
 
-    /* Campaign image card */
-    .campaign-image{{width:100%;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.12);aspect-ratio:16/9;object-fit:cover;display:block}}
+    /* Campaign image card — no crop, full image always visible */
+    .campaign-image{{width:100%;height:auto;display:block;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}}
 
     /* CTA band */
     .cta-band{{background:#DA291C;padding:72px 40px;text-align:center}}
