@@ -522,21 +522,21 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
   <!-- Campaign image + Plans side by side -->
   <section class="section" id="plans" style="background:#f5f5f5">
     <div class="section-inner">
-      <div style="display:flex;gap:48px;align-items:flex-start;flex-wrap:wrap;">
+      <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap;">
 
-        {f'''<!-- Left: campaign image -->
-        <div style="flex:1 1 380px;min-width:280px;">
+        {f'''<!-- Left: campaign image, fixed width ~40% -->
+        <div style="flex:0 0 38%;min-width:260px;max-width:440px;">
           <img src="{camp_src}" alt="Campaign visual"
                style="width:100%;height:auto;display:block;border-radius:20px;
-                      box-shadow:0 8px 40px rgba(0,0,0,0.14);position:sticky;top:80px;">
+                      box-shadow:0 8px 40px rgba(0,0,0,0.14);position:sticky;top:88px;">
         </div>''' if camp_src else ""}
 
-        <!-- Right: pricing -->
-        <div style="flex:1 1 380px;min-width:280px;">
+        <!-- Right: pricing — 2-column plan grid -->
+        <div style="flex:1 1 0;min-width:320px;">
           <div class="section-label">Pricing</div>
           <h2 class="section-title">Simple plans. No surprises.</h2>
-          <p class="section-sub" style="margin-bottom:32px;">All plans include a dedicated account manager, 24/7 support, and free onboarding.</p>
-          <div style="display:flex;flex-direction:column;gap:16px;">
+          <p class="section-sub" style="margin-bottom:28px;">All plans include a dedicated account manager, 24/7 support, and free onboarding.</p>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;">
             {plan_cards}
           </div>
         </div>
