@@ -448,17 +448,9 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     </div>
   </nav>
 
-  <!-- Hero -->
+  <!-- Hero — clean image only, no text overlay -->
   <div class="hero">
     <div class="hero-overlay"></div>
-    <div class="hero-content">
-      <h1 class="hero-title">{hero_message or 'Your business. Without limits.'}</h1>
-      <p class="hero-sub">{body_copy or "Switzerland's leading network for businesses — mobile, internet, and cloud in one seamless solution."}</p>
-      <div class="hero-btns">
-        <a href="#plans" class="btn-primary">{cta or 'View plans'}</a>
-        <a href="#features" class="btn-secondary">Learn more</a>
-      </div>
-    </div>
   </div>
 
   <!-- Trust bar -->
