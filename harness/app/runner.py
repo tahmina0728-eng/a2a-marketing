@@ -1045,7 +1045,7 @@ def _apply_brand_overlay(
             if _primary and str(_primary).lower().endswith(".svg"):
                 # SVG can't be opened by Pillow — draw programmatically for known brands
                 if brand.lower() in ("sunrise",):
-                    _logo_img = _draw_sunrise_logo_img(int(H * 0.10), font_path)
+                    _logo_img = _draw_sunrise_logo_img(int(H * 0.13), font_path)
                     _use_pill = False  # white wordmark composited directly on image
             elif _primary:
                 _logo_bytes = None
@@ -2496,6 +2496,14 @@ Create a Big Idea for this campaign. Output:
             "wardrobe": "electric blue, cobalt, or sharp white outfit — bold and graphic",
             "energy":   "power, unstoppable momentum, pure charged confidence",
         },
+        "sunrise": {
+            "effects":  "cinematic golden hour light rays, dramatic depth of field, rich alpine atmosphere, sunlight breaking over mountain ridges",
+            "model":    "active Swiss person (age 20-38) caught at a peak outdoor moment — summiting a mountain, leaping off a lakeside rock at golden sunset, sprinting on an alpine trail, playing tennis on a clay court, or longboarding down a mountain road — pure exhilaration, ethnicity matching selected market",
+            "hair":     "natural, windswept — the landscape and the person's energy are co-heroes",
+            "bg":       "dramatic Swiss alpine landscape — snow-capped peaks, crystal-clear mountain lakes, high alpine passes, rugged cliff faces, or clay sports courts with mountain backdrop",
+            "wardrobe": "high-performance outdoor sportswear or casual urban — vibrant colours, absolutely NO Sunrise branding on clothing",
+            "energy":   "fearless living, freedom, bold spontaneous adventure — 'Dream Big. Do Big.'",
+        },
     }
     _magic = _BRAND_MAGIC.get(brand, {
         "effects":  "sparkling light particles, soft bokeh, premium studio lighting",
@@ -2519,6 +2527,10 @@ Create a Big Idea for this campaign. Output:
         "Rnorr": (
             "Concept 1 — DYNAMIC ENERGY: Model caught mid-stir or mid-taste, steam rising dramatically, genuine delight. Bold food energy. Products prominent in scene.",
             "Concept 2 — INTIMATE GLOW: Model closer to camera, warm proud smile, holding a steaming bowl or pan. Cosy kitchen atmosphere. Products naturally integrated.",
+        ),
+        "sunrise": (
+            "Concept 1 — PEAK MOMENT: One person at the absolute peak of an outdoor action — jumping dramatically off a lakeside rock into alpine water at golden sunset, reaching the top of a mountain with arms raised to the sky, or sprinting on a rugged alpine trail with peaks behind. Heroic low-angle composition. Pure triumph and freedom. NO products, NO branded items, NO bottles or accessories anywhere.",
+            "Concept 2 — SPONTANEOUS ADVENTURE: Two or three friends caught mid-spontaneous outdoor moment — longboarding together down a mountain road in autumn, playing tennis on a clay court with Alps in background, or laughing on a cliff edge overlooking a Swiss lake panorama at dusk. Genuine connection and joy. NO products, NO branded items, NO bottles or accessories anywhere.",
         ),
     }
     _c1_dir, _c2_dir = _BRAND_CONCEPT_DIRS.get(brand, (
@@ -2860,8 +2872,48 @@ Create a Big Idea for this campaign. Output:
             + (f". Market: {_market_demo}" if _market_demo else "")
         )
 
-    scene_concepts_raw = await _llm(f"""You are a world-class FMCG advertising creative director.
-Study these reference ad styles: Sunsilk (dynamic hair, sparkles, vibrant energy), Pantene (cinematic hair movement, golden glow), Knorr (warm kitchen magic, steam, real moments), L'Oréal (empowered model, bold colour, premium feel).
+    _sr_life = brand.lower() in ("sunrise",) and not bool(product_name)
+
+    _product_ref_section = (
+        "LIFESTYLE / BRAND CAMPAIGN — ABSOLUTELY NO PRODUCTS IN SCENE:\n"
+        "This is a pure lifestyle campaign. There are NO physical products to show.\n"
+        "Do NOT add any branded bottles, cans, merchandise, accessories, phones, or devices anywhere.\n"
+        "The image shows ONLY people and the environment (alpine landscape, sports court, city backdrop).\n"
+        "The brand mark is applied via logo overlay after generation — keep the scene completely product-free."
+        if _sr_life
+        else (
+            f"Selected product: {_product_ctx}\n"
+            f"I am providing reference images of the actual {brand} {_product_ctx} packaging and logo.\n"
+            f"Reproduce the EXACT product design, colours, and label from those reference images.\n"
+            f"Every product in the image MUST show '{brand}' and '{_product_ctx}' on the label.\n"
+            f"Show 2-3 of these products prominently in the RIGHT zone."
+        )
+    )
+
+    _creative_director_intro = (
+        "You are a world-class outdoor lifestyle and telecoms advertising creative director.\n"
+        "Reference visual styles: Sunrise Switzerland brand campaigns, Red Bull outdoor, Patagonia alpine photography, Nike outdoor — dramatic landscapes, peak human moments, no products."
+        if _sr_life
+        else (
+            "You are a world-class FMCG advertising creative director.\n"
+            "Study these reference ad styles: Sunsilk (dynamic hair, sparkles, vibrant energy), Pantene (cinematic hair movement, golden glow), Knorr (warm kitchen magic, steam, real moments), L'Oréal (empowered model, bold colour, premium feel)."
+        )
+    )
+
+    _positioning_rule = (
+        "- Subject positioned left or centre-left, landscape fills right — wide cinematic composition"
+        if _sr_life
+        else "- Model and products positioned centre-right or right, facing slightly left into the frame"
+    )
+
+    _no_product_rule = (
+        "- ZERO products, ZERO branded bottles/cans/accessories/devices in the image — lifestyle only\n"
+        "- Landscape and human action fill every inch of the frame"
+        if _sr_life
+        else ""
+    )
+
+    scene_concepts_raw = await _llm(f"""{_creative_director_intro}
 
 Generate 2 DISTINCT advertising key visual prompts for this campaign.
 CRITICAL: The two concepts MUST be structurally different — different number of people, different scene types, different emotional angles. NEVER produce two near-identical single-person shots.
@@ -2886,11 +2938,7 @@ Emotional Energy: {_magic['energy']}
 Colours: {_brand_palette_str}
 
 ═══ PRODUCT REFERENCE ═══
-Selected product: {_product_ctx}
-I am providing reference images of the actual {brand} {_product_ctx} packaging and logo.
-Reproduce the EXACT product design, colours, and label from those reference images.
-Every product in the image MUST show '{brand}' and '{_product_ctx}' on the label.
-Show 2-3 of these products prominently in the RIGHT zone.
+{_product_ref_section}
 
 ═══ TWO DIFFERENT CONCEPTS ═══
 {_c1_dir}
@@ -2902,12 +2950,12 @@ Output EXACTLY this format (nothing else):
 
 ═══ MANDATORY RULES ═══
 - FULL BLEED — subject and background fill the entire frame edge to edge, no flat panels
-- Model and products positioned centre-right or right, facing slightly left into the frame
+{_positioning_rule}
 - Photorealistic DSLR advertising photography quality
 - Magical effects: {_magic['effects']}
 - Bold saturated colours — award-winning art direction
 - NO text anywhere in the image — headline is injected separately after generation
-- Fan truth ({_ft_ctx}) visible in model's expression and scene energy
+{_no_product_rule}- Fan truth ({_ft_ctx}) visible in model's expression and scene energy
 - Season ({_season_ctx}) woven into atmosphere, lighting temperature, and mood
 - Natural balanced lighting across the full frame — no artificial dark zone on the left""", temp=0.9)
 
