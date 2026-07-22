@@ -1326,7 +1326,12 @@ def _apply_brand_overlay(
                     # ── White circle price badge (Types B/C/D) — below headline on left
                     _br   = max(38, int(min(W, H) * 0.13))
                     _bx   = _lm                  # left-aligned with headline
-                    _by   = _hy                  # directly below plan label
+                    # Cap _by so the price circle bottom never overlaps the logo circle
+                    # that peeks above the red strip.  Logo circle top ≈ H - strip - 63% of ic_d2.
+                    _ic_d2_est     = max(36, int(_strip_h * 0.90))
+                    _logo_top_est  = H - _strip_h - int(_ic_d2_est * 0.63)
+                    _by_max        = _logo_top_est - _br * 2 - max(8, int(H * 0.015))
+                    _by   = min(_hy, _by_max)    # don't let headline push circle into logo
                     _bdg  = Image.new("RGBA", (_br * 2, _br * 2), (0, 0, 0, 0))
                     _bdrw = ImageDraw.Draw(_bdg)
                     _bdrw.ellipse(
