@@ -238,6 +238,33 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     if not logos:
         logo_html = '<span style="font-size:22px;font-weight:900;color:#DA291C;letter-spacing:-0.03em;">sunrise</span>'
 
+    # Product carousel — load from GCS; fall back to telecom device list
+    _prod_srcs = [_gcs_to_b64(p, "image/jpeg", 400) for p in products[:8]]
+    _carousel_products = [
+        ("Apple",    "iPhone 16 Pro"),
+        ("Samsung",  "Galaxy S25 Ultra"),
+        ("Google",   "Pixel 9 Pro"),
+        ("Apple",    "iPhone 16"),
+        ("Samsung",  "Galaxy A55"),
+        ("Sunrise",  "5G Router"),
+        ("Apple",    "iPad Pro"),
+        ("Samsung",  "Galaxy Tab S9"),
+    ]
+    carousel_items_html = ""
+    for i, (dev_brand, dev_model) in enumerate(_carousel_products):
+        src = _prod_srcs[i] if i < len(_prod_srcs) else ""
+        img_html = (f'<img src="{src}" alt="{dev_brand} {dev_model}" '
+                    f'style="height:130px;width:100%;object-fit:contain;display:block;margin-bottom:16px;">'
+                    if src else
+                    '<div style="height:130px;display:flex;align-items:center;justify-content:center;'
+                    'font-size:52px;margin-bottom:16px;">📱</div>')
+        carousel_items_html += f"""
+          <div class="cs-item">
+            {img_html}
+            <div style="font-size:12px;font-weight:900;letter-spacing:0.08em;text-transform:uppercase;color:#1a1a1a;line-height:1.2;">{dev_brand}</div>
+            <div style="font-size:11px;color:#555;margin-top:3px;">{dev_model}</div>
+          </div>"""
+
     # Feature cards — based on actual sunrise.ch product categories
     features = [
         ("Business Mobile",    "Flexible SIM-only plans and device bundles for teams of any size.",         "📱"),
@@ -360,6 +387,19 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
     /* Plans grid */
     .plans-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;margin-top:48px;align-items:start}}
 
+    /* Product carousel */
+    .cs-wrap{{position:relative;background:linear-gradient(120deg,#DA291C 0%,#e85d00 60%,#f5a000 100%);border-radius:24px;padding:40px 56px;overflow:hidden;margin:0 40px}}
+    .cs-badge-dark{{position:absolute;top:24px;right:120px;width:110px;height:110px;border-radius:50%;background:#1a1a1a;color:white;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;font-weight:700;line-height:1.3;z-index:2}}
+    .cs-badge-light{{position:absolute;top:52px;right:28px;width:88px;height:88px;border-radius:50%;background:white;color:#1a1a1a;display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px;font-weight:700;line-height:1.3;z-index:2}}
+    .cs-badge-light span{{font-size:26px;font-weight:900;display:block;line-height:1}}
+    .cs-track-outer{{overflow:hidden}}
+    .cs-track{{display:flex;gap:24px;transition:transform 0.4s cubic-bezier(.4,0,.2,1)}}
+    .cs-item{{flex:0 0 calc(25% - 18px);background:white;border-radius:16px;padding:24px 16px 16px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.12)}}
+    .cs-arrow{{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.9);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;z-index:3;box-shadow:0 2px 8px rgba(0,0,0,0.18);transition:background 0.15s}}
+    .cs-arrow:hover{{background:white}}
+    .cs-arrow-prev{{left:12px}}
+    .cs-arrow-next{{right:12px}}
+
     /* Campaign image card — no crop, full image always visible */
     .campaign-image{{width:100%;height:auto;display:block;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,0.12)}}
 
@@ -428,6 +468,41 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
       <div class="trust-item"><span class="trust-icon">📞</span>24/7 Dedicated Business Support</div>
     </div>
   </div>
+
+  <!-- Product carousel -->
+  <section style="padding:64px 0;background:#fff;">
+    <div class="cs-wrap">
+      <!-- Promo badges -->
+      <div class="cs-badge-dark">Premium devices.<br>Best prices.</div>
+      <div class="cs-badge-light"><span>3</span>months<br>free</div>
+
+      <!-- Arrow prev -->
+      <button class="cs-arrow cs-arrow-prev" onclick="csPrev()" aria-label="Previous">&#8249;</button>
+
+      <!-- Track -->
+      <div class="cs-track-outer">
+        <div class="cs-track" id="csTrack">
+          {carousel_items_html}
+        </div>
+      </div>
+
+      <!-- Arrow next -->
+      <button class="cs-arrow cs-arrow-next" onclick="csNext()" aria-label="Next">&#8250;</button>
+    </div>
+  </section>
+  <script>
+    (function(){{
+      var track = document.getElementById('csTrack');
+      var items = track ? track.children.length : 0;
+      var visible = 4, idx = 0;
+      function move(){{
+        var pct = idx * (100 / visible);
+        track.style.transform = 'translateX(-' + pct + '%)';
+      }}
+      window.csNext = function(){{ if(idx < items - visible){{ idx++; move(); }} }};
+      window.csPrev = function(){{ if(idx > 0){{ idx--; move(); }} }};
+    }})();
+  </script>
 
   <!-- Features -->
   <section class="section" id="features" style="background:#fff">
