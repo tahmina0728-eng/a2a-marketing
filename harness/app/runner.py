@@ -954,11 +954,12 @@ def _apply_brand_overlay(
 
         def _build_line_data(spec):
             data = []
+            _lead = 1.05 if _is_sr_life else 1.25
+            _pad  = int(4 if _is_sr_life else 12)
             for word, sz, fnt in spec:
                 bb = _td.textbbox((0, 0), word, font=fnt)
                 tw, th = bb[2] - bb[0], bb[3] - bb[1]
-                # 125% leading — standard typographic line advance, no overlap
-                lh = max(th + max(12, int(sz * 0.25)), int(sz * 1.25))
+                lh = max(th + _pad, int(sz * _lead))
                 data.append((word, fnt, lh, tw))
             return data
 
@@ -989,15 +990,7 @@ def _apply_brand_overlay(
         # vs. lifestyle mode → full-bleed photo with text overlay (sections 2-3)
         _sunrise_offer = brand.lower() in ("sunrise",) and bool(product_name)
 
-        # ── 2. Left vignette (Sunrise only, lifestyle mode) ────────────────────
-        if brand.lower() in ("sunrise",) and not _sunrise_offer:
-            _vig_w = int(W * 0.50)
-            _vig   = Image.new("RGBA", (_vig_w, H), (0, 0, 0, 0))
-            _vd    = ImageDraw.Draw(_vig)
-            for _vx in range(_vig_w):
-                _va = int(110 * (1.0 - _vx / _vig_w) ** 1.5)
-                _vd.line([(_vx, 0), (_vx, H)], fill=(0, 0, 0, _va))
-            img.alpha_composite(_vig, (0, 0))
+        # ── 2. Left vignette — removed (no shadow on Sunrise lifestyle images) ──
 
         # ── 3. Billboard text — lifestyle mode only (offer mode builds own layout) ──
         draw = ImageDraw.Draw(img)
