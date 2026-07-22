@@ -2961,6 +2961,68 @@ Output EXACTLY this format (nothing else):
         concept_prompts = [l.strip() for l in scene_concepts_raw.split('\n') if len(l.strip()) > 80]
     concept_prompts = concept_prompts[:2] or [scene_concepts_raw[:600]]
 
+    # ── Sunrise lifestyle override ───────────────────────────────────────────
+    # Bypass LLM concepts entirely: Gemini's image model has a strong prior for
+    # "Sunrise Switzerland = couple with phones on rooftop" from training data.
+    # Injecting pre-written ultra-specific adventure scenes guarantees the right
+    # output regardless of what the concept LLM produced above.
+    if _sr_life:
+        _sr_concept_pool = [
+            (
+                "Ultra-wide cinematic photograph: a SINGLE solo hiker in vivid orange and red high-performance outdoor jacket "
+                "stands at the rocky SUMMIT of a Swiss alpine peak, BOTH ARMS RAISED WIDE toward a dramatic golden sunrise sky. "
+                "Snow-dusted boulders underfoot. Heroic extreme low-angle shot looking UP at the lone figure, "
+                "silhouetted against blazing gold and deep blue sky. Multiple jagged snow-capped peaks recede to the horizon behind. "
+                "Shot on professional cinema camera — 14mm ultra-wide, deep field, epic scale. "
+                "Absolutely no other people. No bags, no phones, no objects — only the hiker, rock, snow, and sky. "
+                "Rich saturated colours, cinematic grade, Red Bull campaign quality."
+            ),
+            (
+                "Ultra-wide cinematic action photograph: two trail runners in vivid sportswear "
+                "sprint at full speed along a knife-edge alpine ridge in Switzerland. Both lean forward in full athletic stride, "
+                "a sheer drop of hundreds of metres visible on both sides, emerald valley far below. "
+                "Wide-angle side shot capturing motion blur on their feet. Crystal-clear morning air, golden alpine light. "
+                "No phones, no bags, no branded objects — just two athletes and the mountains. "
+                "Patagonia / The North Face campaign quality."
+            ),
+            (
+                "Ultra-wide cinematic action photograph: a lone SNOWBOARDER launches off a natural cornice jump "
+                "on a steep Swiss alpine slope and is suspended fully MID-AIR, board beneath them, arms wide, "
+                "vivid blue sky above, massive snow-covered peaks in the distance. "
+                "Captured at the absolute peak of the jump — maximum height, maximum freedom. "
+                "Deep powder below, crisp cold air, golden winter light. No bags, no branded objects. "
+                "Red Bull / Burton snowboard campaign quality."
+            ),
+            (
+                "Ultra-wide cinematic photograph: two mountain bikers in full-face helmets and colourful jerseys "
+                "descend a rugged swiss alpine singletrack at high speed, leaning hard into a steep hairpin bend, "
+                "pine forest blurred around them. Wide-angle chase shot from behind — pure velocity and total control. "
+                "Dappled autumn light through the trees. No bags, no phones, no objects. "
+                "GoPro / Red Bull Rampage campaign quality."
+            ),
+            (
+                "Ultra-wide cinematic photograph: a solo rock climber in a vivid-coloured harness and chalk-dusted hands "
+                "grips a sheer granite cliff face, body stretched across the rock, one hand reaching upward for the next hold. "
+                "A crystal-clear turquoise alpine lake shimmers 150 metres directly below in the valley. "
+                "Heroic upward-angled shot with the climber SMALL against the vast scale of the cliff and sky. "
+                "Sharp morning light, perfect depth of field. No bags, no objects — only climber and rock. "
+                "Patagonia / Black Diamond campaign quality."
+            ),
+            (
+                "Ultra-wide cinematic action photograph: a swimmer in a vivid swimsuit leaps off a high granite cliff "
+                "into a vivid turquoise alpine lake far below, body in a perfect arc mid-air, "
+                "jagged rocky peaks all around, golden sunset light flaring behind. "
+                "Wide shot capturing the swimmer SMALL against the vast alpine landscape. "
+                "Pure fearless freedom and joy. No bags, no objects. "
+                "Red Bull / GoPro cliff-jumping campaign quality."
+            ),
+        ]
+        # Deterministic selection per campaign (stable per run, varies across briefs)
+        _idx1 = hash(big_idea_seed or audience or brand) % len(_sr_concept_pool)
+        _idx2 = (_idx1 + 1) % len(_sr_concept_pool)
+        concept_prompts = [_sr_concept_pool[_idx1], _sr_concept_pool[_idx2]]
+        log.info("sr_lifestyle_concept_override", idx1=_idx1, idx2=_idx2)
+
     log.info("p2_prompt_agent_done", n_concepts=len(concept_prompts))
     await _emit("kv", "step_data", _json2.dumps({
         "image_prompt": concept_prompts[0][:350] if concept_prompts else "",
