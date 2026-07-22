@@ -308,8 +308,10 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
           <a href="#" style="display:block;text-align:center;padding:14px;border-radius:12px;font-weight:700;font-size:14px;text-decoration:none;{btn_bg}transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">{cta or 'Get unlimited now'}</a>
         </div>"""
 
+    # Anchor to right so the clean photo portion (people) fills the hero;
+    # the baked-in text/price circle on the left side of the KV is cropped out.
     hero_style = (
-        f"background:url('{hero_bg_src}') center/cover no-repeat;" if hero_bg_src
+        f"background:url('{hero_bg_src}') right center/cover no-repeat;" if hero_bg_src
         else "background:linear-gradient(135deg,#1a1a1a 0%,#333 100%);"
     )
 
@@ -351,7 +353,7 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
 
     /* Hero */
     .hero{{position:relative;min-height:360px;display:flex;align-items:center;overflow:hidden;{hero_style}}}
-    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,0.65) 0%,rgba(0,0,0,0.2) 55%,transparent 100%)}}
+    .hero-overlay{{position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,10,10,0.88) 0%,rgba(10,10,10,0.55) 40%,rgba(0,0,0,0.1) 65%,transparent 100%)}}
     .hero-content{{position:relative;z-index:1;max-width:1140px;margin:0 auto;padding:52px 40px;width:100%}}
     .hero-tag{{display:inline-block;background:#DA291C;color:white;font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;padding:6px 16px;border-radius:99px;margin-bottom:20px}}
     .hero-title{{font-size:clamp(32px,5vw,56px);font-weight:800;color:white;line-height:1.1;max-width:580px;text-wrap:balance;margin-bottom:16px}}
