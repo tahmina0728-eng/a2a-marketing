@@ -1308,7 +1308,7 @@ def _apply_brand_overlay(
                     )
                     canvas.alpha_composite(_bdg, (_bx, _by))
                     _amt_fnt  = _font(max(10, int(_br * 0.50)))
-                    try: _amt_fnt.set_variation_by_axes([700])
+                    try: _amt_fnt.set_variation_by_axes([300])
                     except: pass
                     _cur_fnt  = _font(max(7, int(_br * 0.24)))
                     _amt_bb   = draw_c.textbbox((0, 0), _pr_amt,  font=_amt_fnt)
@@ -1341,7 +1341,7 @@ def _apply_brand_overlay(
                     )
                     canvas.alpha_composite(_bdg, (_bx, _by))
                     _amt_fnt  = _font(max(10, int(_br * 0.50)))
-                    try: _amt_fnt.set_variation_by_axes([700])
+                    try: _amt_fnt.set_variation_by_axes([300])
                     except: pass
                     _cur_fnt  = _font(max(7, int(_br * 0.24)))
                     _amt_bb   = _md3.textbbox((0, 0), _pr_amt,  font=_amt_fnt)
