@@ -919,7 +919,7 @@ def _apply_brand_overlay(
         # Offer mode: font weight is handled separately in section 6 (ExtraBold 800).
         _measure   = Image.new("RGBA", (1, 1))
         _md        = ImageDraw.Draw(_measure)
-        max_line_w = int(W * (0.70 if brand.lower() in ("sunrise",) else 0.55))
+        max_line_w = int(W * (0.48 if _is_sr_life else (0.70 if brand.lower() in ("sunrise",) else 0.55)))
         base_sz    = max(44, W // 10)
         _is_sunrise_lifestyle = brand.lower() in ("sunrise",) and not bool(product_name)
         if _is_sunrise_lifestyle:
@@ -1045,7 +1045,7 @@ def _apply_brand_overlay(
             if _primary and str(_primary).lower().endswith(".svg"):
                 # SVG can't be opened by Pillow — draw programmatically for known brands
                 if brand.lower() in ("sunrise",):
-                    _logo_img = _draw_sunrise_logo_img(int(H * 0.13), font_path)
+                    _logo_img = _draw_sunrise_logo_img(int(H * 0.22), font_path)
                     _use_pill = False  # white wordmark composited directly on image
             elif _primary:
                 _logo_bytes = None
@@ -1061,8 +1061,8 @@ def _apply_brand_overlay(
 
             # Sunrise offer mode: logo belongs in the red bottom strip (section 6), not here
             if _logo_img is not None and not _sunrise_offer:
-                max_lw = int(W * (0.26 if not _use_pill else 0.14))
-                max_lh = int(H * 0.10)
+                max_lw = int(W * (0.30 if not _use_pill else 0.14))
+                max_lh = int(H * (0.20 if not _use_pill else 0.10))
                 sc  = min(max_lw / max(1, _logo_img.width), max_lh / max(1, _logo_img.height), 1.0)
                 lw  = max(32, int(_logo_img.width  * sc))
                 lh2 = max(32, int(_logo_img.height * sc))
