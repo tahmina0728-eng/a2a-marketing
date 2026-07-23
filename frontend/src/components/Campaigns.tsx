@@ -48,7 +48,7 @@ const BRAND_AUDIENCES: Record<string, string[]> = {
     "Active Lifestyle 20–40",
   ],
 };
-const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Instagram, Facebook"];
+const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Instagram, Facebook","Website","Email"];
 const MARKETS   = ["United Kingdom","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 const MARKET_LANGUAGES: Record<string, string[]> = {
   "United Kingdom": ["English"],
@@ -315,7 +315,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
     brief,
     goal && `Goal: ${goal}`,
     audience && `Audience: ${audience}`,
-    platform && `Platform: ${platform}`,
+    platform && `Channel: ${platform}`,
     market && `Market: ${market}`,
     language && `Language: ${language}`,
   ].filter(Boolean).join(". ");
@@ -608,7 +608,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/></svg>} />
               <ChipSel label="Target Audience" value={audience} onChange={setAudience} opts={audiences}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>} />
-              <ChipSel label="Platform" value={platform} onChange={setPlatform} opts={PLATFORMS}
+              <ChipSel label="Channel" value={platform} onChange={setPlatform} opts={PLATFORMS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
               <ChipSel label="Market" value={market} onChange={v => {
                   setMarket(v);
