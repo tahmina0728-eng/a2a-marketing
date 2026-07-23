@@ -48,7 +48,7 @@ const BRAND_AUDIENCES: Record<string, string[]> = {
     "Active Lifestyle 20–40",
   ],
 };
-const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Instagram, Facebook","Website","Email"];
+const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Website","Email"];
 const MARKETS   = ["United Kingdom","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 const MARKET_LANGUAGES: Record<string, string[]> = {
   "United Kingdom": ["English"],
