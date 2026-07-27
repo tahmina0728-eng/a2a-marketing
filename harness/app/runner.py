@@ -764,6 +764,41 @@ def _draw_sunrise_logo_img(height_px: int, font_path: str | None) -> "Image":
     return logo
 
 
+def _draw_haleon_logo_img(height_px: int, font_path: str | None) -> "Image":
+    """
+    Render the Haleon wordmark using Pillow + New Hero Bold font.
+    The real logo has a green rectangle across the middle bar of the 'E';
+    we approximate by drawing the wordmark in Charcoal with a green accent
+    underline — clean and legible at all overlay sizes.
+    Returns an RGBA image, composited into a white pill by _apply_brand_overlay.
+    """
+    from PIL import Image as _PI, ImageDraw as _PID, ImageFont as _PIF
+
+    fs = max(14, int(height_px * 0.55))
+    CHARCOAL = (51, 62, 72, 255)
+    GREEN    = (101, 172, 30, 255)
+    try:
+        fnt = _PIF.truetype(font_path, fs) if font_path else _PIF.load_default(size=fs)
+    except Exception:
+        fnt = _PIF.load_default(size=fs)
+
+    _tmp = _PI.new("RGBA", (1, 1))
+    _tbb = _PID.Draw(_tmp).textbbox((0, 0), "HALEON", font=fnt)
+    tw, th = _tbb[2] - _tbb[0], _tbb[3] - _tbb[1]
+    bar_h = max(3, int(fs * 0.08))          # green accent underline
+    gap   = max(2, int(fs * 0.06))
+    total_w = tw + 4
+    total_h = th + gap + bar_h + 4
+
+    logo = _PI.new("RGBA", (total_w, total_h), (0, 0, 0, 0))
+    d = _PID.Draw(logo)
+    d.text((2 - _tbb[0], 2 - _tbb[1]), "HALEON", font=fnt, fill=CHARCOAL)
+    # Green accent bar underneath
+    bar_y = th + gap + 2
+    d.rectangle([0, bar_y, total_w - 1, bar_y + bar_h - 1], fill=GREEN)
+    return logo
+
+
 def _apply_brand_overlay(
     img_data:     bytes,
     brand:        str,
@@ -807,18 +842,22 @@ def _apply_brand_overlay(
             "Glenfiddich": ["Agrandir", "Aston Martin Flare"],
             "sunrise":     ["Figtree"],
             "Sunrise":     ["Figtree"],
+            "Haleon":      ["New_Hero_Bold", "New_Hero_SemiBold", "New_Hero"],
         }
         font_dir  = _P(__file__).parent.parent / "bucket" / "brands" / brand / "Font"
         font_path = None
+        _all_fonts = sorted(
+            [f for f in font_dir.glob("*.ttf") if "italic" not in f.name.lower()] +
+            [f for f in font_dir.glob("*.otf") if "italic" not in f.name.lower()]
+        )
         for pref in BRAND_FONT_PREFS.get(brand, []):
-            for f in sorted(font_dir.glob("*.ttf")):
-                if pref.lower() in f.name.lower() and "italic" not in f.name.lower():
+            for f in _all_fonts:
+                if pref.lower() in f.name.lower():
                     font_path = str(f); break
             if font_path:
                 break
         if not font_path:
-            hits = [f for f in sorted(font_dir.glob("*.ttf")) if "italic" not in f.name.lower()]
-            font_path = str(hits[0]) if hits else None
+            font_path = str(_all_fonts[0]) if _all_fonts else None
 
         def _font(size: int, weight: int | None = None):
             if font_path:
@@ -843,9 +882,11 @@ def _apply_brand_overlay(
             "Boozt":    (  0, 134, 254),
             "sunrise":  (218,  41,  28),   # Sunrise Red #DA291C (brand spec §3.4)
             "Sunrise":  (218,  41,  28),
+            "Haleon":   (101, 172,  30),   # Haleon Green #65AC1E (comms/UI — not logo green)
             # Glenfiddich intentionally omitted — chartreuse blends with the AMF1 swirl background
         }
         accent_rgb = BRAND_ACCENT.get(brand, (255, 255, 255))
+        _is_haleon = brand.lower() == "haleon"
 
         # ── 1. Split headline into 2 display lines (sentence-aware) ───────────
         # Group raw words into sentence fragments, then collapse into ≤2 lines.
@@ -979,9 +1020,12 @@ def _apply_brand_overlay(
 
         # Place text in the lower third — keeps model faces clear in the upper/mid frame
         # Sunrise: text sits vertically centred in the upper portion (matches Campaign1 refs)
+        # Haleon: upper-left zone (20% down) — composition leaves left third clear
         # Other brands: pushed to lower third so product imagery dominates
         if brand.lower() in ("sunrise",):
             text_y_start = max(margin, min(int(H * 0.28), H - block_h - margin * 2))
+        elif _is_haleon:
+            text_y_start = max(margin, min(int(H * 0.20), H - block_h - margin * 2))
         else:
             text_y_start = max(margin, min(int(H * 0.58), H - block_h - margin))
         text_x = margin
@@ -1006,9 +1050,13 @@ def _apply_brand_overlay(
                     for dx, dy in [(-1,-1),(1,-1),(-1,1),(1,1),(0,2),(2,0)]:
                         draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,80))
                 _all_white = brand.lower() in ("sunrise",)
-                color = (255, 255, 255, 255) if _all_white else (
-                    (*accent_rgb, 255) if i == 0 and len(line_data) > 1 else (255, 255, 255, 255)
-                )
+                if _is_haleon:
+                    # White-dominant images need dark text; green accent on second line
+                    color = (51, 62, 72, 255) if i == 0 else (*accent_rgb, 255)
+                else:
+                    color = (255, 255, 255, 255) if _all_white else (
+                        (*accent_rgb, 255) if i == 0 and len(line_data) > 1 else (255, 255, 255, 255)
+                    )
                 draw.text((text_x, y), word, font=fnt, fill=color)
                 y += lh
 
@@ -1046,6 +1094,9 @@ def _apply_brand_overlay(
                 if brand.lower() in ("sunrise",):
                     _logo_img = _draw_sunrise_logo_img(int(H * 0.22), font_path)
                     _use_pill = False  # white wordmark composited directly on image
+                elif _is_haleon:
+                    _logo_img = _draw_haleon_logo_img(int(H * 0.12), font_path)
+                    _use_pill = True   # charcoal wordmark on white pill — sits on image
             elif _primary:
                 _logo_bytes = None
                 if not _primary.startswith("gs://"):
@@ -1104,6 +1155,7 @@ def _apply_brand_overlay(
                 "Glenfiddich": {"bg": (255, 255, 255, 225), "text": (  6,  75,  71), "accent": (  6,  75,  71)},
                 "sunrise":     {"bg": (227,   5,  27, 220), "text": (255, 255, 255), "accent": (255, 255, 255)},
                 "Sunrise":     {"bg": (227,   5,  27, 220), "text": (255, 255, 255), "accent": (255, 255, 255)},
+                "Haleon":      {"bg": (101, 172,  30, 220), "text": (255, 255, 255), "accent": (255, 255, 255)},
             }
             _lc = _LABEL_COLORS.get(brand, {"bg": (20, 20, 20, 200), "text": (255, 255, 255), "accent": (255, 200, 0)})
             _sw = int(W * 0.17)
@@ -3214,6 +3266,18 @@ Output EXACTLY this format (nothing else):
                 "or any other copy. Zero headlines, zero slogans. All copy is added in "
                 f"post-production.\n{_sr_lifestyle_no_product}\n"
             )
+        elif brand.lower() == "haleon":
+            # Consumer health brand — sub-brand product pack drives the label design.
+            # Never write "HALEON" on packaging; the reference product image defines the label.
+            _no_text_rule = (
+                f"PRODUCT RULE: Show the product from the reference image prominently in the scene — "
+                f"match its exact shape, label design, and brand colours. "
+                f"Do NOT add any text, logos, or pricing to the packaging beyond what the reference shows. "
+                f"The product pack should be clearly visible, held or placed naturally in the scene.\n"
+                "TYPOGRAPHY RULE: No text, headlines, slogans, logos, or numbers anywhere in the image "
+                "except what is already printed on the reference product packaging. "
+                "All headline copy and branding are added in post-production.\n\n"
+            )
         else:
             _no_text_rule = (
                 f"CRITICAL BRAND + PRODUCT RULE:\n"
@@ -3335,6 +3399,20 @@ Output EXACTLY this format (nothing else):
                 "People can be in motion (running, skating, swimming, climbing) or contemplative (sitting on a cliff, overlooking a view). "
                 "Dramatic lighting: deep shadows with strong highlights, golden hour warmth, or bold architectural contrast. "
                 "The LEFT THIRD of the frame must stay relatively open — sky, horizon, or soft negative space — to allow headline text overlay in post-production."
+            )
+        elif brand.lower() == "haleon":
+            _composition_rule = (
+                "\n\nCOMPOSITION RULE (Haleon visual style): "
+                "White-dominant or very light background — clean, warm, and human. "
+                "The product pack/tube/bottle must be clearly visible and in natural focus. "
+                "SUBJECT: A real person in a relatable everyday health moment — using, holding, "
+                "or having just used the product. Warm and credible, never clinical or dramatic. "
+                "The person and product occupy the CENTRE to RIGHT two-thirds of the frame. "
+                "The LEFT THIRD must be clean and bright — white wall, open daylight, or soft bokeh — "
+                "this area receives the headline overlay in post-production. "
+                "PALETTE: White-dominant with natural green accents from plants, towels, or packaging. "
+                "Warm, natural daylight or soft studio light. No dark, moody, or clinical settings. "
+                "No text, logos, or brand marks rendered in the image."
             )
         else:
             _composition_rule = ""
