@@ -15,7 +15,7 @@ interface GeneratedResult {
   tagline?:   string;
 }
 
-const BRANDS    = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank","Sunrise"];
+const BRANDS    = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank","Sunrise","Haleon"];
 const GOALS     = ["Brand Awareness","Drive Sales","Lead Generation","Product Launch","Engagement"];
 const DEFAULT_AUDIENCES = ["Women 18–35","Men 25–45","Gen Z 16–24","Professionals 30–50","Families"];
 const BRAND_AUDIENCES: Record<string, string[]> = {
@@ -46,6 +46,13 @@ const BRAND_AUDIENCES: Record<string, string[]> = {
     "Trend-Conscious Gen Z 18–28",
     "Premium Shoppers 30–50",
     "Active Lifestyle 20–40",
+  ],
+  "Haleon": [
+    "Adults 25–54 (General Wellness)",
+    "Families with Children",
+    "Active Adults 35–65",
+    "Seniors 60+",
+    "Health-Conscious Millennials 25–40",
   ],
 };
 const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Website","Email"];
@@ -86,6 +93,7 @@ const BRAND_ICONS: Record<string, string> = {
   "Boozt": "/brands/boozt-logo.png",
   "Glenfiddich": "/brands/glenfiddich-logo.png",
   "UBS Bank": "/brands/ubs-bank-logo.png",
+  "Haleon": "/brands/haleon-logo.png",
 };
 
 const G = "linear-gradient(135deg,#7c3aed,#a855f7,#6366f1)";

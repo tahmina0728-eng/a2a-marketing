@@ -36,6 +36,7 @@ from google.genai import types
 from app.brand_assets import get_asset_loader
 from app.config import get_settings
 from app.data_loader import log_brief_to_bigquery
+from app.haleon_catalog import enrich_brief as haleon_enrich_brief
 from app.models import (
     BrandLocks,
     BriefingContext,
@@ -92,6 +93,9 @@ def load_brand_context(
         except (json.JSONDecodeError, TypeError, ValueError):
             # Fallback: try plain-text "Key: Value" format (ADK web paste-in)
             brief_dict = _parse_kv_brief(raw_text)
+
+    # Enrich Haleon briefs: extract sub_brand/product_category from free text
+    brief_dict = haleon_enrich_brief(brief_dict)
 
     brand            = brief_dict.get("brand", "")
     product          = brief_dict.get("product", "")

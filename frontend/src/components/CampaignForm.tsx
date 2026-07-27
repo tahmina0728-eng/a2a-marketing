@@ -10,6 +10,7 @@ const BRANDS = [
   { id: "Glenfiddich", label: "Glenfiddich × AMF1", logo: "/brands/glenfiddich-logo.png" },
   { id: "UBS Bank",    label: "UBS Bank",           logo: "/brands/ubs-bank-logo.png" },
   { id: "sunrise",     label: "Sunrise",            logo: "/brands/sunrise-logo.svg" },
+  { id: "Haleon",      label: "Haleon",             logo: "/brands/haleon-logo.png" },
 ];
 const MARKETS  = ["United Kingdom","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 
@@ -27,6 +28,45 @@ const CHANNELS  = ["Instagram","TikTok","YouTube","OOH","Google Ads","Meta Ads",
 const SEASONS   = ["Evergreen","Spring","Summer","Autumn","Winter","Christmas","Valentine's Day","Easter","Diwali","New Year"];
 const MOMENTS   = ["Day-to-Day","Brand Moment","Partnership Moment"];
 const AGES      = ["13–17","18–24","25–34","35–44","45–54","55+"];
+
+// Haleon sub-brand catalog (mirrors harness/app/haleon_catalog.py)
+const HALEON_CATALOG: Record<string, { brand: string; category: string }> = {
+  sensodyne:  { brand: "Sensodyne",  category: "Oral Health" },
+  polident:   { brand: "Polident",   category: "Oral Health" },
+  parodontax: { brand: "parodontax", category: "Oral Health" },
+  centrum:    { brand: "Centrum",    category: "Vitamins, Minerals & Supplements" },
+  "emergen-c":{ brand: "Emergen-C",  category: "Vitamins, Minerals & Supplements" },
+  "emergen c":{ brand: "Emergen-C",  category: "Vitamins, Minerals & Supplements" },
+  caltrate:   { brand: "Caltrate",   category: "Vitamins, Minerals & Supplements" },
+  otrivin:    { brand: "Otrivin",    category: "Respiratory" },
+  theraflu:   { brand: "Theraflu",   category: "Respiratory" },
+  flonase:    { brand: "Flonase",    category: "Respiratory" },
+  robitussin: { brand: "Robitussin", category: "Respiratory" },
+  voltaren:   { brand: "Voltaren",   category: "Pain Relief" },
+  panadol:    { brand: "Panadol",    category: "Pain Relief" },
+  advil:      { brand: "Advil",      category: "Pain Relief" },
+  fenbid:     { brand: "Fenbid",     category: "Pain Relief" },
+  contac:     { brand: "Contac",     category: "Pain Relief" },
+  "grand-pa": { brand: "Grand-pa",   category: "Pain Relief" },
+  grandpa:    { brand: "Grand-pa",   category: "Pain Relief" },
+  excedrin:   { brand: "Excedrin",   category: "Pain Relief" },
+  tums:       { brand: "Tums",       category: "Digestive Health" },
+  eno:        { brand: "Eno",        category: "Digestive Health" },
+  benefiber:  { brand: "Benefiber",  category: "Digestive Health" },
+  fenistil:   { brand: "Fenistil",   category: "Therapeutic Skin Health" },
+  zovirax:    { brand: "Zovirax",    category: "Therapeutic Skin Health" },
+  bactroban:  { brand: "Bactroban",  category: "Therapeutic Skin Health" },
+};
+
+function lookupHaleonSubBrand(text: string): { brand: string; category: string } | null {
+  const normalized = text.toLowerCase();
+  // Sort by key length descending so longer names match before shorter ones
+  const keys = Object.keys(HALEON_CATALOG).sort((a, b) => b.length - a.length);
+  for (const key of keys) {
+    if (normalized.includes(key)) return HALEON_CATALOG[key];
+  }
+  return null;
+}
 
 // Sunrise-specific — must match Campaigns.tsx exactly
 const SUNRISE_AUDIENCES = ["Young Adults 18–35","Families","Business Professionals","SME & Entrepreneurs","Digital Natives 16–24"];
@@ -75,6 +115,12 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
     "High achievers believe their financial choices should be as bold as their ambitions — UBS helps them build a future worthy of their vision.",
     "Entrepreneurs need a financial partner who sees potential, not just risk — UBS backs the person, not just the plan.",
     "Families want financial security without sacrificing their dreams — UBS makes both possible without having to choose.",
+  ],
+  Haleon: [
+    "People dealing with everyday health issues don't want to feel like patients — they want a trusted brand that helps them get back to living without making a fuss.",
+    "Caregivers choose health brands that make them feel confident, not confused — Haleon earns that trust by being the name they already know works.",
+    "Health-conscious consumers believe prevention and relief shouldn't require a doctor's visit — Haleon makes specialist-grade care accessible to everyone.",
+    "Families want one brand they can rely on across generations — Haleon's portfolio means parents and grandparents reach for the same trusted names.",
   ],
 };
 
@@ -421,11 +467,13 @@ export default function CampaignForm({ onFullCampaign }: {
     const resolvedSeason = data.season || detectSeason(data.objective) || "Evergreen";
     const brandLabel = BRANDS.find(b => b.id === data.brand)?.label ?? data.brand;
     const isSunrise  = data.brand === "sunrise";
+    const isHaleon   = data.brand === "Haleon";
 
     // Build product string for Sunrise:
     // Offer plan  → "Mobile Unlimited CHF 39.90" — runner.py regex splits price from label
     // Lifestyle KV → "" (empty → runner.py lifestyle render path)
     let product = "";
+    let productCategory = brandLabel;
     let audienceSegment = data.age.join(", ") || "General audience";
 
     if (isSunrise) {
@@ -434,6 +482,16 @@ export default function CampaignForm({ onFullCampaign }: {
       if (plan) {
         const sym = MARKET_CURRENCY_SYMBOL[data.market] ?? "CHF";
         product = `${plan.name} ${sym} ${plan.amount}`;
+      }
+    }
+
+    if (isHaleon) {
+      // Extract sub-brand from objective + campaign name free text
+      const corpus = `${data.objective} ${data.campaignName}`;
+      const match = lookupHaleonSubBrand(corpus);
+      if (match) {
+        product         = match.brand;
+        productCategory = match.category;
       }
     }
 
@@ -463,7 +521,7 @@ export default function CampaignForm({ onFullCampaign }: {
       budget:           data.budget,
       kpis:             data.kpiTargets.trim() || "reach, ctr, roas",
       product:          product,
-      product_category: brandLabel,
+      product_category: productCategory,
       fan_truth:        fanTruth,
       channels:         data.channels,
       market:           data.market,
