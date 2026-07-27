@@ -2052,6 +2052,58 @@ async def generate_campaign_reel(
                 f"Cobblestones and modern glass side by side, warm human connection, Swiss urban energy."
             )
 
+    def _haleon_scene(p: str) -> str:
+        _pl = p.lower()
+        if any(x in _pl for x in ["sensodyne", "parodontax", "polident", "toothpaste", "whitening", "gum"]):
+            return (
+                f"A bright bathroom morning: a person finishes brushing with {p} and smiles "
+                f"confidently into the mirror — teeth catching clean white light. "
+                f"The {p} pack sits prominently on the shelf. "
+                f"Clean white tiles, Haleon green towel accent, fresh and optimistic mood."
+            )
+        elif any(x in _pl for x in ["voltaren", "panadol", "advil", "ibuprofen", "pain", "ache", "relief"]):
+            return (
+                f"A man in his 40s stretches his back after gardening, reaches for {p} on the patio table "
+                f"with quiet relief — then stands tall, back in control. "
+                f"Golden afternoon garden light, the {p} pack clearly visible. "
+                f"Haleon green and white palette, real life, no drama."
+            )
+        elif any(x in _pl for x in ["theraflu", "otrivin", "flonase", "robitussin", "cold", "flu", "nasal", "cough"]):
+            return (
+                f"A woman working from home blows her nose, then uses {p} — moments later "
+                f"she looks up from her laptop with clearer eyes and a small relieved smile. "
+                f"Bright home-office desk, white walls, a plant in the background. "
+                f"The {p} pack on the desk. Haleon green accent, calm and credible."
+            )
+        elif any(x in _pl for x in ["centrum", "emergen", "caltrate", "vitamin", "supplement", "mineral"]):
+            return (
+                f"A woman in her 30s starts her morning in a bright airy kitchen — "
+                f"she places {p} beside a glass of water and smiles to herself, a quiet health ritual. "
+                f"White marble counter, natural morning light, a single green plant. "
+                f"The {p} pack prominent. Haleon green and white, fresh start energy."
+            )
+        elif any(x in _pl for x in ["tums", "eno", "benefiber", "digestion", "heartburn", "fibre"]):
+            return (
+                f"A man at a dinner table reaches for {p} with a knowing smile after a big meal — "
+                f"friends still laughing around him, life carrying on comfortably. "
+                f"Warm restaurant-style lighting, {p} pack in focus. "
+                f"Haleon green and white tones, real and relatable."
+            )
+        elif any(x in _pl for x in ["fenistil", "zovirax", "bactroban", "skin", "itch", "cold sore"]):
+            return (
+                f"A person carefully applies {p} in a softly lit bathroom — "
+                f"a small, meaningful act of self-care. The skin looks visibly calmer in the next shot. "
+                f"Clean white tiles, Haleon green towel, quiet focus. "
+                f"Reassuring and science-credible, no clinical drama."
+            )
+        # Masterbrand / generic Haleon
+        return (
+            f"A woman pauses in a busy day to take {p} at her bright kitchen counter — "
+            f"sunlight through the window, a quiet intentional moment of choosing health. "
+            f"The {p} pack clearly visible. Clean white and Haleon green palette, "
+            f"warm, human, and completely real."
+        )
+
     _BRAND_SCENE_FN = {
         "Sunglow":     _sunglow_scene,
         "Rnorr":       _rnorr_scene,
@@ -2059,6 +2111,7 @@ async def generate_campaign_reel(
         "Glenfiddich": _glenfiddich_scene,
         "sunrise":     _sunrise_scene,
         "Sunrise":     _sunrise_scene,
+        "Haleon":      _haleon_scene,
     }
     # Sunrise lifestyle (no product selected): use hard-coded adventure scenes.
     # _sunrise_scene defaults to "friends in Zurich with phones" which Veo
