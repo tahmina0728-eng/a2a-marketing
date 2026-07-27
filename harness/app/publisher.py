@@ -97,6 +97,34 @@ BRAND_CONFIG: dict[str, dict] = {
         "copy":       "UBS delivers integrated wealth and investment solutions to high-net-worth individuals, families, and institutions — combining Swiss precision with global reach to make your financial future feel clear and within reach.",
         "features":   ["Wealth Management", "Private Banking", "Asset Management", "Global Reach"],
     },
+    # Haleon: #65AC1E Haleon Green (highlight/CTA) | #000000 Black (type) | #333E48 Charcoal (body) | New Hero / Verdana
+    "Haleon": {
+        "primary":    "#65AC1E",   # Haleon Green — highlight device, CTAs, underlines
+        "secondary":  "#4d8216",   # Darker green for hover states
+        "accent":     "#65AC1E",
+        "accent2":    "#F2F3F3",   # Gray 100 — soft card/section background
+        "text":       "#ffffff",
+        "body_bg":    "#ffffff",   # White dominant — trust signal for health brand
+        "section_bg": "#F2F3F3",   # Gray 100 for alternating sections
+        "font":       "'New Hero', Verdana, system-ui, sans-serif",
+        "font_url":   "",
+        "tagline":    "Better everyday health with humanity.",
+        "hero_tag":   "Consumer Health",
+        "copy":       "A world-leading consumer health company, 100% focused on everyday health. Science-led solutions trusted by millions worldwide.",
+        "features":   ["Science-Led", "Globally Trusted", "Inclusive Health", "Everyday Wellness"],
+        # Haleon-specific brand tokens
+        "logo_green":       "#30EA03",   # logo "E" bar only
+        "highlight_green":  "#65AC1E",   # comms/UI green
+        "charcoal":         "#333E48",
+        "cat_colors": {
+            "Oral Health":                      "#65AC1E",
+            "Vitamins, Minerals & Supplements": "#FA01FE",
+            "Respiratory":                      "#5CE0CA",
+            "Pain Relief":                      "#AC7BFF",
+            "Digestive Health":                 "#DBFE02",
+            "Therapeutic Skin Health":          "#333E48",
+        },
+    },
     # Sunrise: #DA291C Red (accent/CTA only) | #FFFFFF White (body) | #1A1A1A Charcoal | Source Sans / system-ui
     "Sunrise": {
         "primary":    "#DA291C",   # Sunrise Red — CTA, badges, highlights only
@@ -215,6 +243,8 @@ def generate_brand_website(brand: str, hero_message: str = "", tagline: str = ""
         return generate_glenfiddich_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     if brand.lower() == "sunrise":
         return generate_sunrise_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
+    if brand.lower() == "haleon":
+        return generate_haleon_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     return _generate_sunglow_website(brand, hero_message, tagline, body_copy, cta,
                                      campaign_image_b64, campaign_id, hero_image_b64, video_b64)
 
@@ -591,6 +621,356 @@ def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = ""
 
 </body>
 </html>"""
+
+
+def generate_haleon_website(campaign_image_b64: str = "", campaign_id: str = "",
+                            hero_message: str = "", body_copy: str = "", cta: str = "",
+                            hero_image_b64: str = "", video_b64: str = "") -> str:
+    """
+    Haleon masterbrand landing page.
+    Design system: white-dominant, Haleon Green #65AC1E accent, New Hero / Verdana,
+    green highlight device on one headline word, category colour coding.
+    """
+    from app.brand_assets import get_asset_loader
+    from app.haleon_catalog import HALEON_BRANDS_BY_CATEGORY, HALEON_CATALOG
+
+    cfg    = BRAND_CONFIG["Haleon"]
+    loader = get_asset_loader()
+    logos    = loader.list_logos("Haleon")
+    products = loader.list_products("Haleon")
+    assets   = loader.list_assets("Haleon")
+
+    GREEN     = "#65AC1E"   # brand/comms green — highlights, CTAs, underlines
+    CHARCOAL  = "#333E48"   # body type, structural dark
+    GRAY100   = "#F2F3F3"   # soft section backgrounds / cards
+    GRAY300   = "#CFD2D3"   # borders / dividers
+    GRAY700   = "#6E7579"   # captions / muted text
+    BLACK     = "#000000"
+
+    # ── Assets ────────────────────────────────────────────────────────────────
+    _gcs_hero   = next((_gcs_to_b64(a, "image/jpeg", 1200) for a in assets[:4] if a), "")
+    hero_bg_src = _make_bg_src(hero_image_b64) or _make_bg_src(campaign_image_b64) or _gcs_hero
+    camp_src    = _make_bg_src(campaign_image_b64) or _gcs_hero
+
+    # Logo — use the black SVG (white background nav)
+    haleon_svg = """<svg width="120" height="19" viewBox="0 0 1426 222" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M0 5.03V216.98H53.81V135.8H160.29V216.98H214.1V5.03H160.29V86.21H53.81V5.03H0Z" fill="black"/>
+<path d="M320 5.03L251 216.98H308.16L323.51 168.39H401.58L416.94 216.98H474.12L405.09 5.03H320ZM362.55 49.997L385.43 120.25H339.66L362.55 49.997Z" fill="black"/>
+<path d="M511 5.03V216.98H682.13L682.13 167.39H564.8V5.03H511Z" fill="black"/>
+<path d="M720 5.02H901.26V54.61H720V5.02Z" fill="black"/>
+<path d="M720 86.2H901.26V135.79H720V86.2Z" fill="#30EA03"/>
+<path d="M720 167.38H901.26V216.97H720V167.38Z" fill="black"/>
+<path d="M1056.3 0C991.67 0 939.29 49.7 939.29 111C939.29 172.3 991.67 222 1056.3 222C1120.92 222 1173.31 172.3 1173.31 111C1173.31 49.7 1120.93 0 1056.3 0ZM1056.3 47.7C1091.24 47.7 1119.57 76.04 1119.57 111C1119.57 145.96 1091.24 174.3 1056.3 174.3C1021.35 174.3 993.02 145.96 993.02 111C993.02 76.04 1021.35 47.7 1056.3 47.7Z" fill="black"/>
+<path d="M1211.37 5.02V216.97H1265.18V84.21L1371.66 216.97H1425.47V5.02H1371.67V137.78L1265.18 5.02H1211.37Z" fill="black"/>
+</svg>"""
+
+    logo_html = f'<a href="#" aria-label="Haleon">{haleon_svg}</a>'
+
+    # ── Product grid ─────────────────────────────────────────────────────────
+    # Load all product images from bucket; map filename → src
+    prod_map: dict[str, str] = {}
+    for p in products:
+        fname = p.split("/")[-1].replace(".png", "").replace(".jpg", "").replace(".jpeg", "").lower()
+        src   = _gcs_to_b64(p, "image/png", 600)
+        if src:
+            prod_map[fname] = src
+
+    cat_colors = cfg["cat_colors"]
+
+    # Build product cards grouped by category
+    cat_sections_html = ""
+    categories_with_products = []
+    for cat_name, brands_in_cat in HALEON_BRANDS_BY_CATEGORY.items():
+        cards_html = ""
+        for brand_display in brands_in_cat:
+            key = brand_display.lower().replace("-", "").replace(" ", "")
+            # Try several key variants
+            src = (prod_map.get(brand_display.lower()) or
+                   prod_map.get(key) or
+                   prod_map.get(brand_display.lower().replace("-","")) or
+                   "")
+            img_html = (
+                f'<img src="{src}" alt="{brand_display}" '
+                f'style="height:100px;width:100%;object-fit:contain;display:block;margin-bottom:12px;">'
+                if src else
+                f'<div style="height:100px;display:flex;align-items:center;justify-content:center;'
+                f'font-size:13px;font-weight:700;color:{GRAY700};margin-bottom:12px;">{brand_display}</div>'
+            )
+            cards_html += f"""
+          <div style="background:white;border-radius:12px;padding:20px 16px;text-align:center;
+                      border:1px solid {GRAY300};transition:box-shadow 0.2s,transform 0.2s;"
+               onmouseover="this.style.boxShadow='0 8px 24px rgba(101,172,30,0.14)';this.style.transform='translateY(-3px)'"
+               onmouseout="this.style.boxShadow='none';this.style.transform='translateY(0)'">
+            {img_html}
+            <div style="font-size:13px;font-weight:700;color:{BLACK};">{brand_display}</div>
+          </div>"""
+
+        accent = cat_colors.get(cat_name, GREEN)
+        categories_with_products.append((cat_name, accent, cards_html, len(brands_in_cat)))
+
+    # Render each category section
+    for cat_name, accent, cards_html, count in categories_with_products:
+        cols = min(count, 4)
+        cat_sections_html += f"""
+  <section style="padding:56px 40px;background:{'white' if categories_with_products.index((cat_name,accent,cards_html,count))%2==0 else GRAY100};">
+    <div style="max-width:1200px;margin:0 auto;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+        <div style="width:40px;height:4px;background:{accent};border-radius:2px;flex-shrink:0;"></div>
+        <span style="font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:{GRAY700};">{cat_name}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat({cols},1fr);gap:16px;margin-top:24px;">
+        {cards_html}
+      </div>
+    </div>
+  </section>"""
+
+    # ── Reel section ─────────────────────────────────────────────────────────
+    reel_section = f"""
+<section style="background:{CHARCOAL};padding:72px 40px;text-align:center;">
+  <div style="max-width:1100px;margin:0 auto;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
+                color:{GREEN};margin-bottom:12px;">Campaign Reel</div>
+    <h2 style="font-size:32px;font-weight:700;color:white;margin-bottom:32px;text-wrap:balance;">{hero_message}</h2>
+    <div style="border-radius:16px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,0.5);">
+      <video controls autoplay loop muted playsinline style="width:100%;display:block;"
+             src="data:video/mp4;base64,{video_b64}"></video>
+    </div>
+    <a href="#brands" style="display:inline-block;margin-top:32px;background:{GREEN};color:white;
+       padding:14px 40px;border-radius:6px;font-weight:700;font-size:14px;text-decoration:none;">{cta or 'Explore our brands'}</a>
+  </div>
+</section>""" if video_b64 else ""
+
+    # ── Full HTML ─────────────────────────────────────────────────────────────
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Haleon — {hero_message or 'Better everyday health with humanity.'}</title>
+  <style>
+    *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+    body{{font-family:Verdana,system-ui,-apple-system,sans-serif;background:#fff;color:{BLACK};line-height:1.6}}
+    a{{text-decoration:none;color:inherit}}
+
+    /* Nav */
+    nav{{position:sticky;top:0;z-index:100;background:white;border-bottom:1px solid {GRAY300};
+         height:64px;display:flex;align-items:center;padding:0 40px;
+         box-shadow:0 1px 8px rgba(0,0,0,0.05)}}
+    .nav-inner{{max-width:1200px;width:100%;margin:0 auto;display:flex;align-items:center;justify-content:space-between}}
+    .nav-links{{display:flex;gap:28px}}
+    .nav-links a{{font-size:13px;font-weight:600;color:{CHARCOAL};padding:4px 0;
+                  border-bottom:2px solid transparent;transition:color 0.15s,border-color 0.15s}}
+    .nav-links a:hover{{color:{GREEN};border-color:{GREEN}}}
+    .nav-cta{{background:{GREEN};color:white;padding:10px 22px;border-radius:5px;
+              font-weight:700;font-size:13px;transition:background 0.15s}}
+    .nav-cta:hover{{background:#4d8216}}
+
+    /* Hero — left text (46%) / right image (54%) matching PPT template */
+    .hero{{display:grid;grid-template-columns:46fr 54fr;min-height:480px;}}
+    .hero-left{{display:flex;flex-direction:column;justify-content:center;
+                padding:64px 48px 64px 60px;background:white;}}
+    .hero-tag{{font-size:10px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
+               color:{GREEN};margin-bottom:20px;}}
+    .hero-h1{{font-size:clamp(28px,3.5vw,48px);font-weight:700;color:{BLACK};
+              line-height:1.2;text-wrap:balance;margin-bottom:16px;}}
+    .hero-hl{{background:{GREEN};color:white;padding:2px 8px;border-radius:3px;
+              display:inline;white-space:nowrap;}}
+    .hero-underline{{display:block;width:48px;height:4px;background:{GREEN};
+                     border-radius:2px;margin:20px 0;}}
+    .hero-body{{font-size:16px;color:{CHARCOAL};line-height:1.7;max-width:420px;margin-bottom:32px;}}
+    .hero-btns{{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}}
+    .btn-primary{{background:{GREEN};color:white;padding:14px 32px;border-radius:5px;
+                  font-weight:700;font-size:14px;transition:background 0.15s,transform 0.15s;}}
+    .btn-primary:hover{{background:#4d8216;transform:translateY(-1px)}}
+    .btn-ghost{{color:{GREEN};font-weight:700;font-size:14px;
+                border-bottom:2px solid {GREEN};padding-bottom:2px;}}
+    .hero-right{{position:relative;overflow:hidden;background:{GRAY100};}}
+    .hero-right img{{width:100%;height:100%;object-fit:cover;object-position:center;display:block;}}
+    .hero-right-fallback{{width:100%;height:100%;display:flex;align-items:center;justify-content:center;
+                           font-size:13px;font-weight:600;letter-spacing:0.06em;color:{GRAY700};
+                           text-transform:uppercase;background:{GRAY100};}}
+    @media(max-width:768px){{
+      .hero{{grid-template-columns:1fr;}}
+      .hero-right{{height:280px;}}
+      .hero-left{{padding:40px 24px;}}
+    }}
+
+    /* Trust bar */
+    .trust-bar{{background:{GRAY100};border-bottom:1px solid {GRAY300};padding:18px 40px;}}
+    .trust-inner{{max-width:1200px;margin:0 auto;display:flex;justify-content:space-around;
+                  align-items:center;gap:20px;flex-wrap:wrap;}}
+    .trust-item{{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;color:{CHARCOAL};}}
+    .trust-dot{{width:8px;height:8px;border-radius:50%;background:{GREEN};flex-shrink:0;}}
+
+    /* Campaign image */
+    .camp-img{{width:100%;height:auto;display:block;border-radius:12px;
+               box-shadow:0 8px 40px rgba(0,0,0,0.10);}}
+
+    /* CTA band */
+    .cta-band{{background:{GREEN};padding:72px 40px;text-align:center;}}
+    .cta-band h2{{font-size:clamp(22px,3vw,36px);font-weight:700;color:white;
+                  margin-bottom:12px;text-wrap:balance;}}
+    .cta-band p{{font-size:16px;color:rgba(255,255,255,0.88);margin-bottom:32px;}}
+    .cta-band a{{display:inline-block;background:white;color:{GREEN};padding:16px 44px;
+                 border-radius:5px;font-weight:700;font-size:15px;
+                 transition:transform 0.15s;}}
+    .cta-band a:hover{{transform:translateY(-2px)}}
+
+    /* Footer */
+    footer{{background:{CHARCOAL};color:#aaa;padding:56px 40px 32px;}}
+    .foot-inner{{max-width:1200px;margin:0 auto;}}
+    .foot-top{{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:48px;}}
+    .foot-col h4{{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;
+                  color:white;margin-bottom:16px;}}
+    .foot-col a{{display:block;font-size:13px;color:#888;margin-bottom:10px;transition:color 0.15s;}}
+    .foot-col a:hover{{color:white}}
+    .foot-bottom{{border-top:1px solid rgba(255,255,255,0.1);padding-top:24px;
+                  display:flex;justify-content:space-between;align-items:center;
+                  font-size:12px;flex-wrap:wrap;gap:12px;}}
+    .foot-purpose{{font-size:14px;font-weight:700;color:white;margin-bottom:8px;}}
+    .foot-tagline{{font-size:13px;color:#888;max-width:280px;line-height:1.5;}}
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-inner">
+      <div style="display:flex;align-items:center;gap:40px;">
+        {logo_html}
+        <div class="nav-links">
+          <a href="#brands">Our Brands</a>
+          <a href="#categories">Categories</a>
+          <a href="#science">Science</a>
+          <a href="#">Sustainability</a>
+          <a href="#">Newsroom</a>
+        </div>
+      </div>
+      <a href="#brands" class="nav-cta">{cta or 'Explore our brands'}</a>
+    </div>
+  </nav>
+
+  <!-- Hero — left text / right image (matches PPT slide 2/3 layout) -->
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-tag">Consumer Health · Science-Led</div>
+      <h1 class="hero-h1">
+        {_split_headline_haleon(hero_message or 'Better everyday health with humanity.')}
+      </h1>
+      <span class="hero-underline"></span>
+      <p class="hero-body">{body_copy or "A world-leading consumer health company. Science-backed solutions trusted by millions worldwide — accessible, inclusive, human."}</p>
+      <div class="hero-btns">
+        <a href="#brands" class="btn-primary">{cta or 'Explore our brands'}</a>
+        <a href="#science" class="btn-ghost">Our science →</a>
+      </div>
+    </div>
+    <div class="hero-right">
+      {f'<img src="{hero_bg_src}" alt="Haleon — better everyday health">' if hero_bg_src else f'<div class="hero-right-fallback">Better everyday health with humanity.</div>'}
+    </div>
+  </div>
+
+  <!-- Trust bar -->
+  <div class="trust-bar">
+    <div class="trust-inner">
+      <div class="trust-item"><span class="trust-dot"></span>Science-led innovation</div>
+      <div class="trust-item"><span class="trust-dot"></span>9 Power Brands globally</div>
+      <div class="trust-item"><span class="trust-dot"></span>Trusted in 100+ markets</div>
+      <div class="trust-item"><span class="trust-dot"></span>100% focused on everyday health</div>
+      <div class="trust-item"><span class="trust-dot"></span>Inclusive by design</div>
+    </div>
+  </div>
+
+  {reel_section}
+
+  <!-- Campaign image — full width, no crop -->
+  {f'''<section style="padding:56px 40px;background:{GRAY100};" id="campaign">
+    <div style="max-width:1200px;margin:0 auto;">
+      <img src="{camp_src}" alt="Campaign visual" class="camp-img">
+    </div>
+  </section>''' if camp_src else ""}
+
+  <!-- Product portfolio by category -->
+  <div id="brands" style="scroll-margin-top:64px;">
+    {cat_sections_html}
+  </div>
+
+  <!-- CTA band -->
+  <div class="cta-band">
+    <h2>Helping people take control of their everyday <span style="border-bottom:3px solid rgba(255,255,255,0.6);padding-bottom:2px;">health.</span></h2>
+    <p>Science. Humanity. A portfolio of trusted brands — for everyone, everywhere.</p>
+    <a href="#brands">Find your brand</a>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="foot-inner">
+      <div class="foot-top">
+        <div>
+          <div class="foot-purpose">Better everyday health with humanity.</div>
+          <p class="foot-tagline">Haleon is a world-leading consumer health company, 100% focused on everyday health.</p>
+        </div>
+        <div class="foot-col">
+          <h4>Our Brands</h4>
+          <a href="#">Sensodyne</a>
+          <a href="#">Centrum</a>
+          <a href="#">Panadol</a>
+          <a href="#">Voltaren</a>
+          <a href="#">Advil</a>
+        </div>
+        <div class="foot-col">
+          <h4>Company</h4>
+          <a href="#">About Haleon</a>
+          <a href="#">Science & Innovation</a>
+          <a href="#">Sustainability</a>
+          <a href="#">Newsroom</a>
+          <a href="#">Careers</a>
+        </div>
+        <div class="foot-col">
+          <h4>Investors</h4>
+          <a href="#">Results & Reports</a>
+          <a href="#">Governance</a>
+          <a href="#">Our Strategy</a>
+          <a href="#">Shareholder Info</a>
+        </div>
+      </div>
+      <div class="foot-bottom">
+        <span>© 2025 Haleon plc. All rights reserved.</span>
+        <div style="display:flex;gap:20px;">
+          <a href="#" style="color:#888;">Privacy</a>
+          <a href="#" style="color:#888;">Legal</a>
+          <a href="#" style="color:#888;">Cookies</a>
+          <a href="#" style="color:#888;">Accessibility</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>"""
+
+
+def _split_headline_haleon(headline: str) -> str:
+    """
+    Apply the Haleon green highlight device to one key word in the headline.
+    Targets health/benefit words: health, humanity, better, care, science,
+    everyday, trusted, relief, protection, wellness.
+    Falls back to highlighting the last significant word.
+    """
+    priority = ["health", "humanity", "better", "care", "science",
+                "everyday", "trusted", "relief", "protection", "wellness",
+                "stronger", "brighter", "faster", "cleaner", "healthier"]
+    words = headline.split()
+    for kw in priority:
+        for i, w in enumerate(words):
+            if kw in w.lower().rstrip(".,!?"):
+                words[i] = f'<span class="hero-hl">{w}</span>'
+                return " ".join(words)
+    # Fallback: highlight the last substantive word (skip punctuation-only)
+    for i in range(len(words) - 1, -1, -1):
+        if len(words[i]) > 3:
+            words[i] = f'<span class="hero-hl">{words[i]}</span>'
+            return " ".join(words)
+    return headline
 
 
 def generate_glenfiddich_website(campaign_image_b64: str = "", campaign_id: str = "",
