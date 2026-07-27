@@ -10,7 +10,7 @@ const BRANDS = [
   { id: "Glenfiddich", label: "Glenfiddich × AMF1", logo: "/brands/glenfiddich-logo.png" },
   { id: "UBS Bank",    label: "UBS Bank",           logo: "/brands/ubs-bank-logo.png" },
   { id: "sunrise",     label: "Sunrise",            logo: "/brands/sunrise-logo.svg" },
-  { id: "Haleon",      label: "Haleon",             logo: "/brands/haleon-logo.png" },
+  { id: "Haleon",      label: "Haleon",             logo: "/brands/haleon-logo.svg" },
 ];
 const MARKETS  = ["United Kingdom","Germany","France","Spain","India","Thailand","China","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 

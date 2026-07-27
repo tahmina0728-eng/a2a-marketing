@@ -99,7 +99,7 @@ const BRAND_ICONS: Record<string, string> = {
   "Boozt": "/brands/boozt-logo.png",
   "Glenfiddich": "/brands/glenfiddich-logo.png",
   "UBS Bank": "/brands/ubs-bank-logo.png",
-  "Haleon": "/brands/haleon-logo.png",
+  "Haleon": "/brands/haleon-logo.svg",
 };
 
 const G = "linear-gradient(135deg,#7c3aed,#a855f7,#6366f1)";
