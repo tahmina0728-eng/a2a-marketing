@@ -1,0 +1,80 @@
+{
+  "primary": [
+    {
+      "name": "Haleon Green",
+      "hex": "#65AC1E",
+      "rgb": "101, 172, 30",
+      "role": "Brand/communications green \u2014 highlight-bar device, headline highlights, key accents"
+    },
+    {
+      "name": "Logo Green",
+      "hex": "#30EA03",
+      "rgb": "48, 234, 3",
+      "role": "Vivid green baked into the logo artwork (the \u201cE\u201d bar). Do not swap with #65AC1E."
+    },
+    {
+      "name": "Black",
+      "hex": "#000000",
+      "rgb": "0, 0, 0",
+      "role": "Primary type, structure, credibility"
+    },
+    {
+      "name": "White",
+      "hex": "#FFFFFF",
+      "rgb": "255, 255, 255",
+      "role": "Primary background, space, clarity"
+    },
+    {
+      "name": "Charcoal",
+      "hex": "#333E48",
+      "rgb": "51, 62, 72",
+      "role": "Warmer structural dark \u2014 type, dark surfaces"
+    }
+  ],
+  "secondary": [
+    {
+      "name": "Magenta",
+      "hex": "#FA01FE",
+      "rgb": "250, 1, 254",
+      "role": "Expressive accent, category coding, data highlights"
+    },
+    {
+      "name": "Lime Yellow",
+      "hex": "#DBFE02",
+      "rgb": "219, 254, 2",
+      "role": "Vitality, category coding, highlights"
+    },
+    {
+      "name": "Purple",
+      "hex": "#AC7BFF",
+      "rgb": "172, 123, 255",
+      "role": "Warmth, category coding, expressive accents"
+    },
+    {
+      "name": "Teal",
+      "hex": "#5CE0CA",
+      "rgb": "92, 224, 202",
+      "role": "Calm, category coding, expressive accents"
+    }
+  ],
+  "neutral": [
+    {
+      "name": "Gray 700",
+      "hex": "#6E7579",
+      "rgb": "110, 117, 121",
+      "role": "Secondary type, captions"
+    },
+    {
+      "name": "Gray 300",
+      "hex": "#CFD2D3",
+      "rgb": "207, 210, 211",
+      "role": "Dividers, borders, disabled states"
+    },
+    {
+      "name": "Gray 100",
+      "hex": "#F2F3F3",
+      "rgb": "242, 243, 243",
+      "role": "Soft backgrounds, cards"
+    }
+  ]
+}

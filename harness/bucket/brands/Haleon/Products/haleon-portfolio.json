@@ -1,0 +1,85 @@
+{
+  "meta": {
+    "brand": "Haleon",
+    "categories_count": 6,
+    "power_brands_count": 9,
+    "flagship_brands": [
+      "Sensodyne",
+      "Advil",
+      "Centrum"
+    ],
+    "brand_tiers": [
+      "Power Brands (global core, 9)",
+      "Local Growth Brands (market/region-specific)"
+    ],
+    "source": "https://www.haleon.com/our-brands",
+    "note": "Representative, not exhaustive. Availability varies by market. Verify current market-specific portfolio and each brand's own guidelines before use."
+  },
+  "categories": [
+    {
+      "name": "Oral Health",
+      "desc": "Therapeutic oral health (a leading position) — toothpaste, denture care, mouthwash, toothbrushes.",
+      "brands": [
+        "Sensodyne",
+        "parodontax",
+        "Polident"
+      ]
+    },
+    {
+      "name": "Vitamins, Minerals and Supplements (VMS)",
+      "desc": "Everyday health & wellness — multivitamins, calcium, vitamin C.",
+      "brands": [
+        "Centrum",
+        "Emergen-C",
+        "Caltrate"
+      ]
+    },
+    {
+      "name": "Respiratory",
+      "desc": "Cold & flu, nasal decongestant, allergy.",
+      "brands": [
+        "Otrivin",
+        "Theraflu",
+        "Flonase",
+        "Robitussin"
+      ]
+    },
+    {
+      "name": "Pain Relief",
+      "desc": "Pain relief & anti-inflammatory.",
+      "brands": [
+        "Panadol",
+        "Voltaren",
+        "Advil",
+        "Fenbid",
+        "Contac",
+        "Grand-pa",
+        "Excedrin"
+      ]
+    },
+    {
+      "name": "Digestive Health and other",
+      "desc": "Heartburn, acid indigestion, gastric discomfort, fibre.",
+      "brands": [
+        "Tums",
+        "Eno",
+        "Benefiber"
+      ]
+    },
+    {
+      "name": "Therapeutic Skin Health",
+      "desc": "Treatments for skin conditions — antihistamine, cold sore, antibiotic ointment.",
+      "brands": [
+        "Fenistil",
+        "Zovirax",
+        "Bactroban"
+      ]
+    }
+  ],
+  "name_styling": {
+    "parodontax": "always lowercase p",
+    "Grand-pa": "capital G, hyphen, lowercase pa",
+    "Tums": "Tums in running text; logo may be caps",
+    "rule": "reproduce each trademark exactly; never apply Haleon green E device to product-brand names/logos"
+  }
+}
