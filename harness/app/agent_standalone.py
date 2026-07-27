@@ -545,6 +545,23 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
                     "Premium Swiss telecommunications advertising photography style.\n\n"
                 ) + image_prompt
 
+        # Haleon-specific composition rule
+        if brand.lower() == "haleon":
+            _haleon_subject = (
+                "SUBJECT: A real person in a relatable everyday health moment — "
+                "using, holding, or just having used the product. Warm, human, credible. "
+                "No lab coats, no clinical settings, no dramatic illness portrayal. "
+                "The product pack/tube/bottle must be clearly visible and in focus.\n"
+                "COMPOSITION: The subject and product must occupy the RIGHT TWO-THIRDS of the frame. "
+                "The LEFT THIRD must be clean, bright, and uncluttered — white wall, soft bokeh, "
+                "or open daylight — this area receives the headline overlay in post-production.\n"
+                "PALETTE: White-dominant background with natural Haleon green accents (plants, packaging, "
+                "fabric details). Warm, natural daylight or soft studio light. No dark or moody backgrounds.\n"
+                "CRITICAL: No text, logos, brand marks, or pricing anywhere in the image. "
+                "No overly clinical or pharmaceutical imagery.\n\n"
+            )
+            image_prompt = _haleon_subject + image_prompt
+
         contents.append(image_prompt)
 
         resp = _genai_client().models.generate_content(
@@ -1126,6 +1143,98 @@ def run_reel(brand: str, prompt: str) -> dict:
                 "the network as reliable as the Swiss railway.",
             ])
 
+    def _haleon_scene(p: str) -> str:
+        _pl = p.lower()
+        _is_oral    = any(x in _pl for x in ["sensodyne", "parodontax", "polident", "toothpaste", "whitening", "gum"])
+        _is_pain    = any(x in _pl for x in ["voltaren", "panadol", "advil", "ibuprofen", "pain", "ache", "relief", "headache"])
+        _is_resp    = any(x in _pl for x in ["theraflu", "otrivin", "flonase", "robitussin", "cold", "flu", "nasal", "cough", "allergy"])
+        _is_vms     = any(x in _pl for x in ["centrum", "emergen", "caltrate", "vitamin", "supplement", "mineral", "calcium"])
+        _is_digest  = any(x in _pl for x in ["tums", "eno", "benefiber", "digestion", "heartburn", "fibre", "fiber"])
+        _is_skin    = any(x in _pl for x in ["fenistil", "zovirax", "bactroban", "skin", "itch", "cold sore", "wound"])
+
+        if _is_christmas or _is_new_year and _is_resp:
+            return _rnd.choice([
+                f"A family of four at home on a cold winter evening — a parent opening {p} for a child "
+                f"who has been sniffling. Warm living room, Christmas fairy lights softly glowing in the background. "
+                f"The parent's reassuring smile says 'I've got this'. Haleon green accent in the pack. "
+                f"Clean white and warm amber palette, genuine parental care.",
+                f"A woman recovering from a winter cold, wrapped in a blanket — she reaches for {p} on the side table "
+                f"beside a warm mug and a book. Soft natural window light, clean white interiors, a gentle moment of self-care. "
+                f"The pack clearly visible. Haleon green and white tones, calm and hopeful.",
+            ])
+        if _is_new_year or (_is_vms and (_is_winter or _is_spring or not any([_is_christmas, _is_summer, _is_autumn]))):
+            return _rnd.choice([
+                f"A woman in her 30s starting her morning routine in a bright, airy kitchen on New Year's Day — "
+                f"she places {p} beside a glass of water and smiles to herself, a small quiet commitment. "
+                f"White marble countertop, natural morning light, a single green plant in the background. "
+                f"Clean, aspirational, Haleon green and white palette, a fresh start.",
+                f"A couple in activewear side by side in their bright apartment, each taking {p} as part of "
+                f"their morning health ritual before heading out. Warm daylight, wooden floors, the pack on the kitchen island. "
+                f"Haleon green accent, energising and modern, everyday health at its most human.",
+            ])
+        if _is_pain:
+            if _is_summer:
+                return _rnd.choice([
+                    f"A man in his 40s who was gardening all afternoon — he sits on the back-garden steps, "
+                    f"stretching his back, then reaches for {p} on the patio table with quiet relief. "
+                    f"Golden afternoon sunlight, lush green garden, a cup of tea nearby. "
+                    f"Haleon green palette, real life, no drama — just getting back to it.",
+                    f"A woman runner (35-45) applying {p} gel to her knee after a morning jog — "
+                    f"sitting on a park bench, light through the trees, city in the soft background. "
+                    f"She's back on her feet in the next shot, smiling. Haleon green and white, active and empowered.",
+                ])
+            return _rnd.choice([
+                f"A woman in her 40s waking up with a headache — she reaches for {p} on the bedside table, "
+                f"takes it with water, and 30 seconds later opens the blinds to a bright morning. "
+                f"Clean white bedroom, soft morning light, a quiet moment of taking control. Haleon green accent.",
+                f"An older man returning from a walk, rubbing his knee — his adult daughter passes him {p} "
+                f"with a caring look. Bright modern kitchen, natural light, a warm generational moment. "
+                f"Haleon green and white palette, human and reassuring.",
+            ])
+        if _is_oral:
+            if _is_summer:
+                return (f"A woman (28-38) enjoying an ice-cold drink at a summer picnic — she takes a sip "
+                        f"expecting sensitivity pain, then beams when there's none. {p} pack on the picnic blanket. "
+                        f"Bright summer light, green grass, Haleon green palette, pure liberation.")
+            return _rnd.choice([
+                f"A bright bathroom, morning light — a person finishing their brushing routine with {p} "
+                f"and smiling into the mirror, genuinely confident. Clean white tiles, a green towel, "
+                f"the {p} pack prominent on the shelf. Haleon green and white, fresh and optimistic.",
+                f"A mother helping her young child brush their teeth with {p} before school — "
+                f"both leaning into the bathroom mirror, the child grinning with foam on their lips. "
+                f"Warm morning bathroom light, Haleon green towels, pure family warmth.",
+            ])
+        if _is_resp:
+            return _rnd.choice([
+                f"A woman working from home, sniffling — she uses {p} and within moments looks up from her "
+                f"laptop with clearer eyes and a small smile. Bright home-office desk, white walls, a plant. "
+                f"Haleon green accent. Calm, credible, a subtle but real moment of relief.",
+                f"A father at the school gate with a sniffling child — he's prepared: {p} in his jacket pocket. "
+                f"He kneels down, reassuring. The child smiles. Soft outdoor morning light, Haleon green palette.",
+            ])
+        if _is_digest:
+            return _rnd.choice([
+                f"A woman at a dinner party enjoying every course without hesitation — {p} pack discreetly in her bag, "
+                f"her confidence the only thing showing. Warm restaurant lighting, friends laughing. "
+                f"Haleon green and warm amber palette, freedom without compromise.",
+                f"A man after a big family lunch reaching for {p} with a wry knowing smile. "
+                f"Bright dining room, family still at the table, Sunday afternoon light. "
+                f"Real and relatable, Haleon green and white palette.",
+            ])
+        if _is_skin:
+            return (f"A person carefully applying {p} to their arm in a clean, softly lit bathroom — "
+                    f"a small but meaningful ritual. The skin looks visibly calmer in the next shot. "
+                    f"Clean white tiles, Haleon green towel, quiet focus. Reassuring and science-credible.")
+        # Generic Haleon masterbrand fallback
+        return _rnd.choice([
+            f"A montage of three quick human moments — a woman smiling in a bright kitchen taking {p}, "
+            f"a man after a run feeling good, a child laughing with a parent — each a small everyday health win. "
+            f"White and Haleon green palette throughout, warm natural light, human and credible.",
+            f"A woman in her 30s pausing in a busy day to take {p} — not dramatic, just intentional. "
+            f"She picks it up at her bright kitchen counter, sunlight through the window, a quiet moment of choosing health. "
+            f"Clean white and Haleon green, aspirational yet completely real.",
+        ])
+
     _BRAND_SCENE_FN = {
         "Sunglow":     _sunglow_scene,
         "Rnorr":       _rnorr_scene,
@@ -1134,6 +1243,7 @@ def run_reel(brand: str, prompt: str) -> dict:
         "UBS Bank":    _ubs_scene,
         "sunrise":     _sunrise_scene,
         "Sunrise":     _sunrise_scene,
+        "Haleon":      _haleon_scene,
     }
     brand_scene = (
         _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN
