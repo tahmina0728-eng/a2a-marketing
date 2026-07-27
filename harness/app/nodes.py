@@ -117,6 +117,20 @@ def load_brand_context(
     product_paths    = loader.list_products(brand)   if brand else []
     logo_paths       = loader.list_logos(brand)      if brand else []
 
+    # Haleon: reorder product_paths so the matched sub-brand image is first.
+    # list_products() returns all 23 images alphabetically; pipeline only uses
+    # product_uris[:1] as the Gemini reference, so the wrong image would be sent.
+    if brand.lower() == "haleon" and product and product_paths:
+        from pathlib import Path as _PP
+        _prod_key = product.lower().replace("-", "").replace(" ", "")
+        _match = next(
+            (p for p in product_paths
+             if _prod_key in _PP(p).stem.lower().replace("-", "").replace(" ", "")),
+            None,
+        )
+        if _match:
+            product_paths = [_match] + [p for p in product_paths if p != _match]
+
     # Parse brand locks from guidelines YAML blocks ───────────────────────
     brand_locks_dict = _parse_brand_locks(brand, brand_guidelines)
 

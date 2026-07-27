@@ -466,6 +466,18 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
                              f"only, do not render this logo in the image.")
             contents.append(part)
         products = loader.list_products(brand)
+        # Haleon: sort the matched sub-brand product to the front so Gemini
+        # gets the right packaging reference (not whatever comes first alphabetically).
+        if brand.lower() == "haleon" and product_name and products:
+            from pathlib import Path as _PPkv
+            _pk = product_name.lower().replace("-", "").replace(" ", "")
+            _pm = next(
+                (p for p in products
+                 if _pk in _PPkv(p).stem.lower().replace("-", "").replace(" ", "")),
+                None,
+            )
+            if _pm:
+                products = [_pm] + [p for p in products if p != _pm]
         # For brands with no Products folder (e.g. Sunrise), use a campaign asset
         # from the Assets folder as a visual style reference so Gemini can match
         # the brand's actual photography style, palette, and mood.
