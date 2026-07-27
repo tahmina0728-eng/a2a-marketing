@@ -12,10 +12,16 @@ const BRANDS = [
   { id: "sunrise",     label: "Sunrise",            logo: "/brands/sunrise-logo.svg" },
   { id: "Haleon",      label: "Haleon",             logo: "/brands/haleon-logo.png" },
 ];
-const MARKETS  = ["United Kingdom","Australia","United States","New Zealand","SEA","Switzerland","Global"];
+const MARKETS  = ["United Kingdom","Germany","France","Spain","India","Thailand","China","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 
 const MARKET_LANGUAGES: Record<string, string[]> = {
   "United Kingdom": ["English"],
+  "Germany":        ["German","English"],
+  "France":         ["French","English"],
+  "Spain":          ["Spanish","English"],
+  "India":          ["English","Hindi"],
+  "Thailand":       ["Thai","English"],
+  "China":          ["Chinese (Simplified)","English"],
   "Australia":      ["English"],
   "United States":  ["English"],
   "New Zealand":    ["English"],
@@ -81,7 +87,8 @@ const SUNRISE_PRODUCT_PLANS = [
 const MARKET_CURRENCY_SYMBOL: Record<string, string> = {
   "United Kingdom": "£", "Australia": "A$", "United States": "$",
   "New Zealand": "NZ$", "Switzerland": "CHF", "Germany": "€",
-  "Austria": "€", "France": "€", "Global": "CHF", "SEA": "$",
+  "Austria": "€", "France": "€", "Spain": "€", "Global": "CHF",
+  "SEA": "$", "India": "₹", "Thailand": "฿", "China": "¥",
 };
 
 const BRAND_FAN_TRUTHS: Record<string, string[]> = {

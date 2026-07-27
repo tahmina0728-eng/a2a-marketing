@@ -56,9 +56,15 @@ const BRAND_AUDIENCES: Record<string, string[]> = {
   ],
 };
 const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Website","Email"];
-const MARKETS   = ["United Kingdom","Australia","United States","New Zealand","SEA","Switzerland","Global"];
+const MARKETS   = ["United Kingdom","Germany","France","Spain","India","Thailand","China","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 const MARKET_LANGUAGES: Record<string, string[]> = {
   "United Kingdom": ["English"],
+  "Germany":        ["German","English"],
+  "France":         ["French","English"],
+  "Spain":          ["Spanish","English"],
+  "India":          ["English","Hindi"],
+  "Thailand":       ["Thai","English"],
+  "China":          ["Chinese (Simplified)","English"],
   "Australia":      ["English"],
   "United States":  ["English"],
   "New Zealand":    ["English"],
