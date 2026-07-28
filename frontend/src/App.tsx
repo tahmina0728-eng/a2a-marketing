@@ -1096,7 +1096,7 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
             ))}
           </div>
         </div>
-      ) : (
+      ) : status === "done" && agentKey === "briefing" ? null : (
         <>
           {/* Greeting — left-aligned, close to prompt */}
           <h3 style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 10px", lineHeight: 1.3 }}>
