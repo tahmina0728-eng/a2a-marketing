@@ -1907,8 +1907,8 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
   return (
     <div style={{
       flex: 1, overflowY: "auto" as const,
-      padding: showHeader ? "40px 48px" : "32px 48px",
-      display: showHeader ? "flex" : "block",
+      padding: showHeader ? "40px 48px" : "40px 48px",
+      display: "flex", flexDirection: "column" as const,
       alignItems: "center", justifyContent: "center",
       position: "relative" as const, background: "transparent",
     }}>
@@ -1920,7 +1920,7 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
       <div style={{
         maxWidth: showHeader ? 720 : 860,
         width: "100%",
-        margin: showHeader ? undefined : "0 auto",
+        margin: "auto",
         position: "relative" as const, zIndex: 1,
       }}>
 
