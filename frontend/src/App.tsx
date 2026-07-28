@@ -606,10 +606,10 @@ function BriefingAgentDashboard({ result, color }: {
   const tabs = [
     { id: "overview",  label: "Overview" },
     { id: "messages",  label: "Key Messages" },
-    { id: "creative",  label: "Creative Direction" },
+    { id: "creative",  label: "Creative" },
     { id: "channels",  label: "Channels" },
-    { id: "risks",     label: "Risks & Compliance" },
-    { id: "metrics",   label: "Success Metrics" },
+    { id: "risks",     label: "Risks" },
+    { id: "metrics",   label: "Metrics" },
   ];
 
   const donutSegs = [
@@ -855,7 +855,7 @@ function BriefingAgentDashboard({ result, color }: {
               </button>
             ))}
           </div>
-          <div style={{ padding: "18px 20px", overflowY: "auto" as const, maxHeight: 340 }}>
+          <div style={{ padding: "18px 20px", overflowY: "auto" as const, minHeight: 220 }}>
             {tabContentMap[activeTab]}
           </div>
         </div>
@@ -2001,7 +2001,7 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
 
         </div>
 
-        {agentKey === "briefing" && <BrandUploadPanel />}
+        {agentKey === "briefing" && !prompt.trim() && <BrandUploadPanel />}
 
         {agentKey !== "performance" && (
           <AgentRunPanel agentKey={agentKey} agentLabel={stage.label} color={color}
