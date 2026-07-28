@@ -929,9 +929,10 @@ function BriefingAgentDashboard({ result, color }: {
   );
 }
 
-function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: {
+function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange, onBriefingDone }: {
   agentKey: string; agentLabel: string; color: string;
   prompt: string; onPromptChange: (v: string) => void;
+  onBriefingDone?: () => void;
 }) {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [result, setResult] = useState<Record<string, any> | null>(null);
@@ -1016,6 +1017,7 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
       if (!res.ok) throw new Error(data?.detail || `Run failed (${res.status})`);
       setResult(data);
       setStatus("done");
+      if (agentKey === "briefing") onBriefingDone?.();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : String(e));
       setStatus("error");
@@ -1887,6 +1889,8 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
   const avatar   = avatarUrl(stage?.label ?? "", idx);
   const workflowStage = WORKFLOW_STAGES.find((w) => w.agents.includes(agentKey))?.label ?? "";
 
+  const [briefingDone, setBriefingDone] = useState(false);
+
   // Voice intro — auto-play once on mount, toggle stop/replay via button
   const [speaking, setSpeaking] = useState(false);
   useEffect(() => {
@@ -1897,6 +1901,20 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
   }, [agentKey]);
 
   if (!stage) return null;
+
+  // Once briefing is done, collapse the whole profile header — show only the result dashboard
+  if (agentKey === "briefing" && briefingDone) {
+    return (
+      <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 48px",
+        position: "relative" as const, background: "transparent" }}>
+        <div style={{ maxWidth: 860, margin: "0 auto", position: "relative" as const, zIndex: 1 }}>
+          <AgentRunPanel agentKey={agentKey} agentLabel={stage.label} color={color}
+            prompt={prompt} onPromptChange={onPromptChange}
+            onBriefingDone={() => setBriefingDone(true)} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "40px 48px",
@@ -1987,7 +2005,8 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
 
         {agentKey !== "performance" && (
           <AgentRunPanel agentKey={agentKey} agentLabel={stage.label} color={color}
-            prompt={prompt} onPromptChange={onPromptChange} />
+            prompt={prompt} onPromptChange={onPromptChange}
+            onBriefingDone={() => setBriefingDone(true)} />
         )}
       </div>
     </div>
