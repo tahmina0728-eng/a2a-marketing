@@ -958,6 +958,13 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
   const [mcSending,    setMcSending]    = useState(false);
   const [mcResult,     setMcResult]     = useState<{status:string;campaign_id?:string} | null>(null);
   const supported = STANDALONE_SUPPORTED.includes(agentKey);
+  const [availableBrands, setAvailableBrands] = useState<string[]>([]);
+  useEffect(() => {
+    if (agentKey !== "briefing") return;
+    fetch(`${API_BASE_PUB}/brands`).then(r => r.json()).then(d => {
+      if (Array.isArray(d?.brands)) setAvailableBrands(d.brands);
+    }).catch(() => {});
+  }, [agentKey]);
 
   const handleSaveKvToHub = async () => {
     if (!result?.image_b64) return;
@@ -1100,6 +1107,34 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
             {AGENT_AGENDA[agentKey] ?? `What would you like ${agentLabel} to do?`}
           </h3>
 
+          {/* Briefing agent — brand quick-pick chips */}
+          {agentKey === "briefing" && availableBrands.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 7 }}>
+                Pick a brand to brief
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                {availableBrands.map((b) => {
+                  const active = prompt.toLowerCase().includes(b.toLowerCase());
+                  return (
+                    <button key={b} onClick={() => {
+                      const cleaned = prompt.replace(new RegExp(`^${b}[:\\s—-]*`, "i"), "").trim();
+                      onPromptChange(`${b} — ${cleaned}`);
+                    }}
+                      style={{ padding: "5px 13px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                        cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                        border: `1.5px solid ${active ? color : "var(--card-border)"}`,
+                        background: active ? `${color}18` : "var(--card-bg-soft)",
+                        color: active ? color : "var(--text-secondary)" }}>
+                      {b}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* TVC duration picker — only shown for Director agent */}
           {agentKey === "tvc" && (
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
@@ -1127,7 +1162,9 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
           }}>
             <textarea value={prompt} onChange={(e) => onPromptChange(e.target.value)}
               rows={1}
-              placeholder="Describe your brand, market, and campaign direction — I'll help you move it forward"
+              placeholder={agentKey === "briefing"
+                ? "Brand name + market + objective — e.g. \"Haleon UK: winter campaign for Sensodyne, targeting adults with sensitive teeth\""
+                : "Describe your brand, market, and campaign direction — I'll help you move it forward"}
               style={{ width: "100%", padding: "18px 16px", border: "none", resize: "none" as const,
                 background: "transparent", color: "var(--text-primary)", fontFamily: "inherit",
                 fontSize: 13, lineHeight: 1.6, outline: "none", boxSizing: "border-box" as const,
