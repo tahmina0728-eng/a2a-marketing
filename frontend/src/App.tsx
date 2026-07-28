@@ -576,13 +576,7 @@ function BriefingAgentDashboard({ result, color }: {
   const summary  = (result.summary   as string) ?? "";
   const passColor = score >= 70 ? "#10b981" : "#f59e0b";
 
-  const dataSources = [
-    { label: "Brand Guidelines",    source: "Vertex AI Search", count: "47 chunks",     accentColor: "#3b82f6" },
-    { label: "Historical Campaigns", source: "BigQuery",        count: "1,247 records",  accentColor: "#8b5cf6" },
-    { label: "Customer CDP",         source: "BigQuery",        count: "50K profiles",   accentColor: "#10b981" },
-    { label: "Product Catalogue",    source: "BigQuery",        count: "2,847 SKUs",     accentColor: "#f59e0b" },
-    { label: "Market Trends",        source: "Vertex AI Search", count: "156 signals",   accentColor: "#ef4444" },
-  ];
+  const DATA_SOURCE_COUNT = 5;
 
   const insights = [
     {
@@ -804,21 +798,81 @@ function BriefingAgentDashboard({ result, color }: {
         </div>
       </div>
 
-      {/* Data Sources Bar */}
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 13 }}>
-        {dataSources.map((src) => (
-          <div key={src.label} style={{ display: "flex", alignItems: "center", gap: 5,
-            padding: "5px 10px", borderRadius: 20, fontSize: 10, fontWeight: 600,
-            background: "var(--card-bg-soft)", border: "1px solid var(--card-border)",
-            color: "var(--text-secondary)" }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", flexShrink: 0 }} />
-            <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{src.label}</span>
-            <span style={{ opacity: 0.45 }}>·</span>
-            <span>{src.source}</span>
-            <span style={{ opacity: 0.45 }}>·</span>
-            <span style={{ color: src.accentColor, fontWeight: 700 }}>{src.count}</span>
+      {/* Data Sources Section */}
+      <div style={{ borderRadius: 12, border: "1px solid var(--card-border)", background: "var(--card-bg)",
+        padding: "14px 18px", marginBottom: 13 }}>
+        {/* Section header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Data Sources</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#10b981" }}>
+              <svg width={12} height={12} viewBox="0 0 12 12" fill="none">
+                <circle cx={6} cy={6} r={5.5} stroke="#10b981" strokeWidth={1}/>
+                <path d="M3.5 6l1.8 1.8L8.5 4.5" stroke="#10b981" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              All sources connected
+            </span>
           </div>
-        ))}
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Last synced: 2 min ago
+            <svg style={{ marginLeft: 4, verticalAlign: "middle" }} width={11} height={11} viewBox="0 0 12 12" fill="none">
+              <circle cx={6} cy={6} r={5.5} stroke="#10b981" strokeWidth={1}/>
+              <path d="M3.5 6l1.8 1.8L8.5 4.5" stroke="#10b981" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+        </div>
+        {/* Source cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10 }}>
+          {[
+            { label: "Brand Guidelines",    source: "Vertex AI Search", desc: `${result._chunks ?? 47} chunks retrieved`,  icon: (
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/>
+              </svg>), iconBg: "rgba(59,130,246,0.1)" },
+            { label: "Historical Campaigns", source: "BigQuery",         desc: "24 campaigns",               icon: (
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+                <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+              </svg>), iconBg: "rgba(139,92,246,0.1)" },
+            { label: "Customer CDP",         source: "BigQuery",         desc: "3 audience segments",         icon: (
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx={9} cy={7} r={4}/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>), iconBg: "rgba(16,185,129,0.1)" },
+            { label: "Product Catalogue",    source: "BigQuery",         desc: "Current",                    icon: (
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                <line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+              </svg>), iconBg: "rgba(245,158,11,0.1)" },
+            { label: "Market Trends",        source: "Vertex AI Search", desc: "8 insights",                 icon: (
+              <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#06b6d4" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                <polyline points="17 6 23 6 23 12"/>
+              </svg>), iconBg: "rgba(6,182,212,0.1)" },
+          ].map((src) => (
+            <div key={src.label} style={{ borderRadius: 10, border: "1px solid var(--card-border)",
+              background: "var(--card-bg-soft)", padding: "12px 13px",
+              display: "flex", flexDirection: "column" as const, gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 32, height: 32, borderRadius: 8, background: src.iconBg,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {src.icon}
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2 }}>{src.label}</div>
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 1 }}>{src.source}</div>
+                </div>
+              </div>
+              <div style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 500 }}>{src.desc}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: "#10b981" }}>
+                <svg width={10} height={10} viewBox="0 0 12 12" fill="none">
+                  <circle cx={6} cy={6} r={5.5} stroke="#10b981" strokeWidth={1}/>
+                  <path d="M3.5 6l1.8 1.8L8.5 4.5" stroke="#10b981" strokeWidth={1.4} strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                Connected
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Insight Cards */}
@@ -919,7 +973,7 @@ function BriefingAgentDashboard({ result, color }: {
             <div>
               <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.08em",
                 textTransform: "uppercase" as const, marginBottom: 3 }}>Overall Confidence</div>
-              <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>Based on {dataSources.length} data sources</div>
+              <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>Based on {DATA_SOURCE_COUNT} data sources</div>
             </div>
             <div style={{ fontSize: 26, fontWeight: 900, color: passColor }}>{score}%</div>
           </div>
