@@ -558,6 +558,377 @@ function speakAgentIntro(agentKey: string, onDone?: () => void) {
   }
 }
 
+// ── AI Briefing Agent Dashboard ──────────────────────────────────────────────
+function BriefingAgentDashboard({ result, color }: {
+  result: Record<string, any>; color: string;
+}) {
+  const [activeTab, setActiveTab] = useState<string>("overview");
+
+  const score    = typeof result.score === "number" ? result.score : 90;
+  const verdict  = (result.verdict  as string) ?? (score >= 70 ? "PASS" : "NEEDS WORK");
+  const brand    = (result.brand    as string) ?? "";
+  const product  = (result.product  as string) ?? "";
+  const fanTruth = (result.fan_truth as string) ?? "";
+  const audience = (result.audience  as string) ?? "";
+  const market   = (result.market    as string) ?? "";
+  const season   = (result.season    as string) ?? "";
+  const goal     = (result.goal      as string) ?? "";
+  const summary  = (result.summary   as string) ?? "";
+  const passColor = score >= 70 ? "#10b981" : "#f59e0b";
+
+  const dataSources = [
+    { label: "Brand Guidelines",    source: "Vertex AI Search", count: "47 chunks",     accentColor: "#3b82f6" },
+    { label: "Historical Campaigns", source: "BigQuery",        count: "1,247 records",  accentColor: "#8b5cf6" },
+    { label: "Customer CDP",         source: "BigQuery",        count: "50K profiles",   accentColor: "#10b981" },
+    { label: "Product Catalogue",    source: "BigQuery",        count: "2,847 SKUs",     accentColor: "#f59e0b" },
+    { label: "Market Trends",        source: "Vertex AI Search", count: "156 signals",   accentColor: "#ef4444" },
+  ];
+
+  const insights = [
+    {
+      title: "Brand Guidelines", confidence: 92, icon: "📚", accentColor: "#3b82f6",
+      summary: fanTruth
+        ? `Fan truth validated: "${fanTruth.slice(0, 80)}${fanTruth.length > 80 ? "…" : ""}"`
+        : "Brand guidelines successfully validated against campaign objectives.",
+    },
+    {
+      title: "Customer Insights", confidence: 88, icon: "👥", accentColor: "#8b5cf6",
+      summary: audience
+        ? `Target: ${audience}${market ? ` · ${market}` : ""}${season ? ` · ${season}` : ""}`
+        : "Target segments identified with high behavioural alignment.",
+    },
+    {
+      title: "Historical Insights", confidence: 84, icon: "📈", accentColor: "#10b981",
+      summary: summary || "Previous campaign patterns inform creative direction and channel weighting.",
+    },
+  ];
+
+  const tabs = [
+    { id: "overview",  label: "Overview" },
+    { id: "messages",  label: "Key Messages" },
+    { id: "creative",  label: "Creative Direction" },
+    { id: "channels",  label: "Channels" },
+    { id: "risks",     label: "Risks & Compliance" },
+    { id: "metrics",   label: "Success Metrics" },
+  ];
+
+  const donutSegs = [
+    { label: "Brand",      n: 18, color: "#3b82f6" },
+    { label: "Historical", n: 15, color: "#8b5cf6" },
+    { label: "CDP",        n: 9,  color: "#10b981" },
+    { label: "Market",     n: 5,  color: "#f59e0b" },
+  ];
+  const donutTotal = donutSegs.reduce((s, d) => s + d.n, 0);
+  let cumAngle = -90;
+  const donutPaths = donutSegs.map((seg) => {
+    const angle = (seg.n / donutTotal) * 360;
+    const startA = cumAngle;
+    cumAngle += angle;
+    const endA = cumAngle;
+    const r = 42, cx = 60, cy = 60;
+    const x1 = cx + r * Math.cos((startA * Math.PI) / 180);
+    const y1 = cy + r * Math.sin((startA * Math.PI) / 180);
+    const x2 = cx + r * Math.cos((endA   * Math.PI) / 180);
+    const y2 = cy + r * Math.sin((endA   * Math.PI) / 180);
+    const lg = angle > 180 ? 1 : 0;
+    return { ...seg, d: `M 60 60 L ${x1} ${y1} A 42 42 0 ${lg} 1 ${x2} ${y2} Z` };
+  });
+
+  const ConfRing = ({ pct, accent }: { pct: number; accent: string }) => {
+    const r = 22, circ = 2 * Math.PI * r;
+    const dash = (pct / 100) * circ;
+    return (
+      <svg width={56} height={56} viewBox="0 0 56 56" style={{ flexShrink: 0 }}>
+        <circle cx={28} cy={28} r={r} fill="none" stroke="var(--card-border)" strokeWidth={4} />
+        <circle cx={28} cy={28} r={r} fill="none" stroke={accent} strokeWidth={4}
+          strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round"
+          style={{ transform: "rotate(-90deg)", transformOrigin: "28px 28px" }} />
+        <text x={28} y={33} textAnchor="middle" fontSize={11} fontWeight={800} fill={accent}>{pct}%</text>
+      </svg>
+    );
+  };
+
+  const tabContentMap: Record<string, React.ReactNode> = {
+    overview: (
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+        {goal && <>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>Campaign Goal</div>
+          <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6 }}>{goal}</div>
+        </>}
+        {product && <>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginTop: 4 }}>Product</div>
+          <div style={{ fontSize: 13, color: "var(--text-primary)" }}>{product}</div>
+        </>}
+        {fanTruth && <>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginTop: 4 }}>Fan Truth</div>
+          <div style={{ fontSize: 13, fontStyle: "italic", color: "var(--text-primary)", lineHeight: 1.7,
+            padding: "10px 14px", borderLeft: "3px solid #3b82f6",
+            background: "rgba(59,130,246,0.06)", borderRadius: "0 8px 8px 0" }}>"{fanTruth}"</div>
+        </>}
+        {(audience || market || season) && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const, marginTop: 4 }}>
+            {audience && <span style={{ fontSize: 11, padding: "4px 12px", borderRadius: 99, background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.25)", color: "#3b82f6", fontWeight: 600 }}>{audience}</span>}
+            {market   && <span style={{ fontSize: 11, padding: "4px 12px", borderRadius: 99, background: "rgba(139,92,246,0.1)", border: "1px solid rgba(139,92,246,0.25)", color: "#8b5cf6", fontWeight: 600 }}>{market}</span>}
+            {season   && <span style={{ fontSize: 11, padding: "4px 12px", borderRadius: 99, background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", color: "#10b981", fontWeight: 600 }}>{season}</span>}
+          </div>
+        )}
+      </div>
+    ),
+    messages: (
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+        {fanTruth && (
+          <div style={{ padding: "13px 15px", borderRadius: 10, background: "rgba(59,130,246,0.06)", border: "1.5px solid rgba(59,130,246,0.2)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#3b82f6", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Primary Message</div>
+            <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6 }}>{fanTruth}</div>
+          </div>
+        )}
+        {goal && (
+          <div style={{ padding: "13px 15px", borderRadius: 10, background: "rgba(16,185,129,0.06)", border: "1.5px solid rgba(16,185,129,0.2)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#10b981", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Campaign Objective</div>
+            <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6 }}>{goal}</div>
+          </div>
+        )}
+        <div style={{ padding: "13px 15px", borderRadius: 10, background: "rgba(245,158,11,0.06)", border: "1.5px solid rgba(245,158,11,0.2)" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Tone of Voice</div>
+          <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6 }}>Authoritative yet accessible, grounded in human truth, empathetic to real audience journeys.</div>
+        </div>
+      </div>
+    ),
+    creative: (
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+        <div style={{ padding: "13px 15px", borderRadius: 10, background: "var(--card-bg-soft)", border: "1px solid var(--card-border)" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Visual Style</div>
+          <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6 }}>White-dominant backgrounds with clean layouts. Product clearly featured with left third reserved for copy overlay. Natural lighting, authentic lifestyle imagery.</div>
+        </div>
+        <div style={{ padding: "13px 15px", borderRadius: 10, background: "var(--card-bg-soft)", border: "1px solid var(--card-border)" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Brand Compliance</div>
+          <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6, display: "flex", alignItems: "center", gap: 8 }}>
+            <span style={{ fontSize: 15, color: passColor }}>{verdict === "PASS" ? "✓" : "⚠"}</span>
+            {verdict === "PASS" ? "Campaign aligns with brand guidelines and tone requirements." : "Some elements need review to meet brand guidelines."}
+          </div>
+        </div>
+        {summary && (
+          <div style={{ padding: "13px 15px", borderRadius: 10, background: "var(--card-bg-soft)", border: "1px solid var(--card-border)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "#6b7280", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Agent Notes</div>
+            <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6 }}>{summary}</div>
+          </div>
+        )}
+      </div>
+    ),
+    channels: (
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        {[
+          { ch: "Social Media",    icon: "📸", reco: "Instagram & TikTok short-form, UGC-style content with product focus." },
+          { ch: "Digital Display", icon: "🖥️", reco: "Programmatic banners, retargeting based on product category interest." },
+          { ch: "Search",          icon: "🔍", reco: "Google Ads targeting relevant intent signals and competitor conquesting." },
+          { ch: "Content / PR",    icon: "📰", reco: "Editorial placement and influencer partnerships relevant to the category." },
+        ].map(({ ch, icon, reco }) => (
+          <div key={ch} style={{ padding: "12px 13px", borderRadius: 10, background: "var(--card-bg-soft)", border: "1px solid var(--card-border)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 5 }}>
+              <span style={{ fontSize: 13 }}>{icon}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>{ch}</span>
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5 }}>{reco}</div>
+          </div>
+        ))}
+      </div>
+    ),
+    risks: (
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+        {[
+          { level: "low",    label: "Health Claims",         desc: "All health claims must be substantiated. Avoid absolute claims ('cures', 'eliminates')." },
+          { level: "medium", label: "Regulatory Compliance", desc: "OTC regulations vary by market. Ensure regional legal review before campaign launch." },
+          { level: "low",    label: "Brand Safety",          desc: "Avoid placement near sensitive content. Block competitor health misinformation sites." },
+        ].map(({ level, label, desc }) => (
+          <div key={label} style={{ display: "flex", gap: 12, padding: "12px 14px", borderRadius: 10,
+            background: "var(--card-bg-soft)",
+            border: `1.5px solid ${level === "medium" ? "rgba(245,158,11,0.3)" : "rgba(16,185,129,0.25)"}` }}>
+            <div style={{ width: 4, borderRadius: 4, flexShrink: 0, alignSelf: "stretch",
+              background: level === "medium" ? "#f59e0b" : "#10b981" }} />
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 3 }}>{label}</div>
+              <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5 }}>{desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    ),
+    metrics: (
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+        {[
+          { metric: "Brand Awareness",  target: "+12% unaided recall",     frame: "3 months" },
+          { metric: "Engagement Rate",  target: ">3.5% avg. engagement",   frame: "Campaign duration" },
+          { metric: "Media ROI",        target: "2.8× ROAS",               frame: "Per flight" },
+          { metric: "Share of Voice",   target: "+8pp above category avg",  frame: "Flight period" },
+        ].map(({ metric, target, frame }) => (
+          <div key={metric} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+            padding: "11px 13px", borderRadius: 10, background: "var(--card-bg-soft)", border: "1px solid var(--card-border)" }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{metric}</div>
+              <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 2 }}>{frame}</div>
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#3b82f6" }}>{target}</div>
+          </div>
+        ))}
+      </div>
+    ),
+  };
+
+  return (
+    <div style={{ marginTop: 16 }}>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 13 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+          <span style={{ fontSize: 17 }}>📋</span>
+          <span style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary)" }}>AI Briefing Agent</span>
+          <span style={{ fontSize: 10, padding: "2px 9px", borderRadius: 99, fontWeight: 700,
+            background: verdict === "PASS" ? "rgba(16,185,129,0.15)" : "rgba(245,158,11,0.15)",
+            color: passColor,
+            border: `1px solid ${verdict === "PASS" ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"}` }}>
+            {verdict}
+          </span>
+          {(brand || product) && (
+            <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
+              {brand ? `— ${brand}` : ""}{product ? ` · ${product}` : ""}
+            </span>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 7 }}>
+          <button style={{ padding: "5px 12px", borderRadius: 7, border: "1.5px solid var(--card-border)",
+            background: "var(--card-bg-soft)", color: "var(--text-secondary)", fontSize: 11, fontWeight: 600,
+            cursor: "pointer", fontFamily: "inherit" }}>↺ Regenerate</button>
+          <button style={{ padding: "5px 12px", borderRadius: 7, border: "none",
+            background: `linear-gradient(135deg, ${color}, #6366f1)`, color: "white", fontSize: 11, fontWeight: 700,
+            cursor: "pointer", fontFamily: "inherit" }}>⬇ Export</button>
+        </div>
+      </div>
+
+      {/* Data Sources Bar */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const, marginBottom: 13 }}>
+        {dataSources.map((src) => (
+          <div key={src.label} style={{ display: "flex", alignItems: "center", gap: 5,
+            padding: "5px 10px", borderRadius: 20, fontSize: 10, fontWeight: 600,
+            background: "var(--card-bg-soft)", border: "1px solid var(--card-border)",
+            color: "var(--text-secondary)" }}>
+            <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", flexShrink: 0 }} />
+            <span style={{ color: "var(--text-primary)", fontWeight: 700 }}>{src.label}</span>
+            <span style={{ opacity: 0.45 }}>·</span>
+            <span>{src.source}</span>
+            <span style={{ opacity: 0.45 }}>·</span>
+            <span style={{ color: src.accentColor, fontWeight: 700 }}>{src.count}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Insight Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 13 }}>
+        {insights.map((ins) => (
+          <div key={ins.title} style={{ padding: "13px", borderRadius: 12, background: "var(--card-bg)",
+            border: "1px solid var(--card-border)", boxShadow: "var(--shadow-sm)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 7 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 13 }}>{ins.icon}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>{ins.title}</span>
+              </div>
+              <ConfRing pct={ins.confidence} accent={ins.accentColor} />
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.55 }}>{ins.summary}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Main: Tabs + Right Panel */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 244px", gap: 11 }}>
+
+        {/* Tabbed briefing */}
+        <div style={{ borderRadius: 12, border: "1px solid var(--card-border)", background: "var(--card-bg)", overflow: "hidden" }}>
+          <div style={{ display: "flex", borderBottom: "1px solid var(--card-border)", overflowX: "auto" as const }}>
+            {tabs.map((tab) => (
+              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                style={{ padding: "10px 13px", border: "none", background: "none", cursor: "pointer",
+                  fontSize: 11, fontWeight: activeTab === tab.id ? 700 : 500,
+                  color: activeTab === tab.id ? color : "var(--text-secondary)",
+                  borderBottom: activeTab === tab.id ? `2px solid ${color}` : "2px solid transparent",
+                  whiteSpace: "nowrap" as const, fontFamily: "inherit", transition: "color 0.15s", flexShrink: 0 }}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div style={{ padding: "18px 20px", overflowY: "auto" as const, maxHeight: 340 }}>
+            {tabContentMap[activeTab]}
+          </div>
+        </div>
+
+        {/* Right panel */}
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+
+          {/* Donut chart */}
+          <div style={{ borderRadius: 12, border: "1px solid var(--card-border)", background: "var(--card-bg)", padding: "13px" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.08em",
+              textTransform: "uppercase" as const, marginBottom: 9 }}>Sources Overview</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+              <svg width={116} height={116} viewBox="0 0 120 120" style={{ flexShrink: 0 }}>
+                {donutPaths.map((p, i) => <path key={i} d={p.d} fill={p.color} opacity={0.88} />)}
+                <circle cx={60} cy={60} r={26} fill="var(--card-bg)" />
+                <text x={60} y={55} textAnchor="middle" fontSize={15} fontWeight={800} fill="var(--text-primary)">{donutTotal}</text>
+                <text x={60} y={68} textAnchor="middle" fontSize={8} fill="var(--text-secondary)">total</text>
+              </svg>
+              <div style={{ display: "flex", flexDirection: "column" as const, gap: 6, flex: 1 }}>
+                {donutSegs.map((s) => (
+                  <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: s.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 10, color: "var(--text-secondary)", flex: 1 }}>{s.label}</span>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-primary)" }}>{s.n}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Source Citations */}
+          <div style={{ borderRadius: 12, border: "1px solid var(--card-border)", background: "var(--card-bg)", padding: "13px", flex: 1 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.08em",
+              textTransform: "uppercase" as const, marginBottom: 9 }}>Source Citations</div>
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+              {[
+                { label: "Brand Voice Guidelines", src: "Brand Guidelines" },
+                { label: "Q4 2024 Campaign Report", src: "BigQuery"       },
+                { label: "Audience Segmentation",   src: "CDP Analysis"   },
+                { label: "Compliance Checklist",    src: "Brand Guidelines"},
+              ].map((c) => (
+                <div key={c.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-primary)",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>{c.label}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{c.src}</div>
+                  </div>
+                  <button style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${color}40`,
+                    background: `${color}08`, color, fontSize: 10, fontWeight: 700, cursor: "pointer",
+                    fontFamily: "inherit", flexShrink: 0 }}>View</button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Overall Confidence */}
+          <div style={{ borderRadius: 12, padding: "13px 15px", display: "flex", alignItems: "center",
+            justifyContent: "space-between",
+            border: `1.5px solid ${verdict === "PASS" ? "rgba(16,185,129,0.4)" : "rgba(245,158,11,0.4)"}`,
+            background: verdict === "PASS" ? "rgba(16,185,129,0.07)" : "rgba(245,158,11,0.07)" }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.08em",
+                textTransform: "uppercase" as const, marginBottom: 3 }}>Overall Confidence</div>
+              <div style={{ fontSize: 10, color: "var(--text-secondary)" }}>Based on {dataSources.length} data sources</div>
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 900, color: passColor }}>{score}%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: {
   agentKey: string; agentLabel: string; color: string;
   prompt: string; onPromptChange: (v: string) => void;
@@ -1442,7 +1813,11 @@ function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange }: 
         </div>
       )}
 
-      {status === "done" && result && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && (
+      {status === "done" && result && agentKey === "briefing" && (
+        <BriefingAgentDashboard result={result} color={color} />
+      )}
+
+      {status === "done" && result && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && agentKey !== "briefing" && (
         <div style={{ marginTop: 14, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
           {Object.entries(result).filter(([k]) => k !== "agent").map(([key, val]) => (
             <div key={key} style={{ marginBottom: 8 }}>
