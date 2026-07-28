@@ -1902,107 +1902,95 @@ function AgentProfile({ agentKey, prompt, onPromptChange }: {
 
   if (!stage) return null;
 
-  // Once briefing is done, collapse the whole profile header — show only the result dashboard
-  if (agentKey === "briefing" && briefingDone) {
-    return (
-      <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 48px",
-        position: "relative" as const, background: "transparent" }}>
-        <div style={{ maxWidth: 860, margin: "0 auto", position: "relative" as const, zIndex: 1 }}>
-          <AgentRunPanel agentKey={agentKey} agentLabel={stage.label} color={color}
-            prompt={prompt} onPromptChange={onPromptChange}
-            onBriefingDone={() => setBriefingDone(true)} />
-        </div>
-      </div>
-    );
-  }
+  const showHeader = !(agentKey === "briefing" && briefingDone);
 
   return (
-    <div style={{ flex: 1, overflowY: "auto" as const, padding: "40px 48px",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      position: "relative" as const, background: "transparent" }}>
-      <div style={{ position: "absolute" as const, inset: 0, zIndex: 0, pointerEvents: "none" as const,
-        background: `radial-gradient(ellipse 70% 55% at 50% 40%, ${color}14 0%, transparent 70%)` }} />
+    <div style={{
+      flex: 1, overflowY: "auto" as const,
+      padding: showHeader ? "40px 48px" : "32px 48px",
+      display: showHeader ? "flex" : "block",
+      alignItems: "center", justifyContent: "center",
+      position: "relative" as const, background: "transparent",
+    }}>
+      {showHeader && (
+        <div style={{ position: "absolute" as const, inset: 0, zIndex: 0, pointerEvents: "none" as const,
+          background: `radial-gradient(ellipse 70% 55% at 50% 40%, ${color}14 0%, transparent 70%)` }} />
+      )}
 
-      <div style={{ maxWidth: 720, width: "100%", position: "relative" as const, zIndex: 1 }}>
-        <div style={{ position: "relative" as const, overflow: "hidden", padding: "8px 4px 10px" }}>
-          <div style={{ position: "absolute" as const, top: "-40%", right: "-10%", width: 320, height: 320,
-            borderRadius: "50%", pointerEvents: "none" as const,
-            background: `radial-gradient(circle, ${color}22 0%, transparent 70%)` }} />
+      <div style={{
+        maxWidth: showHeader ? 720 : 860,
+        width: "100%",
+        margin: showHeader ? undefined : "0 auto",
+        position: "relative" as const, zIndex: 1,
+      }}>
 
-          <div style={{ position: "relative" as const, zIndex: 1, display: "flex", alignItems: "center", gap: 20, marginBottom: 24 }}>
-            <div style={{
-              width: 76, height: 76, borderRadius: "50%", flexShrink: 0, position: "relative" as const,
-              border: `3px solid ${color}80`, boxShadow: `0 0 28px ${color}40`, overflow: "hidden",
-            }}>
-              <img src={avatar} alt={stage.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.1 }}>
-                  {stage.label}
-                </div>
-                {/* Stop / replay voice button */}
-                <button
-                  onClick={() => {
-                    if (speaking) {
-                      window.speechSynthesis?.cancel();
-                      setSpeaking(false);
-                    } else {
-                      setSpeaking(true);
-                      speakAgentIntro(agentKey, () => setSpeaking(false));
-                    }
-                  }}
-                  title={speaking ? "Stop voice" : "Replay introduction"}
-                  style={{ width: 32, height: 32, borderRadius: "50%", border: "none",
-                    background: speaking ? `${color}28` : `${color}18`,
-                    cursor: "pointer", flexShrink: 0,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color, transition: "all 0.15s",
-                    boxShadow: speaking ? `0 0 0 3px ${color}30` : "none" }}>
-                  {speaking ? (
-                    /* Stop icon — square */
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                      <rect x="4" y="4" width="16" height="16" rx="2"/>
-                    </svg>
-                  ) : (
-                    /* Speaker icon */
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
-                      stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
-                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
-                    </svg>
-                  )}
-                </button>
+        {/* ── Profile header — hidden once briefing result is ready ── */}
+        {showHeader && (
+          <div style={{ position: "relative" as const, overflow: "hidden", padding: "8px 4px 10px" }}>
+            <div style={{ position: "absolute" as const, top: "-40%", right: "-10%", width: 320, height: 320,
+              borderRadius: "50%", pointerEvents: "none" as const,
+              background: `radial-gradient(circle, ${color}22 0%, transparent 70%)` }} />
+
+            <div style={{ position: "relative" as const, zIndex: 1, display: "flex", alignItems: "center", gap: 20, marginBottom: 24 }}>
+              <div style={{
+                width: 76, height: 76, borderRadius: "50%", flexShrink: 0, position: "relative" as const,
+                border: `3px solid ${color}80`, boxShadow: `0 0 28px ${color}40`, overflow: "hidden",
+              }}>
+                <img src={avatar} alt={stage.label} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               </div>
-              {workflowStage && (
-                <span style={{
-                  display: "inline-block", marginTop: 6, fontSize: 11, fontWeight: 700,
-                  padding: "3px 10px", borderRadius: 99, letterSpacing: "0.04em",
-                  background: `${color}18`, color,
-                }}>{workflowStage}</span>
-              )}
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.1 }}>
+                    {stage.label}
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (speaking) { window.speechSynthesis?.cancel(); setSpeaking(false); }
+                      else { setSpeaking(true); speakAgentIntro(agentKey, () => setSpeaking(false)); }
+                    }}
+                    title={speaking ? "Stop voice" : "Replay introduction"}
+                    style={{ width: 32, height: 32, borderRadius: "50%", border: "none",
+                      background: speaking ? `${color}28` : `${color}18`,
+                      cursor: "pointer", flexShrink: 0,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color, transition: "all 0.15s",
+                      boxShadow: speaking ? `0 0 0 3px ${color}30` : "none" }}>
+                    {speaking ? (
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {workflowStage && (
+                  <span style={{ display: "inline-block", marginTop: 6, fontSize: 11, fontWeight: 700,
+                    padding: "3px 10px", borderRadius: 99, letterSpacing: "0.04em",
+                    background: `${color}18`, color }}>{workflowStage}</span>
+                )}
+              </div>
             </div>
-          </div>
 
-          <p style={{ position: "relative" as const, zIndex: 1, fontSize: 16, color: "var(--text-primary)",
-            lineHeight: 1.6, margin: "0 0 12px", textShadow: "0 1px 6px rgba(255,255,255,0.25)" }}>
-            {longDesc}
-          </p>
-          {/* Voice intro text — same as what the agent speaks */}
-          {AGENT_INTROS[agentKey] && (
-            <p style={{ position: "relative" as const, zIndex: 1, fontSize: 14,
-              color: "var(--text-secondary)", lineHeight: 1.7, margin: "0 0 24px",
-              fontStyle: "italic", borderLeft: `3px solid ${color}50`,
-              paddingLeft: 14 }}>
-              "{AGENT_INTROS[agentKey]}"
+            <p style={{ position: "relative" as const, zIndex: 1, fontSize: 16, color: "var(--text-primary)",
+              lineHeight: 1.6, margin: "0 0 12px", textShadow: "0 1px 6px rgba(255,255,255,0.25)" }}>
+              {longDesc}
             </p>
-          )}
+            {AGENT_INTROS[agentKey] && (
+              <p style={{ position: "relative" as const, zIndex: 1, fontSize: 14,
+                color: "var(--text-secondary)", lineHeight: 1.7, margin: "0 0 24px",
+                fontStyle: "italic", borderLeft: `3px solid ${color}50`, paddingLeft: 14 }}>
+                "{AGENT_INTROS[agentKey]}"
+              </p>
+            )}
+          </div>
+        )}
 
-        </div>
+        {agentKey === "briefing" && showHeader && !prompt.trim() && <BrandUploadPanel />}
 
-        {agentKey === "briefing" && !prompt.trim() && <BrandUploadPanel />}
-
+        {/* AgentRunPanel — always mounted so status/result state is preserved */}
         {agentKey !== "performance" && (
           <AgentRunPanel agentKey={agentKey} agentLabel={stage.label} color={color}
             prompt={prompt} onPromptChange={onPromptChange}
