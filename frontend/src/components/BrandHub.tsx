@@ -247,8 +247,11 @@ function ComingSoon({ title, description }: { title: string; description: string
 
 const CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB — stays under Cloud Run's 32 MB limit
 
-function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record<string,number>) => void }) {
-  const [brandName, setBrandName]   = useState("");
+function GuidelinesSection({ onAssetsUploaded, activeBrand: propBrand }: {
+  onAssetsUploaded?: (c: Record<string,number>) => void;
+  activeBrand?: string;
+}) {
+  const [brandName, setBrandName]   = useState(() => propBrand || localStorage.getItem("brandHub_activeBrand") || "");
   const [file, setFile]             = useState<File | null>(null);
   const [dragging, setDragging]     = useState(false);
   const [status, setStatus]         = useState<"idle" | "uploading" | "done" | "error">("idle");
@@ -487,27 +490,37 @@ function GuidelinesSection({ onAssetsUploaded }: { onAssetsUploaded?: (c: Record
 
 // ── Section content map ────────────────────────────────────────
 const SECTION_META: Record<BrandHubSection, { title: string; subtitle: string }> = {
-  guidelines:       { title: "Brand Guidelines",    subtitle: "Upload and manage brand knowledge" },
-  voice:            { title: "Brand Voice",          subtitle: "Tone of voice, messaging pillars and personality" },
-  "visual-identity":{ title: "Visual Identity",      subtitle: "Logos, colour palette, typography and design tokens" },
-  products:         { title: "Products & Services",  subtitle: "Product catalogue, descriptions and imagery" },
-  competitors:      { title: "Competitors",           subtitle: "Competitive landscape and positioning analysis" },
-  personas:         { title: "Customer Personas",    subtitle: "Target audience profiles and segmentation" },
+  overview:           { title: "Overview",             subtitle: "Brand summary and key information" },
+  logos:              { title: "Logos",                subtitle: "Brand logo files and usage guidelines" },
+  fonts:              { title: "Fonts",                subtitle: "Typography and font family specifications" },
+  "brand-assets":     { title: "Brand Assets",         subtitle: "Upload and manage brand knowledge and assets" },
+  "brand-voice":      { title: "Brand Voice",          subtitle: "Tone of voice, messaging pillars and personality" },
+  "visual-identity":  { title: "Visual Identity",      subtitle: "Colour palette, typography and design tokens" },
+  products:           { title: "Products & Services",  subtitle: "Product catalogue, descriptions and imagery" },
+  competitors:        { title: "Competitors",          subtitle: "Competitive landscape and positioning analysis" },
+  personas:           { title: "Customer Personas",    subtitle: "Target audience profiles and segmentation" },
+  messaging:          { title: "Messaging",            subtitle: "Key messages, taglines and campaign narratives" },
+  legal:              { title: "Legal & Compliance",   subtitle: "Brand usage rules, disclaimers and compliance notes" },
+  "campaign-history": { title: "Campaign History",     subtitle: "Past campaigns, performance and learnings" },
+  "market-research":  { title: "Market Research",      subtitle: "Market insights, trends and consumer data" },
+  documents:          { title: "Documents",            subtitle: "Brand documents, briefs and reference materials" },
 };
 
 // ── Main BrandHub component ────────────────────────────────────
 interface BrandHubProps {
   section?: BrandHubSection;
+  activeBrand?: string;
   onAssetsUploaded?: (counts: Record<string, number>) => void;
 }
 
-export default function BrandHub({ section = "guidelines", onAssetsUploaded }: BrandHubProps) {
-  const meta = SECTION_META[section];
+export default function BrandHub({ section = "overview", activeBrand, onAssetsUploaded }: BrandHubProps) {
+  const meta = SECTION_META[section] ?? SECTION_META["overview"];
 
   const renderSection = () => {
     switch (section) {
-      case "guidelines": return <GuidelinesSection onAssetsUploaded={onAssetsUploaded} />;
-      case "voice":
+      case "brand-assets":
+        return <GuidelinesSection key={activeBrand} onAssetsUploaded={onAssetsUploaded} activeBrand={activeBrand} />;
+      case "brand-voice":
         return <VoiceSection />;
       case "visual-identity":
         return <ComingSoon title="Visual Identity" description="Manage logos, colour palettes, typography and visual design tokens used across all campaign outputs. Coming soon." />;
@@ -517,6 +530,8 @@ export default function BrandHub({ section = "guidelines", onAssetsUploaded }: B
         return <ComingSoon title="Competitors" description="Map the competitive landscape, positioning gaps and differentiation strategy to inform campaign direction. Coming soon." />;
       case "personas":
         return <ComingSoon title="Customer Personas" description="Define target audience segments, demographics, behaviours and motivations to power personalised campaigns. Coming soon." />;
+      default:
+        return <ComingSoon title={meta.title} description={`${meta.subtitle}. Coming soon.`} />;
     }
   };
 

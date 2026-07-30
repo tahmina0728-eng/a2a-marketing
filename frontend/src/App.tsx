@@ -4081,14 +4081,14 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 // ── Sidebar ───────────────────────────────────────────────────
 
 function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, savedCampaigns, activeAgentKey, onSelectAgent,
-  brandHubSection, onBrandHubSection, brandAssets, activeBrand, publishingChannel, onPublishingChannel, publishingContentType }: {
+  brandHubSection, onBrandHubSection, activeBrand, onBrandChange, publishingChannel, onPublishingChannel, publishingContentType }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
   view: "app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing" | "campaigns" | "campaign-list") => void;
   onSelectCampaign: (c: {id:string;name:string;brand:string}|null) => void;
   savedCampaigns: {id:string;name:string;brand:string}[];
   activeAgentKey: string | null; onSelectAgent: (key: string) => void;
   brandHubSection: BrandHubSection; onBrandHubSection: (s: BrandHubSection) => void;
-  brandAssets: Record<string, number>; activeBrand: string;
+  activeBrand: string; onBrandChange: (brand: string) => void;
   publishingChannel: PublishingChannel; onPublishingChannel: (c: PublishingChannel) => void;
   publishingContentType?: "image" | "video";
 }) {
@@ -4231,7 +4231,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
                   {/* Brand Hub sub-nav — visible only when expanded */}
                   {item.label === "Brand Hub" && brandHubOpen && (
                     <BrandHubNav active={brandHubSection} onChange={onBrandHubSection}
-                      brandAssets={brandAssets} activeBrand={activeBrand} />
+                      activeBrand={activeBrand} onBrandChange={onBrandChange} />
                   )}
                 </Fragment>
               ))}
@@ -4590,15 +4590,9 @@ export default function App() {
   const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list">("app");
   const [selectedCampaign, setSelectedCampaign] = useState<{id:string;name:string;brand:string}|null>(null);
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
-  const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("guidelines");
-  const [brandAssets, setBrandAssets] = useState<Record<string, number>>(() => {
-    try {
-      const stored = localStorage.getItem("brandHub_assetCounts");
-      return stored ? JSON.parse(stored) : {};
-    } catch { return {}; }
-  });
+  const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("overview");
   const [activeBrand, setActiveBrand] = useState<string>(() =>
-    localStorage.getItem("brandHub_activeBrand") ?? ""
+    localStorage.getItem("brandHub_activeBrand") ?? "Rnorr"
   );
   const [publishingChannel, setPublishingChannel] = useState<PublishingChannel>("instagram");
   const [campaignPublishData, setCampaignPublishData] = useState<{
@@ -4672,7 +4666,7 @@ export default function App() {
           activeAgentKey={activeAgentKey}
           onSelectAgent={(key) => { setActiveAgentKey(key); setView("agent"); }}
           brandHubSection={brandHubSection} onBrandHubSection={setBrandHubSection}
-          brandAssets={brandAssets} activeBrand={activeBrand}
+          activeBrand={activeBrand} onBrandChange={setActiveBrand}
           publishingChannel={publishingChannel} onPublishingChannel={setPublishingChannel}
           publishingContentType={campaignPublishData?.contentType} />
 
@@ -4788,9 +4782,8 @@ export default function App() {
               pointerEvents: "none" as const, background: "var(--video-wash)" }} />
             <div style={{ position: "relative" as const, zIndex: 2, flex: 1,
               display: "flex", flexDirection: "column" as const, overflow: "hidden" }}>
-              <BrandHub section={brandHubSection} onAssetsUploaded={(counts) => {
-                setBrandAssets(counts);
-                setActiveBrand(localStorage.getItem("brandHub_activeBrand") ?? "");
+              <BrandHub section={brandHubSection} activeBrand={activeBrand} onAssetsUploaded={(_counts) => {
+                setActiveBrand(localStorage.getItem("brandHub_activeBrand") ?? activeBrand);
               }} />
             </div>
           </>

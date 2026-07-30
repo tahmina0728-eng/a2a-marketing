@@ -1,185 +1,151 @@
 export type BrandHubSection =
-  | "guidelines"
-  | "voice"
+  | "overview"
+  | "logos"
+  | "fonts"
+  | "brand-assets"
+  | "brand-voice"
   | "visual-identity"
   | "products"
   | "competitors"
-  | "personas";
+  | "personas"
+  | "messaging"
+  | "legal"
+  | "campaign-history"
+  | "market-research"
+  | "documents";
 
-interface NavItem {
-  id: BrandHubSection;
-  label: string;
-  icon: React.ReactNode;
-}
-
-const NAV_ITEMS: NavItem[] = [
-  {
-    id: "guidelines",
-    label: "Brand Guidelines",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-      </svg>
-    ),
-  },
-  {
-    id: "voice",
-    label: "Brand Voice",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
-        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
-      </svg>
-    ),
-  },
-  {
-    id: "visual-identity",
-    label: "Visual Identity",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10"/>
-        <circle cx="12" cy="12" r="4"/>
-        <line x1="21.17" y1="8" x2="12" y2="8"/>
-        <line x1="3.95" y1="6.06" x2="8.54" y2="14"/>
-        <line x1="10.88" y1="21.94" x2="15.46" y2="14"/>
-      </svg>
-    ),
-  },
-  {
-    id: "products",
-    label: "Products & Services",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-        <line x1="12" y1="22.08" x2="12" y2="12"/>
-      </svg>
-    ),
-  },
-  {
-    id: "competitors",
-    label: "Competitors",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-        <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-      </svg>
-    ),
-  },
-  {
-    id: "personas",
-    label: "Customer Personas",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-        <circle cx="12" cy="7" r="4"/>
-      </svg>
-    ),
-  },
+const BRANDS = [
+  { id: "Rnorr",       label: "Rnorr",             emoji: "🎯" },
+  { id: "Sunglow",     label: "Sunglow",            emoji: "✨" },
+  { id: "Boozt",       label: "Boozt",              emoji: "👗" },
+  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃" },
+  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦" },
+  { id: "sunrise",     label: "Sunrise",            emoji: "🌅" },
+  { id: "Haleon",      label: "Haleon",             emoji: "💊" },
 ];
 
-const ASSET_ITEMS = [
-  { key: "logos",    label: "Logos",          icon: "⭐" },
-  { key: "products", label: "Product Images", icon: "🖼" },
-  { key: "fonts",    label: "Fonts",          icon: "Aa" },
-  { key: "colours",  label: "Color Palette",  icon: "🎨" },
-  { key: "assets",   label: "Brand Assets",   icon: "📦" },
+type NavItem =
+  | { type: "item"; id: BrandHubSection; label: string; inGroup?: boolean }
+  | { type: "group-header"; label: string };
+
+const BRAND_SECTIONS: NavItem[] = [
+  { type: "item",         id: "overview",          label: "Overview" },
+  { type: "group-header", label: "Brand Guidelines" },
+  { type: "item",         id: "logos",             label: "Logos",            inGroup: true },
+  { type: "item",         id: "fonts",             label: "Fonts",            inGroup: true },
+  { type: "item",         id: "brand-assets",      label: "Brand Assets",     inGroup: true },
+  { type: "item",         id: "brand-voice",       label: "Brand Voice",      inGroup: true },
+  { type: "item",         id: "visual-identity",   label: "Visual Identity",  inGroup: true },
+  { type: "item",         id: "products",          label: "Products & Services" },
+  { type: "item",         id: "competitors",       label: "Competitors" },
+  { type: "item",         id: "personas",          label: "Customer Personas" },
+  { type: "item",         id: "messaging",         label: "Messaging" },
+  { type: "item",         id: "legal",             label: "Legal & Compliance" },
+  { type: "item",         id: "campaign-history",  label: "Campaign History" },
+  { type: "item",         id: "market-research",   label: "Market Research" },
+  { type: "item",         id: "documents",         label: "Documents" },
 ];
 
 interface BrandHubNavProps {
   active: BrandHubSection;
   onChange: (s: BrandHubSection) => void;
-  brandAssets?: Record<string, number>;
-  activeBrand?: string;
+  activeBrand: string;
+  onBrandChange: (brand: string) => void;
 }
 
-export default function BrandHubNav({ active, onChange, brandAssets = {}, activeBrand = "" }: BrandHubNavProps) {
-  const hasAssets = Object.keys(brandAssets).length > 0 && !!activeBrand;
+export default function BrandHubNav({ active, onChange, activeBrand, onBrandChange }: BrandHubNavProps) {
   return (
     <div style={{ padding: "0 8px" }}>
-      {/* Section label */}
       <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
         textTransform: "uppercase" as const, color: "var(--text-secondary)",
         padding: "10px 10px 6px", opacity: 0.6 }}>
-        Brand Knowledge
+        Brand Hub
       </div>
 
-      {NAV_ITEMS.map(item => {
-        const isActive = item.id === active;
-        const showAssets = item.id === "guidelines" && hasAssets;
+      {BRANDS.map(brand => {
+        const isBrandActive = activeBrand === brand.id;
+
         return (
-          <div key={item.id}>
+          <div key={brand.id}>
+            {/* Brand row */}
             <button
-              onClick={() => onChange(item.id)}
+              onClick={() => { onBrandChange(brand.id); onChange("overview"); }}
               style={{
-                display: "flex", alignItems: "center", gap: 10,
-                padding: "8px 10px", borderRadius: 8, border: "none",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                gap: 8, padding: "7px 10px", borderRadius: 8, border: "none",
                 cursor: "pointer", fontFamily: "inherit",
-                fontSize: 13, fontWeight: isActive ? 600 : 500,
+                fontSize: 13, fontWeight: isBrandActive ? 700 : 500,
                 textAlign: "left" as const, width: "100%",
                 transition: "all 0.15s",
-                background: isActive ? "rgba(124,58,237,0.10)" : "transparent",
-                color: isActive ? "#7c3aed" : "var(--text-secondary)",
+                background: isBrandActive ? "rgba(124,58,237,0.10)" : "transparent",
+                color: isBrandActive ? "#7c3aed" : "var(--text-secondary)",
               }}
               onMouseEnter={e => {
-                if (!isActive) e.currentTarget.style.background = "var(--card-hover-bg)";
+                if (!isBrandActive) e.currentTarget.style.background = "var(--card-hover-bg)";
               }}
               onMouseLeave={e => {
-                if (!isActive) e.currentTarget.style.background = "transparent";
+                if (!isBrandActive) e.currentTarget.style.background = "transparent";
               }}
             >
-              <span style={{ flexShrink: 0, opacity: isActive ? 1 : 0.65 }}>
-                {item.icon}
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 14 }}>{brand.emoji}</span>
+                <span>{brand.label}</span>
               </span>
-              {item.label}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
+                style={{ transform: isBrandActive ? "rotate(180deg)" : "none",
+                  transition: "transform 0.2s", flexShrink: 0, opacity: 0.45 }}>
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
             </button>
 
-            {/* Brand name + asset sub-items */}
-            {showAssets && (
-              <>
-                {/* Brand name row */}
-                <div style={{ display: "flex", alignItems: "center", gap: 8,
-                  padding: "5px 10px 5px 24px", fontSize: 12, fontWeight: 600,
-                  color: "var(--text-primary)" }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                    <path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/>
-                    <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
-                  </svg>
-                  {activeBrand}
-                </div>
+            {/* Section list — visible only for the active brand */}
+            {isBrandActive && (
+              <div style={{ marginBottom: 6 }}>
+                {BRAND_SECTIONS.map((item, idx) => {
+                  if (item.type === "group-header") {
+                    return (
+                      <div key={`gh-${idx}`} style={{
+                        fontSize: 9, fontWeight: 700, letterSpacing: "0.10em",
+                        textTransform: "uppercase" as const,
+                        color: "var(--text-secondary)", opacity: 0.45,
+                        padding: "8px 10px 2px 24px",
+                      }}>
+                        {item.label}
+                      </div>
+                    );
+                  }
 
-                {/* Asset categories indented under brand */}
-                {ASSET_ITEMS.map(a => {
-                  const count = brandAssets[a.key] ?? 0;
-                  if (count === 0) return null;
+                  const isActive = active === item.id;
+                  const indent = item.inGroup ? 36 : 24;
+
                   return (
-                    <div key={a.key} style={{
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                      padding: "4px 10px 4px 36px", fontSize: 11,
-                      color: "var(--text-secondary)",
-                    }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                        <span style={{ fontSize: 11 }}>{a.icon}</span>
-                        {a.label}
-                      </span>
-                      <span style={{ fontSize: 10, fontWeight: 600, color: "#10b981",
-                        background: "rgba(16,185,129,0.12)", padding: "1px 7px",
-                        borderRadius: 99 }}>
-                        {count}
-                      </span>
-                    </div>
+                    <button
+                      key={`${brand.id}-${item.id}-${idx}`}
+                      onClick={() => onChange(item.id)}
+                      style={{
+                        display: "flex", alignItems: "center",
+                        padding: `5px 10px 5px ${indent}px`,
+                        borderRadius: 6, border: "none",
+                        cursor: "pointer", fontFamily: "inherit",
+                        fontSize: 12, fontWeight: isActive ? 600 : 400,
+                        textAlign: "left" as const, width: "100%",
+                        transition: "all 0.12s",
+                        background: isActive ? "rgba(124,58,237,0.10)" : "transparent",
+                        color: isActive ? "#7c3aed" : "var(--text-secondary)",
+                      }}
+                      onMouseEnter={e => {
+                        if (!isActive) e.currentTarget.style.background = "var(--card-hover-bg)";
+                      }}
+                      onMouseLeave={e => {
+                        if (!isActive) e.currentTarget.style.background = "transparent";
+                      }}
+                    >
+                      {item.label}
+                    </button>
                   );
                 })}
-              </>
+              </div>
             )}
           </div>
         );
