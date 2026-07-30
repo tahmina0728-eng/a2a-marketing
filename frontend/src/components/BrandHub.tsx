@@ -366,6 +366,214 @@ function FontsSection({ activeBrand }: { activeBrand?: string }) {
   );
 }
 
+// ── Visual Identity section ────────────────────────────────────
+type ColourEntry = { name: string; hex: string; rgb: string; role: string };
+type Palette = Record<string, ColourEntry[] | { name: string; from: string; to: string; role: string }>;
+
+function VisualIdentitySection({ activeBrand }: { activeBrand?: string }) {
+  const [mode, setMode] = useState<"json" | "images" | null>(null);
+  const [palette, setPalette] = useState<Palette>({});
+  const [swatches, setSwatches] = useState<{ name: string; url: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!activeBrand) { setLoading(false); return; }
+    setLoading(true);
+    fetch(`${API_BASE}/brands/${encodeURIComponent(activeBrand)}/list-colours`)
+      .then(r => r.json())
+      .then(d => {
+        setMode(d.mode);
+        if (d.mode === "json") setPalette(d.palette ?? {});
+        else setSwatches(d.swatches ?? []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [activeBrand]);
+
+  if (loading) return <div style={{ textAlign: "center" as const, padding: "40px 0", color: "var(--text-secondary)", fontSize: 13 }}>Loading…</div>;
+
+  if (mode === "json" && Object.keys(palette).length > 0) {
+    const groupLabel: Record<string, string> = {
+      primary: "Primary Colours", secondary: "Secondary", neutral: "Neutrals",
+      tertiary: "Tertiary", functional: "Functional", gradient: "Gradient",
+    };
+    return (
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 28 }}>
+        {Object.entries(palette).map(([group, entries]) => {
+          const label = groupLabel[group] ?? group.charAt(0).toUpperCase() + group.slice(1);
+          const isGrad = !Array.isArray(entries);
+          return (
+            <div key={group}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+                textTransform: "uppercase" as const, color: "var(--text-secondary)",
+                marginBottom: 12, opacity: 0.7 }}>
+                {label}
+              </div>
+              {isGrad ? (
+                <div style={{ borderRadius: 14, border: "1.5px solid var(--card-border)",
+                  background: "var(--card-bg)", padding: "16px 20px",
+                  display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ width: 64, height: 40, borderRadius: 8, flexShrink: 0,
+                    background: `linear-gradient(90deg, ${(entries as any).from}, ${(entries as any).to})` }} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{(entries as any).name}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>{(entries as any).from} → {(entries as any).to}</div>
+                    <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>{(entries as any).role}</div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                  {(entries as ColourEntry[]).map(c => (
+                    <div key={c.hex} style={{ borderRadius: 14, border: "1.5px solid var(--card-border)",
+                      background: "var(--card-bg)", overflow: "hidden" }}>
+                      <div style={{ height: 56, background: c.hex }} />
+                      <div style={{ padding: "10px 14px" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{c.name}</span>
+                          <code style={{ fontSize: 10, fontWeight: 600, color: "var(--text-secondary)",
+                            background: "var(--card-bg-soft)", padding: "2px 6px", borderRadius: 4 }}>{c.hex}</code>
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 }}>{c.role}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  if (mode === "images" && swatches.length > 0) {
+    return (
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 12 }}>
+        {swatches.map(s => (
+          <div key={s.name} style={{ borderRadius: 12, border: "1.5px solid var(--card-border)",
+            background: "var(--card-bg)", overflow: "hidden" }}>
+            <img src={`${API_BASE}${s.url}`} alt={s.name} style={{ width: "100%", height: 80, objectFit: "cover" }} />
+            <div style={{ padding: "8px 12px", fontSize: 11, color: "var(--text-secondary)" }}>{s.name}</div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return <ComingSoon title="Visual Identity" description="No colour palette found. Upload a brand package from Brand Assets." />;
+}
+
+// ── Products & Services section ────────────────────────────────
+function ProductsSection({ activeBrand }: { activeBrand?: string }) {
+  const [products, setProducts] = useState<{ name: string; url: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!activeBrand) { setLoading(false); return; }
+    setLoading(true);
+    fetch(`${API_BASE}/brands/${encodeURIComponent(activeBrand)}/list-products`)
+      .then(r => r.json())
+      .then(d => setProducts(d.products ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [activeBrand]);
+
+  if (loading) return <div style={{ textAlign: "center" as const, padding: "40px 0", color: "var(--text-secondary)", fontSize: 13 }}>Loading…</div>;
+  if (products.length === 0) return <ComingSoon title="Products & Services" description="No product images found. Upload a brand package from Brand Assets." />;
+
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 16 }}>
+        {products.length} product{products.length !== 1 ? "s" : ""}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 14 }}>
+        {products.map(p => (
+          <div key={p.name} style={{ borderRadius: 14, border: "1.5px solid var(--card-border)",
+            background: "var(--card-bg)", overflow: "hidden" }}>
+            <div style={{ height: 140, background: "var(--card-bg-soft)",
+              display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+              <img src={`${API_BASE}${p.url}`} alt={p.name}
+                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", padding: 8 }} />
+            </div>
+            <div style={{ padding: "8px 12px", fontSize: 11, color: "var(--text-secondary)",
+              wordBreak: "break-all" as const }}>
+              {p.name.replace(/\.[^.]+$/, "")}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Documents section ──────────────────────────────────────────
+const DOC_ICONS: Record<string, string> = {
+  md: "📝", txt: "📄", pdf: "📕", json: "🗂", html: "🌐", docx: "📘", pptx: "📊",
+};
+
+function DocumentsSection({ activeBrand }: { activeBrand?: string }) {
+  const [docs, setDocs] = useState<{ name: string; category: string; url: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!activeBrand) { setLoading(false); return; }
+    setLoading(true);
+    fetch(`${API_BASE}/brands/${encodeURIComponent(activeBrand)}/list-documents`)
+      .then(r => r.json())
+      .then(d => setDocs(d.documents ?? []))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [activeBrand]);
+
+  if (loading) return <div style={{ textAlign: "center" as const, padding: "40px 0", color: "var(--text-secondary)", fontSize: 13 }}>Loading…</div>;
+  if (docs.length === 0) return <ComingSoon title="Documents" description="No documents found. Upload a brand package from Brand Assets." />;
+
+  const grouped = docs.reduce<Record<string, typeof docs>>((acc, d) => {
+    (acc[d.category] = acc[d.category] || []).push(d); return acc;
+  }, {});
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column" as const, gap: 24 }}>
+      {Object.entries(grouped).map(([cat, files]) => (
+        <div key={cat}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
+            textTransform: "uppercase" as const, color: "var(--text-secondary)",
+            marginBottom: 10, opacity: 0.7 }}>
+            {cat}
+          </div>
+          <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+            {files.map(doc => {
+              const ext = doc.name.split(".").pop()?.toLowerCase() ?? "";
+              const icon = DOC_ICONS[ext] ?? "📎";
+              return (
+                <div key={doc.name} style={{ borderRadius: 12,
+                  border: "1.5px solid var(--card-border)", background: "var(--card-bg)",
+                  padding: "12px 16px", display: "flex", alignItems: "center",
+                  justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>{icon}</span>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{doc.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 1 }}>{ext.toUpperCase()}</div>
+                    </div>
+                  </div>
+                  <a href={`${API_BASE}${doc.url}`} download={doc.name}
+                    style={{ padding: "5px 12px", borderRadius: 8,
+                      border: "1.5px solid var(--card-border)", background: "transparent",
+                      color: "var(--text-secondary)", fontSize: 11, fontWeight: 600,
+                      cursor: "pointer", textDecoration: "none", flexShrink: 0 }}>
+                    ↓ Download
+                  </a>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Shared placeholder for sections not yet built ──────────────
 function ComingSoon({ title, description }: { title: string; description: string }) {
   return (
@@ -660,16 +868,15 @@ export default function BrandHub({ section = "overview", activeBrand, onAssetsUp
 
   const renderSection = () => {
     switch (section) {
-      case "logos": return <LogosSection activeBrand={activeBrand} />;
-      case "fonts": return <FontsSection activeBrand={activeBrand} />;
+      case "logos":            return <LogosSection activeBrand={activeBrand} />;
+      case "fonts":            return <FontsSection activeBrand={activeBrand} />;
+      case "visual-identity":  return <VisualIdentitySection activeBrand={activeBrand} />;
+      case "products":         return <ProductsSection activeBrand={activeBrand} />;
+      case "documents":        return <DocumentsSection activeBrand={activeBrand} />;
       case "brand-assets":
         return <GuidelinesSection key={activeBrand} onAssetsUploaded={onAssetsUploaded} activeBrand={activeBrand} />;
       case "brand-voice":
         return <VoiceSection />;
-      case "visual-identity":
-        return <ComingSoon title="Visual Identity" description="Manage logos, colour palettes, typography and visual design tokens used across all campaign outputs. Coming soon." />;
-      case "products":
-        return <ComingSoon title="Products & Services" description="Upload and manage your product catalogue, descriptions, pricing and imagery for use in campaign generation. Coming soon." />;
       case "competitors":
         return <ComingSoon title="Competitors" description="Map the competitive landscape, positioning gaps and differentiation strategy to inform campaign direction. Coming soon." />;
       case "personas":

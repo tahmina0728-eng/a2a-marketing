@@ -1531,6 +1531,93 @@ async def list_brand_fonts(brand_name: str):
     return {"brand": brand_name, "fonts": result}
 
 
+@app.get("/brands/{brand_name}/list-colours")
+async def list_brand_colours(brand_name: str):
+    """Return colour palette — JSON data if available, otherwise PNG swatch URLs."""
+    from app.brand_assets import get_asset_loader
+    from pathlib import Path
+    loader = get_asset_loader()
+    # Try the structured JSON first (preferred)
+    json_name = f"{brand_name.lower()}-colours.json"
+    if loader._mode == "gcs":
+        try:
+            from google.cloud import storage as _gcs
+            blob = _gcs.Client(project=settings.gcp_project).bucket(settings.gcs_bucket).blob(
+                f"brands/{brand_name}/Colours/{json_name}"
+            )
+            import json as _json
+            data = _json.loads(blob.download_as_text())
+            return {"brand": brand_name, "mode": "json", "palette": data}
+        except Exception:
+            pass
+    else:
+        candidates = list((loader._local_root / brand_name / "Colours").glob("*.json")) if (loader._local_root / brand_name / "Colours").is_dir() else []
+        if candidates:
+            import json as _json
+            data = _json.loads(candidates[0].read_text(encoding="utf-8"))
+            return {"brand": brand_name, "mode": "json", "palette": data}
+    # Fallback: list PNG swatch images
+    swatches = loader.list_colours(brand_name)
+    result = []
+    for path in swatches:
+        name = path.split("/")[-1] if path.startswith("gs://") else Path(path).name
+        result.append({"name": name, "url": f"/brands/{brand_name}/serve/Colours/{name}"})
+    return {"brand": brand_name, "mode": "images", "swatches": result}
+
+
+@app.get("/brands/{brand_name}/list-products")
+async def list_brand_products(brand_name: str):
+    """List product images for a brand."""
+    from app.brand_assets import get_asset_loader
+    from pathlib import Path
+    loader = get_asset_loader()
+    products = loader.list_products(brand_name)
+    result = []
+    for path in products:
+        if path.startswith("gs://"):
+            name = path.split("/")[-1]
+            folder = "Products"
+        else:
+            p = Path(path)
+            name = p.name
+            folder = p.parent.name
+        result.append({"name": name, "url": f"/brands/{brand_name}/serve/{folder}/{name}"})
+    return {"brand": brand_name, "products": result}
+
+
+@app.get("/brands/{brand_name}/list-documents")
+async def list_brand_documents(brand_name: str):
+    """List document files (Guidelines/, Assets/) for a brand."""
+    from app.brand_assets import get_asset_loader
+    from pathlib import Path
+    loader = get_asset_loader()
+    DOC_EXTS = {".md", ".txt", ".pdf", ".json", ".html", ".docx", ".pptx"}
+    result = []
+    if loader._mode == "gcs":
+        try:
+            from google.cloud import storage as _gcs
+            client = _gcs.Client(project=settings.gcp_project)
+            for subdir in ("Guidelines", "Assets"):
+                prefix = f"brands/{brand_name}/{subdir}/"
+                for blob in client.bucket(settings.gcs_bucket).list_blobs(prefix=prefix):
+                    name = blob.name.split("/")[-1]
+                    if Path(name).suffix.lower() in DOC_EXTS and not name.startswith("."):
+                        result.append({"name": name, "category": subdir,
+                                       "url": f"/brands/{brand_name}/serve/{subdir}/{name}"})
+        except Exception:
+            pass
+    else:
+        for subdir in ("Guidelines", "Assets"):
+            folder = loader._local_root / brand_name / subdir
+            if not folder.is_dir():
+                continue
+            for p in sorted(folder.iterdir()):
+                if p.is_file() and p.suffix.lower() in DOC_EXTS and not p.name.startswith("."):
+                    result.append({"name": p.name, "category": subdir,
+                                   "url": f"/brands/{brand_name}/serve/{subdir}/{p.name}"})
+    return {"brand": brand_name, "documents": result}
+
+
 @app.get("/brands/{brand_name}/serve/{category}/{filename:path}")
 async def serve_brand_asset_file(brand_name: str, category: str, filename: str):
     """Serve a brand asset file (logo, font, colour, etc.) from local bucket or GCS."""
