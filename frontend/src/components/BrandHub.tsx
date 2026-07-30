@@ -366,7 +366,7 @@ function GuidelinesSection({ onAssetsUploaded, activeBrand: propBrand }: {
   };
 
   return (
-    <div style={{ maxWidth: 520, width: "100%" }}>
+    <div style={{ width: "100%" }}>
       <div style={{ padding: 24, borderRadius: 16,
         background: "var(--card-bg)", border: "1px solid var(--card-border)",
         boxShadow: "var(--shadow-sm)", marginBottom: 20 }}>
@@ -540,30 +540,34 @@ export default function BrandHub({ section = "overview", activeBrand, onAssetsUp
   };
 
   return (
-    <div style={{ flex: 1, overflowY: "auto" as const, position: "relative" as const }}>
-      <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 32px" }}>
+    <div style={{ flex: 1, overflowY: "auto" as const }}>
+      {/* minHeight:100% + flex column center = centered when short, scrollable when tall */}
+      <div style={{ minHeight: "100%", display: "flex", flexDirection: "column" as const,
+        alignItems: "center", justifyContent: "center", padding: "40px 32px" }}>
+        <div style={{ width: "100%", maxWidth: 680 }}>
 
-        {/* Page header */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10,
-              background: "linear-gradient(135deg,#7c3aed,#6366f1)",
-              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white"
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-            </div>
-            <div>
-              <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800,
-                color: "var(--text-primary)", letterSpacing: "-0.02em" }}>{meta.title}</h1>
-              <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)" }}>{meta.subtitle}</p>
+          {/* Page header */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10,
+                background: "linear-gradient(135deg,#7c3aed,#6366f1)",
+                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white"
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </div>
+              <div>
+                <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800,
+                  color: "var(--text-primary)", letterSpacing: "-0.02em" }}>{meta.title}</h1>
+                <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)" }}>{meta.subtitle}</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Section content */}
-        {renderSection()}
+          {/* Section content */}
+          {renderSection()}
+        </div>
       </div>
     </div>
   );
