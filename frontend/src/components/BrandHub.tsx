@@ -231,13 +231,17 @@ function VoiceSection() {
 // ── Shared placeholder for sections not yet built ──────────────
 function ComingSoon({ title, description }: { title: string; description: string }) {
   return (
-    <div style={{ textAlign: "center" as const, padding: "60px 24px" }}>
-      <div style={{ fontSize: 40, marginBottom: 16 }}>🚧</div>
-      <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
-        {title}
-      </div>
-      <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6, maxWidth: 360, margin: "0 auto" }}>
-        {description}
+    <div style={{ padding: "32px 0" }}>
+      <div style={{ borderRadius: 16, border: "1.5px dashed var(--card-border)",
+        background: "var(--card-bg)", padding: "48px 32px", textAlign: "center" as const }}>
+        <div style={{ fontSize: 36, marginBottom: 14 }}>🚧</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8 }}>
+          {title} — Coming Soon
+        </div>
+        <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6,
+          maxWidth: 380, margin: "0 auto" }}>
+          {description}
+        </div>
       </div>
     </div>
   );
@@ -536,33 +540,29 @@ export default function BrandHub({ section = "overview", activeBrand, onAssetsUp
   };
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
-      alignItems: "center", justifyContent: "center",
-      overflowY: "auto", position: "relative" as const, padding: "40px 24px" }}>
+    <div style={{ flex: 1, overflowY: "auto" as const, position: "relative" as const }}>
+      <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 32px" }}>
 
-      {/* Page header */}
-      <div style={{ maxWidth: 520, width: "100%", marginBottom: 28,
-        position: "relative" as const, zIndex: 1 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ width: 36, height: 36, borderRadius: 10,
-            background: "linear-gradient(135deg,#7c3aed,#6366f1)",
-            display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white"
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-            </svg>
-          </div>
-          <div>
-            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800,
-              color: "var(--text-primary)", letterSpacing: "-0.02em" }}>{meta.title}</h1>
-            <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)" }}>{meta.subtitle}</p>
+        {/* Page header */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10,
+              background: "linear-gradient(135deg,#7c3aed,#6366f1)",
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+            </div>
+            <div>
+              <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800,
+                color: "var(--text-primary)", letterSpacing: "-0.02em" }}>{meta.title}</h1>
+              <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)" }}>{meta.subtitle}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Section content */}
-      <div style={{ position: "relative" as const, zIndex: 1, width: "100%",
-        display: "flex", justifyContent: "center" }}>
+        {/* Section content */}
         {renderSection()}
       </div>
     </div>

@@ -69,7 +69,11 @@ export default function BrandHubNav({ active, onChange, activeBrand, onBrandChan
           <div key={brand.id}>
             {/* Brand row */}
             <button
-              onClick={() => { onBrandChange(brand.id); onChange("overview"); }}
+              onClick={() => {
+                onBrandChange(brand.id);
+                onChange("overview");
+                localStorage.setItem("brandHub_activeBrand", brand.id);
+              }}
               style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 gap: 8, padding: "7px 10px", borderRadius: 8, border: "none",
