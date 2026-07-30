@@ -1573,15 +1573,19 @@ async def list_brand_products(brand_name: str):
     loader = get_asset_loader()
     products = loader.list_products(brand_name)
     result = []
+    products_base = loader._local_root / brand_name / "Products"
     for path in products:
         if path.startswith("gs://"):
             name = path.split("/")[-1]
-            folder = "Products"
+            result.append({"name": name, "url": f"/brands/{brand_name}/serve/Products/{name}"})
         else:
             p = Path(path)
             name = p.name
-            folder = p.parent.name
-        result.append({"name": name, "url": f"/brands/{brand_name}/serve/{folder}/{name}"})
+            try:
+                rel = str(p.relative_to(products_base)).replace("\\", "/")
+            except ValueError:
+                rel = name
+            result.append({"name": name, "url": f"/brands/{brand_name}/serve/Products/{rel}"})
     return {"brand": brand_name, "products": result}
 
 
@@ -1616,6 +1620,81 @@ async def list_brand_documents(brand_name: str):
                     result.append({"name": p.name, "category": subdir,
                                    "url": f"/brands/{brand_name}/serve/{subdir}/{p.name}"})
     return {"brand": brand_name, "documents": result}
+
+
+@app.get("/brands/{brand_name}/campaign-history")
+async def get_brand_campaign_history(brand_name: str, limit: int = 50):
+    """Return historical campaigns + generated briefs for a brand from BigQuery."""
+    import asyncio
+
+    def _query():
+        try:
+            from google.cloud import bigquery as _bq
+        except ImportError:
+            return {"error": "bigquery_unavailable"}
+
+        client = _bq.Client(project=settings.gcp_project)
+        project = settings.gcp_project
+        hist_table = f"{project}.{settings.bq_dataset}.{settings.bq_campaigns_table}"
+        briefs_table = f"{project}.{settings.bq_output_dataset}.{settings.bq_output_table}"
+        brand_param = brand_name.lower()
+
+        results: dict = {"historical": [], "briefs": []}
+
+        # Historical campaigns (benchmark data)
+        try:
+            q = f"""
+                SELECT brand, product_category, market, season, channels,
+                       reach, ctr_pct, roas, engagement_pct, budget_gbp, notes
+                FROM `{hist_table}`
+                WHERE LOWER(brand) = @brand
+                ORDER BY roas DESC
+                LIMIT {limit}
+            """
+            job = client.query(q, job_config=_bq.QueryJobConfig(
+                query_parameters=[_bq.ScalarQueryParameter("brand", "STRING", brand_param)]
+            ))
+            for row in job.result():
+                r = dict(row)
+                if isinstance(r.get("channels"), list):
+                    r["channels"] = r["channels"]
+                results["historical"].append(r)
+        except Exception as e:
+            results["historical_error"] = str(e)
+
+        # Generated machine briefs
+        try:
+            q = f"""
+                SELECT campaign_id, campaign_name, brand, market, product_category,
+                       season, channels, moment_type, validation_score, validation_status,
+                       fan_truth_score, fan_truth_verdict, flag_count, created_at
+                FROM `{briefs_table}`
+                WHERE LOWER(brand) = @brand
+                ORDER BY created_at DESC
+                LIMIT {limit}
+            """
+            job = client.query(q, job_config=_bq.QueryJobConfig(
+                query_parameters=[_bq.ScalarQueryParameter("brand", "STRING", brand_param)]
+            ))
+            for row in job.result():
+                r = dict(row)
+                if r.get("created_at"):
+                    r["created_at"] = r["created_at"].isoformat()
+                results["briefs"].append(r)
+        except Exception as e:
+            results["briefs_error"] = str(e)
+
+        return results
+
+    try:
+        data = await asyncio.to_thread(_query)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if data.get("error") == "bigquery_unavailable":
+        raise HTTPException(status_code=503, detail="BigQuery SDK not available")
+
+    return {"brand": brand_name, **data}
 
 
 @app.get("/brands/{brand_name}/serve/{category}/{filename:path}")

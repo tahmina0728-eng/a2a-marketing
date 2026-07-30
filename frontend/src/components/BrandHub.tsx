@@ -165,19 +165,25 @@ function VoiceModal({ voice, isNew, onSave, onDelete, onClose }: {
   );
 }
 
-function VoiceSection() {
-  const [voices, setVoices] = useState<BrandVoice[]>(() => {
+function VoiceSection({ activeBrand }: { activeBrand?: string }) {
+  const storageKey = activeBrand ? `${VOICE_STORAGE_KEY}_${activeBrand}` : VOICE_STORAGE_KEY;
+
+  const load = (): BrandVoice[] => {
     try {
-      const stored = localStorage.getItem(VOICE_STORAGE_KEY);
+      const stored = localStorage.getItem(storageKey);
       return stored ? JSON.parse(stored) : DEFAULT_VOICES;
     } catch { return DEFAULT_VOICES; }
-  });
+  };
+
+  const [voices, setVoices] = useState<BrandVoice[]>(load);
   const [editing, setEditing] = useState<BrandVoice | null>(null);
   const [isNew, setIsNew] = useState(false);
 
+  useEffect(() => { setVoices(load()); setEditing(null); }, [storageKey]);
+
   const persist = (updated: BrandVoice[]) => {
     setVoices(updated);
-    localStorage.setItem(VOICE_STORAGE_KEY, JSON.stringify(updated));
+    localStorage.setItem(storageKey, JSON.stringify(updated));
   };
 
   const handleSave = (v: BrandVoice) => {
@@ -574,6 +580,852 @@ function DocumentsSection({ activeBrand }: { activeBrand?: string }) {
   );
 }
 
+// ── Competitors section ────────────────────────────────────────
+interface Competitor { id: string; name: string; positioning: string; strengths: string; weaknesses: string; }
+
+function CompetitorsSection({ activeBrand }: { activeBrand?: string }) {
+  const storageKey = `brandHub_competitors_${activeBrand ?? ""}`;
+  const [items, setItems] = useState<Competitor[]>(() => {
+    try { return JSON.parse(localStorage.getItem(storageKey) ?? "[]"); } catch { return []; }
+  });
+  const [editing, setEditing] = useState<Competitor | null>(null);
+  const [isNew, setIsNew] = useState(false);
+
+  useEffect(() => {
+    try { setItems(JSON.parse(localStorage.getItem(storageKey) ?? "[]")); } catch { setItems([]); }
+  }, [storageKey]);
+
+  const persist = (updated: Competitor[]) => {
+    setItems(updated);
+    localStorage.setItem(storageKey, JSON.stringify(updated));
+  };
+  const save = (v: Competitor) => { persist(isNew ? [v, ...items] : items.map(x => x.id === v.id ? v : x)); setEditing(null); };
+  const del  = (id: string)    => { persist(items.filter(x => x.id !== id)); setEditing(null); };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{items.length} competitor{items.length !== 1 ? "s" : ""} tracked</div>
+        <button onClick={() => { setIsNew(true); setEditing({ id: `c_${Date.now()}`, name: "", positioning: "", strengths: "", weaknesses: "" }); }}
+          style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 18px", borderRadius: 10, border: "none",
+            background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Competitor
+        </button>
+      </div>
+      {items.length === 0 && <ComingSoon title="Competitors" description="Track your competitive landscape — add positioning notes, strengths and weaknesses for each competitor." />}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+        {items.map(c => (
+          <div key={c.id} onClick={() => { setIsNew(false); setEditing(c); }}
+            style={{ borderRadius: 14, border: "1.5px solid var(--card-border)", background: "var(--card-bg)",
+              padding: "18px 20px", cursor: "pointer", transition: "border-color 0.15s, box-shadow 0.15s" }}
+            onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "#7c3aed"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 20px rgba(124,58,237,0.12)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--card-border)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
+            <div style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary)", marginBottom: 8 }}>{c.name}</div>
+            {c.positioning && <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 10, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>{c.positioning}</div>}
+            <div style={{ display: "flex", gap: 8 }}>
+              {c.strengths  && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, background: "rgba(16,185,129,0.12)", color: "#10b981", fontWeight: 700 }}>💪 Strengths</span>}
+              {c.weaknesses && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, background: "rgba(239,68,68,0.10)",  color: "#ef4444", fontWeight: 700 }}>⚠ Weaknesses</span>}
+            </div>
+          </div>
+        ))}
+      </div>
+      {editing && (
+        <CompetitorModal competitor={editing} isNew={isNew} onSave={save} onDelete={del} onClose={() => setEditing(null)} />
+      )}
+    </div>
+  );
+}
+
+function CompetitorModal({ competitor, isNew, onSave, onDelete, onClose }: {
+  competitor: Competitor; isNew: boolean;
+  onSave: (v: Competitor) => void; onDelete: (id: string) => void; onClose: () => void;
+}) {
+  const [d, setD] = useState({ ...competitor });
+  const field = (label: string, key: keyof Competitor, rows?: number) => (
+    <div>
+      <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" as const, letterSpacing: ".07em", display: "block", marginBottom: 6 }}>{label}</label>
+      {rows ? (
+        <textarea value={d[key] as string} onChange={e => setD(x => ({ ...x, [key]: e.target.value }))} rows={rows}
+          style={{ width: "100%", padding: "10px 14px", borderRadius: 10, resize: "none" as const, border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)", color: "var(--text-primary)", fontFamily: "inherit", fontSize: 13, lineHeight: 1.6, outline: "none", boxSizing: "border-box" as const }} />
+      ) : (
+        <input value={d[key] as string} onChange={e => setD(x => ({ ...x, [key]: e.target.value }))}
+          style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)", color: "var(--text-primary)", fontFamily: "inherit", fontSize: 13, fontWeight: 600, outline: "none", boxSizing: "border-box" as const }} />
+      )}
+    </div>
+  );
+  return (
+    <div style={{ position: "fixed" as const, inset: 0, zIndex: 300, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ width: "100%", maxWidth: 500, margin: "0 20px", borderRadius: 18, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", boxShadow: "0 24px 60px rgba(0,0,0,0.25)", overflow: "hidden" }}>
+        <div style={{ padding: "20px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)" }}>{isNew ? "Add Competitor" : "Edit Competitor"}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", fontSize: 20, padding: "2px 6px" }}>×</button>
+        </div>
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column" as const, gap: 14 }}>
+          {field("Competitor Name", "name")}
+          {field("Positioning / Market Focus", "positioning", 2)}
+          {field("Key Strengths", "strengths", 2)}
+          {field("Key Weaknesses", "weaknesses", 2)}
+        </div>
+        <div style={{ padding: "0 24px 22px", display: "flex", justifyContent: "space-between" }}>
+          {!isNew && <button onClick={() => onDelete(d.id)} style={{ padding: "9px 18px", borderRadius: 10, border: "1.5px solid #ef444440", background: "transparent", color: "#ef4444", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Delete</button>}
+          <div style={{ display: "flex", gap: 10, marginLeft: "auto" }}>
+            <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+            <button onClick={() => d.name.trim() && onSave(d)} disabled={!d.name.trim()}
+              style={{ padding: "9px 22px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white", fontSize: 13, fontWeight: 700, cursor: d.name.trim() ? "pointer" : "not-allowed", opacity: d.name.trim() ? 1 : 0.5, fontFamily: "inherit" }}>
+              {isNew ? "Add" : "Save"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Customer Personas section ──────────────────────────────────
+interface Persona { id: string; name: string; segment: string; age: string; channels: string; motivation: string; painPoint: string; }
+
+function PersonasSection({ activeBrand }: { activeBrand?: string }) {
+  const storageKey = `brandHub_personas_${activeBrand ?? ""}`;
+  const [items, setItems] = useState<Persona[]>(() => {
+    try { return JSON.parse(localStorage.getItem(storageKey) ?? "[]"); } catch { return []; }
+  });
+  const [editing, setEditing] = useState<Persona | null>(null);
+  const [isNew, setIsNew] = useState(false);
+
+  useEffect(() => {
+    try { setItems(JSON.parse(localStorage.getItem(storageKey) ?? "[]")); } catch { setItems([]); }
+  }, [storageKey]);
+
+  const persist = (updated: Persona[]) => { setItems(updated); localStorage.setItem(storageKey, JSON.stringify(updated)); };
+  const save = (v: Persona) => { persist(isNew ? [v, ...items] : items.map(x => x.id === v.id ? v : x)); setEditing(null); };
+  const del  = (id: string) => { persist(items.filter(x => x.id !== id)); setEditing(null); };
+
+  const AVATAR_COLORS = ["#7c3aed","#6366f1","#0ea5e9","#10b981","#f59e0b","#ef4444","#ec4899"];
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{items.length} persona{items.length !== 1 ? "s" : ""} defined</div>
+        <button onClick={() => { setIsNew(true); setEditing({ id: `p_${Date.now()}`, name: "", segment: "", age: "", channels: "", motivation: "", painPoint: "" }); }}
+          style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 18px", borderRadius: 10, border: "none",
+            background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Persona
+        </button>
+      </div>
+      {items.length === 0 && <ComingSoon title="Customer Personas" description="Define target audience segments — age, motivation, channels and pain points used to power personalised campaign briefs." />}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 14 }}>
+        {items.map((p, i) => {
+          const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+          const initials = p.name.split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+          return (
+            <div key={p.id} onClick={() => { setIsNew(false); setEditing(p); }}
+              style={{ borderRadius: 14, border: "1.5px solid var(--card-border)", background: "var(--card-bg)",
+                padding: "18px 20px", cursor: "pointer", transition: "border-color 0.15s, box-shadow 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = color; (e.currentTarget as HTMLDivElement).style.boxShadow = `0 4px 20px ${color}20`; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = "var(--card-border)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+                <div style={{ width: 40, height: 40, borderRadius: "50%", background: `${color}22`, border: `2px solid ${color}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 800, color, flexShrink: 0 }}>{initials || "?"}</div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)" }}>{p.name || "Unnamed Persona"}</div>
+                  {p.segment && <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 1 }}>{p.segment}</div>}
+                </div>
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                {p.age      && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, background: `${color}18`, color, fontWeight: 700 }}>Age: {p.age}</span>}
+                {p.channels && <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99, background: "var(--card-bg-soft)", color: "var(--text-secondary)", fontWeight: 600 }}>{p.channels}</span>}
+              </div>
+              {p.motivation && <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 10, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>💡 {p.motivation}</div>}
+            </div>
+          );
+        })}
+      </div>
+      {editing && <PersonaModal persona={editing} isNew={isNew} onSave={save} onDelete={del} onClose={() => setEditing(null)} />}
+    </div>
+  );
+}
+
+function PersonaModal({ persona, isNew, onSave, onDelete, onClose }: {
+  persona: Persona; isNew: boolean;
+  onSave: (v: Persona) => void; onDelete: (id: string) => void; onClose: () => void;
+}) {
+  const [d, setD] = useState({ ...persona });
+  const field = (label: string, key: keyof Persona, placeholder: string, rows?: number) => (
+    <div>
+      <label style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", textTransform: "uppercase" as const, letterSpacing: ".07em", display: "block", marginBottom: 6 }}>{label}</label>
+      {rows ? (
+        <textarea value={d[key] as string} onChange={e => setD(x => ({ ...x, [key]: e.target.value }))} rows={rows} placeholder={placeholder}
+          style={{ width: "100%", padding: "10px 14px", borderRadius: 10, resize: "none" as const, border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)", color: "var(--text-primary)", fontFamily: "inherit", fontSize: 13, lineHeight: 1.6, outline: "none", boxSizing: "border-box" as const }} />
+      ) : (
+        <input value={d[key] as string} onChange={e => setD(x => ({ ...x, [key]: e.target.value }))} placeholder={placeholder}
+          style={{ width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)", color: "var(--text-primary)", fontFamily: "inherit", fontSize: 13, fontWeight: 600, outline: "none", boxSizing: "border-box" as const }} />
+      )}
+    </div>
+  );
+  return (
+    <div style={{ position: "fixed" as const, inset: 0, zIndex: 300, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center" }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ width: "100%", maxWidth: 520, margin: "0 20px", borderRadius: 18, background: "var(--card-bg)", border: "1.5px solid var(--card-border)", boxShadow: "0 24px 60px rgba(0,0,0,0.25)", overflow: "hidden", maxHeight: "90vh", overflowY: "auto" as const }}>
+        <div style={{ padding: "20px 24px 0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)" }}>{isNew ? "New Persona" : "Edit Persona"}</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--text-tertiary)", fontSize: 20, padding: "2px 6px" }}>×</button>
+        </div>
+        <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column" as const, gap: 14 }}>
+          {field("Persona Name", "name", "e.g. Urban Health-Seeker")}
+          {field("Segment", "segment", "e.g. Women 30–45, mid-income, health-conscious")}
+          {field("Age Range", "age", "e.g. 30–45")}
+          {field("Primary Channels", "channels", "e.g. Instagram, YouTube, email")}
+          {field("Core Motivation", "motivation", "What drives them to choose this brand?", 2)}
+          {field("Pain Point", "painPoint", "What problem are they trying to solve?", 2)}
+        </div>
+        <div style={{ padding: "0 24px 22px", display: "flex", justifyContent: "space-between" }}>
+          {!isNew && <button onClick={() => onDelete(d.id)} style={{ padding: "9px 18px", borderRadius: 10, border: "1.5px solid #ef444440", background: "transparent", color: "#ef4444", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Delete</button>}
+          <div style={{ display: "flex", gap: 10, marginLeft: "auto" }}>
+            <button onClick={onClose} style={{ padding: "9px 18px", borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+            <button onClick={() => d.name.trim() && onSave(d)} disabled={!d.name.trim()}
+              style={{ padding: "9px 22px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white", fontSize: 13, fontWeight: 700, cursor: d.name.trim() ? "pointer" : "not-allowed", opacity: d.name.trim() ? 1 : 0.5, fontFamily: "inherit" }}>
+              {isNew ? "Create" : "Save"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Overview section ───────────────────────────────────────────
+const BRANDS_META: Record<string, { emoji: string; label: string }> = {
+  Rnorr:       { emoji: "🎯", label: "Rnorr" },
+  Sunglow:     { emoji: "✨", label: "Sunglow" },
+  Boozt:       { emoji: "👗", label: "Boozt" },
+  Glenfiddich: { emoji: "🥃", label: "Glenfiddich × AMF1" },
+  "UBS Bank":  { emoji: "🏦", label: "UBS Bank" },
+  sunrise:     { emoji: "🌅", label: "Sunrise" },
+  Haleon:      { emoji: "💊", label: "Haleon" },
+};
+
+const QUICK_LINKS: { id: BrandHubSection; label: string; icon: string }[] = [
+  { id: "logos",           label: "Logos",           icon: "🖼" },
+  { id: "fonts",           label: "Fonts",           icon: "Aa" },
+  { id: "visual-identity", label: "Colours",         icon: "🎨" },
+  { id: "brand-voice",     label: "Brand Voice",     icon: "💬" },
+  { id: "products",        label: "Products",        icon: "📦" },
+  { id: "competitors",     label: "Competitors",     icon: "⚔" },
+  { id: "personas",        label: "Personas",        icon: "👤" },
+  { id: "documents",       label: "Documents",       icon: "📄" },
+];
+
+interface OverviewSectionProps { activeBrand?: string; onNavigate?: (s: BrandHubSection) => void; }
+
+function OverviewSection({ activeBrand, onNavigate }: OverviewSectionProps) {
+  const brand = activeBrand ?? "";
+  const meta  = BRANDS_META[brand] ?? { emoji: "🏷", label: brand };
+
+  const [logo, setLogo]   = useState<string | null>(null);
+  const [palette, setPalette] = useState<{ hex: string; name: string }[]>([]);
+  const [traits,  setTraits]  = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!brand) return;
+    const enc = encodeURIComponent(brand);
+
+    fetch(`${API_BASE}/brands/${enc}/list-logos`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.logos?.length) setLogo(d.logos[0].url); })
+      .catch(() => {});
+
+    fetch(`${API_BASE}/brands/${enc}/list-colours`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d) return;
+        if (d.mode === "json" && d.palette) {
+          const swatches: { hex: string; name: string }[] = [];
+          for (const entries of Object.values(d.palette)) {
+            if (Array.isArray(entries)) {
+              for (const e of entries as { hex: string; name: string }[]) {
+                swatches.push({ hex: e.hex, name: e.name });
+                if (swatches.length >= 8) break;
+              }
+            }
+            if (swatches.length >= 8) break;
+          }
+          setPalette(swatches);
+        }
+      })
+      .catch(() => {});
+
+    try {
+      const voiceKey = brand ? `${VOICE_STORAGE_KEY}_${brand}` : VOICE_STORAGE_KEY;
+      const voices: BrandVoice[] = JSON.parse(localStorage.getItem(voiceKey) ?? "null") ?? DEFAULT_VOICES;
+      setTraits(voices.flatMap(v => v.traits).slice(0, 6));
+    } catch { /* ignore */ }
+  }, [brand]);
+
+  const messagingKey = `brandHub_messaging_${brand}`;
+  let tagline = "";
+  try { tagline = JSON.parse(localStorage.getItem(messagingKey) ?? "{}").tagline ?? ""; } catch { /* ignore */ }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column" as const, gap: 24 }}>
+      {/* Hero row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 20, padding: "24px 28px", borderRadius: 16,
+        border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+        {logo ? (
+          <div style={{ width: 72, height: 72, borderRadius: 14, overflow: "hidden", flexShrink: 0,
+            background: "repeating-conic-gradient(#80808018 0% 25%, transparent 0% 50%) 0 0 / 12px 12px",
+            display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <img src={logo} alt={meta.label} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+          </div>
+        ) : (
+          <div style={{ width: 72, height: 72, borderRadius: 14, flexShrink: 0, fontSize: 34,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "linear-gradient(135deg,rgba(124,58,237,.12),rgba(99,102,241,.12))" }}>
+            {meta.emoji}
+          </div>
+        )}
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 22, fontWeight: 900, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>{meta.label}</div>
+          {tagline
+            ? <div style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4, fontStyle: "italic" }}>"{tagline}"</div>
+            : <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 4 }}>No tagline set — add one in Messaging</div>}
+        </div>
+      </div>
+
+      {/* Colour palette strip */}
+      {palette.length > 0 && (
+        <div style={{ padding: "20px 24px", borderRadius: 16, border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em",
+            color: "var(--text-secondary)", marginBottom: 14 }}>Brand Colours</div>
+          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
+            {palette.map((sw, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ width: 28, height: 28, borderRadius: 8, background: sw.hex, border: "1.5px solid rgba(0,0,0,0.08)", flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.2 }}>{sw.name}</div>
+                  <div style={{ fontSize: 9, color: "var(--text-tertiary)", fontFamily: "monospace" }}>{sw.hex}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Voice traits */}
+      {traits.length > 0 && (
+        <div style={{ padding: "20px 24px", borderRadius: 16, border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em",
+            color: "var(--text-secondary)", marginBottom: 12 }}>Brand Voice Traits</div>
+          <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+            {traits.map((t, i) => (
+              <TraitChip key={i} label={t} index={i} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Quick nav */}
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em",
+          color: "var(--text-secondary)", marginBottom: 12 }}>Explore</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: 10 }}>
+          {QUICK_LINKS.map(link => (
+            <button key={link.id} onClick={() => onNavigate?.(link.id)}
+              style={{ display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center",
+                gap: 8, padding: "16px 12px", borderRadius: 14, border: "1.5px solid var(--card-border)",
+                background: "var(--card-bg)", cursor: "pointer", fontFamily: "inherit", transition: "border-color 0.15s, box-shadow 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "#7c3aed"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 4px 16px rgba(124,58,237,.12)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = "var(--card-border)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "none"; }}>
+              <span style={{ fontSize: 22 }}>{link.icon}</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{link.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Messaging section ──────────────────────────────────────────
+interface MessagingData { tagline: string; brandPromise: string; keyMessages: string[]; toneNotes: string; }
+const MESSAGING_DEFAULT: MessagingData = { tagline: "", brandPromise: "", keyMessages: [""], toneNotes: "" };
+
+function MessagingSection({ activeBrand }: { activeBrand?: string }) {
+  const storageKey = `brandHub_messaging_${activeBrand ?? ""}`;
+  const load = (): MessagingData => {
+    try { return { ...MESSAGING_DEFAULT, ...JSON.parse(localStorage.getItem(storageKey) ?? "{}") }; } catch { return MESSAGING_DEFAULT; }
+  };
+  const [data,    setData]    = useState<MessagingData>(load);
+  const [editing, setEditing] = useState(false);
+  const [draft,   setDraft]   = useState<MessagingData>(load);
+
+  useEffect(() => { const d = load(); setData(d); setDraft(d); }, [storageKey]);
+
+  const save = () => {
+    localStorage.setItem(storageKey, JSON.stringify(draft));
+    setData(draft);
+    setEditing(false);
+  };
+  const cancel = () => { setDraft(data); setEditing(false); };
+
+  const addMsg  = () => setDraft(d => ({ ...d, keyMessages: [...d.keyMessages, ""] }));
+  const delMsg  = (i: number) => setDraft(d => ({ ...d, keyMessages: d.keyMessages.filter((_, j) => j !== i) }));
+  const editMsg = (i: number, v: string) => setDraft(d => ({ ...d, keyMessages: d.keyMessages.map((m, j) => j === i ? v : m) }));
+
+  const isEmpty = !data.tagline && !data.brandPromise && !data.keyMessages.filter(Boolean).length && !data.toneNotes;
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--card-border)",
+    background: "var(--card-bg-soft)", color: "var(--text-primary)", fontFamily: "inherit",
+    fontSize: 13, fontWeight: 600, outline: "none", boxSizing: "border-box",
+  };
+  const taStyle: React.CSSProperties = { ...inputStyle, fontWeight: 400, resize: "none", lineHeight: 1.6 };
+  const label = (text: string) => (
+    <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".07em", color: "var(--text-secondary)", marginBottom: 6 }}>{text}</div>
+  );
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+        {editing ? (
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={cancel} style={{ padding: "9px 18px", borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+            <button onClick={save}   style={{ padding: "9px 22px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Save</button>
+          </div>
+        ) : (
+          <button onClick={() => { setDraft(data); setEditing(true); }}
+            style={{ padding: "9px 20px", borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            {isEmpty ? "+ Fill in Messaging" : "Edit"}
+          </button>
+        )}
+      </div>
+
+      {isEmpty && !editing && <ComingSoon title="Messaging" description="Define your brand tagline, promise, key messages and tone guidance used across all campaign briefs." />}
+
+      {(!isEmpty || editing) && (
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 24 }}>
+
+          {/* Tagline */}
+          <div style={{ padding: "20px 24px", borderRadius: 16, border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+            {label("Tagline")}
+            {editing
+              ? <input value={draft.tagline} onChange={e => setDraft(d => ({ ...d, tagline: e.target.value }))} placeholder="e.g. Built for what matters" style={inputStyle} />
+              : <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", fontStyle: "italic" }}>
+                  {data.tagline || <span style={{ color: "var(--text-tertiary)", fontSize: 14, fontStyle: "normal", fontWeight: 400 }}>Not set</span>}
+                </div>}
+          </div>
+
+          {/* Brand promise */}
+          <div style={{ padding: "20px 24px", borderRadius: 16, border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+            {label("Brand Promise")}
+            {editing
+              ? <textarea value={draft.brandPromise} onChange={e => setDraft(d => ({ ...d, brandPromise: e.target.value }))} rows={3} placeholder="The core promise your brand makes to its customers…" style={taStyle} />
+              : <div style={{ fontSize: 14, color: "var(--text-primary)", lineHeight: 1.7, whiteSpace: "pre-wrap" as const }}>
+                  {data.brandPromise || <span style={{ color: "var(--text-tertiary)" }}>Not set</span>}
+                </div>}
+          </div>
+
+          {/* Key messages */}
+          <div style={{ padding: "20px 24px", borderRadius: 16, border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+            {label("Key Messages")}
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+              {(editing ? draft.keyMessages : data.keyMessages.filter(Boolean)).map((msg, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#7c3aed", flexShrink: 0, marginTop: 6 }} />
+                  {editing ? (
+                    <>
+                      <input value={msg} onChange={e => editMsg(i, e.target.value)} placeholder={`Key message ${i + 1}…`} style={{ ...inputStyle, flex: 1 }} />
+                      {draft.keyMessages.length > 1 && (
+                        <button onClick={() => delMsg(i)} style={{ background: "none", border: "none", color: "var(--text-tertiary)", cursor: "pointer", fontSize: 18, padding: "4px", lineHeight: 1 }}>×</button>
+                      )}
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 14, color: "var(--text-primary)", lineHeight: 1.6 }}>{msg}</div>
+                  )}
+                </div>
+              ))}
+              {editing && (
+                <button onClick={addMsg} style={{ alignSelf: "flex-start", background: "none", border: "none", color: "#7c3aed", fontSize: 13, fontWeight: 600, cursor: "pointer", padding: "4px 0", fontFamily: "inherit" }}>+ Add message</button>
+              )}
+            </div>
+          </div>
+
+          {/* Tone notes */}
+          <div style={{ padding: "20px 24px", borderRadius: 16, border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+            {label("Tone & Style Notes")}
+            {editing
+              ? <textarea value={draft.toneNotes} onChange={e => setDraft(d => ({ ...d, toneNotes: e.target.value }))} rows={4} placeholder="Guidance on how to write for this brand — word choices, style rules, what to avoid…" style={taStyle} />
+              : <div style={{ fontSize: 14, color: "var(--text-primary)", lineHeight: 1.7, whiteSpace: "pre-wrap" as const }}>
+                  {data.toneNotes || <span style={{ color: "var(--text-tertiary)" }}>Not set</span>}
+                </div>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Legal & Compliance section ─────────────────────────────────
+interface LegalData { disclaimer: string; usageRules: string; restrictedUses: string; approvalProcess: string; }
+const LEGAL_DEFAULT: LegalData = { disclaimer: "", usageRules: "", restrictedUses: "", approvalProcess: "" };
+
+function LegalSection({ activeBrand }: { activeBrand?: string }) {
+  const storageKey = `brandHub_legal_${activeBrand ?? ""}`;
+  const load = (): LegalData => {
+    try { return { ...LEGAL_DEFAULT, ...JSON.parse(localStorage.getItem(storageKey) ?? "{}") }; } catch { return LEGAL_DEFAULT; }
+  };
+  const [data,    setData]    = useState<LegalData>(load);
+  const [editing, setEditing] = useState(false);
+  const [draft,   setDraft]   = useState<LegalData>(load);
+
+  useEffect(() => { const d = load(); setData(d); setDraft(d); }, [storageKey]);
+
+  const save = () => { localStorage.setItem(storageKey, JSON.stringify(draft)); setData(draft); setEditing(false); };
+  const cancel = () => { setDraft(data); setEditing(false); };
+  const isEmpty = !data.disclaimer && !data.usageRules && !data.restrictedUses && !data.approvalProcess;
+
+  const taStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--card-border)",
+    background: "var(--card-bg-soft)", color: "var(--text-primary)", fontFamily: "inherit",
+    fontSize: 13, lineHeight: 1.6, outline: "none", boxSizing: "border-box", resize: "none",
+  };
+  const label = (text: string, sub?: string) => (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".07em", color: "var(--text-secondary)" }}>{text}</div>
+      {sub && <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>{sub}</div>}
+    </div>
+  );
+
+  const Field = ({ lbl, sub, field, rows }: { lbl: string; sub?: string; field: keyof LegalData; rows: number }) => (
+    <div style={{ padding: "20px 24px", borderRadius: 16, border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+      {label(lbl, sub)}
+      {editing
+        ? <textarea value={draft[field]} onChange={e => setDraft(d => ({ ...d, [field]: e.target.value }))} rows={rows} style={taStyle} />
+        : <div style={{ fontSize: 13, color: data[field] ? "var(--text-primary)" : "var(--text-tertiary)", lineHeight: 1.7, whiteSpace: "pre-wrap" as const }}>
+            {data[field] || "Not set"}
+          </div>}
+    </div>
+  );
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+        {editing ? (
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={cancel} style={{ padding: "9px 18px", borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+            <button onClick={save}   style={{ padding: "9px 22px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Save</button>
+          </div>
+        ) : (
+          <button onClick={() => { setDraft(data); setEditing(true); }}
+            style={{ padding: "9px 20px", borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            {isEmpty ? "+ Add Legal Content" : "Edit"}
+          </button>
+        )}
+      </div>
+
+      {isEmpty && !editing && <ComingSoon title="Legal & Compliance" description="Document brand usage rules, standard disclaimers, restricted uses and the approval process for this brand." />}
+
+      {(!isEmpty || editing) && (
+        <div style={{ display: "flex", flexDirection: "column" as const, gap: 16 }}>
+          <Field lbl="Standard Disclaimer" sub="Used in campaigns, ads and external communications" field="disclaimer" rows={4} />
+          <Field lbl="Usage Rules" sub="How the brand should and should not be represented" field="usageRules" rows={4} />
+          <Field lbl="Restricted Uses" sub="What is explicitly prohibited or requires approval" field="restrictedUses" rows={3} />
+          <Field lbl="Approval Process" sub="Steps required before publishing brand content" field="approvalProcess" rows={3} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Campaign History section ───────────────────────────────────
+interface HistoricalCampaign {
+  brand: string; product_category: string; market: string; season: string;
+  channels: string[]; reach: number; ctr_pct: number; roas: number;
+  engagement_pct: number; budget_gbp: number; notes: string;
+}
+interface MachineBrief {
+  campaign_id: string; campaign_name: string; brand: string; market: string;
+  product_category: string; season: string; channels: string; moment_type: string;
+  validation_score: number; validation_status: string; fan_truth_score: number;
+  fan_truth_verdict: string; flag_count: number; created_at: string;
+}
+interface CampaignHistoryData {
+  historical: HistoricalCampaign[]; briefs: MachineBrief[];
+  historical_error?: string; briefs_error?: string;
+}
+
+function CampaignHistorySection({ activeBrand }: { activeBrand?: string }) {
+  const [data,    setData]    = useState<CampaignHistoryData | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
+  const [tab,     setTab]     = useState<"historical" | "briefs">("briefs");
+
+  useEffect(() => {
+    if (!activeBrand) return;
+    setLoading(true); setError(""); setData(null);
+    fetch(`${API_BASE}/brands/${encodeURIComponent(activeBrand)}/campaign-history`)
+      .then(r => r.ok ? r.json() : r.json().then((e: { detail?: string }) => { throw new Error(e.detail ?? `HTTP ${r.status}`); }))
+      .then(d => setData(d))
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [activeBrand]);
+
+  const fmt = (n: number | null | undefined, decimals = 1) =>
+    n == null ? "—" : n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+
+  const statusColor = (s: string) =>
+    s === "approved" ? "#10b981" : s === "flagged" ? "#ef4444" : s === "needs_review" ? "#f59e0b" : "#6366f1";
+
+  const Tab = ({ id, label, count }: { id: "historical" | "briefs"; label: string; count: number }) => (
+    <button onClick={() => setTab(id)}
+      style={{ padding: "8px 18px", borderRadius: 10, cursor: "pointer",
+        fontFamily: "inherit", fontSize: 13, fontWeight: tab === id ? 700 : 500,
+        background: tab === id ? "linear-gradient(135deg,#7c3aed,#6366f1)" : "var(--card-bg)",
+        color: tab === id ? "white" : "var(--text-secondary)",
+        border: tab === id ? "none" : "1.5px solid var(--card-border)" }}>
+      {label} {count > 0 && <span style={{ opacity: 0.75, fontSize: 11 }}>({count})</span>}
+    </button>
+  );
+
+  if (loading) return (
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "60px 0", gap: 12, color: "var(--text-secondary)" }}>
+      <div style={{ width: 20, height: 20, border: "2.5px solid var(--card-border)", borderTopColor: "#7c3aed", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />
+      Loading campaign history…
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ padding: "32px 24px", borderRadius: 16, border: "1.5px solid #ef444430", background: "rgba(239,68,68,0.06)", textAlign: "center" }}>
+      <div style={{ fontSize: 28, marginBottom: 10 }}>⚠</div>
+      <div style={{ fontSize: 14, fontWeight: 700, color: "#ef4444", marginBottom: 6 }}>Could not load campaign history</div>
+      <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>{error}</div>
+    </div>
+  );
+
+  if (!data) return <ComingSoon title="Campaign History" description="Historical campaigns and generated briefs for this brand will appear here once BigQuery is connected." />;
+
+  const historical = data.historical ?? [];
+  const briefs     = data.briefs ?? [];
+  const noData     = historical.length === 0 && briefs.length === 0;
+
+  if (noData) return <ComingSoon title="Campaign History" description={`No campaign records found for ${activeBrand ?? "this brand"} in BigQuery yet.`} />;
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 10, marginBottom: 24 }}>
+        <Tab id="briefs"     label="Generated Briefs"      count={briefs.length} />
+        <Tab id="historical" label="Historical Campaigns"  count={historical.length} />
+      </div>
+
+      {/* Generated Briefs tab */}
+      {tab === "briefs" && (
+        briefs.length === 0
+          ? <ComingSoon title="Generated Briefs" description={data.briefs_error ? `BigQuery error: ${data.briefs_error}` : "No generated briefs found for this brand yet. Run a campaign brief to get started."} />
+          : <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+              {briefs.map(b => (
+                <div key={b.campaign_id} style={{ padding: "18px 22px", borderRadius: 14,
+                  border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", marginBottom: 3 }}>
+                        {b.campaign_name || b.campaign_id}
+                      </div>
+                      <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                        {b.market} · {b.product_category} · {b.season}
+                        {b.created_at && ` · ${new Date(b.created_at).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}`}
+                      </div>
+                    </div>
+                    <span style={{ padding: "3px 10px", borderRadius: 99, fontSize: 10, fontWeight: 700, flexShrink: 0,
+                      background: `${statusColor(b.validation_status)}18`, color: statusColor(b.validation_status) }}>
+                      {b.validation_status?.replace(/_/g, " ") ?? "unknown"}
+                    </span>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
+                    {b.channels && <Chip label={`📺 ${b.channels}`} />}
+                    {b.moment_type && <Chip label={`⚡ ${b.moment_type}`} />}
+                    {b.validation_score != null && <Chip label={`✅ Score ${fmt(b.validation_score * 100, 0)}%`} />}
+                    {b.fan_truth_score != null && <Chip label={`🎯 Fan truth ${fmt(b.fan_truth_score * 100, 0)}%`} />}
+                    {b.flag_count != null && b.flag_count > 0 && <Chip label={`🚩 ${b.flag_count} flag${b.flag_count > 1 ? "s" : ""}`} red />}
+                  </div>
+                </div>
+              ))}
+            </div>
+      )}
+
+      {/* Historical campaigns tab */}
+      {tab === "historical" && (
+        historical.length === 0
+          ? <ComingSoon title="Historical Campaigns" description={data.historical_error ? `BigQuery error: ${data.historical_error}` : "No historical campaign benchmarks found for this brand yet."} />
+          : <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+              {historical.map((c, i) => (
+                <div key={i} style={{ padding: "18px 22px", borderRadius: 14,
+                  border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+                  <div style={{ marginBottom: 12 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: "var(--text-primary)", marginBottom: 3 }}>
+                      {c.product_category} — {c.market}
+                    </div>
+                    <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                      {c.season}
+                      {Array.isArray(c.channels) && c.channels.length > 0 && ` · ${c.channels.join(", ")}`}
+                    </div>
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 8, marginBottom: c.notes ? 12 : 0 }}>
+                    <MetricTile label="ROAS"       value={c.roas != null ? `${fmt(c.roas)}×` : "—"} />
+                    <MetricTile label="CTR"        value={c.ctr_pct != null ? `${fmt(c.ctr_pct)}%` : "—"} />
+                    <MetricTile label="Engagement" value={c.engagement_pct != null ? `${fmt(c.engagement_pct)}%` : "—"} />
+                    <MetricTile label="Reach"      value={c.reach != null ? c.reach.toLocaleString() : "—"} />
+                    <MetricTile label="Budget"     value={c.budget_gbp != null ? `£${Math.round(c.budget_gbp).toLocaleString()}` : "—"} />
+                  </div>
+                  {c.notes && <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6, paddingTop: 10,
+                    borderTop: "1px solid var(--card-border)" }}>{c.notes}</div>}
+                </div>
+              ))}
+            </div>
+      )}
+
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
+
+function Chip({ label, red }: { label: string; red?: boolean }) {
+  return (
+    <span style={{ fontSize: 11, padding: "3px 9px", borderRadius: 99, fontWeight: 600,
+      background: red ? "rgba(239,68,68,0.10)" : "var(--card-bg-soft)",
+      color: red ? "#ef4444" : "var(--text-secondary)" }}>
+      {label}
+    </span>
+  );
+}
+
+function MetricTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ padding: "10px 12px", borderRadius: 10, background: "var(--card-bg-soft)",
+      border: "1px solid var(--card-border)" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase" as const,
+        letterSpacing: ".06em", color: "var(--text-tertiary)", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 800, color: "var(--text-primary)", fontVariantNumeric: "tabular-nums" }}>{value}</div>
+    </div>
+  );
+}
+
+// ── Market Research section ────────────────────────────────────
+interface MarketResearchData {
+  marketSize: string;
+  targetAudience: string;
+  keyTrends: string;
+  opportunities: string;
+  threats: string;
+  notes: string;
+}
+const MR_DEFAULT: MarketResearchData = { marketSize: "", targetAudience: "", keyTrends: "", opportunities: "", threats: "", notes: "" };
+
+function MarketResearchSection({ activeBrand }: { activeBrand?: string }) {
+  const brand = activeBrand ?? "";
+  const storageKey = `brandHub_marketResearch_${brand}`;
+
+  const load = (): MarketResearchData => {
+    try { return { ...MR_DEFAULT, ...JSON.parse(localStorage.getItem(storageKey) ?? "{}") }; }
+    catch { return MR_DEFAULT; }
+  };
+
+  const [data,    setData]    = useState<MarketResearchData>(load);
+  const [editing, setEditing] = useState(false);
+  const [draft,   setDraft]   = useState<MarketResearchData>(load);
+  const [assets,  setAssets]  = useState<{ name: string; url: string }[]>([]);
+
+  useEffect(() => { const d = load(); setData(d); setDraft(d); }, [storageKey]);
+
+  useEffect(() => {
+    if (!brand) return;
+    const folder = brand === "UBS Bank" ? "UBS" : brand;
+    fetch(`/brands/${encodeURIComponent(folder)}/list-products`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (d?.products) setAssets(d.products); })
+      .catch(() => {});
+  }, [brand]);
+
+  const save   = () => { localStorage.setItem(storageKey, JSON.stringify(draft)); setData(draft); setEditing(false); };
+  const cancel = () => { setDraft(data); setEditing(false); };
+  const isEmpty = Object.values(data).every(v => !v);
+
+  const taStyle: React.CSSProperties = {
+    width: "100%", padding: "10px 14px", borderRadius: 10, border: "1.5px solid var(--card-border)",
+    background: "var(--card-bg-soft)", color: "var(--text-primary)", fontFamily: "inherit",
+    fontSize: 13, lineHeight: 1.6, outline: "none", boxSizing: "border-box", resize: "none",
+  };
+
+  const Card = ({ lbl, icon, field, rows = 3 }: { lbl: string; icon: string; field: keyof MarketResearchData; rows?: number }) => (
+    <div style={{ padding: "18px 22px", borderRadius: 14, border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 16 }}>{icon}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".07em", color: "var(--text-secondary)" }}>{lbl}</span>
+      </div>
+      {editing
+        ? <textarea value={draft[field]} onChange={e => setDraft(d => ({ ...d, [field]: e.target.value }))} rows={rows} style={taStyle} />
+        : <div style={{ fontSize: 13, color: data[field] ? "var(--text-primary)" : "var(--text-tertiary)", lineHeight: 1.7, whiteSpace: "pre-wrap" as const }}>
+            {data[field] || "Not set"}
+          </div>}
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Edit toolbar */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 20 }}>
+        {editing ? (
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={cancel} style={{ padding: "9px 18px", borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Cancel</button>
+            <button onClick={save}   style={{ padding: "9px 22px", borderRadius: 10, border: "none", background: "linear-gradient(135deg,#7c3aed,#6366f1)", color: "white", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>Save</button>
+          </div>
+        ) : (
+          <button onClick={() => { setDraft(data); setEditing(true); }}
+            style={{ padding: "9px 20px", borderRadius: 10, border: "1.5px solid var(--card-border)", background: "transparent", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
+            {isEmpty ? "+ Add Research" : "Edit"}
+          </button>
+        )}
+      </div>
+
+      {/* Intel cards — always visible when not empty, or when editing */}
+      {(!isEmpty || editing) && (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))", gap: 14, marginBottom: 28 }}>
+          <Card lbl="Market Size & Value"    icon="📊" field="marketSize"     rows={3} />
+          <Card lbl="Target Audience"        icon="🎯" field="targetAudience" rows={3} />
+          <Card lbl="Key Trends"             icon="📈" field="keyTrends"      rows={3} />
+          <Card lbl="Opportunities"          icon="💡" field="opportunities"  rows={3} />
+          <Card lbl="Threats & Risks"        icon="⚠"  field="threats"        rows={3} />
+          <Card lbl="Additional Notes"       icon="📝" field="notes"          rows={3} />
+        </div>
+      )}
+
+      {isEmpty && !editing && (
+        <div style={{ marginBottom: 28 }}>
+          <ComingSoon title="Market Research" description="Document market size, audience insights, key trends, opportunities and threats for this brand." />
+        </div>
+      )}
+
+      {/* Campaign visuals from Assets/ */}
+      {assets.length > 0 && (
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase" as const, letterSpacing: ".08em", color: "var(--text-secondary)", marginBottom: 14 }}>
+            Campaign Visuals
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 10 }}>
+            {assets.map((a, i) => (
+              <div key={i} style={{ borderRadius: 10, overflow: "hidden", border: "1.5px solid var(--card-border)", background: "var(--card-bg-soft)", aspectRatio: "16/9" }}>
+                <img src={a.url} alt={a.name}
+                  onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Shared placeholder for sections not yet built ──────────────
 function ComingSoon({ title, description }: { title: string; description: string }) {
   return (
@@ -861,13 +1713,15 @@ interface BrandHubProps {
   section?: BrandHubSection;
   activeBrand?: string;
   onAssetsUploaded?: (counts: Record<string, number>) => void;
+  onNavigate?: (s: BrandHubSection) => void;
 }
 
-export default function BrandHub({ section = "overview", activeBrand, onAssetsUploaded }: BrandHubProps) {
+export default function BrandHub({ section = "overview", activeBrand, onAssetsUploaded, onNavigate }: BrandHubProps) {
   const meta = SECTION_META[section] ?? SECTION_META["overview"];
 
   const renderSection = () => {
     switch (section) {
+      case "overview":         return <OverviewSection activeBrand={activeBrand} onNavigate={onNavigate} />;
       case "logos":            return <LogosSection activeBrand={activeBrand} />;
       case "fonts":            return <FontsSection activeBrand={activeBrand} />;
       case "visual-identity":  return <VisualIdentitySection activeBrand={activeBrand} />;
@@ -876,11 +1730,13 @@ export default function BrandHub({ section = "overview", activeBrand, onAssetsUp
       case "brand-assets":
         return <GuidelinesSection key={activeBrand} onAssetsUploaded={onAssetsUploaded} activeBrand={activeBrand} />;
       case "brand-voice":
-        return <VoiceSection />;
-      case "competitors":
-        return <ComingSoon title="Competitors" description="Map the competitive landscape, positioning gaps and differentiation strategy to inform campaign direction. Coming soon." />;
-      case "personas":
-        return <ComingSoon title="Customer Personas" description="Define target audience segments, demographics, behaviours and motivations to power personalised campaigns. Coming soon." />;
+        return <VoiceSection activeBrand={activeBrand} />;
+      case "competitors":      return <CompetitorsSection activeBrand={activeBrand} />;
+      case "personas":         return <PersonasSection activeBrand={activeBrand} />;
+      case "messaging":         return <MessagingSection activeBrand={activeBrand} />;
+      case "legal":             return <LegalSection activeBrand={activeBrand} />;
+      case "campaign-history":  return <CampaignHistorySection activeBrand={activeBrand} />;
+      case "market-research":   return <MarketResearchSection activeBrand={activeBrand} />;
       default:
         return <ComingSoon title={meta.title} description={`${meta.subtitle}. Coming soon.`} />;
     }

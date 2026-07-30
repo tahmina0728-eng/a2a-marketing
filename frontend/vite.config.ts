@@ -10,6 +10,7 @@ export default defineConfig({
       "/campaign": "http://localhost:8000",
       "/performance": "http://localhost:8000",
       "/campaigns": "http://localhost:8000",
+      "/brands":    "http://localhost:8000",
     },
   },
   define: {

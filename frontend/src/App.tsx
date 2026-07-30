@@ -4782,9 +4782,11 @@ export default function App() {
               pointerEvents: "none" as const, background: "var(--video-wash)" }} />
             <div style={{ position: "relative" as const, zIndex: 2, flex: 1,
               display: "flex", flexDirection: "column" as const, overflow: "hidden" }}>
-              <BrandHub section={brandHubSection} activeBrand={activeBrand} onAssetsUploaded={(_counts) => {
-                setActiveBrand(localStorage.getItem("brandHub_activeBrand") ?? activeBrand);
-              }} />
+              <BrandHub section={brandHubSection} activeBrand={activeBrand}
+                onNavigate={setBrandHubSection}
+                onAssetsUploaded={(_counts) => {
+                  setActiveBrand(localStorage.getItem("brandHub_activeBrand") ?? activeBrand);
+                }} />
             </div>
           </>
         ) : view === "publishing" ? (

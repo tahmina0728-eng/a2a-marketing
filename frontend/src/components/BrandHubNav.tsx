@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 export type BrandHubSection =
   | "overview"
   | "logos"
@@ -15,13 +17,13 @@ export type BrandHubSection =
   | "documents";
 
 const BRANDS = [
-  { id: "Rnorr",       label: "Rnorr",             emoji: "🎯" },
-  { id: "Sunglow",     label: "Sunglow",            emoji: "✨" },
-  { id: "Boozt",       label: "Boozt",              emoji: "👗" },
-  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃" },
-  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦" },
-  { id: "sunrise",     label: "Sunrise",            emoji: "🌅" },
-  { id: "Haleon",      label: "Haleon",             emoji: "💊" },
+  { id: "Rnorr",       label: "Rnorr",             emoji: "🎯", logo: "/brands/Rnorr/serve/Logos/Rnorr-Logo.png" },
+  { id: "Sunglow",     label: "Sunglow",            emoji: "✨", logo: "/brands/Sunglow/serve/Logos/sunglow_logo.png" },
+  { id: "Boozt",       label: "Boozt",              emoji: "👗", logo: "/brands/Boozt/serve/Logos/Boozt_Logo.png" },
+  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", logo: "/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png" },
+  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", logo: "/brands/UBS Bank/serve/Logos/ubs-bank-logo.png" },
+  { id: "sunrise",     label: "Sunrise",            emoji: "🌅", logo: "/brands/sunrise/serve/Logos/sunrise_logo_red.svg" },
+  { id: "Haleon",      label: "Haleon",             emoji: "💊", logo: "/brands/Haleon/serve/Logos/haleon_logo_black.svg" },
 ];
 
 type NavItem =
@@ -51,6 +53,21 @@ interface BrandHubNavProps {
   onChange: (s: BrandHubSection) => void;
   activeBrand: string;
   onBrandChange: (brand: string) => void;
+}
+
+function BrandLogo({ src, emoji, label }: { src: string; emoji: string; label: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <span style={{ fontSize: 14 }}>{emoji}</span>;
+  return (
+    <span style={{ width: 20, height: 20, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <img
+        src={src}
+        alt={label}
+        onError={() => setFailed(true)}
+        style={{ maxWidth: 20, maxHeight: 20, objectFit: "contain" }}
+      />
+    </span>
+  );
 }
 
 export default function BrandHubNav({ active, onChange, activeBrand, onBrandChange }: BrandHubNavProps) {
@@ -92,7 +109,7 @@ export default function BrandHubNav({ active, onChange, activeBrand, onBrandChan
               }}
             >
               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 14 }}>{brand.emoji}</span>
+                <BrandLogo src={brand.logo} emoji={brand.emoji} label={brand.label} />
                 <span>{brand.label}</span>
               </span>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
