@@ -228,6 +228,144 @@ function VoiceSection() {
   );
 }
 
+// ── Logos section ──────────────────────────────────────────────
+function LogosSection({ activeBrand }: { activeBrand?: string }) {
+  const [logos, setLogos] = useState<{ name: string; url: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!activeBrand) { setLoading(false); return; }
+    setLoading(true);
+    fetch(`${API_BASE}/brands/${encodeURIComponent(activeBrand)}/list-logos`)
+      .then(r => r.json())
+      .then(d => setLogos((d.logos ?? []).filter((l: any) => !l.name.toLowerCase().endsWith(".html"))))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [activeBrand]);
+
+  if (loading) return (
+    <div style={{ textAlign: "center" as const, padding: "40px 0", color: "var(--text-secondary)", fontSize: 13 }}>
+      Loading logos…
+    </div>
+  );
+  if (logos.length === 0) return (
+    <ComingSoon title="Logos" description="No logo files found. Upload a brand package from Brand Assets to add logos." />
+  );
+
+  return (
+    <div>
+      <div style={{ fontSize: 12, color: "var(--text-secondary)", marginBottom: 16 }}>
+        {logos.length} logo file{logos.length !== 1 ? "s" : ""}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 16 }}>
+        {logos.map(logo => (
+          <div key={logo.name} style={{ borderRadius: 14,
+            border: "1.5px solid var(--card-border)", background: "var(--card-bg)",
+            padding: "20px 16px", display: "flex", flexDirection: "column" as const,
+            alignItems: "center", gap: 10 }}>
+            <div style={{
+              width: "100%", height: 100, borderRadius: 8,
+              background: "repeating-conic-gradient(rgba(128,128,128,0.08) 0% 25%, transparent 0% 50%) 0 0 / 14px 14px",
+              display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+              <img src={`${API_BASE}${logo.url}`} alt={logo.name}
+                style={{ maxWidth: "90%", maxHeight: "90%", objectFit: "contain" }} />
+            </div>
+            <div style={{ fontSize: 10, color: "var(--text-secondary)", textAlign: "center" as const,
+              wordBreak: "break-all" as const, lineHeight: 1.4 }}>
+              {logo.name}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Fonts section ───────────────────────────────────────────────
+function FontsSection({ activeBrand }: { activeBrand?: string }) {
+  const [fonts, setFonts] = useState<{ name: string; url: string; stem: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!activeBrand) { setLoading(false); return; }
+    setLoading(true);
+    fetch(`${API_BASE}/brands/${encodeURIComponent(activeBrand)}/list-fonts`)
+      .then(r => r.json())
+      .then(d => {
+        const list = (d.fonts ?? []).filter((f: any) => !f.name.toLowerCase().endsWith(".html"));
+        setFonts(list);
+        list.forEach((font: { name: string; url: string; stem: string }) => {
+          const family = `bh-${font.stem}`;
+          if (!document.querySelector(`style[data-font="${family}"]`)) {
+            const s = document.createElement("style");
+            s.setAttribute("data-font", family);
+            s.textContent = `@font-face { font-family: "${family}"; src: url("${API_BASE}${font.url}"); }`;
+            document.head.appendChild(s);
+          }
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [activeBrand]);
+
+  if (loading) return (
+    <div style={{ textAlign: "center" as const, padding: "40px 0", color: "var(--text-secondary)", fontSize: 13 }}>
+      Loading fonts…
+    </div>
+  );
+  if (fonts.length === 0) return (
+    <ComingSoon title="Fonts" description="No font files found. Upload a brand package from Brand Assets to add fonts." />
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column" as const, gap: 14 }}>
+      <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+        {fonts.length} font file{fonts.length !== 1 ? "s" : ""}
+      </div>
+      {fonts.map(font => {
+        const family = `bh-${font.stem}`;
+        const displayName = font.stem.replace(/[-_]/g, " ");
+        return (
+          <div key={font.name} style={{ borderRadius: 14,
+            border: "1.5px solid var(--card-border)", background: "var(--card-bg)",
+            padding: "20px 24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between",
+              alignItems: "flex-start", marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>
+                  {displayName}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 2 }}>
+                  {font.name}
+                </div>
+              </div>
+              <a href={`${API_BASE}${font.url}`} download={font.name}
+                style={{ padding: "5px 12px", borderRadius: 8,
+                  border: "1.5px solid var(--card-border)", background: "transparent",
+                  color: "var(--text-secondary)", fontSize: 11, fontWeight: 600,
+                  cursor: "pointer", textDecoration: "none" }}>
+                ↓ Download
+              </a>
+            </div>
+            <div style={{ fontFamily: `"${family}", sans-serif`, fontSize: 30,
+              color: "var(--text-primary)", lineHeight: 1.2, marginBottom: 6 }}>
+              Aa Bb Cc Dd Ee
+            </div>
+            <div style={{ fontFamily: `"${family}", sans-serif`, fontSize: 13,
+              color: "var(--text-secondary)", lineHeight: 1.8 }}>
+              ABCDEFGHIJKLMNOPQRSTUVWXYZ
+            </div>
+            <div style={{ fontFamily: `"${family}", sans-serif`, fontSize: 13,
+              color: "var(--text-secondary)", lineHeight: 1.8 }}>
+              abcdefghijklmnopqrstuvwxyz&nbsp;&nbsp;0 1 2 3 4 5 6 7 8 9
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Shared placeholder for sections not yet built ──────────────
 function ComingSoon({ title, description }: { title: string; description: string }) {
   return (
@@ -522,6 +660,8 @@ export default function BrandHub({ section = "overview", activeBrand, onAssetsUp
 
   const renderSection = () => {
     switch (section) {
+      case "logos": return <LogosSection activeBrand={activeBrand} />;
+      case "fonts": return <FontsSection activeBrand={activeBrand} />;
       case "brand-assets":
         return <GuidelinesSection key={activeBrand} onAssetsUploaded={onAssetsUploaded} activeBrand={activeBrand} />;
       case "brand-voice":

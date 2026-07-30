@@ -1490,6 +1490,80 @@ async def get_brand_assets(brand_name: str):
     return {"brand": brand_name, "assets": counts}
 
 
+@app.get("/brands/{brand_name}/list-logos")
+async def list_brand_logos(brand_name: str):
+    """List all logo files for a brand with HTTP serve URLs."""
+    from app.brand_assets import get_asset_loader
+    from pathlib import Path
+    loader = get_asset_loader()
+    logos = loader.list_logos(brand_name)
+    result = []
+    for path in logos:
+        if path.startswith("gs://"):
+            name = path.split("/")[-1]
+            folder = "Logos" if "/Logos/" in path else "Logo"
+        else:
+            p = Path(path)
+            name = p.name
+            folder = p.parent.name
+        ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+        result.append({"name": name, "url": f"/brands/{brand_name}/serve/{folder}/{name}", "ext": ext})
+    return {"brand": brand_name, "logos": result}
+
+
+@app.get("/brands/{brand_name}/list-fonts")
+async def list_brand_fonts(brand_name: str):
+    """List all font files for a brand with HTTP serve URLs."""
+    from app.brand_assets import get_asset_loader
+    from pathlib import Path
+    loader = get_asset_loader()
+    fonts = loader.list_fonts(brand_name)
+    result = []
+    for path in fonts:
+        if path.startswith("gs://"):
+            name = path.split("/")[-1]
+        else:
+            p = Path(path)
+            name = p.name
+        ext = name.rsplit(".", 1)[-1].lower() if "." in name else ""
+        stem = name.rsplit(".", 1)[0] if "." in name else name
+        result.append({"name": name, "url": f"/brands/{brand_name}/serve/Font/{name}", "ext": ext, "stem": stem})
+    return {"brand": brand_name, "fonts": result}
+
+
+@app.get("/brands/{brand_name}/serve/{category}/{filename:path}")
+async def serve_brand_asset_file(brand_name: str, category: str, filename: str):
+    """Serve a brand asset file (logo, font, colour, etc.) from local bucket or GCS."""
+    import mimetypes
+    from fastapi.responses import Response
+    from app.brand_assets import get_asset_loader
+    loader = get_asset_loader()
+    if loader._mode == "gcs":
+        try:
+            from google.cloud import storage as _gcs
+            blob = _gcs.Client(project=settings.gcp_project).bucket(settings.gcs_bucket).blob(
+                f"brands/{brand_name}/{category}/{filename}"
+            )
+            data = blob.download_as_bytes()
+        except Exception:
+            raise HTTPException(status_code=404, detail="File not found")
+    else:
+        from pathlib import Path
+        base = loader._local_root / brand_name
+        target = (base / category / filename).resolve()
+        if not str(target).startswith(str(base.resolve())):
+            raise HTTPException(status_code=403, detail="Access denied")
+        if not target.exists():
+            raise HTTPException(status_code=404, detail="File not found")
+        data = target.read_bytes()
+    content_type, _ = mimetypes.guess_type(filename)
+    if filename.lower().endswith(".svg"):
+        content_type = "image/svg+xml"
+    return Response(content=data, media_type=content_type or "application/octet-stream",
+                    headers={"Cache-Control": "public, max-age=3600",
+                             "Access-Control-Allow-Origin": "*"})
+
+
 @app.post("/brands/{brand_name}/upload")
 async def upload_brand(brand_name: str, file: UploadFile = File(...)):
     """
