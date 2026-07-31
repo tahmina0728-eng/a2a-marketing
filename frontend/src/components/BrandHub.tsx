@@ -1155,9 +1155,10 @@ interface CampaignHistoryData {
   historical_error?: string; briefs_error?: string;
 }
 
-function CampaignHistorySection({ activeBrand, onLaunchCampaign }: {
+function CampaignHistorySection({ activeBrand, onLaunchCampaign, onViewCampaign }: {
   activeBrand?: string;
   onLaunchCampaign?: (brief: Record<string, unknown>) => void;
+  onViewCampaign?: (campaignId: string) => void;
 }) {
   const [data,      setData]      = useState<CampaignHistoryData | null>(null);
   const [loading,   setLoading]   = useState(false);
@@ -1273,9 +1274,26 @@ function CampaignHistorySection({ activeBrand, onLaunchCampaign }: {
           : <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
               {briefs.map(b => {
                 const isLaunching = launching === b.campaign_id;
+                const canView = !!onViewCampaign;
                 return (
-                  <div key={b.campaign_id} style={{ padding: "18px 22px", borderRadius: 14,
-                    border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+                  <div
+                    key={b.campaign_id}
+                    onClick={canView ? () => onViewCampaign(b.campaign_id) : undefined}
+                    style={{
+                      padding: "18px 22px", borderRadius: 14,
+                      border: "1.5px solid var(--card-border)", background: "var(--card-bg)",
+                      cursor: canView ? "pointer" : "default",
+                      transition: "box-shadow 0.15s, border-color 0.15s",
+                    }}
+                    onMouseEnter={canView ? e => {
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 20px rgba(124,58,237,0.12)";
+                      (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(124,58,237,0.35)";
+                    } : undefined}
+                    onMouseLeave={canView ? e => {
+                      (e.currentTarget as HTMLDivElement).style.boxShadow = "";
+                      (e.currentTarget as HTMLDivElement).style.borderColor = "";
+                    } : undefined}
+                  >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", marginBottom: 3 }}>
@@ -1293,17 +1311,19 @@ function CampaignHistorySection({ activeBrand, onLaunchCampaign }: {
                         </span>
                         {onLaunchCampaign && (
                           <button
-                            onClick={() => handleRunCampaign(b.campaign_id, b)}
+                            onClick={e => { e.stopPropagation(); handleRunCampaign(b.campaign_id, b); }}
                             disabled={isLaunching}
+                            title="Re-run the full pipeline with this brief"
                             style={{
                               display: "flex", alignItems: "center", gap: 5,
-                              padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700,
-                              border: "none", cursor: isLaunching ? "default" : "pointer",
+                              padding: "4px 10px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+                              border: "1px solid rgba(124,58,237,0.30)",
+                              cursor: isLaunching ? "default" : "pointer",
                               fontFamily: "inherit",
-                              background: isLaunching ? "var(--card-bg-soft)" : "linear-gradient(135deg,#7c3aed,#6366f1)",
-                              color: isLaunching ? "var(--text-tertiary)" : "white",
+                              background: isLaunching ? "var(--card-bg-soft)" : "rgba(124,58,237,0.08)",
+                              color: isLaunching ? "var(--text-tertiary)" : "#7c3aed",
                               opacity: isLaunching ? 0.7 : 1,
-                              transition: "opacity 0.15s",
+                              transition: "background 0.15s",
                             }}
                           >
                             {isLaunching ? (
@@ -1313,10 +1333,13 @@ function CampaignHistorySection({ activeBrand, onLaunchCampaign }: {
                                   animation: "spin 0.7s linear infinite" }} />
                                 Launching…
                               </>
-                            ) : (
-                              <>&#9654; Re-run</>
-                            )}
+                            ) : <>&#9654; Re-run</>}
                           </button>
+                        )}
+                        {canView && (
+                          <div style={{ fontSize: 11, color: "var(--text-tertiary)", display: "flex", alignItems: "center", gap: 4 }}>
+                            View results →
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1795,9 +1818,10 @@ interface BrandHubProps {
   onAssetsUploaded?: (counts: Record<string, number>) => void;
   onNavigate?: (s: BrandHubSection) => void;
   onLaunchCampaign?: (brief: Record<string, unknown>) => void;
+  onViewCampaign?: (campaignId: string) => void;
 }
 
-export default function BrandHub({ section = "overview", activeBrand, onAssetsUploaded, onNavigate, onLaunchCampaign }: BrandHubProps) {
+export default function BrandHub({ section = "overview", activeBrand, onAssetsUploaded, onNavigate, onLaunchCampaign, onViewCampaign }: BrandHubProps) {
   const meta = SECTION_META[section] ?? SECTION_META["overview"];
 
   const renderSection = () => {
@@ -1816,7 +1840,7 @@ export default function BrandHub({ section = "overview", activeBrand, onAssetsUp
       case "personas":         return <PersonasSection activeBrand={activeBrand} />;
       case "messaging":         return <MessagingSection activeBrand={activeBrand} />;
       case "legal":             return <LegalSection activeBrand={activeBrand} />;
-      case "campaign-history":  return <CampaignHistorySection activeBrand={activeBrand} onLaunchCampaign={onLaunchCampaign} />;
+      case "campaign-history":  return <CampaignHistorySection activeBrand={activeBrand} onLaunchCampaign={onLaunchCampaign} onViewCampaign={onViewCampaign} />;
       case "market-research":   return <MarketResearchSection activeBrand={activeBrand} />;
       default:
         return <ComingSoon title={meta.title} description={`${meta.subtitle}. Coming soon.`} />;

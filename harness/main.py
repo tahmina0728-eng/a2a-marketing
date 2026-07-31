@@ -68,6 +68,29 @@ GCP_PROJECT       = os.getenv("GOOGLE_CLOUD_PROJECT", "dauntless-karma-497108-b0
 BQ_OUTPUT_DATASET = "campaign_outputs"
 
 
+async def _save_pipeline_output(campaign_id: str, output: dict) -> None:
+    """Fire-and-forget: persist pipeline output JSON to GCS for history viewing.
+    Large base64 blobs are stripped — GCS URIs (already uploaded) are kept instead."""
+    try:
+        import copy as _copy
+        from google.cloud import storage as _gcs_s
+        slim = _copy.deepcopy(output)
+        for _k in ("image_b64", "images_b64", "video_b64"):
+            slim.pop(_k, None)
+        cp = slim.get("creative_pipeline")
+        if isinstance(cp, dict):
+            for _k in ("image_b64", "images_b64", "video_b64"):
+                cp.pop(_k, None)
+        blob_path = f"outputs/{campaign_id}/pipeline_output.json"
+        client = _gcs_s.Client(project=GCP_PROJECT)
+        bucket = client.bucket(settings.gcs_bucket)
+        blob   = bucket.blob(blob_path)
+        blob.upload_from_string(json.dumps(slim), content_type="application/json")
+        logger.info("pipeline_output_saved", campaign_id=campaign_id)
+    except Exception as e:
+        logger.warning("pipeline_output_save_failed", campaign_id=campaign_id, error=str(e))
+
+
 async def _bq_log_machine_brief(campaign_id: str, machine_brief: dict, brief) -> None:
     """Fire-and-forget: write one row to campaign_outputs.machine_briefs in BigQuery."""
     try:
@@ -689,6 +712,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "processing_time_ms": int((time.time() - t_start) * 1000),
         }
         await push_event(campaign_id, "__done__", "done", json.dumps(result))
+        asyncio.create_task(_save_pipeline_output(campaign_id, result))
 
     except Exception as e:
         logger.error("campaign_error", campaign_id=campaign_id, error=str(e))
@@ -1749,6 +1773,50 @@ async def get_campaign_brief_detail(campaign_id: str):
         raise HTTPException(status_code=503, detail="BigQuery SDK not available")
 
     return row
+
+
+@app.get("/campaign/{campaign_id}/output")
+async def get_campaign_output(campaign_id: str):
+    """Fetch stored pipeline output from GCS (saved after each pipeline run)."""
+    def _fetch():
+        try:
+            from google.cloud import storage as _gcs_s
+            client = _gcs_s.Client(project=GCP_PROJECT)
+            blob   = client.bucket(settings.gcs_bucket).blob(
+                f"outputs/{campaign_id}/pipeline_output.json"
+            )
+            return json.loads(blob.download_as_text())
+        except Exception:
+            return None
+
+    result = await asyncio.to_thread(_fetch)
+    if result is None:
+        raise HTTPException(status_code=404,
+                            detail="Campaign output not found — it may predate output storage, or still be running.")
+    return result
+
+
+@app.get("/campaign/{campaign_id}/kv/{idx}")
+async def serve_campaign_kv_image(campaign_id: str, idx: int):
+    """Proxy a KV image from GCS for a historical campaign (index is 1-based)."""
+    from fastapi.responses import Response
+
+    def _fetch():
+        try:
+            from google.cloud import storage as _gcs_s
+            client = _gcs_s.Client(project=GCP_PROJECT)
+            blob   = client.bucket(settings.gcs_bucket).blob(
+                f"outputs/{campaign_id}/kv_image_{idx}.jpg"
+            )
+            return blob.download_as_bytes()
+        except Exception:
+            return None
+
+    data = await asyncio.to_thread(_fetch)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"KV image {idx} not found for campaign {campaign_id}")
+    return Response(content=data, media_type="image/jpeg",
+                    headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/brands/{brand_name}/serve/{category}/{filename:path}")

@@ -2465,7 +2465,13 @@ function ResultsView({ output, campaignId }: {
   const cdpLines = output?.audience_insights
     ? String(output.audience_insights).split("\n").filter((l: string) => l.trim()) : [];
 
-  const imagesB64: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
+  const imagesB64Raw: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
+  // For historical campaigns loaded from GCS, base64 is stripped — use the KV proxy endpoint instead.
+  // Generate up to 3 candidate URLs; broken ones are hidden via onError in the thumbnail strip.
+  const kvHttpUrls: string[] = imagesB64Raw.length === 0 && campaignId
+    ? Array.from({ length: 3 }, (_, i) => `${API_BASE_PUB}/campaign/${encodeURIComponent(campaignId)}/kv/${i + 1}`)
+    : [];
+  const imagesB64: string[] = imagesB64Raw;
   const videoB64: string    = cp?.video_b64 ? String(cp.video_b64) : "";
   const videoUri: string    = cp?.video_uri
     ? String(cp.video_uri).replace(/^gs:\/\/([^/]+)\/(.+)$/, "https://storage.googleapis.com/$1/$2") : "";
@@ -2885,35 +2891,46 @@ function ResultsView({ output, campaignId }: {
         })()}
 
         {/* ── 5. Key Visual ─────────────────────────────────────────────── */}
-        {imagesB64.length > 0 && (() => {
+        {(imagesB64.length > 0 || kvHttpUrls.length > 0) && (() => {
+          const useHttp = imagesB64.length === 0 && kvHttpUrls.length > 0;
+          const kvSrc = (idx: number) => useHttp
+            ? kvHttpUrls[idx]
+            : `data:image/jpeg;base64,${imagesB64[idx]}`;
+          const kvCount = useHttp ? kvHttpUrls.length : imagesB64.length;
           const n = S();
           return (
-            <StageCard step={n} label={`Key Visual${imagesB64.length > 1 ? ` — ${imagesB64.length} Variations` : ""}`} color="#e11d48">
+            <StageCard step={n} label={`Key Visual${kvCount > 1 ? ` — ${kvCount} Variations` : ""}`} color="#e11d48">
               {/* Full-bleed image */}
               <div>
-                <img src={`data:image/jpeg;base64,${imagesB64[selectedKV]}`} alt="Key visual"
-                  style={{ width: "100%", display: "block", maxHeight: 580, objectFit: "cover" }} />
+                <img src={kvSrc(selectedKV)} alt="Key visual"
+                  style={{ width: "100%", display: "block", maxHeight: 580, objectFit: "cover" }}
+                  onError={(e) => { e.currentTarget.style.display = "none"; }} />
                 <div style={{ padding: "10px 16px", background: "rgba(15,23,42,0.04)", borderTop: "1px solid rgba(255,255,255,0.07)", display: "flex", justifyContent: "flex-end", gap: 8 }}>
-                  <button onClick={handleSaveKV} disabled={kvSaveState === "saving"}
-                    style={{ padding: "5px 14px", borderRadius: 99, background: kvSaveState === "saved" ? "rgba(16,185,129,0.15)" : "rgba(124,58,237,0.15)",
-                      border: `1px solid ${kvSaveState === "saved" ? "rgba(16,185,129,0.35)" : "rgba(124,58,237,0.35)"}`,
-                      color: kvSaveState === "saved" ? "#10b981" : "#7c3aed", fontSize: 11, fontWeight: 700,
-                      cursor: kvSaveState === "saving" ? "default" : "pointer", fontFamily: "inherit" }}>
-                    {kvSaveState === "saved" ? "✓ Saved" : kvSaveState === "saving" ? "Saving…" : "💾 Save to Content Hub"}
-                  </button>
-                  <a href={`data:image/jpeg;base64,${imagesB64[selectedKV]}`} download={`kv-${selectedKV + 1}.jpg`}
+                  {!useHttp && (
+                    <button onClick={handleSaveKV} disabled={kvSaveState === "saving"}
+                      style={{ padding: "5px 14px", borderRadius: 99, background: kvSaveState === "saved" ? "rgba(16,185,129,0.15)" : "rgba(124,58,237,0.15)",
+                        border: `1px solid ${kvSaveState === "saved" ? "rgba(16,185,129,0.35)" : "rgba(124,58,237,0.35)"}`,
+                        color: kvSaveState === "saved" ? "#10b981" : "#7c3aed", fontSize: 11, fontWeight: 700,
+                        cursor: kvSaveState === "saving" ? "default" : "pointer", fontFamily: "inherit" }}>
+                      {kvSaveState === "saved" ? "✓ Saved" : kvSaveState === "saving" ? "Saving…" : "💾 Save to Content Hub"}
+                    </button>
+                  )}
+                  <a href={kvSrc(selectedKV)} download={useHttp ? undefined : `kv-${selectedKV + 1}.jpg`}
+                    target={useHttp ? "_blank" : undefined} rel={useHttp ? "noreferrer" : undefined}
                     style={{ padding: "5px 14px", borderRadius: 99, background: "rgba(225,29,72,0.15)", border: "1px solid rgba(225,29,72,0.35)", color: "#f43f5e", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
                     ⬇ Download
                   </a>
                 </div>
               </div>
-              {imagesB64.length > 1 && (
+              {kvCount > 1 && (
                 <div style={{ padding: "14px 18px", background: "rgba(15,23,42,0.04)", borderTop: "1px solid rgba(255,255,255,0.07)" }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: "#f43f5e", letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 10 }}>Variations</div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    {imagesB64.map((img, idx) => (
-                      <div key={idx} onClick={() => setSelectedKV(idx)} style={{ flex: 1, cursor: "pointer", borderRadius: 8, overflow: "hidden", border: `2px solid ${idx === selectedKV ? "#e11d48" : "rgba(255,255,255,0.1)"}`, opacity: idx === selectedKV ? 1 : 0.45, transition: "all 0.2s", boxShadow: idx === selectedKV ? "0 0 0 1px rgba(225,29,72,0.4), 0 4px 14px rgba(225,29,72,0.2)" : "none" }}>
-                        <img src={`data:image/jpeg;base64,${img}`} alt={`V${idx + 1}`} style={{ width: "100%", display: "block" }} />
+                    {Array.from({ length: kvCount }, (_, idx) => (
+                      <div key={idx} onClick={() => setSelectedKV(idx)}
+                        style={{ flex: 1, cursor: "pointer", borderRadius: 8, overflow: "hidden", border: `2px solid ${idx === selectedKV ? "#e11d48" : "rgba(255,255,255,0.1)"}`, opacity: idx === selectedKV ? 1 : 0.45, transition: "all 0.2s", boxShadow: idx === selectedKV ? "0 0 0 1px rgba(225,29,72,0.4), 0 4px 14px rgba(225,29,72,0.2)" : "none" }}>
+                        <img src={kvSrc(idx)} alt={`V${idx + 1}`} style={{ width: "100%", display: "block" }}
+                          onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }} />
                       </div>
                     ))}
                   </div>
@@ -4738,6 +4755,8 @@ export default function App() {
     localStorage.getItem("brandHub_activeBrand") ?? "Rnorr"
   );
   const [publishingChannel, setPublishingChannel] = useState<PublishingChannel>("instagram");
+  const [historicalOutput, setHistoricalOutput] = useState<{ campaignId: string; output: Record<string,unknown> } | null>(null);
+  const [historicalLoading, setHistoricalLoading] = useState<string | null>(null);
   const [campaignPublishData, setCampaignPublishData] = useState<{
     brand: string; brief: string; headline?: string; body?: string; image_b64?: string; contentType?: "image" | "video";
   } | null>(null);
@@ -4937,6 +4956,24 @@ export default function App() {
                   setBriefApproved(true);
                   handleLaunch(brief as unknown as import("./types/pipeline").HarnessBriefRequest);
                   setView("app");
+                }}
+                onViewCampaign={async (campaignId) => {
+                  setHistoricalLoading(campaignId);
+                  try {
+                    const res = await fetch(`${API_BASE_PUB}/campaign/${encodeURIComponent(campaignId)}/output`);
+                    if (!res.ok) throw new Error(`${res.status}`);
+                    const data = await res.json();
+                    setHistoricalOutput({ campaignId, output: data });
+                  } catch {
+                    // Fallback: fetch brief only and show what we have
+                    try {
+                      const res2 = await fetch(`${API_BASE_PUB}/campaign/${encodeURIComponent(campaignId)}/brief`);
+                      const brief2 = res2.ok ? await res2.json() : {};
+                      setHistoricalOutput({ campaignId, output: { machine_brief: brief2.brief_parsed ?? brief2, campaign_id: campaignId } });
+                    } catch { /* nothing */ }
+                  } finally {
+                    setHistoricalLoading(null);
+                  }
                 }} />
             </div>
           </>
@@ -5174,6 +5211,56 @@ export default function App() {
         </>
         )}
       </div>
+    {/* ── Historical campaign loading overlay ── */}
+    {historicalLoading && !historicalOutput && (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9998,
+        background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)",
+        display: "flex", alignItems: "center", justifyContent: "center",
+      }}>
+        <div style={{ background: "var(--card-bg)", borderRadius: 16, padding: "32px 48px", textAlign: "center" }}>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 8 }}>Loading campaign results…</div>
+          <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>{historicalLoading}</div>
+        </div>
+      </div>
+    )}
+
+    {/* ── Historical campaign results modal ── */}
+    {historicalOutput && (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9999,
+        background: "rgba(0,0,0,0.72)", backdropFilter: "blur(4px)",
+        display: "flex", flexDirection: "column",
+      }}>
+        {/* header bar */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "14px 24px",
+          background: "var(--card-bg)", borderBottom: "1px solid var(--border-color)",
+          flexShrink: 0,
+        }}>
+          <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text-primary)" }}>
+            Campaign Results — {historicalOutput.campaignId}
+          </span>
+          <button
+            onClick={() => setHistoricalOutput(null)}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: 22, color: "var(--text-secondary)", lineHeight: 1,
+              padding: "2px 6px", borderRadius: 6,
+            }}
+            aria-label="Close"
+          >×</button>
+        </div>
+        {/* scrollable body */}
+        <div style={{ flex: 1, overflowY: "auto", background: "var(--page-bg)" }}>
+          <ResultsView
+            output={historicalOutput.output as Record<string,unknown>}
+            campaignId={historicalOutput.campaignId}
+          />
+        </div>
+      </div>
+    )}
     </ErrorBoundary>
   );
 }
