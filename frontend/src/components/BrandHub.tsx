@@ -1155,11 +1155,15 @@ interface CampaignHistoryData {
   historical_error?: string; briefs_error?: string;
 }
 
-function CampaignHistorySection({ activeBrand }: { activeBrand?: string }) {
-  const [data,    setData]    = useState<CampaignHistoryData | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
-  const [tab,     setTab]     = useState<"historical" | "briefs">("briefs");
+function CampaignHistorySection({ activeBrand, onLaunchCampaign }: {
+  activeBrand?: string;
+  onLaunchCampaign?: (brief: Record<string, unknown>) => void;
+}) {
+  const [data,      setData]      = useState<CampaignHistoryData | null>(null);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState("");
+  const [tab,       setTab]       = useState<"historical" | "briefs">("briefs");
+  const [launching, setLaunching] = useState<string | null>(null);
 
   useEffect(() => {
     if (!activeBrand) return;
@@ -1170,6 +1174,50 @@ function CampaignHistorySection({ activeBrand }: { activeBrand?: string }) {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, [activeBrand]);
+
+  const handleRunCampaign = async (campaignId: string, fallback: MachineBrief) => {
+    if (!onLaunchCampaign) return;
+    setLaunching(campaignId);
+    try {
+      const res = await fetch(`${API_BASE}/campaign/${encodeURIComponent(campaignId)}/brief`);
+      const row = res.ok ? await res.json() : null;
+      const parsed = row?.brief_parsed ?? {};
+      const channels = row?.channels
+        ? String(row.channels).split(",").map((c: string) => c.trim()).filter(Boolean)
+        : [];
+      const brief: Record<string, unknown> = {
+        campaign_name:    row?.campaign_name   ?? fallback.campaign_name ?? "Untitled Campaign",
+        brand:            row?.brand           ?? fallback.brand         ?? activeBrand ?? "",
+        market:           row?.market          ?? fallback.market        ?? "",
+        product_category: row?.product_category ?? fallback.product_category ?? "",
+        product:          parsed.product       ?? row?.product_category  ?? "",
+        season:           row?.season          ?? fallback.season        ?? "",
+        channels,
+        moment_type:      row?.moment_type     ?? fallback.moment_type   ?? "",
+        goal:             parsed.goal          ?? "",
+        fan_truth:        parsed.fan_truth     ?? "",
+        audience:         parsed.audience ?? {
+          segment: "", location: row?.market ?? "", age_range: "", gender: "",
+        },
+        tone:   parsed.tone   ?? "",
+        budget: parsed.budget ?? "",
+        kpis:   parsed.kpis   ?? "",
+      };
+      onLaunchCampaign(brief);
+    } catch {
+      onLaunchCampaign({
+        campaign_name: fallback.campaign_name ?? "Untitled Campaign",
+        brand: fallback.brand ?? activeBrand ?? "",
+        market: fallback.market ?? "", product_category: fallback.product_category ?? "",
+        season: fallback.season ?? "", channels: [],
+        moment_type: fallback.moment_type ?? "",
+        goal: "", fan_truth: "", tone: "", budget: "", kpis: "",
+        audience: { segment: "", location: "", age_range: "", gender: "" },
+      });
+    } finally {
+      setLaunching(null);
+    }
+  };
 
   const fmt = (n: number | null | undefined, decimals = 1) =>
     n == null ? "—" : n.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
@@ -1223,33 +1271,65 @@ function CampaignHistorySection({ activeBrand }: { activeBrand?: string }) {
         briefs.length === 0
           ? <ComingSoon title="Generated Briefs" description={data.briefs_error ? `BigQuery error: ${data.briefs_error}` : "No generated briefs found for this brand yet. Run a campaign brief to get started."} />
           : <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
-              {briefs.map(b => (
-                <div key={b.campaign_id} style={{ padding: "18px 22px", borderRadius: 14,
-                  border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", marginBottom: 3 }}>
-                        {b.campaign_name || b.campaign_id}
+              {briefs.map(b => {
+                const isLaunching = launching === b.campaign_id;
+                return (
+                  <div key={b.campaign_id} style={{ padding: "18px 22px", borderRadius: 14,
+                    border: "1.5px solid var(--card-border)", background: "var(--card-bg)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 10 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)", marginBottom: 3 }}>
+                          {b.campaign_name || b.campaign_id}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
+                          {b.market} · {b.product_category} · {b.season}
+                          {b.created_at && ` · ${new Date(b.created_at).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}`}
+                        </div>
                       </div>
-                      <div style={{ fontSize: 11, color: "var(--text-tertiary)" }}>
-                        {b.market} · {b.product_category} · {b.season}
-                        {b.created_at && ` · ${new Date(b.created_at).toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}`}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                        <span style={{ padding: "3px 10px", borderRadius: 99, fontSize: 10, fontWeight: 700,
+                          background: `${statusColor(b.validation_status)}18`, color: statusColor(b.validation_status) }}>
+                          {b.validation_status?.replace(/_/g, " ") ?? "unknown"}
+                        </span>
+                        {onLaunchCampaign && (
+                          <button
+                            onClick={() => handleRunCampaign(b.campaign_id, b)}
+                            disabled={isLaunching}
+                            style={{
+                              display: "flex", alignItems: "center", gap: 5,
+                              padding: "5px 12px", borderRadius: 8, fontSize: 11, fontWeight: 700,
+                              border: "none", cursor: isLaunching ? "default" : "pointer",
+                              fontFamily: "inherit",
+                              background: isLaunching ? "var(--card-bg-soft)" : "linear-gradient(135deg,#7c3aed,#6366f1)",
+                              color: isLaunching ? "var(--text-tertiary)" : "white",
+                              opacity: isLaunching ? 0.7 : 1,
+                              transition: "opacity 0.15s",
+                            }}
+                          >
+                            {isLaunching ? (
+                              <>
+                                <div style={{ width: 10, height: 10, border: "2px solid currentColor",
+                                  borderTopColor: "transparent", borderRadius: "50%",
+                                  animation: "spin 0.7s linear infinite" }} />
+                                Launching…
+                              </>
+                            ) : (
+                              <>&#9654; Re-run</>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
-                    <span style={{ padding: "3px 10px", borderRadius: 99, fontSize: 10, fontWeight: 700, flexShrink: 0,
-                      background: `${statusColor(b.validation_status)}18`, color: statusColor(b.validation_status) }}>
-                      {b.validation_status?.replace(/_/g, " ") ?? "unknown"}
-                    </span>
+                    <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
+                      {b.channels && <Chip label={`📺 ${b.channels}`} />}
+                      {b.moment_type && <Chip label={`⚡ ${b.moment_type}`} />}
+                      {b.validation_score != null && <Chip label={`✅ Score ${fmt(b.validation_score * 100, 0)}%`} />}
+                      {b.fan_truth_score != null && <Chip label={`🎯 Fan truth ${fmt(b.fan_truth_score * 100, 0)}%`} />}
+                      {b.flag_count != null && b.flag_count > 0 && <Chip label={`🚩 ${b.flag_count} flag${b.flag_count > 1 ? "s" : ""}`} red />}
+                    </div>
                   </div>
-                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 10 }}>
-                    {b.channels && <Chip label={`📺 ${b.channels}`} />}
-                    {b.moment_type && <Chip label={`⚡ ${b.moment_type}`} />}
-                    {b.validation_score != null && <Chip label={`✅ Score ${fmt(b.validation_score * 100, 0)}%`} />}
-                    {b.fan_truth_score != null && <Chip label={`🎯 Fan truth ${fmt(b.fan_truth_score * 100, 0)}%`} />}
-                    {b.flag_count != null && b.flag_count > 0 && <Chip label={`🚩 ${b.flag_count} flag${b.flag_count > 1 ? "s" : ""}`} red />}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
       )}
 
@@ -1714,9 +1794,10 @@ interface BrandHubProps {
   activeBrand?: string;
   onAssetsUploaded?: (counts: Record<string, number>) => void;
   onNavigate?: (s: BrandHubSection) => void;
+  onLaunchCampaign?: (brief: Record<string, unknown>) => void;
 }
 
-export default function BrandHub({ section = "overview", activeBrand, onAssetsUploaded, onNavigate }: BrandHubProps) {
+export default function BrandHub({ section = "overview", activeBrand, onAssetsUploaded, onNavigate, onLaunchCampaign }: BrandHubProps) {
   const meta = SECTION_META[section] ?? SECTION_META["overview"];
 
   const renderSection = () => {
@@ -1735,7 +1816,7 @@ export default function BrandHub({ section = "overview", activeBrand, onAssetsUp
       case "personas":         return <PersonasSection activeBrand={activeBrand} />;
       case "messaging":         return <MessagingSection activeBrand={activeBrand} />;
       case "legal":             return <LegalSection activeBrand={activeBrand} />;
-      case "campaign-history":  return <CampaignHistorySection activeBrand={activeBrand} />;
+      case "campaign-history":  return <CampaignHistorySection activeBrand={activeBrand} onLaunchCampaign={onLaunchCampaign} />;
       case "market-research":   return <MarketResearchSection activeBrand={activeBrand} />;
       default:
         return <ComingSoon title={meta.title} description={`${meta.subtitle}. Coming soon.`} />;

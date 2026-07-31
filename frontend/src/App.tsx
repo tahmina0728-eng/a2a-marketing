@@ -86,11 +86,13 @@ const GOALS = [
 ];
 
 const BRANDS = [
-  { id: "Rnorr",       label: "Rnorr",       emoji: "🥣", logo: "/brands/rnorr-logo.png"       },
-  { id: "Sunglow",     label: "Sunglow",     emoji: "✨", logo: "/brands/sunglow-logo.png"     },
-  { id: "Boozt",       label: "Boozt",       emoji: "💨", logo: "/brands/boozt-logo.png"       },
-  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", logo: "/brands/glenfiddich-logo.png" },
-  { id: "UBS Bank",    label: "UBS Bank",    emoji: "🏦", logo: "/brands/ubs-bank-logo.png"    },
+  { id: "Rnorr",       label: "Rnorr",             emoji: "🥣", logo: "/brands/Rnorr/serve/Logos/Rnorr-Logo.png" },
+  { id: "Sunglow",     label: "Sunglow",            emoji: "✨", logo: "/brands/Sunglow/serve/Logos/sunglow_logo.png" },
+  { id: "Boozt",       label: "Boozt",              emoji: "💨", logo: "/brands/Boozt/serve/Logos/Boozt_Logo.png" },
+  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", logo: "/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png" },
+  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", logo: "/brands/UBS Bank/serve/Logos/ubs-bank-logo.png" },
+  { id: "sunrise",     label: "Sunrise",            emoji: "🌅", logo: "/brands/sunrise/serve/Logos/sunrise_logo_red.svg" },
+  { id: "Haleon",      label: "Haleon",             emoji: "💊", logo: "/brands/Haleon/serve/Logos/haleon_logo_black.svg" },
 ];
 
 
@@ -1554,11 +1556,11 @@ function RunningView({
   const doneCount = HARNESS_STAGES.filter(s => agentStatus[s.key] === "done").length;
 
   return (
-    <div style={{ display: "flex", height: compact ? "100%" : "100vh", overflow: "hidden", fontFamily: "Inter,sans-serif" }}>
+    <div style={{ display: "flex", height: "100%", overflow: "hidden", fontFamily: "Inter,sans-serif" }}>
 
       {/* ── LEFT: step sidebar — hidden in compact/3-panel mode ── */}
-      <div style={{ width: 340, flexShrink: 0, background: "var(--card-bg)", borderRight: "1px solid var(--card-border)",
-        display: compact ? "none" : "flex", flexDirection: "column", padding: "28px 20px", overflowY: "auto" as const }}>
+      <div style={{ width: 320, flexShrink: 0, background: "var(--card-bg)", borderRight: "1px solid var(--card-border)",
+        display: compact ? "none" : "flex", flexDirection: "column", padding: "24px 16px", overflowY: "auto" as const }}>
 
         {/* Logo */}
         <div style={{ marginBottom: 28 }}><AsterLogo /></div>
@@ -2456,7 +2458,7 @@ function ResultsView({ output, campaignId }: {
   const [kvSaveState,   setKvSaveState]   = useState<"idle" | "saving" | "saved">("idle");
   const [reelSaveState, setReelSaveState] = useState<"idle" | "saving" | "saved">("idle");
 
-  const brief    = output as any;
+  const brief    = (output as any)?.machine_brief ?? output as any;
   const strategy = output?.creative_strategy as any;
   const copy     = output?.campaign_copy as any;
   const cp       = (output as any)?.creative_pipeline;
@@ -2548,68 +2550,175 @@ function ResultsView({ output, campaignId }: {
         {/* ── 1. Brief Validation ────────────────────────────────────────── */}
         {brief && (() => {
           const n = S();
-          const score   = brief.fan_truth?.overall ?? 0;
-          const showScore = score > 0;
-          const sc = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
+          const ft      = brief.fan_truth ?? {};
+          const score   = ft.overall ?? 0;
+          const sc      = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
+          const status  = (brief.status ?? "") as string;
+          const STATUS_CFG: Record<string, { bg: string; color: string; border: string; label: string }> = {
+            READY:        { bg: "rgba(16,185,129,0.10)", color: "#10b981", border: "rgba(16,185,129,0.30)", label: "✓ READY" },
+            NEEDS_REVIEW: { bg: "rgba(245,158,11,0.10)", color: "#f59e0b", border: "rgba(245,158,11,0.30)", label: "⚑ NEEDS REVIEW" },
+            INCOMPLETE:   { bg: "rgba(239,68,68,0.10)",  color: "#ef4444", border: "rgba(239,68,68,0.30)",  label: "✗ INCOMPLETE" },
+          };
+          const sc2 = STATUS_CFG[status] ?? STATUS_CFG.NEEDS_REVIEW;
+          const kpis = (brief.kpis ?? []) as any[];
+          const locks = (brief.brand_locks_applied ?? []) as string[];
+          const warnings = (brief.brand_warnings ?? []) as string[];
+          const CF: Record<string, { bg: string; color: string; border: string; icon: string }> = {
+            OK:          { bg: "rgba(16,185,129,0.07)", color: "#10b981", border: "rgba(16,185,129,0.20)", icon: "✓" },
+            AMBITIOUS:   { bg: "rgba(245,158,11,0.07)", color: "#f59e0b", border: "rgba(245,158,11,0.20)", icon: "↑" },
+            UNREALISTIC: { bg: "rgba(239,68,68,0.07)",  color: "#ef4444", border: "rgba(239,68,68,0.20)",  icon: "!" },
+          };
           return (
             <StageCard step={n} label="Brief Validation" color="#7c3aed">
-              {/* Score + statement row */}
-              <div style={{ display: "grid", gridTemplateColumns: showScore ? "180px 1fr" : "1fr" }}>
-                {/* Left: score pill — only when score > 0 */}
-                {showScore && <div style={{
-                  display: "flex", flexDirection: "column" as const, alignItems: "center",
-                  justifyContent: "center", gap: 10, padding: "28px 16px",
-                  borderRight: "1px solid rgba(255,255,255,0.07)",
-                  background: "rgba(124,58,237,0.05)",
-                }}>
-                  <div style={{ textAlign: "center" as const }}>
-                    <div style={{ fontSize: 46, fontWeight: 900, color: sc, lineHeight: 1 }}>{score}</div>
-                    <div style={{ fontSize: 13, color: "#334155", fontWeight: 600, marginTop: 2 }}>/100</div>
-                  </div>
-                  <div style={{ textAlign: "center" as const }}>
-                    <div style={{ fontSize: 9, color: "#334155", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase" as const, marginBottom: 5 }}>Fan Truth</div>
-                    {score >= 70 && (
-                      <span style={{
-                        fontSize: 11, fontWeight: 800, padding: "3px 14px", borderRadius: 99,
-                        background: "rgba(16,185,129,0.14)", color: "#10b981",
-                        border: "1px solid rgba(16,185,129,0.3)",
-                      }}>PASS</span>
-                    )}
-                  </div>
-                </div>}
-                {/* Right: statement + KPIs */}
-                <div style={{ padding: "22px 22px 18px" }}>
-                  {brief.fan_truth?.statement && (
-                    <div style={{
-                      padding: "12px 16px", borderRadius: 12, marginBottom: 14,
-                      background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.20)",
-                      fontSize: 14, color: "#6d28d9", fontStyle: "italic", lineHeight: 1.6,
-                    }}>"{brief.fan_truth.statement}"</div>
+              {/* ── Status bar ── */}
+              {status && (
+                <div style={{ padding: "10px 22px", borderBottom: "1px solid rgba(124,58,237,0.10)",
+                  background: sc2.bg, display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: sc2.color,
+                    letterSpacing: "0.12em", textTransform: "uppercase" as const }}>{sc2.label}</span>
+                  {brief.campaign_name && (
+                    <span style={{ fontSize: 12, color: "var(--text-secondary)", marginLeft: "auto" }}>{brief.campaign_name}</span>
                   )}
-                  {brief.kpis?.length > 0 && (
-                    <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
-                      {brief.kpis.slice(0, 4).map((k: any, i: number) => {
-                        const displayFlag = k.flag === "UNREALISTIC" ? "AMBITIOUS" : (k.flag ?? "OK");
-                        const CF: Record<string, { bg: string; color: string; border: string; icon: string }> = {
-                          OK:        { bg: "rgba(16,185,129,0.07)", color: "#10b981", border: "rgba(16,185,129,0.20)", icon: "✓" },
-                          AMBITIOUS: { bg: "rgba(245,158,11,0.07)", color: "#f59e0b", border: "rgba(245,158,11,0.20)", icon: "↑" },
-                        };
-                        const c = CF[displayFlag] ?? CF.OK;
-                        return (
-                          <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 12px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}` }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: c.color, width: 18, textAlign: "center" as const }}>{c.icon}</span>
-                            <span style={{ flex: 1, fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{k.metric}</span>
-                            <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>— {k.target}</span>
-                            <span style={{ fontSize: 10, fontWeight: 700, color: c.color, padding: "2px 8px", background: `${c.color}18`, borderRadius: 8 }}>{displayFlag}</span>
+                </div>
+              )}
+              {/* ── Brief summary ── */}
+              {brief.brief_summary && (
+                <div style={{ padding: "12px 22px 0", fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                  {brief.brief_summary}
+                </div>
+              )}
+              {/* ── Fan Truth section ── */}
+              <div style={{ padding: "16px 22px" }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
+                  textTransform: "uppercase" as const, marginBottom: 10 }}>Fan Truth Analysis</div>
+                {/* Score row */}
+                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
+                  <div style={{ textAlign: "center" as const, flexShrink: 0 }}>
+                    <div style={{ fontSize: 40, fontWeight: 900, color: sc, lineHeight: 1 }}>{score || "–"}</div>
+                    <div style={{ fontSize: 10, color: "var(--text-tertiary)", fontWeight: 600 }}>/100</div>
+                  </div>
+                  {/* 3-axis breakdown */}
+                  <div style={{ flex: 1, display: "flex", gap: 8 }}>
+                    {[
+                      { label: "Specific", val: ft.specific },
+                      { label: "Shared",   val: ft.shared },
+                      { label: "Special",  val: ft.special },
+                    ].map(({ label, val }) => val != null && (
+                      <div key={label} style={{ flex: 1, padding: "8px 10px", borderRadius: 10,
+                        background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.14)",
+                        textAlign: "center" as const }}>
+                        <div style={{ fontSize: 18, fontWeight: 800,
+                          color: (val as number) >= 70 ? "#10b981" : (val as number) >= 55 ? "#f59e0b" : "#ef4444" }}>
+                          {val as number}
+                        </div>
+                        <div style={{ fontSize: 9, color: "var(--text-tertiary)", fontWeight: 600,
+                          textTransform: "uppercase" as const, letterSpacing: "0.08em" }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Verdict badge */}
+                  {ft.verdict && (
+                    <span style={{ fontSize: 11, fontWeight: 800, padding: "4px 14px", borderRadius: 99, flexShrink: 0,
+                      background: ft.verdict === "PASS" ? "rgba(16,185,129,0.14)" : "rgba(245,158,11,0.14)",
+                      color: ft.verdict === "PASS" ? "#10b981" : "#f59e0b",
+                      border: `1px solid ${ft.verdict === "PASS" ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"}` }}>
+                      {ft.verdict}
+                    </span>
+                  )}
+                </div>
+                {/* Statement quote */}
+                {ft.statement && (
+                  <div style={{ padding: "12px 16px", borderRadius: 12, marginBottom: ft.notes ? 10 : 0,
+                    background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.20)",
+                    fontSize: 14, color: "#6d28d9", fontStyle: "italic", lineHeight: 1.6 }}>
+                    "{ft.statement}"
+                  </div>
+                )}
+                {/* Notes */}
+                {ft.notes && (
+                  <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6,
+                    padding: "8px 12px", borderRadius: 8, background: "rgba(124,58,237,0.04)",
+                    border: "1px solid rgba(124,58,237,0.10)", marginTop: 8 }}>
+                    {ft.notes}
+                  </div>
+                )}
+              </div>
+              {/* ── KPIs ── */}
+              {kpis.length > 0 && (
+                <div style={{ padding: "0 22px 16px" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
+                    textTransform: "uppercase" as const, marginBottom: 8 }}>KPI Targets</div>
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                    {kpis.map((k: any, i: number) => {
+                      const flag = k.flag === "UNREALISTIC" ? "UNREALISTIC" : (k.flag ?? "OK");
+                      const c = CF[flag] ?? CF.OK;
+                      return (
+                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10,
+                          padding: "8px 12px", borderRadius: 10, background: c.bg, border: `1px solid ${c.border}` }}>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: c.color, width: 18,
+                            textAlign: "center" as const, flexShrink: 0, marginTop: 1 }}>{c.icon}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{k.metric}</span>
+                              <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>— {k.target}</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: c.color,
+                                padding: "2px 8px", background: `${c.color}18`, borderRadius: 8 }}>{flag}</span>
+                            </div>
+                            {k.note && (
+                              <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 3, lineHeight: 1.5 }}>{k.note}</div>
+                            )}
                           </div>
-                        );
-                      })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {/* ── Brand locks + warnings ── */}
+              {(locks.length > 0 || warnings.length > 0) && (
+                <div style={{ padding: "12px 22px", borderTop: "1px solid rgba(124,58,237,0.10)",
+                  display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                  {locks.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
+                        textTransform: "uppercase" as const, marginBottom: 6 }}>Brand Locks Applied</div>
+                      <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                        {locks.map((l, i) => (
+                          <span key={i} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 99,
+                            background: "rgba(124,58,237,0.08)", color: "#7c3aed",
+                            border: "1px solid rgba(124,58,237,0.20)" }}>🔒 {l}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {warnings.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", letterSpacing: "0.1em",
+                        textTransform: "uppercase" as const, marginBottom: 6 }}>Brand Warnings</div>
+                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
+                        {warnings.map((w, i) => (
+                          <div key={i} style={{ fontSize: 12, color: "#92400e",
+                            padding: "6px 10px", borderRadius: 8,
+                            background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.20)" }}>
+                            ⚠ {w}
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
-              </div>
-              {/* validation_notes intentionally hidden — always proceed */}
-              {/* CDP strip */}
+              )}
+              {/* ── Validation notes ── */}
+              {brief.validation_notes && (
+                <div style={{ padding: "10px 22px", borderTop: "1px solid rgba(124,58,237,0.10)",
+                  fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6,
+                  background: "rgba(124,58,237,0.03)" }}>
+                  <span style={{ fontWeight: 700, color: "#7c3aed", fontSize: 10,
+                    textTransform: "uppercase" as const, letterSpacing: "0.1em" }}>Notes · </span>
+                  {brief.validation_notes}
+                </div>
+              )}
+              {/* ── CDP strip ── */}
               {cdpLines.length > 0 && (() => {
                 const g = (k: string) => { const l = cdpLines.find((x: string) => x.toLowerCase().includes(k)); return l ? l.split(":").slice(1).join(":").trim() : null; };
                 const cnt    = cdpLines.find((l: string) => l.includes("profiles"))?.match(/(\d[\d,]+)\s+\w+\s+profiles/)?.[1] ?? null;
@@ -2922,6 +3031,40 @@ function ResultsView({ output, campaignId }: {
                     <div style={{ fontSize: 10, fontWeight: 700, color: "#34d399", letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 6 }}>✦ Top Opportunity</div>
                     <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.6 }}>{pf.top_opportunity}</div>
                   </div>}
+                </div>
+              )}
+              {/* ── KPI Validation — forecast vs client targets ── */}
+              {Array.isArray(pf.kpi_validation) && pf.kpi_validation.length > 0 && (
+                <div style={{ padding: "14px 20px", borderBottom: `1px solid ${ROSE_BORDER}` }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
+                    textTransform: "uppercase" as const, marginBottom: 10 }}>KPI Validation — Forecast vs Target</div>
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                    {(pf.kpi_validation as any[]).map((kv: any, i: number) => {
+                      const vC: Record<string, { color: string; bg: string; icon: string }> = {
+                        "ACHIEVABLE": { color: "#10b981", bg: "rgba(16,185,129,0.08)", icon: "✓" },
+                        "AMBITIOUS":  { color: "#f59e0b", bg: "rgba(245,158,11,0.08)", icon: "↑" },
+                        "AT RISK":    { color: "#f87171", bg: "rgba(248,113,113,0.08)", icon: "!" },
+                      };
+                      const vc = vC[kv.verdict] ?? vC.AMBITIOUS;
+                      return (
+                        <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10,
+                          padding: "8px 12px", borderRadius: 10,
+                          background: vc.bg, border: `1px solid ${vc.color}30` }}>
+                          <span style={{ fontSize: 14, fontWeight: 800, color: vc.color, flexShrink: 0, marginTop: 1 }}>{vc.icon}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const, marginBottom: 2 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{kv.metric}</span>
+                              <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>Target: {kv.client_target}</span>
+                              <span style={{ fontSize: 11, color: vc.color, fontWeight: 600 }}>Forecast: {kv.forecast}</span>
+                              <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 8px",
+                                borderRadius: 99, background: `${vc.color}18`, color: vc.color }}>{kv.verdict}</span>
+                            </div>
+                            {kv.note && <div style={{ fontSize: 11, color: "var(--text-tertiary)", lineHeight: 1.5 }}>{kv.note}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
               {Array.isArray(pf.first_48h_watchlist) && pf.first_48h_watchlist.length > 0 && (
@@ -4610,12 +4753,14 @@ export default function App() {
   const [campaignName,  setCampaignName]    = useState("New Campaign");
   const [briefData,     setBriefData]       = useState<import("./types/pipeline").HarnessBriefRequest | null>(null);
   const [briefApproved, setBriefApproved]   = useState(false);
+  const [rerunMode,     setRerunMode]       = useState(false);
 
   const handleReset = () => {
     reset();
     setWizardStarted(false);
     setCampaignName("New Campaign");
     setBriefApproved(false);
+    setRerunMode(false);
   };
 
   const handleLaunch = (brief: import("./types/pipeline").HarnessBriefRequest) => {
@@ -4786,6 +4931,12 @@ export default function App() {
                 onNavigate={setBrandHubSection}
                 onAssetsUploaded={(_counts) => {
                   setActiveBrand(localStorage.getItem("brandHub_activeBrand") ?? activeBrand);
+                }}
+                onLaunchCampaign={(brief) => {
+                  setRerunMode(true);
+                  setBriefApproved(true);
+                  handleLaunch(brief as unknown as import("./types/pipeline").HarnessBriefRequest);
+                  setView("app");
                 }} />
             </div>
           </>
@@ -4815,8 +4966,8 @@ export default function App() {
             prompt={campaignPrompt} onPromptChange={setCampaignPrompt} />
         ) : (
         <>
-        {/* Middle: Steps panel — hidden during wakeup (before any agent starts) */}
-        {(state.status === "running" || state.status === "done") &&
+        {/* Middle: Steps panel — hidden in rerun mode (RunningView has its own step sidebar) and during wakeup */}
+        {!rerunMode && (state.status === "running" || state.status === "done") &&
           !(state.status === "running" && !state.agentStatus["briefing"]) && (
           <StepsPanel
             campaignName={campaignName}
@@ -4891,14 +5042,25 @@ export default function App() {
               </>
             )}
 
-            {/* Agent network wakeup — before Logos starts (and not yet approved) */}
-            {state.status === "running" && !briefApproved &&
+            {/* Re-run from Campaign History: full timeline view (all agents visible) */}
+            {state.status === "running" && rerunMode && (
+              <RunningView
+                agentStatus={state.agentStatus}
+                liveLog={state.liveLog}
+                milestones={state.milestones}
+                compact={false}
+                brand={briefData?.brand}
+              />
+            )}
+
+            {/* Agent network wakeup — before briefing starts (and not yet approved) */}
+            {state.status === "running" && !rerunMode && !briefApproved &&
               !state.agentStatus["briefing"] && (
               <AgentNetworkWakeUp />
             )}
 
-            {/* Logos (briefing agent) intake view — held here until user approves */}
-            {state.status === "running" && !briefApproved &&
+            {/* Briefing agent intake view — held here until user approves */}
+            {state.status === "running" && !rerunMode && !briefApproved &&
               !!state.agentStatus["briefing"] && (
               <BriefIntakeView
                 brief={briefData}
@@ -4911,11 +5073,11 @@ export default function App() {
             )}
 
             {/* Brief approved but creative agents not yet showing — brief transition */}
-            {state.status === "running" && briefApproved && activeStageId === "brief" && (
+            {state.status === "running" && !rerunMode && briefApproved && activeStageId === "brief" && (
               <AgentNetworkWakeUp />
             )}
 
-            {state.status === "running" && briefApproved && activeStageId !== "brief" && (() => {
+            {state.status === "running" && !rerunMode && briefApproved && activeStageId !== "brief" && (() => {
               // Prioritise agentStatus so we get the right agent the instant it
               // starts, even before any liveLog entries have arrived for it.
               const focusKey =

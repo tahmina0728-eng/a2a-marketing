@@ -94,12 +94,13 @@ const MARKET_CURRENCY_SYMBOL: Record<string, string> = {
 };
 
 const BRAND_ICONS: Record<string, string> = {
-  "Rnorr": "/brands/rnorr-logo.png",
-  "Sunglow": "/brands/sunglow-logo.png",
-  "Boozt": "/brands/boozt-logo.png",
-  "Glenfiddich": "/brands/glenfiddich-logo.png",
-  "UBS Bank": "/brands/ubs-bank-logo.png",
-  "Haleon": "/brands/haleon-logo.svg",
+  "Rnorr":       "/brands/Rnorr/serve/Logos/Rnorr-Logo.png",
+  "Sunglow":     "/brands/Sunglow/serve/Logos/sunglow_logo.png",
+  "Boozt":       "/brands/Boozt/serve/Logos/Boozt_Logo.png",
+  "Glenfiddich": "/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png",
+  "UBS Bank":    "/brands/UBS Bank/serve/Logos/ubs-bank-logo.png",
+  "sunrise":     "/brands/sunrise/serve/Logos/sunrise_logo_red.svg",
+  "Haleon":      "/brands/Haleon/serve/Logos/haleon_logo_black.svg",
 };
 
 const G = "linear-gradient(135deg,#7c3aed,#a855f7,#6366f1)";

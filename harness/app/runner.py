@@ -1051,8 +1051,10 @@ def _apply_brand_overlay(
                         draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,80))
                 _all_white = brand.lower() in ("sunrise",)
                 if _is_haleon:
-                    # White-dominant images need dark text; green accent on second line
-                    color = (51, 62, 72, 255) if i == 0 else (*accent_rgb, 255)
+                    # Line 1: charcoal; line 2: Haleon green ONLY when it has ≥3 words
+                    # (a short fragment like "OWN DAY." in green looks disconnected)
+                    _line2_words = len(line_data) > 1 and len(line_data[1][0].split()) >= 3
+                    color = (51, 62, 72, 255) if (i == 0 or not _line2_words) else (*accent_rgb, 255)
                 else:
                     color = (255, 255, 255, 255) if _all_white else (
                         (*accent_rgb, 255) if i == 0 and len(line_data) > 1 else (255, 255, 255, 255)
@@ -1109,8 +1111,11 @@ def _apply_brand_overlay(
                 if _logo_bytes:
                     _logo_img = Image.open(io.BytesIO(_logo_bytes)).convert("RGBA")
 
-            # Sunrise offer mode: logo belongs in the red bottom strip (section 6), not here
-            if _logo_img is not None and not _sunrise_offer:
+            # Sunrise offer mode: logo belongs in the red bottom strip (section 6), not here.
+            # Haleon with a product: the section-5 stamp already shows brand+product bottom-right,
+            # so skip the separate top-right logo pill to avoid two "HALEON" labels.
+            _haleon_has_stamp = _is_haleon and bool(product_name)
+            if _logo_img is not None and not _sunrise_offer and not _haleon_has_stamp:
                 max_lw = int(W * (0.30 if not _use_pill else 0.14))
                 max_lh = int(H * (0.20 if not _use_pill else 0.10))
                 sc  = min(max_lw / max(1, _logo_img.width), max_lh / max(1, _logo_img.height), 1.0)
@@ -1743,9 +1748,17 @@ def _overlay_reel(
         _font_dir = _P(__file__).resolve().parent.parent / "bucket" / "brands" / brand / "Font"
         _ttf = None
         if _font_dir.is_dir():
-            _ttf = next((str(f) for f in sorted(_font_dir.glob("*.ttf"))
-                         if "italic" not in f.name.lower() and "bold" not in f.name.lower()), None) \
-                or next((str(f) for f in sorted(_font_dir.glob("*.ttf"))), None)
+            # Include both .ttf and .otf (Haleon, Glenfiddich fonts are .otf)
+            _all_brand_fonts = sorted(_font_dir.glob("*.ttf")) + sorted(_font_dir.glob("*.otf"))
+            # Bold preferred for overlay-heavy brands; regular for others
+            _bold_brands = {"haleon", "glenfiddich", "rnorr", "boozt"}
+            if brand.lower() in _bold_brands:
+                _ttf = next((str(f) for f in _all_brand_fonts
+                             if "bold" in f.name.lower() and "italic" not in f.name.lower()), None)
+            if not _ttf:
+                _ttf = next((str(f) for f in _all_brand_fonts
+                             if "italic" not in f.name.lower() and "bold" not in f.name.lower()), None) \
+                    or (str(_all_brand_fonts[0]) if _all_brand_fonts else None)
         if not _ttf:
             for _wf in [r"C:\Windows\Fonts\arial.ttf",
                         r"C:\Windows\Fonts\calibri.ttf",
@@ -1825,6 +1838,35 @@ def _overlay_reel(
             except Exception as _sle:
                 logger.warning("reel_sunrise_logo_draw_failed", error=str(_sle))
 
+        # Haleon fallback: render white wordmark + green underline on transparent bg.
+        # Haleon only has SVG logos; rsvg-convert is not available on Windows.
+        # White text matches the reel context (video background can be any color).
+        if not _logo_bytes_raw and brand.lower() in ("haleon",):
+            try:
+                from PIL import Image as _HPI, ImageDraw as _HPID, ImageFont as _HPIF
+                _hfs = 50
+                try:
+                    _hfnt = _HPIF.truetype(_ttf, _hfs) if _ttf else _HPIF.load_default(size=_hfs)
+                except Exception:
+                    _hfnt = _HPIF.load_default(size=_hfs)
+                _htm = _HPI.new("RGBA", (1, 1))
+                _htbb = _HPID.Draw(_htm).textbbox((0, 0), "HALEON", font=_hfnt)
+                _htw = _htbb[2] - _htbb[0]
+                _hth = _htbb[3] - _htbb[1]
+                _hbar_h = max(3, int(_hfs * 0.08))
+                _hgap   = max(2, int(_hfs * 0.06))
+                _hlogo  = _HPI.new("RGBA", (_htw + 4, _hth + _hgap + _hbar_h + 4), (0, 0, 0, 0))
+                _hd = _HPID.Draw(_hlogo)
+                _hd.text((2 - _htbb[0], 2 - _htbb[1]), "HALEON", font=_hfnt, fill=(255, 255, 255, 255))
+                _hbar_y = _hth + _hgap + 2
+                _hd.rectangle([0, _hbar_y, _htw + 3, _hbar_y + _hbar_h - 1], fill=(101, 172, 30, 255))
+                _hl_buf = BytesIO()
+                _hlogo.save(_hl_buf, format="PNG")
+                _logo_bytes_raw = _hl_buf.getvalue()
+                logger.info("reel_haleon_logo_drawn_programmatically")
+            except Exception as _hle:
+                logger.warning("reel_haleon_logo_draw_failed", error=str(_hle))
+
         def _esc(s: str) -> str:
             return s.replace("\\","\\\\").replace("'","\\'").replace(":","\\:")
 
@@ -1845,9 +1887,10 @@ def _overlay_reel(
 
             _font_arg = None
             if _ttf:
-                _ft = _P(_tmp) / "font.ttf"
+                _ext = _P(_ttf).suffix.lower()  # preserve .ttf or .otf
+                _ft = _P(_tmp) / f"font{_ext}"
                 _ft.write_bytes(_P(_ttf).read_bytes())
-                _font_arg = "font.ttf"
+                _font_arg = f"font{_ext}"
 
             if _logo_bytes_raw:
                 _lc = _P(_tmp) / "logo.png"
@@ -1862,35 +1905,41 @@ def _overlay_reel(
                 _line1, _line2 = _wrap(headline[:80])
                 _hl1 = _esc(_line1)
                 _has_two_lines = bool(_line2)
-                # y positions shift up when we have 2 headline lines
-                _y1 = "H-170" if (_has_two_lines and cta) else ("H-145" if _has_two_lines else ("H-120" if cta else "H-90"))
-                _y2 = "H-125" if cta else "H-90"
-                _yc = "H-80"
+                # Y positions — calculated so boxes never overlap.
+                # Headline box height = fontsize(36) + 2×boxborderw(16) = 68px.
+                # CTA box height     = fontsize(24) + 2×boxborderw(12) = 48px.
+                # CTA box top        = _yc - 12  (boxborderw extends above text).
+                # Require headline box bottom < CTA box top - 10px gap.
+                # _y1 + 68 < _yc_abs - 12 - 10  →  _y1 < _yc_abs - 90.
+                # Using _yc=H-85: _yc_abs from bottom = 85 → _y1 < H-175. Use H-178 safe.
+                _y1 = "H-248" if (_has_two_lines and cta) else ("H-160" if _has_two_lines else ("H-178" if cta else "H-90"))
+                _y2 = "H-178" if cta else "H-90"
+                _yc = "H-85"
 
                 _txt_f = (
                     f"drawtext=fontfile={_font_arg}:text='{_hl1}':"
-                    f"fontsize=36:fontcolor=white:x=60:y={_y1}:"
+                    f"fontsize=42:fontcolor=white:x=60:y={_y1}:"
                     f"enable=between(t\\,{_t0}\\,6):"
                     f"alpha=if(lt(t\\,{_t1})\\,(t-{_t0})/0.5\\,1):"
-                    f"box=1:boxcolor=black@0.55:boxborderw=16"
+                    f"box=1:boxcolor=black@0.60:boxborderw=14"
                 )
                 if _has_two_lines:
                     _hl2 = _esc(_line2[:80])
                     _txt_f += (
                         f",drawtext=fontfile={_font_arg}:text='{_hl2}':"
-                        f"fontsize=36:fontcolor=white:x=60:y={_y2}:"
+                        f"fontsize=42:fontcolor=white:x=60:y={_y2}:"
                         f"enable=between(t\\,{_t0}\\,6):"
                         f"alpha=if(lt(t\\,{_t1})\\,(t-{_t0})/0.5\\,1):"
-                        f"box=1:boxcolor=black@0.55:boxborderw=16"
+                        f"box=1:boxcolor=black@0.60:boxborderw=14"
                     )
                 if cta:
                     _ct = _esc(cta[:50])
                     _txt_f += (
                         f",drawtext=fontfile={_font_arg}:text='{_ct}':"
-                        f"fontsize=24:fontcolor=white@0.85:x=60:y={_yc}:"
+                        f"fontsize=26:fontcolor=white@0.90:x=60:y={_yc}:"
                         f"enable=between(t\\,{_t2}\\,6):"
                         f"alpha=if(lt(t\\,{_t3})\\,(t-{_t2})/0.3\\,1):"
-                        f"box=1:boxcolor=black@0.40:boxborderw=12"
+                        f"box=1:boxcolor=black@0.45:boxborderw=10"
                     )
 
             # Logo: bottom-right end card — appears in the final ~1.8s of the reel.
@@ -3741,81 +3790,250 @@ async def run_performance_forecast(
     _ss  = _gs()
     _gc  = _g.Client(vertexai=True, project=_ss.gcp_project, location=_ss.gcp_region)
 
+    # ── Extract all brief fields ─────────────────────────────────────────────
     ft       = machine_brief.get("fan_truth_score", machine_brief.get("fan_truth", {}))
-    ft_score = ft.get("overall", 70) if isinstance(ft, dict) else 70
-    brand    = machine_brief.get("brand", "")
-    market   = machine_brief.get("market", "")
-    season   = machine_brief.get("season", "")
+    if not isinstance(ft, dict): ft = {}
+    ft_overall  = ft.get("overall", 70)
+    ft_specific = ft.get("specific", "n/a")
+    ft_shared   = ft.get("shared",   "n/a")
+    ft_special  = ft.get("special",  "n/a")
+    ft_verdict  = ft.get("verdict",  "PASS" if ft_overall >= 70 else "FAIL")
+    ft_statement = ft.get("statement", "")
 
-    # Derive confidence based on Fan Truth score
-    if ft_score >= 80:
+    brand    = machine_brief.get("brand", "")
+    market   = machine_brief.get("market", "UK")
+    season   = machine_brief.get("season", "")
+    budget   = machine_brief.get("budget", "")
+    goal     = machine_brief.get("goal", "")
+    moment   = machine_brief.get("moment_type", "")
+    product  = machine_brief.get("product", machine_brief.get("product_category", ""))
+    b_status = machine_brief.get("status", "")
+
+    aud = machine_brief.get("audience", {})
+    if isinstance(aud, dict):
+        aud_segment  = aud.get("segment", "")
+        aud_age      = aud.get("age_range", "")
+        aud_gender   = aud.get("gender", "")
+        aud_location = aud.get("location", market)
+    else:
+        aud_segment = str(aud); aud_age = aud_gender = aud_location = ""
+
+    # Validated KPI targets from briefing agent
+    kpis_raw = machine_brief.get("kpis", [])
+    kpi_lines = []
+    for k in (kpis_raw if isinstance(kpis_raw, list) else []):
+        flag = k.get("flag", "OK")
+        kpi_lines.append(f"  • {k.get('metric','')}: target {k.get('target','')} [{flag}] — {k.get('note','')}")
+    kpi_block = "\n".join(kpi_lines) if kpi_lines else "  (no specific KPI targets set)"
+
+    # Brand locks that constrain creative execution
+    locks = machine_brief.get("brand_locks_applied", [])
+    locks_str = ", ".join(locks) if locks else "none recorded"
+
+    # ── Fan Truth confidence tier ────────────────────────────────────────────
+    if ft_overall >= 80:
         conf = "HIGH"
-        conf_note = f"Fan Truth {ft_score}/100 — strong authentic connection drives +15% organic uplift"
-    elif ft_score >= 60:
+        ft_effect = (f"Fan Truth {ft_overall}/100 ({ft_verdict}) — strong authentic cultural connection. "
+                     f"Expect +15% organic reach uplift and higher earned-media amplification.")
+    elif ft_overall >= 60:
         conf = "MEDIUM"
-        conf_note = f"Fan Truth {ft_score}/100 — solid but could benefit from deeper cultural specificity"
+        ft_effect = (f"Fan Truth {ft_overall}/100 ({ft_verdict}) — solid connection but room for deeper specificity. "
+                     f"Standard reach benchmarks apply; earned uplift modest.")
     else:
         conf = "LOW"
-        conf_note = f"Fan Truth {ft_score}/100 — confidence reduced 20%; recommend brief refinement"
+        ft_effect = (f"Fan Truth {ft_overall}/100 ({ft_verdict}) — below threshold. "
+                     f"Apply -20% haircut to reach forecasts and flag brief refinement risk.")
+
+    # ── Category-specific channel benchmarks ────────────────────────────────
+    _brand_lower = brand.lower()
+    if any(x in _brand_lower for x in ("haleon", "panadol", "advil", "sensodyne", "voltaren")):
+        _cat = "OTC healthcare / consumer health"
+        _benchmarks = """OTC Healthcare benchmarks ({market}):
+- Instagram: CTR 1.2-1.8%, Reach 1.5-3.5M per £10k, Engagement 2.5-4.5%, ROAS 1.8-2.8x
+  (Health content lower engagement than beauty; trust & safety messaging reduces CTR vs impulse)
+- TikTok: CTR 1.5-2.5%, Reach 2-5M per £10k, Engagement 3-6%, ROAS 1.5-2.5x
+  (Growing for health; younger demos; symptom-moment targeting drives efficiency)
+- Google Search/Display: CTR 4-8% (search), 0.5-1.2% (display), ROAS 3.5-6x
+  (Symptom-intent queries = high purchase intent; strongest direct ROAS channel)
+- Email: CTR 14-20%, strong for existing customers, ROAS 3-5x
+- OOH/DOOH: Impressions 300k-1.5M per £10k; brand recall +12% vs category average
+- YouTube: VTR 30-45%, CTR 0.6-1.2%, strong for product education"""
+    elif any(x in _brand_lower for x in ("glenfiddich", "whisky", "spirit", "alcohol")):
+        _cat = "premium spirits"
+        _benchmarks = """Premium Spirits benchmarks ({market}):
+- Instagram: CTR 0.8-1.4%, Reach 1-2.5M per £10k, Engagement 3-5.5%, ROAS 2-3x
+  (18+ targeting limits reach; premium positioning supports higher AOV)
+- Meta/Facebook: CTR 0.9-1.6%, strong for 30-55 demographic, ROAS 2.5-3.5x
+- Google Ads: CTR 2-4%, ROAS 3-5x (gift/occasion intent searches very high value)
+- OOH: Impressions 400k-1.8M; crucial for premium brand building
+- Email: CTR 16-22%, ROAS 4-7x (gifting moments drive outsized revenue)
+- TikTok: limited by 18+ compliance; CTR 1-2%, mainly brand awareness"""
+    elif any(x in _brand_lower for x in ("rnorr", "knorr", "sunglow", "food", "fmcg")):
+        _cat = "food / grocery FMCG"
+        _benchmarks = """Food/Grocery FMCG benchmarks ({market}):
+- Instagram: CTR 1.8-2.8%, Reach 2.5-6M per £10k, Engagement 4-7%, ROAS 2.5-3.8x
+- TikTok: CTR 2.5-4.5%, Reach 3-9M per £10k, Engagement 7-12%, ROAS 2-3x
+  (Recipe/cooking content extremely high organic amplification)
+- Google Shopping: CTR 2-5%, ROAS 4-7x (purchase-intent dominant)
+- Email: CTR 18-26%, ROAS 4-6x
+- OOH: Impressions 600k-2.5M per £10k; strong basket-fill reminder"""
+    elif any(x in _brand_lower for x in ("boozt", "fashion", "apparel", "clothing")):
+        _cat = "fashion / e-commerce retail"
+        _benchmarks = """Fashion/E-commerce benchmarks ({market}):
+- Instagram: CTR 2.2-3.5%, Reach 3-7M per £10k, Engagement 5-9%, ROAS 3-5x
+- TikTok: CTR 3-5%, Reach 4-10M per £10k, Engagement 8-14%, ROAS 2.5-4x
+  (High organic amplification for styling content; fastest-growing channel)
+- Google Shopping: CTR 3-7%, ROAS 5-9x
+- Email: CTR 20-30%, ROAS 6-10x (retargeting existing customers)
+- Meta/Facebook: CTR 1.8-3%, strong for retargeting, ROAS 3-6x"""
+    elif any(x in _brand_lower for x in ("sunrise", "telco", "telecom", "mobile")):
+        _cat = "telecommunications / mobile"
+        _benchmarks = """Telco/Mobile benchmarks ({market}):
+- Instagram: CTR 1.0-1.8%, Reach 1.5-4M per £10k, Engagement 2-4%, ROAS 1.5-2.5x
+- Google Search: CTR 5-10%, ROAS 4-8x (plan/contract searches = very high LTV intent)
+- TV/Streaming: strong awareness; ROAS 1.2-2x (brand building channel)
+- OOH: Impressions 500k-2M; essential for local footprint and store traffic
+- Email: CTR 12-18%, ROAS 3-5x (upsell to existing base)
+- TikTok: CTR 2-3.5%, growing for youth acquisition"""
+    elif any(x in _brand_lower for x in ("ubs", "bank", "finance", "insurance")):
+        _cat = "financial services"
+        _benchmarks = """Financial Services benchmarks ({market}):
+- LinkedIn: CTR 0.4-0.9%, CPL-focused rather than ROAS, strong B2B reach
+- Google Search: CTR 3-7%, highest intent channel, ROAS 3-6x
+- Instagram/Meta: CTR 0.6-1.2%, Reach 1-2.5M, mainly awareness
+- Email: CTR 10-16%, strong for existing customer upsell, ROAS 4-8x
+- OOH/Premium OOH: brand trust signals; key for premium positioning"""
+    else:
+        _cat = "FMCG / consumer brand"
+        _benchmarks = """FMCG/Consumer benchmarks ({market}):
+- Instagram: CTR 1.8-2.5%, Reach 2-5M per £10k, Engagement 4-6%, ROAS 2.5-3.5x
+- TikTok: CTR 2.5-4%, Reach 3-8M per £10k, Engagement 6-9%, ROAS 2.0-3.0x
+- Google Ads: CTR 3-6%, Reach 1-3M per £10k, ROAS 4-6x
+- Email: CTR 18-24%, ROAS 3-5x
+- OOH: Impressions 500k-2M, brand uplift focused"""
+
+    _benchmarks = _benchmarks.replace("{market}", market)
+
+    # ── Moment-type adjustment note ──────────────────────────────────────────
+    _moment_note = ""
+    if moment:
+        _m = moment.lower()
+        if "season" in _m or "holiday" in _m or "festive" in _m:
+            _moment_note = f"Seasonal moment ({moment}): expect 20-40% reach uplift vs always-on; front-load budget in first 2 weeks."
+        elif "launch" in _m or "new product" in _m:
+            _moment_note = f"Product launch ({moment}): trial-driving channels (search, sampling OOH) should be weighted higher; awareness ROAS will lag 2-3 weeks."
+        elif "event" in _m or "sponsorship" in _m:
+            _moment_note = f"Event/sponsorship ({moment}): real-time social amplification window; TikTok/Instagram burst budget recommended."
+        else:
+            _moment_note = f"Always-on / day-to-day ({moment}): steady-state benchmarks apply; optimise for sustained frequency."
 
     channels_str = ", ".join(channels) if channels else "Instagram, TikTok, Google Ads"
 
-    prompt = f"""You are Nexus, a pre-launch campaign performance forecaster for {brand}.
+    # ── Compose prompt ───────────────────────────────────────────────────────
+    prompt = f"""You are Nexus, CampaignOS's pre-launch performance forecaster.
 
-Use these inputs to generate a realistic pre-launch performance forecast:
+Your job is to produce a REALISTIC, SPECIFIC performance forecast grounded in the brief's validated data.
+Do NOT use generic numbers — use the category benchmarks, brief KPIs, audience profile, and Fan Truth data below.
 
-CAMPAIGN SUMMARY:
-- Brand: {brand}
-- Market: {market}
-- Season: {season}
-- Channels: {channels_str}
-- Fan Truth Score: {ft_score}/100 ({conf_note})
-- Big Idea: {strategy.get("big_idea", "")}
+════════════════════════════════════════
+CAMPAIGN BRIEF (validated by Briefing Agent — status: {b_status})
+════════════════════════════════════════
+Brand:           {brand}
+Product:         {product}
+Market:          {market}
+Season/Timing:   {season}
+Moment Type:     {moment}
+Campaign Goal:   {goal}
+Budget:          {budget}
+Channels:        {channels_str}
+Brief Status:    {b_status}
+
+AUDIENCE:
+- Segment:   {aud_segment}
+- Age range: {aud_age}
+- Gender:    {aud_gender}
+- Location:  {aud_location}
+
+CREATIVE DIRECTION:
+- Big Idea:    {strategy.get("big_idea", "")}
 - Hero Message: {strategy.get("hero_message", "")}
-- Budget: {machine_brief.get("budget", "£50,000")}
+- Tagline:     {strategy.get("tagline", "")}
+- Short Headline: {(copy.get("short") or {{}}).get("headline", "")}
+- CTA:         {copy.get("cta", "")}
 
-BENCHMARKS (typical for {market} beauty/FMCG campaigns):
-- Instagram: CTR 1.8-2.5%, Reach 2-5M per £10k spend, Engagement 4-6%, ROAS 2.5-3.5x
-- TikTok: CTR 2.5-4%, Reach 3-8M per £10k spend, Engagement 6-9%, ROAS 2.0-3.0x
-- Google Ads: CTR 3-6%, Reach 1-3M per £10k spend, ROAS 4-6x
-- Email: CTR 18-24%, Reach depends on list size, ROAS 3-5x
-- OOH: Impressions 500k-2M, low direct ROAS but high brand uplift
+FAN TRUTH ANALYSIS (from Briefing Agent):
+- Overall Score:  {ft_overall}/100  [{ft_verdict}]
+- Specific:       {ft_specific}/100  (cultural specificity — organic amplification driver)
+- Shared:         {ft_shared}/100   (broad audience resonance — reach scalability)
+- Special:        {ft_special}/100  (brand distinctiveness — brand-recall uplift)
+- Statement:      "{ft_statement}"
+- Effect:         {ft_effect}
 
-Apply these Fan Truth adjustments:
-- Fan Truth >= 80: +15% organic reach, boost confidence to HIGH
-- Fan Truth 60-79: standard benchmarks, MEDIUM confidence
-- Fan Truth < 60: -20% on reach forecasts, LOW confidence
+VALIDATED KPI TARGETS (set by client, validated by Briefing Agent):
+{kpi_block}
+
+BRAND LOCKS (constraints on execution):
+{locks_str}
+
+════════════════════════════════════════
+CATEGORY BENCHMARKS — {_cat}
+════════════════════════════════════════
+{_benchmarks}
+
+MOMENT ADJUSTMENT:
+{_moment_note if _moment_note else "No specific moment adjustment — use standard benchmarks."}
+
+════════════════════════════════════════
+FORECASTING RULES
+════════════════════════════════════════
+1. Base your channel forecasts on the CATEGORY BENCHMARKS above, not generic FMCG averages.
+2. Apply Fan Truth adjustments: Specific score drives organic reach; Shared score drives paid scalability; Special score drives brand-recall and ROAS tail.
+3. Audience age/gender affects channel mix — e.g., 25-45 women favour Instagram; 18-30 favour TikTok; 35-55 B2B favour LinkedIn/search.
+4. Validate each channel's predicted metrics against the client's KPI targets — flag if a target looks achievable, ambitious, or unrealistic given benchmarks.
+5. If goal is awareness/reach, weight reach and VTR. If goal is conversion/trial/sales, weight ROAS and CTR.
+6. Budget drives absolute reach numbers — scale proportionally. If budget is a range, use the midpoint.
+7. Moment type adjustment: apply the factor noted above.
 
 Produce a JSON object (no markdown, no explanation):
 {{
   "campaign_id": "{campaign_id}",
-  "headline_prediction": "<one bold sentence predicting campaign performance>",
+  "headline_prediction": "<one specific, confident sentence predicting this campaign's performance — name the brand and goal>",
   "overall_confidence": "{conf}",
-  "predicted_total_reach": "<e.g. 8.2M – 11.4M across all channels>",
-  "predicted_blended_roas": "<e.g. 3.2x>",
-  "fan_truth_impact": "<2 sentences on how the Fan Truth score affects performance>",
-  "benchmark_comparison": "<1-2 sentences comparing to typical {market} {season} campaigns>",
+  "predicted_total_reach": "<specific range, e.g. 6.8M – 9.2M across all channels>",
+  "predicted_blended_roas": "<specific value, e.g. 2.9x>",
+  "fan_truth_impact": "<2 sentences on how the 3-axis Fan Truth breakdown specifically affects THIS campaign's reach and recall>",
+  "benchmark_comparison": "<1-2 sentences comparing these predictions to typical {_cat} campaigns in {market} in {season}>",
+  "kpi_validation": [
+    {{
+      "metric": "<KPI metric name>",
+      "client_target": "<their target>",
+      "forecast": "<your predicted value>",
+      "verdict": "ACHIEVABLE|AMBITIOUS|AT RISK",
+      "note": "<1 sentence grounding>"
+    }}
+  ],
   "channel_forecasts": [
     {{
       "channel": "<channel name>",
-      "predicted_reach": "<e.g. 4.2M – 5.8M>",
-      "predicted_ctr": "<e.g. 2.3%>",
-      "predicted_roas": "<e.g. 3.1x>",
-      "predicted_engagement": "<e.g. 5.8%>",
+      "predicted_reach": "<specific range>",
+      "predicted_ctr": "<specific %>",
+      "predicted_roas": "<specific value>",
+      "predicted_engagement": "<specific %>",
       "confidence": "HIGH|MEDIUM|LOW",
       "budget_pct": <0.0–1.0 float>,
-      "risk_flag": "<optional short risk>",
-      "opportunity": "<optional short opportunity>"
+      "risk_flag": "<short specific risk for this channel given the brief>",
+      "opportunity": "<short specific upside for this channel given the brief>"
     }}
   ],
-  "top_risk": "<single biggest risk to performance>",
-  "top_opportunity": "<single biggest upside opportunity>",
-  "first_48h_watchlist": ["<metric to watch 1>", "<metric to watch 2>", "<metric to watch 3>"],
+  "top_risk": "<single biggest risk specific to this campaign and brand>",
+  "top_opportunity": "<single biggest upside specific to this brief>",
+  "first_48h_watchlist": ["<specific metric 1>", "<specific metric 2>", "<specific metric 3>"],
   "recommended_budget_split": {{"<channel>": <0.0–1.0 float>}}
 }}
 
 Only include channels from this list: {channels_str}
-Budget split percentages must sum to 1.0."""
+Budget split percentages must sum to 1.0.
+kpi_validation must include one entry per validated KPI target listed above."""
 
     raw = await _vertex_generate(_gc, os.getenv("CREATIVE_MODEL", "gemini-3.5-flash"), prompt)
     return _parse_agent_response(raw)

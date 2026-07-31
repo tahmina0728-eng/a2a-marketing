@@ -4,13 +4,13 @@ import type { HarnessBriefRequest } from "../types/pipeline";
 
 /* ── Data ──────────────────────────────────────────────────────── */
 const BRANDS = [
-  { id: "Rnorr",       label: "Rnorr",            logo: "/brands/rnorr-logo.png" },
-  { id: "Sunglow",     label: "Sunglow",            logo: "/brands/sunglow-logo.png" },
-  { id: "Boozt",       label: "Boozt",              logo: "/brands/boozt-logo.png" },
-  { id: "Glenfiddich", label: "Glenfiddich × AMF1", logo: "/brands/glenfiddich-logo.png" },
-  { id: "UBS Bank",    label: "UBS Bank",           logo: "/brands/ubs-bank-logo.png" },
-  { id: "sunrise",     label: "Sunrise",            logo: "/brands/sunrise-logo.svg" },
-  { id: "Haleon",      label: "Haleon",             logo: "/brands/haleon-logo.svg" },
+  { id: "Rnorr",       label: "Rnorr",             logo: "/brands/Rnorr/serve/Logos/Rnorr-Logo.png" },
+  { id: "Sunglow",     label: "Sunglow",            logo: "/brands/Sunglow/serve/Logos/sunglow_logo.png" },
+  { id: "Boozt",       label: "Boozt",              logo: "/brands/Boozt/serve/Logos/Boozt_Logo.png" },
+  { id: "Glenfiddich", label: "Glenfiddich × AMF1", logo: "/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png" },
+  { id: "UBS Bank",    label: "UBS Bank",           logo: "/brands/UBS Bank/serve/Logos/ubs-bank-logo.png" },
+  { id: "sunrise",     label: "Sunrise",            logo: "/brands/sunrise/serve/Logos/sunrise_logo_red.svg" },
+  { id: "Haleon",      label: "Haleon",             logo: "/brands/Haleon/serve/Logos/haleon_logo_black.svg" },
 ];
 const MARKETS  = ["United Kingdom","Germany","France","Spain","India","Thailand","China","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 

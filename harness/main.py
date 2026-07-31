@@ -553,9 +553,14 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             await push_event(campaign_id, agent, status, message)
 
         t2 = time.time()
+        # Filter products to match the selected product name (e.g. "Panadol" not "Advil")
+        # before constructing the ordered list sent to the image generator.
+        _product_slug = (brief.product if hasattr(brief, "product") else "").strip().lower()
+        _matched = [p for p in products if _product_slug and _product_slug in p.lower()]
+        _src_products = _matched if _matched else products
         # Prefer PNG products (transparent background) for cleaner Gemini reference
-        _png_products = [p for p in products if p.lower().endswith(".png")]
-        _jpg_products = [p for p in products if not p.lower().endswith(".png")]
+        _png_products = [p for p in _src_products if p.lower().endswith(".png")]
+        _jpg_products = [p for p in _src_products if not p.lower().endswith(".png")]
         _ordered_products = (_png_products + _jpg_products)[:5]
 
         # Primary logo: prefer whiteBG or plain logo (best contrast on dark backgrounds)
@@ -1695,6 +1700,55 @@ async def get_brand_campaign_history(brand_name: str, limit: int = 50):
         raise HTTPException(status_code=503, detail="BigQuery SDK not available")
 
     return {"brand": brand_name, **data}
+
+
+@app.get("/campaign/{campaign_id}/brief")
+async def get_campaign_brief_detail(campaign_id: str):
+    """Fetch full brief JSON for a specific campaign_id so the UI can re-run it."""
+    import asyncio, json as _json
+
+    def _query():
+        try:
+            from google.cloud import bigquery as _bq
+        except ImportError:
+            return {"error": "bigquery_unavailable"}
+
+        client = _bq.Client(project=settings.gcp_project)
+        table  = f"{settings.gcp_project}.{settings.bq_output_dataset}.{settings.bq_output_table}"
+        q = f"""
+            SELECT campaign_id, campaign_name, brand, market, product_category,
+                   season, channels, moment_type, brief_json, created_at
+            FROM `{table}`
+            WHERE campaign_id = @cid
+            LIMIT 1
+        """
+        job = client.query(q, job_config=_bq.QueryJobConfig(
+            query_parameters=[_bq.ScalarQueryParameter("cid", "STRING", campaign_id)]
+        ))
+        rows = list(job.result())
+        if not rows:
+            return None
+        r = dict(rows[0])
+        if r.get("created_at"):
+            r["created_at"] = r["created_at"].isoformat()
+        if r.get("brief_json"):
+            try:
+                r["brief_parsed"] = _json.loads(r["brief_json"])
+            except Exception:
+                r["brief_parsed"] = {}
+        return r
+
+    try:
+        row = await asyncio.to_thread(_query)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    if isinstance(row, dict) and row.get("error") == "bigquery_unavailable":
+        raise HTTPException(status_code=503, detail="BigQuery SDK not available")
+
+    return row
 
 
 @app.get("/brands/{brand_name}/serve/{category}/{filename:path}")
