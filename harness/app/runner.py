@@ -1117,10 +1117,10 @@ def _apply_brand_overlay(
                     _logo_img = Image.open(io.BytesIO(_logo_bytes)).convert("RGBA")
 
             # Sunrise offer mode: logo belongs in the red bottom strip (section 6), not here.
-            # Haleon with a product: the section-5 stamp already shows brand+product bottom-right,
-            # so skip the separate top-right logo pill to avoid two "HALEON" labels.
-            _haleon_has_stamp = _is_haleon and bool(product_name)
-            if _logo_img is not None and not _sunrise_offer and not _haleon_has_stamp:
+            # Haleon: always show the Haleon wordmark as a small top-right masterbrand mark —
+            # no stamp is added (section 5 is skipped for Haleon), so the logo is the only
+            # brand identifier beyond the product packaging already in the AI-generated scene.
+            if _logo_img is not None and not _sunrise_offer:
                 max_lw = int(W * (0.30 if not _use_pill else 0.14))
                 max_lh = int(H * (0.20 if not _use_pill else 0.10))
                 sc  = min(max_lw / max(1, _logo_img.width), max_lh / max(1, _logo_img.height), 1.0)
@@ -1128,9 +1128,15 @@ def _apply_brand_overlay(
                 lh2 = max(32, int(_logo_img.height * sc))
                 _logo_img = _logo_img.resize((lw, lh2), Image.LANCZOS)
                 lx = W - lw - margin
-                # Sunrise: logo vertically centred on the right — matches reference images
+                # Sunrise: vertically centred right — matches reference images
+                # Haleon: bottom-right corner — masterbrand mark below product zone
                 # Other brands: top-right corner
-                ly = (H - lh2) // 2 if brand.lower() in ("sunrise",) else margin
+                if brand.lower() in ("sunrise",):
+                    ly = (H - lh2) // 2
+                elif _is_haleon:
+                    ly = H - lh2 - margin
+                else:
+                    ly = margin
                 if _use_pill:
                     pad     = max(8, int(lw * 0.18))
                     bg_w    = lw + pad * 2
@@ -1153,10 +1159,12 @@ def _apply_brand_overlay(
         # ── 5. Product label stamp — brand + product name in product zone ────────
         # Placed bottom-right where products sit; guarantees brand name is readable
         # even if the AI model rendered wrong/no text on the packaging.
-        # Glenfiddich skipped — logo pill top-right already carries brand identity.
+        # Glenfiddich / Sunrise / Haleon skipped — their brand identity is carried by
+        # the logo mark composited in section 4, and Haleon's product packaging is
+        # already visible in the AI-generated scene (a duplicate stamp clutters it).
         try:
-            if brand in ("Glenfiddich", "sunrise", "Sunrise"):
-                raise ValueError("stamp_not_needed")  # logo already composited top-right
+            if brand in ("Glenfiddich", "sunrise", "Sunrise", "Haleon"):
+                raise ValueError("stamp_not_needed")
             _LABEL_COLORS = {
                 "Sunglow":     {"bg": (176,   0, 100, 220), "text": (255, 255, 255), "accent": (255, 199,  44)},
                 "Rnorr":       {"bg": (  0,  86,  41, 220), "text": (255, 255, 255), "accent": (255, 222,   0)},
