@@ -381,7 +381,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         _fts    = machine_brief.get("fan_truth_score", {})
         if not isinstance(_ft_cur, dict) or not _ft_cur.get("overall"):
             if isinstance(_fts, dict) and _fts:
-                # Compute overall from sub-scores if the LLM omitted it or returned 0
+                # fan_truth_score has the sub-scores — use it as the source
                 _raw_overall = _fts.get("overall") or 0
                 if not _raw_overall:
                     _raw_overall = round(
@@ -393,6 +393,14 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
                     "statement": ((_ft_cur.get("statement") if isinstance(_ft_cur, dict) else None)
                                   or _fts.get("statement") or brief.fan_truth or ""),
                 }
+            elif isinstance(_ft_cur, dict):
+                # fan_truth IS a dict but overall is 0 — compute it from the 3-axis sub-scores
+                _sp = _ft_cur.get("specific") or 0
+                _sh = _ft_cur.get("shared")   or 0
+                _se = _ft_cur.get("special")  or 0
+                if _sp or _sh or _se:
+                    _ft_cur["overall"] = round((_sp + _sh + _se) / max(sum(1 for x in (_sp, _sh, _se) if x), 1))
+                    machine_brief["fan_truth"] = _ft_cur
 
         # Last resort: if fan_truth is still not a dict, bootstrap from user's brief input
         if not isinstance(machine_brief.get("fan_truth"), dict):

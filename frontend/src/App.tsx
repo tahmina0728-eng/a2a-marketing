@@ -2555,7 +2555,10 @@ function ResultsView({ output, campaignId }: {
         {brief && (() => {
           const n = S();
           const ft    = brief.fan_truth ?? {};
-          const ftScore = ft.overall ?? brief.validation_score ?? 0;
+          // Compute overall from 3-axis if the backend returned 0 (agent sometimes omits it)
+          const _ftAxes = [ft.specific, ft.shared, ft.special].filter((v: any) => typeof v === "number" && v > 0) as number[];
+          const _ftAxeAvg = _ftAxes.length > 0 ? Math.round(_ftAxes.reduce((a, b) => a + b, 0) / _ftAxes.length) : 0;
+          const ftScore = (ft.overall && ft.overall > 0) ? ft.overall : (_ftAxeAvg || brief.validation_score || brief.score || 0);
           const kpis  = (brief.kpis ?? []) as any[];
           const locks = (brief.brand_locks_applied ?? []) as string[];
           const warnings = (brief.brand_warnings ?? []) as string[];
