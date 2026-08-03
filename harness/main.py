@@ -1351,17 +1351,36 @@ async def publish_standalone_channel(req: StandalonePublishRequest):
 @app.get("/brand-logo/{brand}")
 async def serve_brand_logo(brand: str):
     """
-    Serve the primary brand logo PNG for email embedding.
-    Tries local bucket first, then GCS. Returns PNG with 24h cache.
-    Used by email templates as a hosted image URL (Gmail blocks data: URIs).
+    Serve the primary brand logo as PNG with 24h cache.
+    Sunrise and Haleon only have SVG files which browsers reject at small sizes,
+    so we use the same programmatic Pillow generators the KV overlay pipeline uses.
+    All other brands: prefer a neutral PNG from GCS/local bucket.
     """
     from fastapi.responses import Response
-    from app.brand_assets import get_asset_loader
+    from io import BytesIO
     try:
+        # ── Programmatic logos for brands whose GCS assets are SVG-only ──────
+        if brand.lower() in ("sunrise",):
+            from app.runner import _draw_sunrise_logo_img
+            img = _draw_sunrise_logo_img(64, None)
+            buf = BytesIO()
+            img.convert("RGBA").save(buf, format="PNG")
+            return Response(content=buf.getvalue(), media_type="image/png",
+                            headers={"Cache-Control": "public, max-age=86400"})
+
+        if brand.lower() == "haleon":
+            from app.runner import _draw_haleon_logo_img
+            img = _draw_haleon_logo_img(48, None)
+            buf = BytesIO()
+            img.convert("RGBA").save(buf, format="PNG")
+            return Response(content=buf.getvalue(), media_type="image/png",
+                            headers={"Cache-Control": "public, max-age=86400"})
+
+        # ── Raster logo from GCS / local bucket (all other brands) ───────────
+        from app.brand_assets import get_asset_loader
         loader = get_asset_loader()
         logos  = loader.list_logos(brand)
         _sfx   = {"green", "red", "yellow", "orange", "purple", "blue"}
-        # Prefer a neutral PNG (no colour suffix); fall back to any PNG, then SVG, then first logo
         primary = (
             next((p for p in logos if p.lower().endswith(".png")
                   and not any(p.lower().rsplit(".",1)[0].endswith(s) for s in _sfx)), None) or
@@ -1379,7 +1398,7 @@ async def serve_brand_logo(brand: str):
         else:
             from pathlib import Path
             data = Path(primary).read_bytes()
-        _ext = primary.rsplit(".", 1)[-1].lower()
+        _ext  = primary.rsplit(".", 1)[-1].lower()
         _mime = {"svg": "image/svg+xml", "png": "image/png",
                  "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}.get(_ext, "image/png")
         return Response(content=data, media_type=_mime,
