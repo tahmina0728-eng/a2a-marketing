@@ -964,32 +964,21 @@ def _apply_brand_overlay(
         max_line_w = int(W * (0.48 if _is_sr_life else (0.70 if brand.lower() in ("sunrise",) else 0.55)))
         base_sz    = max(44, W // 10)
         _is_sunrise_lifestyle = brand.lower() in ("sunrise",) and not bool(product_name)
-        if _is_sunrise_lifestyle:
-            # Uniform font size across all lines — find the size that fits the longest line
-            # so all 3 lines render at the same scale (no one short line becoming huge)
-            uniform_sz = base_sz
-            while uniform_sz > 18:
-                fnt = _font(uniform_sz)
-                fits = all(
-                    (_md.textbbox((0, 0), t.upper(), font=fnt)[2]
-                     - _md.textbbox((0, 0), t.upper(), font=fnt)[0]) <= max_line_w
-                    for t in sentences
-                )
-                if fits:
-                    break
-                uniform_sz = max(18, int(uniform_sz * 0.88))
-            lines_spec = [(t.upper(), uniform_sz, _font(uniform_sz)) for t in sentences]
-        else:
-            lines_spec = []
-            for line_text in sentences:
-                sz = base_sz
-                while sz > 18:
-                    fnt = _font(sz)  # Light (300) for Sunrise via _font() default
-                    bb  = _md.textbbox((0, 0), line_text.upper(), font=fnt)
-                    if (bb[2] - bb[0]) <= max_line_w:
-                        break
-                    sz = max(18, int(sz * 0.88))
-                lines_spec.append((line_text.upper(), sz, _font(sz)))
+        # All brands use uniform font size across lines so a short line 2 ("SIN MIEDO")
+        # never renders larger than the longer line 1 ("VUELVE A MORDER").
+        # Find the size that fits the widest/hardest line, then apply it to all lines.
+        uniform_sz = base_sz
+        while uniform_sz > 18:
+            fnt = _font(uniform_sz)
+            fits = all(
+                (_md.textbbox((0, 0), t.upper(), font=fnt)[2]
+                 - _md.textbbox((0, 0), t.upper(), font=fnt)[0]) <= max_line_w
+                for t in sentences
+            )
+            if fits:
+                break
+            uniform_sz = max(18, int(uniform_sz * 0.88))
+        lines_spec = [(t.upper(), uniform_sz, _font(uniform_sz)) for t in sentences]
 
         _tmp = Image.new("RGBA", (W, 4))
         _td  = ImageDraw.Draw(_tmp)
