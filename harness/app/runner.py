@@ -2399,6 +2399,7 @@ Rules:
 - AUDIO: upbeat brand-appropriate background music + {_voiceover_line}
 - The voiceover should be delivered confidently and warmly over the music
 - No text or typography in the image
+- CRITICAL PRODUCT RULE: Show ONLY {product_name or brand} product packaging. Do NOT show any other product, competing brand, or unrelated packaging in the scene.
 Output the prompt only.""",
     ))
     final_prompt = video_prompt.text.strip()
@@ -2423,6 +2424,11 @@ Output the prompt only.""",
                         output_gcs_uri=out_uri,
                         number_of_videos=1,
                         generate_audio=True,
+                        negative_prompt=(
+                            "text, words, subtitles, competing products, multiple brands, "
+                            "other product packaging, fictional brands, unrelated products, "
+                            "second product, financial charts, graphs, violence, explicit content"
+                        ),
                     ),
                 ))
             except Exception as _ve:

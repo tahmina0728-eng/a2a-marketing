@@ -1280,6 +1280,8 @@ def run_reel(brand: str, prompt: str) -> dict:
         f"- AUDIO: upbeat brand-appropriate background music + {_voiceover_line}\n"
         f"- The voiceover should be delivered confidently and warmly over the music\n"
         f"- No text or typography visible in the image\n"
+        f"- CRITICAL PRODUCT RULE: Show ONLY {product or brand} product packaging. "
+        f"Do NOT show any other product, competing brand, or unrelated packaging in the scene.\n"
         f"- CRITICAL: Do NOT use any financial or wealth terms: no 'wealth', 'investment', "
         f"'high-net-worth', 'banking', 'financial', 'portfolio', 'returns', 'assets', 'affluent', "
         f"'prosperity'. Describe only pure visual/lifestyle/emotional content.\n"
@@ -1332,7 +1334,9 @@ def run_reel(brand: str, prompt: str) -> dict:
 
         _neg_prompt = (
             "text, words, subtitles, financial charts, graphs, stock prices, "
-            "news tickers, legal disclaimers, violence, explicit content"
+            "news tickers, legal disclaimers, violence, explicit content, "
+            "competing products, multiple product brands, other packaging, "
+            "fictional brands, unrelated products, second product"
         )
 
         # Pure text-to-video — no last_frame/image params.
