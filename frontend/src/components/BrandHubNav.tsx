@@ -293,19 +293,10 @@ export default function BrandHubNav({ active, onChange, activeBrand, onBrandChan
       </div>
 
       {/* ── Sections ── */}
-      {NAV_SECTIONS.map(section => (
+      {NAV_SECTIONS.map(section => {
+        const isSingleGroup = section.groups.length === 1;
+        return (
         <div key={section.sectionLabel} style={{ marginTop: 8 }}>
-          {/* Section label */}
-          {section.sectionLabel && (
-            <div style={{
-              fontSize: 9, fontWeight: 800, letterSpacing: "0.13em",
-              textTransform: "uppercase" as const,
-              color: "var(--text-tertiary)",
-              padding: "6px 14px 4px",
-            }}>
-              {section.sectionLabel}
-            </div>
-          )}
 
           {section.groups.map(group => {
             const isOpen = openGroups.has(group.key);
@@ -313,37 +304,79 @@ export default function BrandHubNav({ active, onChange, activeBrand, onBrandChan
 
             return (
               <div key={group.key}>
-                {/* Group toggle row */}
-                <button
-                  onClick={() => toggleGroup(group.key)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 7,
-                    width: "100%", border: "none", cursor: "pointer",
-                    fontFamily: "inherit", textAlign: "left" as const,
-                    padding: "5px 12px 5px 14px",
-                    fontSize: 12, fontWeight: (groupHasActive && !isOpen) ? 600 : 500,
-                    color: (groupHasActive && !isOpen) ? "#7c3aed" : "var(--text-primary)",
-                    background: "transparent",
-                    borderLeft: (groupHasActive && !isOpen) ? "2px solid #7c3aed" : "2px solid transparent",
-                    borderRadius: "0 6px 6px 0",
-                    transition: "all 0.12s",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,58,237,0.04)"; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                >
-                  {/* Chevron */}
-                  <span style={{ color: "var(--text-tertiary)", transition: "transform 0.2s",
-                    display: "inline-flex", transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)" }}>
-                    <Icon name="chevronDown" size={11} />
-                  </span>
-                  {group.label}
-                </button>
+                {isSingleGroup ? (
+                  /* Single-group section: section label IS the toggle row */
+                  <button
+                    onClick={() => toggleGroup(group.key)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 7,
+                      width: "100%", border: "none", cursor: "pointer",
+                      fontFamily: "inherit", textAlign: "left" as const,
+                      padding: "5px 12px 5px 14px",
+                      background: "transparent",
+                      borderLeft: "2px solid transparent",
+                      borderRadius: "0 6px 6px 0",
+                      transition: "all 0.12s",
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,58,237,0.04)"; }}
+                    onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                  >
+                    <span style={{ color: "var(--text-tertiary)", display: "inline-flex",
+                      transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }}>
+                      <Icon name="chevronDown" size={11} />
+                    </span>
+                    <span style={{
+                      fontSize: 9, fontWeight: 800, letterSpacing: "0.13em",
+                      textTransform: "uppercase" as const,
+                      color: groupHasActive && !isOpen ? "#7c3aed" : "var(--text-tertiary)",
+                    }}>
+                      {section.sectionLabel}
+                    </span>
+                  </button>
+                ) : (
+                  /* Multi-group section: section label is a static header, each group has its own toggle */
+                  <>
+                    {group === section.groups[0] && section.sectionLabel && (
+                      <div style={{
+                        fontSize: 9, fontWeight: 800, letterSpacing: "0.13em",
+                        textTransform: "uppercase" as const,
+                        color: "var(--text-tertiary)",
+                        padding: "6px 14px 4px",
+                      }}>
+                        {section.sectionLabel}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => toggleGroup(group.key)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 7,
+                        width: "100%", border: "none", cursor: "pointer",
+                        fontFamily: "inherit", textAlign: "left" as const,
+                        padding: "5px 12px 5px 14px",
+                        fontSize: 12, fontWeight: (groupHasActive && !isOpen) ? 600 : 500,
+                        color: (groupHasActive && !isOpen) ? "#7c3aed" : "var(--text-primary)",
+                        background: "transparent",
+                        borderLeft: (groupHasActive && !isOpen) ? "2px solid #7c3aed" : "2px solid transparent",
+                        borderRadius: "0 6px 6px 0",
+                        transition: "all 0.12s",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,58,237,0.04)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                    >
+                      <span style={{ color: "var(--text-tertiary)", display: "inline-flex",
+                        transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.2s" }}>
+                        <Icon name="chevronDown" size={11} />
+                      </span>
+                      {group.label}
+                    </button>
+                  </>
+                )}
 
                 {/* Expanded items */}
                 {isOpen && (
                   <div style={{ paddingBottom: 2 }}>
                     {group.items.map(item => (
-                      <NavItem key={item.id} item={item} indent={30} />
+                      <NavItem key={item.id} item={item} indent={isSingleGroup ? 22 : 30} />
                     ))}
                   </div>
                 )}
@@ -351,7 +384,8 @@ export default function BrandHubNav({ active, onChange, activeBrand, onBrandChan
             );
           })}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
