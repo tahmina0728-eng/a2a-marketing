@@ -86,14 +86,14 @@ const GOALS = [
 ];
 
 const BRANDS = [
-  { id: "Rnorr",       label: "Rnorr",             emoji: "🥣", logo: "/brands/Rnorr/serve/Logos/Rnorr-Logo.png" },
-  { id: "Sunglow",     label: "Sunglow",            emoji: "✨", logo: "/brands/Sunglow/serve/Logos/sunglow_logo.png" },
-  { id: "Boozt",       label: "Boozt",              emoji: "💨", logo: "/brands/Boozt/serve/Logos/Boozt_Logo.png" },
-  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", logo: "/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png" },
-  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", logo: "/brands/UBS Bank/serve/Logos/ubs-bank-logo.png" },
-  { id: "sunrise",     label: "Sunrise",            emoji: "🌅", logo: "/brands/sunrise/serve/Logos/sunrise_logo_red.svg" },
-  { id: "Haleon",      label: "Haleon",             emoji: "💊", logo: "/brands/Haleon/serve/Logos/haleon_logo_black.svg" },
-];
+  { id: "Rnorr",       label: "Rnorr",             emoji: "🥣" },
+  { id: "Sunglow",     label: "Sunglow",            emoji: "✨" },
+  { id: "Boozt",       label: "Boozt",              emoji: "💨" },
+  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃" },
+  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦" },
+  { id: "sunrise",     label: "Sunrise",            emoji: "🌅" },
+  { id: "Haleon",      label: "Haleon",             emoji: "💊" },
+].map(b => ({ ...b, logo: `${API_BASE_PUB}/brand-logo/${encodeURIComponent(b.id)}` }));
 
 
 const BRAND_PRODUCTS: Record<string, string[]> = {
@@ -399,7 +399,9 @@ function BriefForm({ onFullCampaign }: {
                     borderRadius: b.id === "Glenfiddich" ? 8 : 0,
                     padding: b.id === "Glenfiddich" ? "4px 10px" : 0 }}>
                     <img src={b.logo} alt={b.label}
+                      onError={e => { (e.target as HTMLImageElement).style.display = "none"; (e.target as HTMLImageElement).nextElementSibling!.removeAttribute("hidden"); }}
                       style={{ height: b.id === "Glenfiddich" ? "auto" : 40, maxHeight: b.id === "Glenfiddich" ? 36 : 40, maxWidth: "100%", objectFit: "contain", display: "block" }} />
+                    <span hidden style={{ fontSize: 28 }}>{b.emoji}</span>
                   </div>
                   <div className="goal-tile-label">{b.label}</div>
                 </div>
