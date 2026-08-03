@@ -1047,15 +1047,19 @@ def _apply_brand_overlay(
                     # backgrounds — matches Sunrise reference ad style (white with dark stroke)
                     for dx, dy in [(-1,-1),(0,-1),(1,-1),(-1,0),(1,0),(-1,1),(0,1),(1,1)]:
                         draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,100))
+                elif _is_haleon:
+                    # Stronger shadow for Haleon: white text on bright spring/studio backgrounds
+                    # needs a solid drop shadow to stay readable (offset 2px, alpha 160)
+                    for dx, dy in [(-1,-1),(1,-1),(-1,1),(1,1),(0,2),(2,0),(0,3),(3,0)]:
+                        draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,160))
                 else:
                     for dx, dy in [(-1,-1),(1,-1),(-1,1),(1,1),(0,2),(2,0)]:
                         draw.text((text_x+dx, y+dy), word, font=fnt, fill=(0,0,0,80))
                 _all_white = brand.lower() in ("sunrise",)
                 if _is_haleon:
-                    # Line 1: charcoal; line 2: Haleon green ONLY when it has ≥3 words
-                    # (a short fragment like "OWN DAY." in green looks disconnected)
-                    _line2_words = len(line_data) > 1 and len(line_data[1][0].split()) >= 3
-                    color = (51, 62, 72, 255) if (i == 0 or not _line2_words) else (*accent_rgb, 255)
+                    # Line 1: white; line 2: Haleon green (#65AC1E) for any second line.
+                    # White headline + green accent matches real Sensodyne/Haleon campaign style.
+                    color = (255, 255, 255, 255) if i == 0 else (*accent_rgb, 255)
                 else:
                     color = (255, 255, 255, 255) if _all_white else (
                         (*accent_rgb, 255) if i == 0 and len(line_data) > 1 else (255, 255, 255, 255)
