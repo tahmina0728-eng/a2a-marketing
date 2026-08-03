@@ -1,16 +1,17 @@
 import { useState } from "react";
 import FormSelect from "./ui/FormSelect";
 import type { HarnessBriefRequest } from "../types/pipeline";
+import { API_BASE_PUB } from "../services/briefingApi";
 
 /* ── Data ──────────────────────────────────────────────────────── */
 const BRANDS = [
-  { id: "Rnorr",       label: "Rnorr",             logo: "/brands/Rnorr/serve/Logos/Rnorr-Logo.png" },
-  { id: "Sunglow",     label: "Sunglow",            logo: "/brands/Sunglow/serve/Logos/sunglow_logo.png" },
-  { id: "Boozt",       label: "Boozt",              logo: "/brands/Boozt/serve/Logos/Boozt_Logo.png" },
-  { id: "Glenfiddich", label: "Glenfiddich × AMF1", logo: "/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png" },
-  { id: "UBS Bank",    label: "UBS Bank",           logo: "/brands/UBS Bank/serve/Logos/ubs-bank-logo.png" },
-  { id: "sunrise",     label: "Sunrise",            logo: "/brands/sunrise/serve/Logos/sunrise_logo_red.svg" },
-  { id: "Haleon",      label: "Haleon",             logo: "/brands/Haleon/serve/Logos/haleon_logo_black.svg" },
+  { id: "Rnorr",       label: "Rnorr",             logo: `${API_BASE_PUB}/brands/Rnorr/serve/Logos/Rnorr-Logo.png` },
+  { id: "Sunglow",     label: "Sunglow",            logo: `${API_BASE_PUB}/brands/Sunglow/serve/Logos/sunglow_logo.png` },
+  { id: "Boozt",       label: "Boozt",              logo: `${API_BASE_PUB}/brands/Boozt/serve/Logos/Boozt_Logo.png` },
+  { id: "Glenfiddich", label: "Glenfiddich × AMF1", logo: `${API_BASE_PUB}/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png` },
+  { id: "UBS Bank",    label: "UBS Bank",           logo: `${API_BASE_PUB}/brands/UBS%20Bank/serve/Logos/ubs-bank-logo.png` },
+  { id: "sunrise",     label: "Sunrise",            logo: `${API_BASE_PUB}/brands/sunrise/serve/Logos/sunrise_logo_red.svg` },
+  { id: "Haleon",      label: "Haleon",             logo: `${API_BASE_PUB}/brands/Haleon/serve/Logos/haleon_logo_black.svg` },
 ];
 const MARKETS  = ["United Kingdom","Germany","France","Spain","India","Thailand","China","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 

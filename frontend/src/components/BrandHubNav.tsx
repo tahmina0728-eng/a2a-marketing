@@ -18,14 +18,14 @@ export type BrandHubSection =
   | "documents";
 
 const BRANDS = [
-  { id: "Rnorr",       label: "Rnorr",             emoji: "🎯", industry: "Food & Beverage"    },
-  { id: "Sunglow",     label: "Sunglow",            emoji: "✨", industry: "Beauty & Lifestyle" },
-  { id: "Boozt",       label: "Boozt",              emoji: "👗", industry: "Fashion & Retail"   },
-  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", industry: "Spirits & Luxury"  },
-  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", industry: "Financial Services" },
-  { id: "sunrise",     label: "Sunrise",            emoji: "🌅", industry: "Telecommunications" },
-  { id: "Haleon",      label: "Haleon",             emoji: "💊", industry: "Consumer Health"    },
-].map(b => ({ ...b, logo: `${API_BASE_PUB}/brand-logo/${encodeURIComponent(b.id)}` }));
+  { id: "Rnorr",       label: "Rnorr",             emoji: "🎯", industry: "Food & Beverage",    logo: `${API_BASE_PUB}/brands/Rnorr/serve/Logos/Rnorr-Logo.png`                        },
+  { id: "Sunglow",     label: "Sunglow",            emoji: "✨", industry: "Beauty & Lifestyle", logo: `${API_BASE_PUB}/brands/Sunglow/serve/Logos/sunglow_logo.png`                    },
+  { id: "Boozt",       label: "Boozt",              emoji: "👗", industry: "Fashion & Retail",   logo: `${API_BASE_PUB}/brands/Boozt/serve/Logos/Boozt_Logo.png`                        },
+  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", industry: "Spirits & Luxury",  logo: `${API_BASE_PUB}/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png`       },
+  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", industry: "Financial Services", logo: `${API_BASE_PUB}/brands/UBS%20Bank/serve/Logos/ubs-bank-logo.png`                },
+  { id: "sunrise",     label: "Sunrise",            emoji: "🌅", industry: "Telecommunications", logo: `${API_BASE_PUB}/brands/sunrise/serve/Logos/sunrise_logo_red.svg`                },
+  { id: "Haleon",      label: "Haleon",             emoji: "💊", industry: "Consumer Health",    logo: `${API_BASE_PUB}/brands/Haleon/serve/Logos/haleon_logo_black.svg`                },
+];
 
 // ── Inline Feather-style icons ───────────────────────────────────────────────
 
@@ -131,16 +131,6 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-// ── Brand logo with img → emoji fallback ─────────────────────────────────────
-
-function BrandLogo({ src, emoji, size = 22 }: { src: string; emoji: string; size?: number }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <span style={{ fontSize: size * 0.7, lineHeight: 1 }}>{emoji}</span>;
-  return (
-    <img src={src} alt="" onError={() => setFailed(true)}
-      style={{ width: size, height: size, objectFit: "contain", display: "block" }} />
-  );
-}
 
 // ── Main nav ─────────────────────────────────────────────────────────────────
 
@@ -217,7 +207,10 @@ export default function BrandHubNav({ active, onChange, activeBrand, onBrandChan
             display: "flex", alignItems: "center", justifyContent: "center",
             overflow: "hidden", padding: 4,
           }}>
-            <BrandLogo src={activeBrandData.logo} emoji={activeBrandData.emoji} size={22} />
+            <img src={activeBrandData.logo} alt={activeBrandData.label}
+              onError={e => { const t = e.target as HTMLImageElement; t.style.display = "none"; (t.nextElementSibling as HTMLElement)?.removeAttribute("hidden"); }}
+              style={{ maxWidth: 24, maxHeight: 24, width: "auto", height: "auto", objectFit: "contain", display: "block" }} />
+            <span hidden style={{ fontSize: 18, lineHeight: 1 }}>{activeBrandData.emoji}</span>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)",
@@ -265,12 +258,15 @@ export default function BrandHubNav({ active, onChange, activeBrand, onBrandChan
                   onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
                 >
                   <div style={{
-                    width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+                    width: 28, height: 28, borderRadius: 6, flexShrink: 0,
                     background: "var(--page-bg)", border: "1px solid var(--border-color)",
                     display: "flex", alignItems: "center", justifyContent: "center",
                     overflow: "hidden", padding: 3,
                   }}>
-                    <BrandLogo src={brand.logo} emoji={brand.emoji} size={16} />
+                    <img src={brand.logo} alt={brand.label}
+                      onError={e => { const t = e.target as HTMLImageElement; t.style.display = "none"; (t.nextElementSibling as HTMLElement)?.removeAttribute("hidden"); }}
+                      style={{ maxWidth: 22, maxHeight: 22, width: "auto", height: "auto", objectFit: "contain", display: "block" }} />
+                    <span hidden style={{ fontSize: 14, lineHeight: 1 }}>{brand.emoji}</span>
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: isSelected ? 600 : 400,

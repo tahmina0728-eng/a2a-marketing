@@ -1,7 +1,13 @@
 steps:
+  # Pull previous image to use as layer cache (fails silently on first run)
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args: ['-c', 'docker pull gcr.io/$PROJECT_ID/campaignos-frontend:latest || true']
+
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--cache-from=gcr.io/$PROJECT_ID/campaignos-frontend:latest'
       - '-t'
       - 'gcr.io/$PROJECT_ID/campaignos-frontend:latest'
       - '--build-arg'

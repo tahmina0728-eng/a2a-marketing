@@ -1367,26 +1367,36 @@ async def serve_brand_logo(brand: str):
             img.convert("RGBA").save(buf, format="PNG")
             return buf.getvalue()
 
-        # ── Programmatic logos: brands whose GCS logos don't render at thumbnail ─
-        # Sunrise SVG is white-on-transparent (invisible on light bg).
-        # Haleon SVG wordmark is unreadable at 16-24px.
-        # UBS Bank Logos/ folder is NOT in the Docker image and may not be in GCS.
-        # All three get a simple PIL mark that's identifiable at any small size.
+        # ── Brand-specific logos: serve actual brand files, PIL fallback for Cloud Run ─
+        import re as _re
 
         if brand.lower() in ("sunrise",):
-            # Red S-circle — Sunrise brand red #DA291C
+            # Red SVG is the actual Sunrise logo mark (~square, visible on any bg)
+            _f = _Path(__file__).parent / "bucket/brands/sunrise/Logos/sunrise_logo_red.svg"
+            if _f.exists():
+                return Response(content=_f.read_bytes(), media_type="image/svg+xml",
+                                headers={"Cache-Control": "public, max-age=86400"})
+            # Cloud Run fallback: PIL red circle
             _SR = (218, 41, 28, 255)
             sz = 64; stroke = max(3, sz // 10)
             img = _PIL.new("RGBA", (sz, sz), (0, 0, 0, 0))
             d   = _PID.Draw(img)
             bb  = [0, 0, sz - 1, sz - 1]
             d.ellipse(bb, outline=_SR, width=stroke)
-            d.chord(bb, start=15, end=165, fill=_SR)
+            d.chord(bb, start=195, end=345, fill=_SR)
             return Response(content=_png_bytes(img), media_type="image/png",
                             headers={"Cache-Control": "public, max-age=86400"})
 
         if brand.lower() == "haleon":
-            # Green rounded pill with "HALEON" in white — Haleon Green #65AC1E
+            # Crop the wordmark SVG to show just the "H" letterform (first 240 of 1426 wide)
+            _f = _Path(__file__).parent / "bucket/brands/Haleon/Logos/haleon_logo_black.svg"
+            if _f.exists():
+                svg = _f.read_text(encoding="utf-8")
+                svg = _re.sub(r'width="\d+(\.\d+)?"', 'width="222"', svg, count=1)
+                svg = _re.sub(r'viewBox="[^"]*"', 'viewBox="0 0 240 222"', svg, count=1)
+                return Response(content=svg.encode("utf-8"), media_type="image/svg+xml",
+                                headers={"Cache-Control": "public, max-age=86400"})
+            # Cloud Run fallback: PIL green pill
             w, h = 80, 32
             img = _PIL.new("RGBA", (w, h), (0, 0, 0, 0))
             d   = _PID.Draw(img)
@@ -1399,7 +1409,16 @@ async def serve_brand_logo(brand: str):
                             headers={"Cache-Control": "public, max-age=86400"})
 
         if brand.lower() == "ubs bank":
-            # Red circle with "UBS" in white — UBS brand red #EC0000
+            # RGBA PNG with transparent bg — resize for web delivery
+            _f = _Path(__file__).parent / "bucket/brands/UBS Bank/Logos/ubs-bank-logo.png"
+            if _f.exists():
+                img = _PIL.open(_f)
+                img.thumbnail((128, 48), _PIL.LANCZOS)
+                buf = BytesIO()
+                img.convert("RGBA").save(buf, format="PNG", optimize=True)
+                return Response(content=buf.getvalue(), media_type="image/png",
+                                headers={"Cache-Control": "public, max-age=86400"})
+            # Cloud Run fallback: PIL red circle with UBS text
             sz = 64
             img = _PIL.new("RGBA", (sz, sz), (0, 0, 0, 0))
             d   = _PID.Draw(img)
