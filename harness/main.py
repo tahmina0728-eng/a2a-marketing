@@ -1359,24 +1359,44 @@ async def serve_brand_logo(brand: str):
     from fastapi.responses import Response
     from io import BytesIO
     try:
-        # ── Programmatic logos for brands whose GCS assets are SVG-only ──────
+        from PIL import Image as _PIL, ImageDraw as _PID, ImageFont as _PIF
+        from pathlib import Path as _Path
+
+        def _png_bytes(img) -> bytes:
+            buf = BytesIO()
+            img.convert("RGBA").save(buf, format="PNG")
+            return buf.getvalue()
+
+        # ── Sunrise: S-circle in brand red — white SVG is invisible on light bg ─
         if brand.lower() in ("sunrise",):
-            from app.runner import _draw_sunrise_logo_img
-            img = _draw_sunrise_logo_img(64, None)
-            buf = BytesIO()
-            img.convert("RGBA").save(buf, format="PNG")
-            return Response(content=buf.getvalue(), media_type="image/png",
+            _SR = (218, 41, 28, 255)   # Sunrise Red #DA291C
+            sz = 64
+            stroke = max(3, sz // 10)
+            img = _PIL.new("RGBA", (sz, sz), (0, 0, 0, 0))
+            d   = _PID.Draw(img)
+            bb  = [0, 0, sz - 1, sz - 1]
+            d.ellipse(bb, outline=_SR, width=stroke)
+            d.chord(bb, start=15, end=165, fill=_SR)
+            return Response(content=_png_bytes(img), media_type="image/png",
                             headers={"Cache-Control": "public, max-age=86400"})
 
+        # ── Haleon: green pill — wordmark at 16px is unreadable; use the brand ──
+        #    green rectangle as a recognisable thumbnail mark instead.
         if brand.lower() == "haleon":
-            from app.runner import _draw_haleon_logo_img
-            img = _draw_haleon_logo_img(48, None)
-            buf = BytesIO()
-            img.convert("RGBA").save(buf, format="PNG")
-            return Response(content=buf.getvalue(), media_type="image/png",
+            w, h = 80, 32
+            img = _PIL.new("RGBA", (w, h), (0, 0, 0, 0))
+            d   = _PID.Draw(img)
+            GREEN = (101, 172, 30, 255)
+            d.rounded_rectangle([0, 0, w - 1, h - 1], radius=6, fill=GREEN)
+            fnt = _PIF.load_default(size=14)
+            bb  = d.textbbox((0, 0), "HALEON", font=fnt)
+            tx  = (w - (bb[2] - bb[0])) // 2 - bb[0]
+            ty  = (h - (bb[3] - bb[1])) // 2 - bb[1]
+            d.text((tx, ty), "HALEON", font=fnt, fill=(255, 255, 255, 255))
+            return Response(content=_png_bytes(img), media_type="image/png",
                             headers={"Cache-Control": "public, max-age=86400"})
 
-        # ── Raster logo from GCS / local bucket (all other brands) ───────────
+        # ── All other brands: GCS → local bucket fallback ─────────────────────
         from app.brand_assets import get_asset_loader
         loader = get_asset_loader()
         logos  = loader.list_logos(brand)
@@ -1388,6 +1408,14 @@ async def serve_brand_logo(brand: str):
             next((p for p in logos if p.lower().endswith(".svg")), None) or
             (logos[0] if logos else None)
         )
+        # Local fallback: GCS mode may miss files not yet uploaded to the bucket
+        if not primary:
+            _local_dir = _Path(__file__).parent / "bucket" / "brands" / brand / "Logos"
+            for _ext in ("*.png", "*.jpg", "*.jpeg"):
+                _locals = sorted(_local_dir.glob(_ext))
+                if _locals:
+                    primary = str(_locals[0])
+                    break
         if not primary:
             raise HTTPException(status_code=404, detail=f"No logo found for {brand}")
         if primary.startswith("gs://"):
@@ -1396,8 +1424,7 @@ async def serve_brand_logo(brand: str):
             bn, _, bp = without.partition("/")
             data = _gcs.Client().bucket(bn).blob(bp).download_as_bytes()
         else:
-            from pathlib import Path
-            data = Path(primary).read_bytes()
+            data = _Path(primary).read_bytes()
         _ext  = primary.rsplit(".", 1)[-1].lower()
         _mime = {"svg": "image/svg+xml", "png": "image/png",
                  "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}.get(_ext, "image/png")
