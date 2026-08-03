@@ -17,36 +17,131 @@ export type BrandHubSection =
   | "documents";
 
 const BRANDS = [
-  { id: "Rnorr",       label: "Rnorr",             emoji: "🎯", logo: "/brands/Rnorr/serve/Logos/Rnorr-Logo.png" },
-  { id: "Sunglow",     label: "Sunglow",            emoji: "✨", logo: "/brands/Sunglow/serve/Logos/sunglow_logo.png" },
-  { id: "Boozt",       label: "Boozt",              emoji: "👗", logo: "/brands/Boozt/serve/Logos/Boozt_Logo.png" },
-  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", logo: "/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png" },
-  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", logo: "/brands/UBS Bank/serve/Logos/ubs-bank-logo.png" },
-  { id: "sunrise",     label: "Sunrise",            emoji: "🌅", logo: "/brands/sunrise/serve/Logos/sunrise_logo_red.svg" },
-  { id: "Haleon",      label: "Haleon",             emoji: "💊", logo: "/brands/Haleon/serve/Logos/haleon_logo_black.svg" },
+  { id: "Rnorr",       label: "Rnorr",             emoji: "🎯", industry: "Food & Beverage",    logo: "/brands/Rnorr/serve/Logos/Rnorr-Logo.png" },
+  { id: "Sunglow",     label: "Sunglow",            emoji: "✨", industry: "Beauty & Lifestyle",  logo: "/brands/Sunglow/serve/Logos/sunglow_logo.png" },
+  { id: "Boozt",       label: "Boozt",              emoji: "👗", industry: "Fashion & Retail",    logo: "/brands/Boozt/serve/Logos/Boozt_Logo.png" },
+  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", industry: "Spirits & Luxury",   logo: "/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png" },
+  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", industry: "Financial Services",  logo: "/brands/UBS Bank/serve/Logos/ubs-bank-logo.png" },
+  { id: "sunrise",     label: "Sunrise",            emoji: "🌅", industry: "Telecommunications", logo: "/brands/sunrise/serve/Logos/sunrise_logo_red.svg" },
+  { id: "Haleon",      label: "Haleon",             emoji: "💊", industry: "Consumer Health",     logo: "/brands/Haleon/serve/Logos/haleon_logo_black.svg" },
 ];
 
-type NavItem =
-  | { type: "item"; id: BrandHubSection; label: string; inGroup?: boolean }
-  | { type: "group-header"; label: string };
+// ── Inline Feather-style icons ───────────────────────────────────────────────
 
-const BRAND_SECTIONS: NavItem[] = [
-  { type: "item",         id: "overview",          label: "Overview" },
-  { type: "group-header", label: "Brand Guidelines" },
-  { type: "item",         id: "logos",             label: "Logos",            inGroup: true },
-  { type: "item",         id: "fonts",             label: "Fonts",            inGroup: true },
-  { type: "item",         id: "brand-assets",      label: "Brand Assets",     inGroup: true },
-  { type: "item",         id: "brand-voice",       label: "Brand Voice",      inGroup: true },
-  { type: "item",         id: "visual-identity",   label: "Visual Identity",  inGroup: true },
-  { type: "item",         id: "products",          label: "Products & Services" },
-  { type: "item",         id: "competitors",       label: "Competitors" },
-  { type: "item",         id: "personas",          label: "Customer Personas" },
-  { type: "item",         id: "messaging",         label: "Messaging" },
-  { type: "item",         id: "legal",             label: "Legal & Compliance" },
-  { type: "item",         id: "campaign-history",  label: "Campaign History" },
-  { type: "item",         id: "market-research",   label: "Market Research" },
-  { type: "item",         id: "documents",         label: "Documents" },
+const ICON_PATHS: Record<string, string> = {
+  grid:         "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
+  image:        "M21 19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z M8.5 10a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z M21 15l-5-5L5 21",
+  type:         "M4 7V4h16v3M9 20h6M12 4v16",
+  folder:       "M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z",
+  eye:          "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
+  mic:          "M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z M19 10v2a7 7 0 0 1-14 0v-2 M12 19v4 M8 23h8",
+  package:      "M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z M3.27 6.96L12 12.01l8.73-5.05 M12 22.08V12",
+  users:        "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2 M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M23 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75",
+  user:         "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  message:      "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  search:       "M11 19a8 8 0 1 0 0-16 8 8 0 0 0 0 16z M21 21l-4.35-4.35",
+  barChart:     "M18 20V10 M12 20V4 M6 20v-6",
+  file:         "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8",
+  shield:       "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  chevronDown:  "M6 9l6 6 6-6",
+  chevronRight: "M9 18l6-6-6-6",
+  check:        "M20 6L9 17l-5-5",
+};
+
+function Icon({ name, size = 13, color }: { name: string; size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+      stroke={color ?? "currentColor"} strokeWidth="1.75"
+      strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      {ICON_PATHS[name]?.split(" M ").map((seg, i) => (
+        <path key={i} d={i === 0 ? seg : `M ${seg}`} />
+      ))}
+    </svg>
+  );
+}
+
+// ── Nav data structure ───────────────────────────────────────────────────────
+
+interface NavLeaf { id: BrandHubSection; label: string; icon: string; }
+
+interface NavGroup {
+  key: string;
+  label: string;
+  icon: string;
+  defaultOpen?: boolean;
+  items: NavLeaf[];
+}
+
+interface NavSection {
+  sectionLabel: string | null;
+  groups: NavGroup[];
+}
+
+const OVERVIEW_ITEM: NavLeaf = { id: "overview", label: "Overview", icon: "grid" };
+
+const NAV_SECTIONS: NavSection[] = [
+  {
+    sectionLabel: "BRAND",
+    groups: [
+      {
+        key: "identity", label: "Identity", icon: "image", defaultOpen: true,
+        items: [
+          { id: "logos",           label: "Logos",          icon: "image"  },
+          { id: "fonts",           label: "Fonts",          icon: "type"   },
+          { id: "brand-assets",    label: "Brand Assets",   icon: "folder" },
+          { id: "visual-identity", label: "Visual Identity",icon: "eye"    },
+        ],
+      },
+      {
+        key: "strategy", label: "Strategy", icon: "mic", defaultOpen: false,
+        items: [
+          { id: "brand-voice",  label: "Brand Voice",         icon: "mic"     },
+          { id: "products",     label: "Products & Services", icon: "package" },
+          { id: "competitors",  label: "Competitors",         icon: "users"   },
+          { id: "personas",     label: "Customer Personas",   icon: "user"    },
+          { id: "messaging",    label: "Messaging",           icon: "message" },
+        ],
+      },
+    ],
+  },
+  {
+    sectionLabel: "KNOWLEDGE",
+    groups: [
+      {
+        key: "knowledge", label: "Knowledge", icon: "search", defaultOpen: false,
+        items: [
+          { id: "market-research",  label: "Market Research",  icon: "search"   },
+          { id: "campaign-history", label: "Campaign History", icon: "barChart" },
+          { id: "documents",        label: "Documents",        icon: "file"     },
+        ],
+      },
+    ],
+  },
+  {
+    sectionLabel: "GOVERNANCE",
+    groups: [
+      {
+        key: "governance", label: "Governance", icon: "shield", defaultOpen: false,
+        items: [
+          { id: "legal", label: "Legal & Compliance", icon: "shield" },
+        ],
+      },
+    ],
+  },
 ];
+
+// ── Brand logo with img → emoji fallback ─────────────────────────────────────
+
+function BrandLogo({ src, emoji, size = 22 }: { src: string; emoji: string; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <span style={{ fontSize: size * 0.7, lineHeight: 1 }}>{emoji}</span>;
+  return (
+    <img src={src} alt="" onError={() => setFailed(true)}
+      style={{ width: size, height: size, objectFit: "contain", display: "block" }} />
+  );
+}
+
+// ── Main nav ─────────────────────────────────────────────────────────────────
 
 interface BrandHubNavProps {
   active: BrandHubSection;
@@ -55,122 +150,208 @@ interface BrandHubNavProps {
   onBrandChange: (brand: string) => void;
 }
 
-function BrandLogo({ src, emoji, label }: { src: string; emoji: string; label: string }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <span style={{ fontSize: 14 }}>{emoji}</span>;
-  return (
-    <span style={{ width: 20, height: 20, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <img
-        src={src}
-        alt={label}
-        onError={() => setFailed(true)}
-        style={{ maxWidth: 20, maxHeight: 20, objectFit: "contain" }}
-      />
-    </span>
-  );
-}
-
 export default function BrandHubNav({ active, onChange, activeBrand, onBrandChange }: BrandHubNavProps) {
+  const [brandDropdownOpen, setBrandDropdownOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Set<string>>(() =>
+    new Set(NAV_SECTIONS.flatMap(s => s.groups.filter(g => g.defaultOpen).map(g => g.key)))
+  );
+
+  const toggleGroup = (key: string) => setOpenGroups(prev => {
+    const next = new Set(prev);
+    next.has(key) ? next.delete(key) : next.add(key);
+    return next;
+  });
+
+  const activeBrandData = BRANDS.find(b => b.id === activeBrand) ?? BRANDS[0];
+
+  // NavLeaf item
+  const NavItem = ({ item, indent = 14 }: { item: NavLeaf; indent?: number }) => {
+    const isActive = active === item.id;
+    return (
+      <button
+        onClick={() => onChange(item.id)}
+        style={{
+          display: "flex", alignItems: "center", gap: 8,
+          width: "100%", border: "none", cursor: "pointer",
+          fontFamily: "inherit", textAlign: "left" as const,
+          padding: `5px 12px 5px ${indent}px`,
+          fontSize: 12, fontWeight: isActive ? 600 : 400,
+          color: isActive ? "#7c3aed" : "var(--text-secondary)",
+          background: isActive ? "rgba(124,58,237,0.07)" : "transparent",
+          borderLeft: isActive ? "2px solid #7c3aed" : "2px solid transparent",
+          borderRadius: "0 6px 6px 0",
+          transition: "all 0.12s",
+        }}
+        onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = "rgba(124,58,237,0.04)"; }}
+        onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = "transparent"; }}
+      >
+        <span style={{ opacity: isActive ? 1 : 0.55 }}>
+          <Icon name={item.icon} size={12} />
+        </span>
+        {item.label}
+      </button>
+    );
+  };
+
   return (
-    <div style={{ padding: "0 8px" }}>
-      <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em",
-        textTransform: "uppercase" as const, color: "var(--text-secondary)",
-        padding: "10px 10px 6px", opacity: 0.6 }}>
-        Brand Hub
+    <div style={{ padding: "0 0 16px" }}>
+
+      {/* ── Brand selector ── */}
+      <div style={{ position: "relative" as const }}>
+        <button
+          onClick={() => setBrandDropdownOpen(v => !v)}
+          style={{
+            display: "flex", alignItems: "center", gap: 10,
+            width: "100%", border: "none", cursor: "pointer",
+            fontFamily: "inherit", textAlign: "left" as const,
+            padding: "10px 14px 10px 12px",
+            background: "transparent",
+            borderBottom: brandDropdownOpen ? "1px solid rgba(124,58,237,0.15)" : "1px solid transparent",
+            transition: "border-color 0.15s",
+          }}
+        >
+          <div style={{
+            width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+            background: "var(--card-bg)", border: "1px solid var(--border-color)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            overflow: "hidden", padding: 4,
+          }}>
+            <BrandLogo src={activeBrandData.logo} emoji={activeBrandData.emoji} size={22} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+              {activeBrandData.label}
+            </div>
+            <div style={{ fontSize: 10, color: "var(--text-tertiary)", marginTop: 1 }}>
+              Brand workspace
+            </div>
+          </div>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+            stroke="var(--text-tertiary)" strokeWidth="2.5" strokeLinecap="round">
+            <path d={brandDropdownOpen ? "M18 15l-6-6-6 6" : "M6 9l6 6 6-6"} />
+          </svg>
+        </button>
+
+        {/* Brand dropdown */}
+        {brandDropdownOpen && (
+          <div style={{
+            position: "absolute" as const, top: "100%", left: 8, right: 8, zIndex: 50,
+            background: "var(--card-bg)", border: "1px solid var(--border-color)",
+            borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+            padding: "6px 0", marginTop: 4,
+          }}>
+            {BRANDS.map(brand => {
+              const isSelected = brand.id === activeBrand;
+              return (
+                <button
+                  key={brand.id}
+                  onClick={() => {
+                    onBrandChange(brand.id);
+                    onChange("overview");
+                    localStorage.setItem("brandHub_activeBrand", brand.id);
+                    setBrandDropdownOpen(false);
+                  }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 9,
+                    width: "100%", border: "none", cursor: "pointer",
+                    fontFamily: "inherit", textAlign: "left" as const,
+                    padding: "7px 12px",
+                    background: isSelected ? "rgba(124,58,237,0.07)" : "transparent",
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = "rgba(124,58,237,0.04)"; }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = "transparent"; }}
+                >
+                  <div style={{
+                    width: 24, height: 24, borderRadius: 6, flexShrink: 0,
+                    background: "var(--page-bg)", border: "1px solid var(--border-color)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    overflow: "hidden", padding: 3,
+                  }}>
+                    <BrandLogo src={brand.logo} emoji={brand.emoji} size={16} />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: isSelected ? 600 : 400,
+                      color: isSelected ? "#7c3aed" : "var(--text-primary)",
+                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" as const }}>
+                      {brand.label}
+                    </div>
+                    <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{brand.industry}</div>
+                  </div>
+                  {isSelected && <Icon name="check" size={12} color="#7c3aed" />}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {BRANDS.map(brand => {
-        const isBrandActive = activeBrand === brand.id;
+      {/* ── Overview ── */}
+      <div style={{ padding: "8px 0 4px" }}>
+        <NavItem item={OVERVIEW_ITEM} indent={14} />
+      </div>
 
-        return (
-          <div key={brand.id}>
-            {/* Brand row */}
-            <button
-              onClick={() => {
-                onBrandChange(brand.id);
-                onChange("overview");
-                localStorage.setItem("brandHub_activeBrand", brand.id);
-              }}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "space-between",
-                gap: 8, padding: "7px 10px", borderRadius: 8, border: "none",
-                cursor: "pointer", fontFamily: "inherit",
-                fontSize: 13, fontWeight: isBrandActive ? 700 : 500,
-                textAlign: "left" as const, width: "100%",
-                transition: "all 0.15s",
-                background: isBrandActive ? "rgba(124,58,237,0.10)" : "transparent",
-                color: isBrandActive ? "#7c3aed" : "var(--text-secondary)",
-              }}
-              onMouseEnter={e => {
-                if (!isBrandActive) e.currentTarget.style.background = "var(--card-hover-bg)";
-              }}
-              onMouseLeave={e => {
-                if (!isBrandActive) e.currentTarget.style.background = "transparent";
-              }}
-            >
-              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <BrandLogo src={brand.logo} emoji={brand.emoji} label={brand.label} />
-                <span>{brand.label}</span>
-              </span>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"
-                style={{ transform: isBrandActive ? "rotate(180deg)" : "none",
-                  transition: "transform 0.2s", flexShrink: 0, opacity: 0.45 }}>
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
-            </button>
+      {/* ── Sections ── */}
+      {NAV_SECTIONS.map(section => (
+        <div key={section.sectionLabel} style={{ marginTop: 8 }}>
+          {/* Section label */}
+          {section.sectionLabel && (
+            <div style={{
+              fontSize: 9, fontWeight: 800, letterSpacing: "0.13em",
+              textTransform: "uppercase" as const,
+              color: "var(--text-tertiary)",
+              padding: "6px 14px 4px",
+            }}>
+              {section.sectionLabel}
+            </div>
+          )}
 
-            {/* Section list — visible only for the active brand */}
-            {isBrandActive && (
-              <div style={{ marginBottom: 6 }}>
-                {BRAND_SECTIONS.map((item, idx) => {
-                  if (item.type === "group-header") {
-                    return (
-                      <div key={`gh-${idx}`} style={{
-                        fontSize: 9, fontWeight: 700, letterSpacing: "0.10em",
-                        textTransform: "uppercase" as const,
-                        color: "var(--text-secondary)", opacity: 0.45,
-                        padding: "8px 10px 2px 24px",
-                      }}>
-                        {item.label}
-                      </div>
-                    );
-                  }
+          {section.groups.map(group => {
+            const isOpen = openGroups.has(group.key);
+            const groupHasActive = group.items.some(i => i.id === active);
 
-                  const isActive = active === item.id;
-                  const indent = item.inGroup ? 36 : 24;
+            return (
+              <div key={group.key}>
+                {/* Group toggle row */}
+                <button
+                  onClick={() => toggleGroup(group.key)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 7,
+                    width: "100%", border: "none", cursor: "pointer",
+                    fontFamily: "inherit", textAlign: "left" as const,
+                    padding: "5px 12px 5px 14px",
+                    fontSize: 12, fontWeight: (groupHasActive && !isOpen) ? 600 : 500,
+                    color: (groupHasActive && !isOpen) ? "#7c3aed" : "var(--text-primary)",
+                    background: "transparent",
+                    borderLeft: (groupHasActive && !isOpen) ? "2px solid #7c3aed" : "2px solid transparent",
+                    borderRadius: "0 6px 6px 0",
+                    transition: "all 0.12s",
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = "rgba(124,58,237,0.04)"; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  {/* Chevron */}
+                  <span style={{ color: "var(--text-tertiary)", transition: "transform 0.2s",
+                    display: "inline-flex", transform: isOpen ? "rotate(0deg)" : "rotate(-90deg)" }}>
+                    <Icon name="chevronDown" size={11} />
+                  </span>
+                  {group.label}
+                </button>
 
-                  return (
-                    <button
-                      key={`${brand.id}-${item.id}-${idx}`}
-                      onClick={() => onChange(item.id)}
-                      style={{
-                        display: "flex", alignItems: "center",
-                        padding: `5px 10px 5px ${indent}px`,
-                        borderRadius: 6, border: "none",
-                        cursor: "pointer", fontFamily: "inherit",
-                        fontSize: 12, fontWeight: isActive ? 600 : 400,
-                        textAlign: "left" as const, width: "100%",
-                        transition: "all 0.12s",
-                        background: isActive ? "rgba(124,58,237,0.10)" : "transparent",
-                        color: isActive ? "#7c3aed" : "var(--text-secondary)",
-                      }}
-                      onMouseEnter={e => {
-                        if (!isActive) e.currentTarget.style.background = "var(--card-hover-bg)";
-                      }}
-                      onMouseLeave={e => {
-                        if (!isActive) e.currentTarget.style.background = "transparent";
-                      }}
-                    >
-                      {item.label}
-                    </button>
-                  );
-                })}
+                {/* Expanded items */}
+                {isOpen && (
+                  <div style={{ paddingBottom: 2 }}>
+                    {group.items.map(item => (
+                      <NavItem key={item.id} item={item} indent={30} />
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
