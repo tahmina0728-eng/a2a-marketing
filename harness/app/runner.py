@@ -332,7 +332,7 @@ Produce a creative strategy as valid JSON only â€" no markdown, no explanatio
     from app.config import get_settings as _gs
     _ss = _gs()
     _gc = _g.Client(vertexai=True, project=_ss.gcp_project, location=_ss.gcp_region)
-    raw = await _vertex_generate(_gc, _get_settings().creative_model, prompt)
+    raw = await _vertex_generate(_gc, _ss.creative_model, prompt)
     return _parse_agent_response(raw)
 
 
@@ -403,7 +403,8 @@ Only include the channel fields listed below.
 {channel_json_lines}
 }}"""
 
-    raw = await _vertex_generate(_gc2, _get_settings().creative_model, prompt)
+    from app.config import get_settings as _gs_copy
+    raw = await _vertex_generate(_gc2, _gs_copy().creative_model, prompt)
     result = _parse_agent_response(raw)
     result["_channel_keys"] = [k for k, _ in channel_fields]
     return result
@@ -451,7 +452,7 @@ Produce campaign copy as valid JSON only â€" no markdown, no explanation:
     from app.config import get_settings as _gs2
     _ss2 = _gs2()
     _gc2 = _g2.Client(vertexai=True, project=_ss2.gcp_project, location=_ss2.gcp_region)
-    raw2 = await _vertex_generate(_gc2, _get_settings().creative_model, prompt)
+    raw2 = await _vertex_generate(_gc2, _ss2.creative_model, prompt)
     return _parse_agent_response(raw2)
 
 
@@ -2405,7 +2406,8 @@ Output the prompt only.""",
 
     # ── Call Veo ──────────────────────────────────────────────────────────────
     loop = asyncio.get_event_loop()
-    veo_model = _get_settings().veo_model
+    from app.config import get_settings as _gs_veo
+    veo_model = _gs_veo().veo_model
 
     async def _veo_generate(prompt: str, out_uri: str):
         """Call generate_videos; on 429/RESOURCE_EXHAUSTED retry up to 3× with backoff."""
@@ -4035,6 +4037,7 @@ Only include channels from this list: {channels_str}
 Budget split percentages must sum to 1.0.
 kpi_validation must include one entry per validated KPI target listed above."""
 
-    raw = await _vertex_generate(_gc, _get_settings().creative_model, prompt)
+    from app.config import get_settings as _gs_perf
+    raw = await _vertex_generate(_gc, _gs_perf().creative_model, prompt)
     return _parse_agent_response(raw)
 
