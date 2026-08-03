@@ -840,9 +840,11 @@ function BriefingPanel({ m, liveMsg, brand }: { m?: Record<string,unknown>; live
   const ft      = (m?.fan_truth ?? {}) as any;
   const aud     = (m?.audience  ?? {}) as any;
   const kpis    = (m?.kpis      ?? []) as any[];
-  const hasData = !!(ft?.overall && ft.overall > 0);
+  const _bpAxes = [ft?.specific, ft?.shared, ft?.special].filter((v: any) => typeof v === "number" && v > 0) as number[];
+  const _bpAxeAvg = _bpAxes.length > 0 ? Math.round(_bpAxes.reduce((a, b) => a + b, 0) / _bpAxes.length) : 0;
+  const hasData = !!(ft?.overall && ft.overall > 0) || _bpAxeAvg > 0;
 
-  const score      = hasData ? (ft.overall ?? 0) : 0;
+  const score      = (ft?.overall && ft.overall > 0) ? ft.overall : _bpAxeAvg;
   const scoreColor = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
 
   return (
@@ -3394,7 +3396,10 @@ function BriefIntakeView({
   }
 
   // ── Phase 3: Brief summary (rich dashboard) ──────────────────
-  const ftScore = ft?.overall as number | undefined;
+  // Compute from 3-axis average when overall is 0 (agent sometimes omits it)
+  const _ftAxes3 = [ft?.specific, ft?.shared, ft?.special].filter((v: any) => typeof v === "number" && v > 0) as number[];
+  const _ftAxeAvg3 = _ftAxes3.length > 0 ? Math.round(_ftAxes3.reduce((a, b) => a + b, 0) / _ftAxes3.length) : undefined;
+  const ftScore = (ft?.overall && ft.overall > 0) ? ft.overall as number : _ftAxeAvg3;
   const dashboardResult = {
     score:     ftScore ?? 90,
     verdict:   (ftScore ?? 90) >= 70 ? "PASS" : "NEEDS WORK",
