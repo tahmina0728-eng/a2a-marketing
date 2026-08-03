@@ -2462,8 +2462,6 @@ function ResultsView({ output, campaignId }: {
   const strategy = output?.creative_strategy as any;
   const copy     = output?.campaign_copy as any;
   const cp       = (output as any)?.creative_pipeline;
-  const cdpLines = output?.audience_insights
-    ? String(output.audience_insights).split("\n").filter((l: string) => l.trim()) : [];
 
   const imagesB64Raw: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
   // For historical campaigns loaded from GCS, base64 is stripped — use the KV proxy endpoint instead.
@@ -2556,17 +2554,9 @@ function ResultsView({ output, campaignId }: {
         {/* ── 1. Brief Validation ────────────────────────────────────────── */}
         {brief && (() => {
           const n = S();
-          const ft      = brief.fan_truth ?? {};
-          const score   = ft.overall ?? 0;
-          const sc      = score >= 70 ? "#10b981" : score >= 55 ? "#f59e0b" : "#ef4444";
-          const status  = (brief.status ?? "") as string;
-          const STATUS_CFG: Record<string, { bg: string; color: string; border: string; label: string }> = {
-            READY:        { bg: "rgba(16,185,129,0.10)", color: "#10b981", border: "rgba(16,185,129,0.30)", label: "✓ READY" },
-            NEEDS_REVIEW: { bg: "rgba(245,158,11,0.10)", color: "#f59e0b", border: "rgba(245,158,11,0.30)", label: "⚑ NEEDS REVIEW" },
-            INCOMPLETE:   { bg: "rgba(239,68,68,0.10)",  color: "#ef4444", border: "rgba(239,68,68,0.30)",  label: "✗ INCOMPLETE" },
-          };
-          const sc2 = STATUS_CFG[status] ?? STATUS_CFG.NEEDS_REVIEW;
-          const kpis = (brief.kpis ?? []) as any[];
+          const ft    = brief.fan_truth ?? {};
+          const ftScore = ft.overall ?? brief.validation_score ?? 0;
+          const kpis  = (brief.kpis ?? []) as any[];
           const locks = (brief.brand_locks_applied ?? []) as string[];
           const warnings = (brief.brand_warnings ?? []) as string[];
           const CF: Record<string, { bg: string; color: string; border: string; icon: string }> = {
@@ -2574,86 +2564,34 @@ function ResultsView({ output, campaignId }: {
             AMBITIOUS:   { bg: "rgba(245,158,11,0.07)", color: "#f59e0b", border: "rgba(245,158,11,0.20)", icon: "↑" },
             UNREALISTIC: { bg: "rgba(239,68,68,0.07)",  color: "#ef4444", border: "rgba(239,68,68,0.20)",  icon: "!" },
           };
+          const dashResult = {
+            score:     ftScore,
+            verdict:   ft.verdict === "PASS" ? "PASS" : (brief.status === "READY" ? "PASS" : "NEEDS WORK"),
+            brand:     brief.brand   ?? "",
+            product:   brief.product ?? "",
+            fan_truth: ft.statement  ?? (typeof brief.fan_truth === "string" ? brief.fan_truth : ""),
+            audience:  typeof brief.audience === "object"
+              ? [brief.audience?.segment, brief.audience?.age_group].filter(Boolean).join(", ")
+              : (brief.audience ?? ""),
+            market:    brief.market  ?? "",
+            season:    brief.season  ?? "",
+            goal:      brief.goal    ?? "",
+            summary:   brief.brief_summary ?? "",
+          };
           return (
             <StageCard step={n} label="Brief Validation" color="#7c3aed">
-              {/* ── Status bar ── */}
-              {status && (
-                <div style={{ padding: "10px 22px", borderBottom: "1px solid rgba(124,58,237,0.10)",
-                  background: sc2.bg, display: "flex", alignItems: "center", gap: 12 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, color: sc2.color,
-                    letterSpacing: "0.12em", textTransform: "uppercase" as const }}>{sc2.label}</span>
-                  {brief.campaign_name && (
-                    <span style={{ fontSize: 12, color: "var(--text-secondary)", marginLeft: "auto" }}>{brief.campaign_name}</span>
-                  )}
-                </div>
-              )}
-              {/* ── Brief summary ── */}
-              {brief.brief_summary && (
-                <div style={{ padding: "12px 22px 0", fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
-                  {brief.brief_summary}
-                </div>
-              )}
-              {/* ── Fan Truth section ── */}
+              {/* Full BriefingAgentDashboard in read-only mode (no approve/regenerate) */}
               <div style={{ padding: "16px 22px" }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
-                  textTransform: "uppercase" as const, marginBottom: 10 }}>Fan Truth Analysis</div>
-                {/* Score row */}
-                <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 12 }}>
-                  <div style={{ textAlign: "center" as const, flexShrink: 0 }}>
-                    <div style={{ fontSize: 40, fontWeight: 900, color: sc, lineHeight: 1 }}>{score || "–"}</div>
-                    <div style={{ fontSize: 10, color: "var(--text-tertiary)", fontWeight: 600 }}>/100</div>
-                  </div>
-                  {/* 3-axis breakdown */}
-                  <div style={{ flex: 1, display: "flex", gap: 8 }}>
-                    {[
-                      { label: "Specific", val: ft.specific },
-                      { label: "Shared",   val: ft.shared },
-                      { label: "Special",  val: ft.special },
-                    ].map(({ label, val }) => val != null && (
-                      <div key={label} style={{ flex: 1, padding: "8px 10px", borderRadius: 10,
-                        background: "rgba(124,58,237,0.06)", border: "1px solid rgba(124,58,237,0.14)",
-                        textAlign: "center" as const }}>
-                        <div style={{ fontSize: 18, fontWeight: 800,
-                          color: (val as number) >= 70 ? "#10b981" : (val as number) >= 55 ? "#f59e0b" : "#ef4444" }}>
-                          {val as number}
-                        </div>
-                        <div style={{ fontSize: 9, color: "var(--text-tertiary)", fontWeight: 600,
-                          textTransform: "uppercase" as const, letterSpacing: "0.08em" }}>{label}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Verdict badge */}
-                  {ft.verdict && (
-                    <span style={{ fontSize: 11, fontWeight: 800, padding: "4px 14px", borderRadius: 99, flexShrink: 0,
-                      background: ft.verdict === "PASS" ? "rgba(16,185,129,0.14)" : "rgba(245,158,11,0.14)",
-                      color: ft.verdict === "PASS" ? "#10b981" : "#f59e0b",
-                      border: `1px solid ${ft.verdict === "PASS" ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.3)"}` }}>
-                      {ft.verdict}
-                    </span>
-                  )}
-                </div>
-                {/* Statement quote */}
-                {ft.statement && (
-                  <div style={{ padding: "12px 16px", borderRadius: 12, marginBottom: ft.notes ? 10 : 0,
-                    background: "rgba(124,58,237,0.08)", border: "1px solid rgba(124,58,237,0.20)",
-                    fontSize: 14, color: "#6d28d9", fontStyle: "italic", lineHeight: 1.6 }}>
-                    "{ft.statement}"
-                  </div>
-                )}
-                {/* Notes */}
-                {ft.notes && (
-                  <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.6,
-                    padding: "8px 12px", borderRadius: 8, background: "rgba(124,58,237,0.04)",
-                    border: "1px solid rgba(124,58,237,0.10)", marginTop: 8 }}>
-                    {ft.notes}
-                  </div>
-                )}
+                <BriefingAgentDashboard
+                  result={dashResult}
+                  color="#7c3aed"
+                />
               </div>
-              {/* ── KPIs ── */}
+              {/* ── KPIs (machine_brief validated targets) ── */}
               {kpis.length > 0 && (
-                <div style={{ padding: "0 22px 16px" }}>
+                <div style={{ padding: "0 22px 16px", borderTop: "1px solid rgba(124,58,237,0.10)", paddingTop: 14 }}>
                   <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
-                    textTransform: "uppercase" as const, marginBottom: 8 }}>KPI Targets</div>
+                    textTransform: "uppercase" as const, marginBottom: 8 }}>Validated KPI Targets</div>
                   <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
                     {kpis.map((k: any, i: number) => {
                       const flag = k.flag === "UNREALISTIC" ? "UNREALISTIC" : (k.flag ?? "OK");
@@ -2689,7 +2627,7 @@ function ResultsView({ output, campaignId }: {
                       <div style={{ fontSize: 10, fontWeight: 700, color: "#7c3aed", letterSpacing: "0.1em",
                         textTransform: "uppercase" as const, marginBottom: 6 }}>Brand Locks Applied</div>
                       <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
-                        {locks.map((l, i) => (
+                        {locks.map((l: string, i: number) => (
                           <span key={i} style={{ fontSize: 11, padding: "3px 10px", borderRadius: 99,
                             background: "rgba(124,58,237,0.08)", color: "#7c3aed",
                             border: "1px solid rgba(124,58,237,0.20)" }}>🔒 {l}</span>
@@ -2702,7 +2640,7 @@ function ResultsView({ output, campaignId }: {
                       <div style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", letterSpacing: "0.1em",
                         textTransform: "uppercase" as const, marginBottom: 6 }}>Brand Warnings</div>
                       <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
-                        {warnings.map((w, i) => (
+                        {warnings.map((w: string, i: number) => (
                           <div key={i} style={{ fontSize: 12, color: "#92400e",
                             padding: "6px 10px", borderRadius: 8,
                             background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.20)" }}>
@@ -2724,37 +2662,6 @@ function ResultsView({ output, campaignId }: {
                   {brief.validation_notes}
                 </div>
               )}
-              {/* ── CDP strip ── */}
-              {cdpLines.length > 0 && (() => {
-                const g = (k: string) => { const l = cdpLines.find((x: string) => x.toLowerCase().includes(k)); return l ? l.split(":").slice(1).join(":").trim() : null; };
-                const cnt    = cdpLines.find((l: string) => l.includes("profiles"))?.match(/(\d[\d,]+)\s+\w+\s+profiles/)?.[1] ?? null;
-                const income = g("household income"); const chans = g("top channels");
-                const crmIdx = cdpLines.findIndex((l: string) => l.includes("CRM notes"));
-                const crm    = crmIdx >= 0 ? cdpLines.slice(crmIdx + 1).join(" ").slice(0, 160) : null;
-                return (
-                  <div style={{ padding: "14px 22px", background: "rgba(124,58,237,0.06)", borderTop: "1px solid rgba(124,58,237,0.14)" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: "#a78bfa", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>👥 CDP Audience Intelligence</span>
-                      <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 99, background: "rgba(124,58,237,0.18)", color: "#a78bfa", border: "1px solid rgba(124,58,237,0.28)" }}>KAGGLE CDP</span>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" as const }}>
-                      {cnt && <div style={{ padding: "8px 14px", borderRadius: 10, background: "var(--card-bg)", border: "1px solid rgba(124,58,237,0.2)", textAlign: "center" as const }}>
-                        <div style={{ fontSize: 18, fontWeight: 900, color: "#a78bfa" }}>{cnt}</div>
-                        <div style={{ fontSize: 9, color: "var(--text-secondary)" }}>profiles</div>
-                      </div>}
-                      {income && <div style={{ flex: 1, padding: "8px 14px", borderRadius: 10, background: "var(--card-bg)", border: "1px solid rgba(124,58,237,0.2)" }}>
-                        <div style={{ fontSize: 9, color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase" as const, marginBottom: 2 }}>Avg Income</div>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: "#a78bfa" }}>{income}</div>
-                      </div>}
-                      {chans && <div style={{ flex: 2, padding: "8px 14px", borderRadius: 10, background: "var(--card-bg)", border: "1px solid rgba(124,58,237,0.2)" }}>
-                        <div style={{ fontSize: 9, color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase" as const, marginBottom: 2 }}>Top Channels</div>
-                        <div style={{ fontSize: 12, color: "#a78bfa" }}>{chans}</div>
-                      </div>}
-                    </div>
-                    {crm && <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-secondary)", fontStyle: "italic", lineHeight: 1.5 }}>"{crm}…"</div>}
-                  </div>
-                );
-              })()}
             </StageCard>
           );
         })()}
