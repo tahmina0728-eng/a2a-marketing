@@ -1361,11 +1361,13 @@ async def serve_brand_logo(brand: str):
         loader = get_asset_loader()
         logos  = loader.list_logos(brand)
         _sfx   = {"green", "red", "yellow", "orange", "purple", "blue"}
-        primary = next(
-            (p for p in logos
-             if p.lower().endswith(".png")
-             and not any(p.lower().rsplit(".", 1)[0].endswith(s) for s in _sfx)),
-            logos[0] if logos else None,
+        # Prefer a neutral PNG (no colour suffix); fall back to any PNG, then SVG, then first logo
+        primary = (
+            next((p for p in logos if p.lower().endswith(".png")
+                  and not any(p.lower().rsplit(".",1)[0].endswith(s) for s in _sfx)), None) or
+            next((p for p in logos if p.lower().endswith(".png")), None) or
+            next((p for p in logos if p.lower().endswith(".svg")), None) or
+            (logos[0] if logos else None)
         )
         if not primary:
             raise HTTPException(status_code=404, detail=f"No logo found for {brand}")
@@ -1377,7 +1379,10 @@ async def serve_brand_logo(brand: str):
         else:
             from pathlib import Path
             data = Path(primary).read_bytes()
-        return Response(content=data, media_type="image/png",
+        _ext = primary.rsplit(".", 1)[-1].lower()
+        _mime = {"svg": "image/svg+xml", "png": "image/png",
+                 "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}.get(_ext, "image/png")
+        return Response(content=data, media_type=_mime,
                         headers={"Cache-Control": "public, max-age=86400"})
     except HTTPException:
         raise

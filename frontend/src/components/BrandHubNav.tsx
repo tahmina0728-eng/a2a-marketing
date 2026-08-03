@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_BASE_PUB } from "../services/briefingApi";
 
 export type BrandHubSection =
   | "overview"
@@ -17,14 +18,14 @@ export type BrandHubSection =
   | "documents";
 
 const BRANDS = [
-  { id: "Rnorr",       label: "Rnorr",             emoji: "🎯", industry: "Food & Beverage",    logo: "/brands/Rnorr/serve/Logos/Rnorr-Logo.png" },
-  { id: "Sunglow",     label: "Sunglow",            emoji: "✨", industry: "Beauty & Lifestyle",  logo: "/brands/Sunglow/serve/Logos/sunglow_logo.png" },
-  { id: "Boozt",       label: "Boozt",              emoji: "👗", industry: "Fashion & Retail",    logo: "/brands/Boozt/serve/Logos/Boozt_Logo.png" },
-  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", industry: "Spirits & Luxury",   logo: "/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png" },
-  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", industry: "Financial Services",  logo: "/brands/UBS Bank/serve/Logos/ubs-bank-logo.png" },
-  { id: "sunrise",     label: "Sunrise",            emoji: "🌅", industry: "Telecommunications", logo: "/brands/sunrise/serve/Logos/sunrise_logo_red.svg" },
-  { id: "Haleon",      label: "Haleon",             emoji: "💊", industry: "Consumer Health",     logo: "/brands/Haleon/serve/Logos/haleon_logo_black.svg" },
-];
+  { id: "Rnorr",       label: "Rnorr",             emoji: "🎯", industry: "Food & Beverage"    },
+  { id: "Sunglow",     label: "Sunglow",            emoji: "✨", industry: "Beauty & Lifestyle" },
+  { id: "Boozt",       label: "Boozt",              emoji: "👗", industry: "Fashion & Retail"   },
+  { id: "Glenfiddich", label: "Glenfiddich × AMF1", emoji: "🥃", industry: "Spirits & Luxury"  },
+  { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", industry: "Financial Services" },
+  { id: "sunrise",     label: "Sunrise",            emoji: "🌅", industry: "Telecommunications" },
+  { id: "Haleon",      label: "Haleon",             emoji: "💊", industry: "Consumer Health"    },
+].map(b => ({ ...b, logo: `${API_BASE_PUB}/brand-logo/${encodeURIComponent(b.id)}` }));
 
 // ── Inline Feather-style icons ───────────────────────────────────────────────
 
