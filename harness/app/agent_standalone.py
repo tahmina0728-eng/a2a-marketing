@@ -390,7 +390,27 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
     else:
         _who = "two or three people of diverse ages"
 
-    if product_name:
+    _is_haleon_brand = brand.lower() == "haleon"
+    if product_name and _is_haleon_brand:
+        # Haleon health products — scene must show the specific product, not a smartphone
+        _morphis_sys = (
+            "You are Morphis, the key visual designer for an AI marketing campaign system. "
+            "You specialise in healthcare and FMCG advertising. Your images feel warm, human, "
+            "and credible — real people in relatable everyday health moments."
+        )
+        _morphis_instr = (
+            f'The Haleon product being advertised is: "{product_name}". '
+            f'The target audience is: {_who}. '
+            'Respond ONLY with JSON, no markdown fences: '
+            '{"headline": "short empathetic campaign headline, 4-8 words", '
+            f'"scene": "2-3 sentences: show {_who} in a warm everyday moment where '
+            f'they are holding or have just used the {product_name} product pack/box/tube — '
+            'the product packaging is clearly visible and in focus in their hand or on a surface nearby. '
+            'People occupy the RIGHT TWO-THIRDS of the frame. The LEFT THIRD is clean, bright, '
+            'uncluttered (white wall, soft bokeh, or open daylight). '
+            'Warm natural daylight, no clinical settings, no text or logos."}'
+        )
+    elif product_name:
         _morphis_sys = (
             "You are Morphis, the key visual designer for an AI marketing campaign system. "
             "You specialise in product offer advertising — your images must feel exciting, "
@@ -444,8 +464,15 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
                 "TYPOGRAPHY RULE: No text anywhere in the image except brand packaging labels "
                 "if products are shown. All headline copy is added in post-production.\n\n"
             )
+        _product_rule = (
+            f"PRODUCT RULE: The product being advertised is {product_name}. "
+            f"The {product_name} packaging (its actual box, tube, or bottle with its real colours "
+            f"and label) must be clearly visible and prominent in the scene — "
+            f"held in someone's hand, on a surface, or on a shelf. "
+            f"Do NOT show any other product, generic bottle, or unrelated packaging.\n\n"
+        ) if product_name and _is_haleon_brand else ""
         image_prompt = (
-            f"{no_text_rule}{scene}\n\n"
+            f"{no_text_rule}{_product_rule}{scene}\n\n"
             "Aspect ratio 16:9, photorealistic, premium advertising photography."
         )
 
