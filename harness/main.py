@@ -1367,11 +1367,16 @@ async def serve_brand_logo(brand: str):
             img.convert("RGBA").save(buf, format="PNG")
             return buf.getvalue()
 
-        # ── Sunrise: S-circle in brand red — white SVG is invisible on light bg ─
+        # ── Programmatic logos: brands whose GCS logos don't render at thumbnail ─
+        # Sunrise SVG is white-on-transparent (invisible on light bg).
+        # Haleon SVG wordmark is unreadable at 16-24px.
+        # UBS Bank Logos/ folder is NOT in the Docker image and may not be in GCS.
+        # All three get a simple PIL mark that's identifiable at any small size.
+
         if brand.lower() in ("sunrise",):
-            _SR = (218, 41, 28, 255)   # Sunrise Red #DA291C
-            sz = 64
-            stroke = max(3, sz // 10)
+            # Red S-circle — Sunrise brand red #DA291C
+            _SR = (218, 41, 28, 255)
+            sz = 64; stroke = max(3, sz // 10)
             img = _PIL.new("RGBA", (sz, sz), (0, 0, 0, 0))
             d   = _PID.Draw(img)
             bb  = [0, 0, sz - 1, sz - 1]
@@ -1380,19 +1385,29 @@ async def serve_brand_logo(brand: str):
             return Response(content=_png_bytes(img), media_type="image/png",
                             headers={"Cache-Control": "public, max-age=86400"})
 
-        # ── Haleon: green pill — wordmark at 16px is unreadable; use the brand ──
-        #    green rectangle as a recognisable thumbnail mark instead.
         if brand.lower() == "haleon":
+            # Green rounded pill with "HALEON" in white — Haleon Green #65AC1E
             w, h = 80, 32
             img = _PIL.new("RGBA", (w, h), (0, 0, 0, 0))
             d   = _PID.Draw(img)
-            GREEN = (101, 172, 30, 255)
-            d.rounded_rectangle([0, 0, w - 1, h - 1], radius=6, fill=GREEN)
+            d.rounded_rectangle([0, 0, w - 1, h - 1], radius=6, fill=(101, 172, 30, 255))
             fnt = _PIF.load_default(size=14)
             bb  = d.textbbox((0, 0), "HALEON", font=fnt)
-            tx  = (w - (bb[2] - bb[0])) // 2 - bb[0]
-            ty  = (h - (bb[3] - bb[1])) // 2 - bb[1]
-            d.text((tx, ty), "HALEON", font=fnt, fill=(255, 255, 255, 255))
+            d.text(((w - (bb[2]-bb[0]))//2 - bb[0], (h - (bb[3]-bb[1]))//2 - bb[1]),
+                   "HALEON", font=fnt, fill=(255, 255, 255, 255))
+            return Response(content=_png_bytes(img), media_type="image/png",
+                            headers={"Cache-Control": "public, max-age=86400"})
+
+        if brand.lower() == "ubs bank":
+            # Red circle with "UBS" in white — UBS brand red #EC0000
+            sz = 64
+            img = _PIL.new("RGBA", (sz, sz), (0, 0, 0, 0))
+            d   = _PID.Draw(img)
+            d.ellipse([0, 0, sz - 1, sz - 1], fill=(236, 0, 0, 255))
+            fnt = _PIF.load_default(size=18)
+            bb  = d.textbbox((0, 0), "UBS", font=fnt)
+            d.text(((sz - (bb[2]-bb[0]))//2 - bb[0], (sz - (bb[3]-bb[1]))//2 - bb[1]),
+                   "UBS", font=fnt, fill=(255, 255, 255, 255))
             return Response(content=_png_bytes(img), media_type="image/png",
                             headers={"Cache-Control": "public, max-age=86400"})
 
