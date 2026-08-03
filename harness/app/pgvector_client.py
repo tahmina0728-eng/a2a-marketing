@@ -16,11 +16,9 @@ logger   = structlog.get_logger()
 settings = get_settings()
 
 # ── Embedding configuration ───────────────────────────────────────────────────
-# Set USE_GEMINI_EMBEDDINGS=true in .env to use Gemini Embedding 2
-# Model: text-embedding-004 (768 dims) — stable, free tier via Google AI
-# Requires GOOGLE_API_KEY or GOOGLE_GENAI_USE_VERTEXAI=TRUE + ADC
-USE_GEMINI_EMBEDDINGS = os.getenv("USE_GEMINI_EMBEDDINGS", "false").lower() == "true"
-GEMINI_EMBEDDING_MODEL = os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2")
+from app.config import get_settings as _pv_get_settings
+USE_GEMINI_EMBEDDINGS  = os.getenv("USE_GEMINI_EMBEDDINGS", "false").lower() == "true"
+GEMINI_EMBEDDING_MODEL = _pv_get_settings().gemini_embedding_model
 GEMINI_EMBEDDING_DIM = 768   # gemini-embedding-2 with output_dimensionality=768 (under HNSW 2000 limit)
 
 # ── Option A: Gemini Embedding 2 (text-embedding-004) ────────────────────────

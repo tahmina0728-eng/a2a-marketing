@@ -56,10 +56,16 @@ class Settings(BaseSettings):
     search_mode:                 str = "live"
 
     # ── Models ────────────────────────────────────────────────────────────
-    # Supports Vertex AI (gemini-2.0-flash-001) or Groq via LiteLLM (groq/llama-3.3-70b-versatile)
-    gemini_model_reasoning:       str = "gemini-3.5-flash"
-    gemini_model_image:           str = "gemini-3-pro-image"
-    gemini_model_image_adapter:   str = "gemini-3-pro-image"
+    # No hardcoded model names — all must be set via environment variables.
+    # Set in .env (local dev) or --set-env-vars (Cloud Run).
+    gemini_model_reasoning:       str = ""   # GEMINI_MODEL_REASONING
+    gemini_model_image:           str = ""   # GEMINI_MODEL_IMAGE
+    gemini_model_image_adapter:   str = ""   # GEMINI_MODEL_IMAGE_ADAPTER (falls back to gemini_model_image if blank)
+    creative_model:               str = ""   # CREATIVE_MODEL
+    veo_model:                    str = ""   # VEO_MODEL
+    fallback_creative_model:      str = ""   # FALLBACK_CREATIVE_MODEL (optional quota-overflow fallback)
+    fallback_image_model:         str = ""   # FALLBACK_IMAGE_MODEL (optional quota-overflow fallback)
+    gemini_embedding_model:       str = ""   # GEMINI_EMBEDDING_MODEL
     groq_api_key:                 str = ""
 
     @property

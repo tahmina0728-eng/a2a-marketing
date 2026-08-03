@@ -47,8 +47,8 @@ settings = get_settings()
 # The experiment_pipeline requires Gemini for:
 #   - Google Search grounding (culture researcher)
 #   - Multimodal image generation (p2_generate_image)
-# Use CREATIVE_MODEL env var to override; defaults to gemini-2.0-flash
-CREATIVE_MODEL = os.getenv("CREATIVE_MODEL", "groq/llama-3.3-70b-versatile")
+from app.config import get_settings as _cp_get_settings
+CREATIVE_MODEL = _cp_get_settings().creative_model
 
 
 # â”€â”€ Shared helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

@@ -31,8 +31,8 @@ logger = structlog.get_logger()
 
 async def _vertex_generate(client, model: str, prompt: str, retries: int = 3) -> str:
     """Call Vertex AI generate_content with backoff on 429, auto-fallback to cheaper model."""
-    import os as _os
-    _fallback = _os.getenv("FALLBACK_CREATIVE_MODEL", "gemini-2.0-flash")
+    from app.config import get_settings as _gs
+    _fallback = _gs().fallback_creative_model
     loop = asyncio.get_event_loop()
     for _model in ([model, _fallback] if _fallback and _fallback != model else [model]):
         for attempt in range(retries):
@@ -205,7 +205,7 @@ Apply brand locks. Return ONLY valid JSON â€" no markdown, no explanation:
     from app.config import get_settings as _gs_brief
     _sb = _gs_brief()
     _gc_brief = _genai_brief.Client(vertexai=True, project=_sb.gcp_project, location=_sb.gcp_region)
-    raw = await _vertex_generate(_gc_brief, os.getenv("GEMINI_MODEL_REASONING", "gemini-3.5-flash"), prompt)
+    raw = await _vertex_generate(_gc_brief, _sb.gemini_model_reasoning, prompt)
     return _parse_agent_response(raw)
 
 
@@ -332,7 +332,7 @@ Produce a creative strategy as valid JSON only â€" no markdown, no explanatio
     from app.config import get_settings as _gs
     _ss = _gs()
     _gc = _g.Client(vertexai=True, project=_ss.gcp_project, location=_ss.gcp_region)
-    raw = await _vertex_generate(_gc, os.getenv('CREATIVE_MODEL', 'gemini-3.5-flash'), prompt)
+    raw = await _vertex_generate(_gc, _get_settings().creative_model, prompt)
     return _parse_agent_response(raw)
 
 
@@ -403,7 +403,7 @@ Only include the channel fields listed below.
 {channel_json_lines}
 }}"""
 
-    raw = await _vertex_generate(_gc2, os.getenv("CREATIVE_MODEL", "gemini-3.5-flash"), prompt)
+    raw = await _vertex_generate(_gc2, _get_settings().creative_model, prompt)
     result = _parse_agent_response(raw)
     result["_channel_keys"] = [k for k, _ in channel_fields]
     return result
@@ -451,7 +451,7 @@ Produce campaign copy as valid JSON only â€" no markdown, no explanation:
     from app.config import get_settings as _gs2
     _ss2 = _gs2()
     _gc2 = _g2.Client(vertexai=True, project=_ss2.gcp_project, location=_ss2.gcp_region)
-    raw2 = await _vertex_generate(_gc2, os.getenv('CREATIVE_MODEL', 'gemini-3.5-flash'), prompt)
+    raw2 = await _vertex_generate(_gc2, _get_settings().creative_model, prompt)
     return _parse_agent_response(raw2)
 
 
@@ -2405,7 +2405,7 @@ Output the prompt only.""",
 
     # ── Call Veo ──────────────────────────────────────────────────────────────
     loop = asyncio.get_event_loop()
-    veo_model = os.getenv("VEO_MODEL", "veo-3.1-generate-001")
+    veo_model = _get_settings().veo_model
 
     async def _veo_generate(prompt: str, out_uri: str):
         """Call generate_videos; on 429/RESOURCE_EXHAUSTED retry up to 3× with backoff."""
@@ -2562,9 +2562,9 @@ async def run_creative_pipeline_direct(
     from app.config import get_settings as _get_settings
     _s = _get_settings()
     _gemini = _genai.Client(vertexai=True, project=_s.gcp_project, location=_s.gcp_region)
-    _text_model = os.getenv("CREATIVE_MODEL", "gemini-3.5-flash")
+    _text_model = _get_settings().creative_model
 
-    _fallback_text_model = os.getenv("FALLBACK_CREATIVE_MODEL", "gemini-2.0-flash")
+    _fallback_text_model = _get_settings().fallback_creative_model
 
     async def _llm(prompt: str, temp: float = 0.5, retries: int = 3,
                    with_brand_imgs: bool = False) -> str:
@@ -3576,7 +3576,7 @@ Output EXACTLY this format (nothing else):
         log.info("p2_generate_image_start", model=image_model, n=len(enriched_concepts))
         await _emit("kv", "running", f"Generating {len(enriched_concepts)} campaign visuals with brand references…")
 
-        _fallback_image_model = os.getenv("FALLBACK_IMAGE_MODEL", "gemini-2.0-flash-exp")
+        _fallback_image_model = _get_settings().fallback_image_model
         _image_models = (
             [image_model, _fallback_image_model]
             if _fallback_image_model and _fallback_image_model != image_model
@@ -4035,6 +4035,6 @@ Only include channels from this list: {channels_str}
 Budget split percentages must sum to 1.0.
 kpi_validation must include one entry per validated KPI target listed above."""
 
-    raw = await _vertex_generate(_gc, os.getenv("CREATIVE_MODEL", "gemini-3.5-flash"), prompt)
+    raw = await _vertex_generate(_gc, _get_settings().creative_model, prompt)
     return _parse_agent_response(raw)
 

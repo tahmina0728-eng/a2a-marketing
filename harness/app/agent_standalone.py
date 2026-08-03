@@ -1324,7 +1324,8 @@ def run_reel(brand: str, prompt: str) -> dict:
         import time as _time
         from google.genai.types import GenerateVideosConfig
 
-        veo_model = os.getenv("VEO_MODEL", "veo-3.1-generate-001")
+        from app.config import get_settings as _gs_veo
+        veo_model = _gs_veo().veo_model
         client    = _genai_client()
         page_id   = uuid.uuid4().hex[:12]
         out_uri   = f"gs://{settings.gcs_bucket}/outputs/standalone-{page_id}/reel.mp4"
@@ -1642,7 +1643,8 @@ def run_tvc(brand: str, prompt: str, duration: int = 30) -> dict:
 
     # ── Step 2: Generate each scene with Veo ─────────────────────────────────
     client    = _genai_client()
-    veo_model = os.getenv("VEO_MODEL", "veo-3.1-generate-001")
+    from app.config import get_settings as _gs_veo2
+    veo_model = _gs_veo2().veo_model
     clip_bytes_list: list[bytes] = []
     clips_b64: list[str]         = []
 
