@@ -2467,6 +2467,8 @@ async def generate_campaign_reel(
     copy_cta: str = "",
     reasoning_model: str = "gemini-3.5-flash",
     language: str = "",
+    channels: list = None,
+    storyboard_cb=None,
 ) -> tuple[str, str]:
     """
     Generate a 6-second campaign reel using Veo via Vertex AI.
@@ -2624,6 +2626,88 @@ async def generate_campaign_reel(
             f"warm, human, and completely real."
         )
 
+    _is_barclays_reel = brand.lower() == "barclays"
+    _is_wimbledon_reel = _is_barclays_reel and any(
+        "wimbledon" in str(v).lower()
+        for v in [big_idea, fan_truth, product_name, audience] if v
+    )
+
+    def _barclays_scene(_: str) -> str:
+        """Barclays Wimbledon 6-second reel — campaign theme selects the 4-beat structure."""
+        _seed = " ".join(filter(None, [big_idea, fan_truth, copy_headline])).lower()
+
+        if any(k in _seed for k in ["moments of progress", "progress", "journey", "first step"]):
+            return (
+                "BARCLAYS × WIMBLEDON — MOMENTS OF PROGRESS. "
+                "Beat 1 (0–1.5s): Extreme close-up — young tennis player's hands tying shoes, gripping "
+                "racket handle. Determination and anticipation. Deep Barclays Night shadows. "
+                "Beat 2 (1.5–3s): Player steps from tunnel onto pristine Wimbledon grass court — "
+                "slow tracking shot from behind, morning mist on grass, English summer light. "
+                "Beat 3 (3–4.5s): Slow-motion serve — ball toss, racket impact, ball frozen mid-air, "
+                "Wimbledon crowd blurred behind. Barclays Blue #00AEEF arc of light following the ball. "
+                "Beat 4 (4.5–6s): Sweeping wide Wimbledon stadium shot — golden hour, crowd energy, "
+                "then pull to Barclays Night #1A2142 dark ground for brand end frame. "
+                "Audio: shoe sounds → subtle heartbeat → crowd ambience rising → uplifting music resolve. "
+                "NO logos, NO text in generated footage."
+            )
+        elif any(k in _seed for k in ["greatness", "solo sport", "partnership", "never alone"]):
+            return (
+                "BARCLAYS × WIMBLEDON — GREATNESS IS NEVER A SOLO SPORT. "
+                "Beat 1 (0–1.5s): Two professionals — warm conversation on Wimbledon stadium balcony, "
+                "the court glowing below in soft evening light, crowd faintly visible. "
+                "Beat 2 (1.5–3s): Cut to court level — tennis rally in full swing, player in concentrated "
+                "focus, crowd rising in anticipation. "
+                "Beat 3 (3–4.5s): Return to balcony — the professionals share a genuine moment of "
+                "quiet pride as they watch. Barclays Night tones, warm stadium light. "
+                "Beat 4 (4.5–6s): Wide Wimbledon stadium atmosphere, golden hour, crowd energy fading "
+                "to Barclays Night #1A2142 dark ground. "
+                "Audio: crowd ambience → soaring orchestral swell → resolve. "
+                "NO logos, NO text in generated footage."
+            )
+        elif any(k in _seed for k in ["every point", "every dream", "belief", "relentless"]):
+            return (
+                "BARCLAYS × WIMBLEDON — EVERY POINT. EVERY DREAM. "
+                "Beat 1 (0–1.5s): Close-up of tennis ball being bounced, player's focused face "
+                "in soft focus behind — pure concentration. "
+                "Beat 2 (1.5–3s): Player positions for serve — ball toss, racket drawn back, "
+                "perfect stillness before power. English summer light. "
+                "Beat 3 (3–4.5s): Slow-motion racket impact — ball launches toward camera, "
+                "Barclays Blue #00AEEF light arc, kinetic energy. "
+                "Beat 4 (4.5–6s): Crowd erupts in slow motion — then hard cut to Barclays Night "
+                "#1A2142 end frame. "
+                "Audio: heartbeat → racket impact snap → crowd eruption → musical resolve. "
+                "NO logos, NO text in generated footage."
+            )
+        elif any(k in _seed for k in ["backing progress", "community", "off the court"]):
+            return (
+                "BARCLAYS × WIMBLEDON — BACKING PROGRESS. "
+                "Beat 1 (0–1.5s): Three young diverse professionals sitting beside Wimbledon court "
+                "after training — natural laughter, rackets resting beside them. "
+                "Beat 2 (1.5–3s): One of them watches a player on court, leaning forward — "
+                "ambition and recognition in their expression. "
+                "Beat 3 (3–4.5s): Match point — the player wins, arms raised. The group on the "
+                "sideline mirrors the joy. "
+                "Beat 4 (4.5–6s): Wide Wimbledon atmosphere — crowd, green court, golden light, "
+                "then Barclays Night end frame. "
+                "Audio: ambient court sounds → rising crowd → uplifting resolve. "
+                "NO logos, NO text in generated footage."
+            )
+        else:
+            # Default: the serve sequence — most visually dynamic, works for any Wimbledon brief
+            return (
+                "BARCLAYS × WIMBLEDON — CINEMATIC TENNIS REEL. "
+                "Beat 1 (0–1.5s): Extreme close-up — young tennis player's determined face, "
+                "racket gripped, Wimbledon grass visible ahead. Deep Barclays Night shadows. "
+                "Beat 2 (1.5–3s): Player steps onto immaculate Wimbledon grass court — "
+                "tracking from behind, English summer morning light, soft mist. "
+                "Beat 3 (3–4.5s): Slow-motion serve — ball toss, racket swing, crowd "
+                "bokeh-blurred, Barclays Blue #00AEEF arc of stadium light. "
+                "Beat 4 (4.5–6s): Wide Wimbledon stadium atmosphere, crowd, golden hour, "
+                "pulling to clean Barclays Night #1A2142 dark ground for brand overlay. "
+                "Audio: crowd ambience → heartbeat → impact → musical resolve. "
+                "NO logos, NO text in generated footage."
+            )
+
     _BRAND_SCENE_FN = {
         "Sunglow":     _sunglow_scene,
         "Rnorr":       _rnorr_scene,
@@ -2632,6 +2716,7 @@ async def generate_campaign_reel(
         "sunrise":     _sunrise_scene,
         "Sunrise":     _sunrise_scene,
         "Haleon":      _haleon_scene,
+        "Barclays":    _barclays_scene,
     }
     # Sunrise lifestyle (no product selected): use hard-coded adventure scenes.
     # _sunrise_scene defaults to "friends in Zurich with phones" which Veo
@@ -2839,37 +2924,113 @@ async def generate_campaign_reel(
 
     _gc = _veo_genai.Client(vertexai=True, project=gcp_project, location=gcp_region)
     _lang_label = language.strip() if language else "English"
-    _voiceover_line = (
-        f'A warm confident voiceover says in {_lang_label}: "{copy_headline}"' if copy_headline
-        else f"A warm confident voiceover narrates the campaign tagline in {_lang_label}."
-    )
-    _language_rule = (
-        f"\nLanguage: {_lang_label} — the voiceover MUST be delivered entirely in {_lang_label}. "
-        "The script text in the prompt should be written in that language."
-        if _lang_label and _lang_label.lower() != "english"
-        else ""
-    )
+
+    # ── Storyboard generation (Barclays Wimbledon) ────────────────────────────
+    # Generate structured JSON storyboard before Veo so the UI can show it.
+    # Emitted via storyboard_cb if provided by the caller.
+    if _is_wimbledon_reel and storyboard_cb:
+        try:
+            _sb_seed = " ".join(filter(None, [big_idea, fan_truth, copy_headline])).lower()
+            if any(k in _sb_seed for k in ["moments of progress", "progress", "journey"]):
+                _sb_concept = "Moments of Progress"
+                _sb_scenes = [
+                    {"time": "0–1.5s", "camera": "Extreme close-up", "visual": "Young player tying shoes and gripping racket", "copy": "Every dream starts somewhere."},
+                    {"time": "1.5–3s", "camera": "Tracking from behind", "visual": "Player steps onto Wimbledon grass court — morning mist, English light", "copy": None},
+                    {"time": "3–4.5s", "camera": "Slow-motion", "visual": "Serve — ball toss, racket impact, ball mid-air, crowd blurred", "copy": "Every point. Every step."},
+                    {"time": "4.5–6s", "camera": "Wide → brand cut", "visual": "Wimbledon stadium golden hour → Barclays Night end frame", "copy": "Greatness is never a solo sport."},
+                ]
+            elif any(k in _sb_seed for k in ["greatness", "solo sport", "partnership"]):
+                _sb_concept = "Greatness Is Never A Solo Sport"
+                _sb_scenes = [
+                    {"time": "0–1.5s", "camera": "Two-shot", "visual": "Professionals in conversation on Wimbledon balcony, court below", "copy": None},
+                    {"time": "1.5–3s", "camera": "Court level", "visual": "Tennis rally — player in full concentration, crowd rising", "copy": "Every achievement is shared."},
+                    {"time": "3–4.5s", "camera": "Return two-shot", "visual": "Professionals share a quiet proud moment watching the match", "copy": None},
+                    {"time": "4.5–6s", "camera": "Wide → brand cut", "visual": "Golden hour stadium → Barclays Night end frame", "copy": "Greatness is never a solo sport."},
+                ]
+            elif any(k in _sb_seed for k in ["every point", "every dream", "belief"]):
+                _sb_concept = "Every Point. Every Dream."
+                _sb_scenes = [
+                    {"time": "0–1.5s", "camera": "Close-up", "visual": "Ball being bounced, player's focused face in soft focus", "copy": None},
+                    {"time": "1.5–3s", "camera": "Medium", "visual": "Player positions for serve — stillness before power", "copy": "Every point."},
+                    {"time": "3–4.5s", "camera": "Slow-motion", "visual": "Racket impact — ball launches toward camera, kinetic energy", "copy": "Every dream."},
+                    {"time": "4.5–6s", "camera": "Wide → brand cut", "visual": "Crowd erupts → Barclays Night end frame", "copy": "We're with you."},
+                ]
+            else:
+                _sb_concept = "Barclays × Wimbledon"
+                _sb_scenes = [
+                    {"time": "0–1.5s", "camera": "Extreme close-up", "visual": "Player's determined face, racket gripped, Wimbledon grass ahead", "copy": None},
+                    {"time": "1.5–3s", "camera": "Tracking from behind", "visual": "Player steps onto Wimbledon grass — morning light, soft mist", "copy": None},
+                    {"time": "3–4.5s", "camera": "Slow-motion", "visual": "Serve — ball toss, racket swing, crowd blurred behind", "copy": copy_headline or "Greatness is never a solo sport."},
+                    {"time": "4.5–6s", "camera": "Wide → brand cut", "visual": "Stadium golden hour → Barclays Night end frame", "copy": None},
+                ]
+            _storyboard = {
+                "concept": _sb_concept,
+                "duration": 6,
+                "format": "9:16",
+                "brand": "Barclays × Wimbledon",
+                "scenes": _sb_scenes,
+            }
+            await storyboard_cb(_storyboard)
+        except Exception as _sb_err:
+            log.warning("storyboard_generation_skipped", error=str(_sb_err))
+
+    # ── Build Veo prompt ──────────────────────────────────────────────────────
+    _veo_aspect_ratio = "9:16"  # vertical by default for Reels/Stories
+    _ch_list = [c.lower().strip() for c in (channels or []) if c]
+    if any(c in _ch_list for c in ("linkedin", "facebook", "youtube", "display")):
+        _veo_aspect_ratio = "16:9"
+
+    if _is_barclays_reel:
+        # Barclays: premium financial services framing, no FMCG language, no product packshot
+        _voiceover_line = (
+            f'Subtle ambient sound design — crowd ambience, heartbeat, musical resolve — '
+            f'no dialogue voiceover unless brand-approved.'
+        )
+        _prompt_rules = (
+            f"- Photorealistic premium UK financial-services advertising quality — NOT FMCG\n"
+            f"- Deep Barclays Night (#1A2142) and Barclays Blue (#00AEEF) colour palette\n"
+            f"- Cinematic, understated, emotionally powerful — sophisticated not flashy\n"
+            f"- AUDIO: {_voiceover_line}\n"
+            f"- NO product packshots, NO bank app screens, NO financial data\n"
+            f"- NO text or typography in the generated footage — text composited separately\n"
+            f"- NO logos or brand marks — composited after generation\n"
+            f"- Wimbledon atmosphere: immaculate grass, English summer light, authentic crowd energy"
+        )
+    else:
+        _language_rule = (
+            f"\nLanguage: {_lang_label} — the voiceover MUST be delivered entirely in {_lang_label}."
+            if _lang_label and _lang_label.lower() != "english" else ""
+        )
+        _voiceover_line = (
+            f'A warm confident voiceover says in {_lang_label}: "{copy_headline}"' if copy_headline
+            else f"A warm confident voiceover narrates the campaign tagline in {_lang_label}."
+        )
+        _prompt_rules = (
+            f"- Photorealistic, premium FMCG ad quality, dynamic motion, brand colours prominent\n"
+            f"- The {season} atmosphere must be unmistakably present — lighting, props, colour grading\n"
+            f"- AUDIO: upbeat brand-appropriate background music + {_voiceover_line}\n"
+            f"- No text or typography in the image\n"
+            f"- CRITICAL PRODUCT RULE: Show ONLY {product_name or brand} product packaging. "
+            f"Do NOT show any other product, competing brand, or unrelated packaging in the scene."
+            + (f"\nLanguage: {_lang_label}" if _lang_label and _lang_label.lower() != "english" else "")
+        )
+
     video_prompt = await asyncio.get_event_loop().run_in_executor(None, lambda: _gc.models.generate_content(
         model=reasoning_model,
-        contents=f"""Write a single cinematic video+audio generation prompt (80-100 words) for a 6-second {brand} campaign reel with voiceover.
+        contents=f"""Write a single cinematic video+audio generation prompt (80-100 words) for a 6-second {brand} campaign reel.
 
 Brand: {brand}
-Product: {product_name}
 Campaign Big Idea: {big_idea}
 Fan Truth: {fan_truth}
-Season / Occasion: {season}  ← CRITICAL: make the seasonal/festive atmosphere visually central throughout the reel
+Season / Occasion: {season}
 Audience: {audience}
-Campaign Headline (voiceover text): "{copy_headline or big_idea}"{_language_rule}
+Headline: "{copy_headline or big_idea}"
 
-Base visual direction (FOLLOW THIS CLOSELY): {brand_scene}
+Base visual direction (FOLLOW THIS CLOSELY):
+{brand_scene}
 
 Rules:
-- Photorealistic, premium FMCG ad quality, dynamic motion, brand colours prominent
-- The {season} atmosphere must be unmistakably present in the visuals — lighting, props, colour grading
-- AUDIO: upbeat brand-appropriate background music + {_voiceover_line}
-- The voiceover should be delivered confidently and warmly over the music
-- No text or typography in the image
-- CRITICAL PRODUCT RULE: Show ONLY {product_name or brand} product packaging. Do NOT show any other product, competing brand, or unrelated packaging in the scene.
+{_prompt_rules}
 Output the prompt only.""",
     ))
     final_prompt = video_prompt.text.strip()
@@ -2885,20 +3046,24 @@ Output the prompt only.""",
         _waits = [60, 120, 180]
         for _attempt in range(4):
             try:
+                _neg = (
+                    "text, words, logos, brand marks, subtitles, app screens, "
+                    "financial data, fabricated claims, violence, explicit content"
+                    if _is_barclays_reel else
+                    "text, words, subtitles, competing products, multiple brands, "
+                    "other product packaging, fictional brands, unrelated products, "
+                    "second product, financial charts, graphs, violence, explicit content"
+                )
                 return await loop.run_in_executor(None, lambda: _gc.models.generate_videos(
                     model=veo_model,
                     prompt=prompt,
                     config=GenerateVideosConfig(
-                        aspect_ratio="16:9",
+                        aspect_ratio=_veo_aspect_ratio,
                         duration_seconds=6,
                         output_gcs_uri=out_uri,
                         number_of_videos=1,
                         generate_audio=True,
-                        negative_prompt=(
-                            "text, words, subtitles, competing products, multiple brands, "
-                            "other product packaging, fictional brands, unrelated products, "
-                            "second product, financial charts, graphs, violence, explicit content"
-                        ),
+                        negative_prompt=_neg,
                     ),
                 ))
             except Exception as _ve:
@@ -4519,6 +4684,9 @@ Output EXACTLY this format (nothing else):
         try:
             await _emit("reel", "running", "Generating 6-second campaign reel with Veo…")
             _settings_r = _get_settings()
+            async def _storyboard_cb(sb: dict):
+                await _emit("storyboard", "milestone", _json2.dumps(sb))
+
             video_b64, video_uri = await generate_campaign_reel(
                 brand           = brand,
                 big_idea        = big_idea,
@@ -4534,6 +4702,8 @@ Output EXACTLY this format (nothing else):
                 copy_cta        = copy_cta,
                 reasoning_model = _settings_r.gemini_model_reasoning,
                 language        = language or "",
+                channels        = channels or [],
+                storyboard_cb   = _storyboard_cb,
             )
             if video_b64:
                 # Send GCS URI immediately so frontend can stream directly from GCS.
