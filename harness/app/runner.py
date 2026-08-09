@@ -2193,6 +2193,7 @@ def _overlay_reel(
     cta: str = "",
     text_start_sec: float = 3.5,
     logo_start_sec: float = 4.2,
+    logo_hint: str = "",
 ) -> bytes:
     """
     Single FFmpeg pass: text lower-third + brand logo end-card on the reel.
@@ -2254,6 +2255,23 @@ def _overlay_reel(
                 _logo_pool    = _raster_logos if _raster_logos else []
                 def _pick_logo(ps):
                     _bslug = brand.split()[0].lower()
+                    # logo_hint overrides — caller requests a specific logo by filename stem
+                    if logo_hint:
+                        _hint = next((p for p in ps if logo_hint.lower() in p.lower()), None)
+                        if _hint:
+                            return _hint
+                    # Barclays: use _wb (white/reversed) on dark video backgrounds;
+                    # avoid eagle-only symbol; prefer full wordmark.
+                    # Wimbledon hint selects co-brand lockup via logo_hint above.
+                    if _bslug == "barclays":
+                        return (
+                            next((p for p in ps if "barclays1_wb" in p.lower()), None) or
+                            next((p for p in ps if _bslug in p.lower() and "_wb" in p.lower()
+                                  and "symbol" not in p.lower() and "wimbledon" not in p.lower()), None) or
+                            next((p for p in ps if _bslug in p.lower() and "_wb" in p.lower()), None) or
+                            next((p for p in ps if _bslug in p.lower()), None) or
+                            (ps[0] if ps else None)
+                        )
                     return (
                         next((p for p in ps if _bslug in p.lower() and "_dark" in p.lower()), None) or
                         next((p for p in ps if _bslug in p.lower()
@@ -3131,9 +3149,15 @@ Output the prompt only.""",
                 None,
                 lambda: _gcs2.Client().bucket(bucket_name2).blob(blob_path2).download_as_bytes()
             )
+            # Barclays Wimbledon: co-brand lockup; standard Barclays: full wordmark
+            _logo_hint = (
+                "barclays-wimbledon_wb" if _is_wimbledon_reel else
+                "barclays1_wb"          if _is_barclays_reel  else ""
+            )
             video_bytes2 = await asyncio.get_event_loop().run_in_executor(
                 None,
-                lambda: _overlay_reel(video_bytes2, brand, copy_headline, copy_cta),
+                lambda: _overlay_reel(video_bytes2, brand, copy_headline, copy_cta,
+                                      logo_hint=_logo_hint),
             )
             return base64.b64encode(video_bytes2).decode("utf-8"), video_gcs
 
@@ -3150,9 +3174,14 @@ Output the prompt only.""",
         )
 
         # ── Text lower-third + logo end-card — single FFmpeg pass ────────────
+        _logo_hint = (
+            "barclays-wimbledon_wb" if _is_wimbledon_reel else
+            "barclays1_wb"          if _is_barclays_reel  else ""
+        )
         video_bytes = await asyncio.get_event_loop().run_in_executor(
             None,
-            lambda: _overlay_reel(video_bytes, brand, copy_headline, copy_cta),
+            lambda: _overlay_reel(video_bytes, brand, copy_headline, copy_cta,
+                                  logo_hint=_logo_hint),
         )
 
         return base64.b64encode(video_bytes).decode("utf-8"), video_gcs
