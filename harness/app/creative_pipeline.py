@@ -55,10 +55,15 @@ CREATIVE_MODEL = _cp_get_settings().creative_model
 
 
 def _load_bytes(path_or_uri: str) -> bytes | None:
-    """Load bytes from a local path or gs:// URI."""
+    """Load bytes from a local path, gs:// URI, or data: URI."""
     if not path_or_uri:
         return None
     try:
+        # data: URI — e.g. generated colour swatch PNG
+        if path_or_uri.startswith("data:"):
+            import base64 as _b64
+            _header, _data = path_or_uri.split(",", 1)
+            return _b64.b64decode(_data)
         if path_or_uri.startswith("gs://"):
             from google.cloud import storage as _gcs
 
@@ -79,6 +84,11 @@ def _load_bytes(path_or_uri: str) -> bytes | None:
 
 
 def _mime_for(uri: str) -> str:
+    # data: URI carries its own MIME type in the header
+    if uri.startswith("data:"):
+        _header = uri.split(",", 1)[0]   # e.g. "data:image/png;base64"
+        _mime_part = _header.split(":", 1)[1].split(";", 1)[0]
+        return _mime_part or "image/png"
     ext = uri.rsplit(".", 1)[-1].lower()
     return {
         "jpg":  "image/jpeg",

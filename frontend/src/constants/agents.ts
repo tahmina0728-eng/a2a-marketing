@@ -1,13 +1,14 @@
 export const HARNESS_STAGES = [
-  { key: "briefing",    icon: "📋", label: "Logos",    desc: "Validating brief & Fan Truth score" },
-  { key: "strategy",    icon: "💡", label: "Helia",    desc: "Building big idea & strategy" },
-  { key: "copy",        icon: "✍️", label: "Ideon",    desc: "Writing campaign copy variants" },
-  { key: "culture",     icon: "🌍", label: "Aether",   desc: "Researching cultural intelligence" },
-  { key: "kv",          icon: "🎨", label: "Morphis",  desc: "Generating key visual with Gemini 3 Pro Image" },
-  { key: "reel",        icon: "🎬", label: "Kinetik",  desc: "Generating 6s campaign reel with Veo" },
-  { key: "channel",     icon: "📡", label: "Poly",     desc: "Publishing to Instagram, TikTok & more" },
-  { key: "performance", icon: "📊", label: "Nexus",    desc: "Forecasting reach, ROAS & channel performance" },
-  { key: "tvc",         icon: "🎥", label: "Director", desc: "Generates a 15s or 30s multi-scene TVC with Veo" },
+  { key: "briefing",    icon: "📋", label: "Logos",       desc: "Validating brief & Fan Truth score" },
+  { key: "compliance",  icon: "🛡️", label: "Compliance",  desc: "Checking brand profile & regulatory rules" },
+  { key: "strategy",    icon: "💡", label: "Helia",       desc: "Building big idea & strategy" },
+  { key: "copy",        icon: "✍️", label: "Ideon",       desc: "Writing campaign copy variants" },
+  { key: "culture",     icon: "🌍", label: "Aether",      desc: "Researching cultural intelligence" },
+  { key: "kv",          icon: "🎨", label: "Morphis",     desc: "Generating key visual with Gemini 3 Pro Image" },
+  { key: "reel",        icon: "🎬", label: "Kinetik",     desc: "Generating 6s campaign reel with Veo" },
+  { key: "channel",     icon: "📡", label: "Poly",        desc: "Publishing to Instagram, TikTok & more" },
+  { key: "performance", icon: "📊", label: "Nexus",       desc: "Forecasting reach, ROAS & channel performance" },
+  { key: "tvc",         icon: "🎥", label: "Director",    desc: "Generates a 15s or 30s multi-scene TVC with Veo" },
 ];
 
 // First 7 agents shown as individual nav entries in the sidebar (Nexus/Performance excluded —

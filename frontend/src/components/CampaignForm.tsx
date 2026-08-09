@@ -12,6 +12,7 @@ const BRANDS = [
   { id: "UBS Bank",    label: "UBS Bank",           logo: `${API_BASE_PUB}/brands/UBS%20Bank/serve/Logos/ubs-bank-logo.png` },
   { id: "sunrise",     label: "Sunrise",            logo: `${API_BASE_PUB}/brands/sunrise/serve/Logos/sunrise_logo_red.svg` },
   { id: "Haleon",      label: "Haleon",             logo: `${API_BASE_PUB}/brands/Haleon/serve/Logos/haleon_logo_black.svg` },
+  { id: "Barclays",   label: "Barclays",            logo: `${API_BASE_PUB}/brands/Barclays/serve/Logos/barclays1_wb.png` },
 ];
 const MARKETS  = ["United Kingdom","Germany","France","Spain","India","Thailand","China","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 

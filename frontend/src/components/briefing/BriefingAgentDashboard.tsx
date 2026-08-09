@@ -6,7 +6,7 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
   onApprove?: () => void;
   onRegenerate?: (refinedPrompt: string, edits?: { fanTruth: string; goal: string; audience: string; market: string }) => void;
 }) {
-  const score    = typeof result.score === "number" ? result.score : 90;
+  const score    = (typeof result.score === "number" && result.score > 0) ? result.score : 90;
   const verdict  = (result.verdict  as string) ?? (score >= 70 ? "PASS" : "NEEDS WORK");
   const brand    = (result.brand    as string) ?? "";
   const product  = (result.product  as string) ?? "";
@@ -76,24 +76,21 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
     ? `${audience}${market ? ` in ${market}` : ""}${season ? ` · ${season}` : ""} — ${fanTruth.slice(0, 130)}${fanTruth.length > 130 ? "…" : ""}`
     : fanTruth || `${audience || "Target audience"}${market ? ` in ${market}` : ""} show strong purchase intent alignment for this campaign.`;
 
-  const insights = [
-    {
-      title: "Brand Guidelines", confidence: 92, icon: "📚", accentColor: "#3b82f6",
-      summary: fanTruth
-        ? `Fan truth validated: "${fanTruth.slice(0, 80)}${fanTruth.length > 80 ? "…" : ""}"`
-        : "Brand guidelines validated against campaign objectives.",
-    },
-    {
-      title: "Target Audience", confidence: 88, icon: "👥", accentColor: "#8b5cf6",
-      summary: audience
-        ? `Target: ${audience}${market ? ` · ${market}` : ""}${season ? ` · ${season}` : ""}`
-        : "Target segments identified with high behavioural alignment.",
-    },
-    {
-      title: "Historical Insights", confidence: 84, icon: "📈", accentColor: "#10b981",
-      summary: summary || "Previous campaign patterns inform creative direction and channel weighting.",
-    },
-  ];
+  // Fan Truth axis breakdown (specific/shared/special) — shown as a mini bar in card 1
+  const ftSpecific = typeof result.ft_specific === "number" ? result.ft_specific : null;
+  const ftShared   = typeof result.ft_shared   === "number" ? result.ft_shared   : null;
+  const ftSpecial  = typeof result.ft_special  === "number" ? result.ft_special  : null;
+  const ftAxes = [
+    { label: "Specific", val: ftSpecific, tip: "Cultural specificity of the insight" },
+    { label: "Shared",   val: ftShared,   tip: "Broad audience resonance (CDP-calibrated)" },
+    { label: "Special",  val: ftSpecial,  tip: "Brand distinctiveness — only this brand can own it" },
+  ].filter(a => a.val !== null) as { label: string; val: number; tip: string }[];
+
+  // KPI health — count flags
+  const kpiItems = Array.isArray(result.kpi_items) ? result.kpi_items as any[] : [];
+  const kpiOK   = kpiItems.filter((k: any) => k.flag === "OK").length;
+  const kpiAmb  = kpiItems.filter((k: any) => k.flag === "AMBITIOUS").length;
+  const kpiRisk = kpiItems.filter((k: any) => k.flag === "UNREALISTIC").length;
 
   const donutSegs = [
     { label: "Brand",      n: 18, color: "#3b82f6" },
@@ -114,18 +111,7 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
     return { ...seg, d: `M 60 60 L ${x1} ${y1} A 42 42 0 ${angle > 180 ? 1 : 0} 1 ${x2} ${y2} Z` };
   });
 
-  const ConfRing = ({ pct, accent }: { pct: number; accent: string }) => {
-    const r = 22, circ = 2 * Math.PI * r, dash = (pct / 100) * circ;
-    return (
-      <svg width={56} height={56} viewBox="0 0 56 56" style={{ flexShrink: 0 }}>
-        <circle cx={28} cy={28} r={r} fill="none" stroke="var(--card-border)" strokeWidth={4} />
-        <circle cx={28} cy={28} r={r} fill="none" stroke={accent} strokeWidth={4}
-          strokeDasharray={`${dash} ${circ - dash}`} strokeLinecap="round"
-          style={{ transform: "rotate(-90deg)", transformOrigin: "28px 28px" }} />
-        <text x={28} y={33} textAnchor="middle" fontSize={11} fontWeight={800} fill={accent}>{pct}%</text>
-      </svg>
-    );
-  };
+
 
   const SectionDivider = () => (
     <div style={{ borderTop: "1px solid var(--card-border)", margin: "14px 0 12px" }} />
@@ -191,9 +177,49 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
               ✓ Approve & Continue
             </button>
           ) : (
-            <button style={{ padding: "5px 12px", borderRadius: 7, border: "none",
-              background: `linear-gradient(135deg, ${color}, #6366f1)`, color: "white",
-              fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
+            <button onClick={() => {
+              const lines = [
+                `CAMPAIGN BRIEF — ${brand || "Brand"}`,
+                "=".repeat(48),
+                `Brand:    ${brand || "—"}`,
+                `Product:  ${product || "—"}`,
+                `Verdict:  ${verdict} (Overall confidence: ${score}/100)`,
+                "",
+                "FAN TRUTH",
+                "-".repeat(48),
+                fanTruth || "—",
+                "",
+                "AUDIENCE",
+                "-".repeat(48),
+                audience || "—",
+                "",
+                "MARKET / SEASON",
+                "-".repeat(48),
+                [market, season].filter(Boolean).join(" · ") || "—",
+                "",
+                "CAMPAIGN GOAL",
+                "-".repeat(48),
+                goal || "—",
+                "",
+                "CONFIDENCE SCORES",
+                "-".repeat(48),
+                ftAxes.length > 0 ? ftAxes.map(a => `${a.label}: ${a.val}%`).join("\n") : "",
+                `Overall: ${score}%`,
+                "",
+                summary ? `SUMMARY\n${"-".repeat(48)}\n${summary}` : "",
+              ].filter(l => l !== undefined).join("\n");
+
+              const blob = new Blob([lines], { type: "text/plain" });
+              const url  = URL.createObjectURL(blob);
+              const a    = document.createElement("a");
+              a.href     = url;
+              a.download = `${(brand || "campaign").replace(/\s+/g, "_")}_brief.txt`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+              style={{ padding: "5px 12px", borderRadius: 7, border: "none",
+                background: `linear-gradient(135deg, ${color}, #6366f1)`, color: "white",
+                fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>
               ⬇ Export
             </button>
           )}
@@ -216,22 +242,70 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
 
       {/* ── 3 Insight cards ────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>
-        {insights.map((ins) => (
-          <div key={ins.title} style={{ padding: "10px 12px", borderRadius: 12, background: "var(--card-bg)",
-            border: "1px solid var(--card-border)", boxShadow: "var(--shadow-sm)" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 13 }}>{ins.icon}</span>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>{ins.title}</span>
-              </div>
-              <ConfRing pct={ins.confidence} accent={ins.accentColor} />
-            </div>
-            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5,
-              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" as const, overflow: "hidden" }}>
-              {ins.summary}
-            </div>
+
+        {/* Card 1: Fan Truth breakdown — specific / shared / special axes */}
+        <div style={{ padding: "10px 12px", borderRadius: 12, background: "var(--card-bg)",
+          border: "1px solid var(--card-border)", boxShadow: "var(--shadow-sm)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <span style={{ fontSize: 13 }}>📚</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>Fan Truth Scores</span>
           </div>
-        ))}
+          {ftAxes.length > 0 ? ftAxes.map(ax => (
+            <div key={ax.label} style={{ marginBottom: 5 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                <span style={{ fontSize: 10, color: "var(--text-secondary)" }}>{ax.label}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#3b82f6" }}>{ax.val}%</span>
+              </div>
+              <div style={{ height: 4, borderRadius: 99, background: "var(--card-border)" }}>
+                <div style={{ height: 4, borderRadius: 99, background: "#3b82f6", width: `${ax.val}%` }} />
+              </div>
+            </div>
+          )) : (
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              {fanTruth ? `"${fanTruth.slice(0, 80)}${fanTruth.length > 80 ? "…" : ""}"` : "Fan truth validated against brand guidelines."}
+            </div>
+          )}
+        </div>
+
+        {/* Card 2: Audience — who, where, when */}
+        <div style={{ padding: "10px 12px", borderRadius: 12, background: "var(--card-bg)",
+          border: "1px solid var(--card-border)", boxShadow: "var(--shadow-sm)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <span style={{ fontSize: 13 }}>👥</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>Audience</span>
+          </div>
+          {[
+            { label: "Segment", val: audience || "—" },
+            { label: "Market",  val: market  || "—" },
+            { label: "Season",  val: season  || "—" },
+          ].map(row => (
+            <div key={row.label} style={{ display: "flex", gap: 6, marginBottom: 3, alignItems: "baseline" }}>
+              <span style={{ fontSize: 10, color: "var(--text-tertiary)", minWidth: 44 }}>{row.label}</span>
+              <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.4 }}>{row.val}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Card 3: KPI health — OK / Ambitious / Unrealistic counts */}
+        <div style={{ padding: "10px 12px", borderRadius: 12, background: "var(--card-bg)",
+          border: "1px solid var(--card-border)", boxShadow: "var(--shadow-sm)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
+            <span style={{ fontSize: 13 }}>📈</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-primary)" }}>KPI Health</span>
+          </div>
+          {kpiItems.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 4 }}>
+              {kpiOK   > 0 && <div style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ fontSize: 10, fontWeight: 700, color: "#10b981", minWidth: 16 }}>{kpiOK}</span><span style={{ fontSize: 10, color: "var(--text-secondary)" }}>within benchmark</span></div>}
+              {kpiAmb  > 0 && <div style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ fontSize: 10, fontWeight: 700, color: "#f59e0b", minWidth: 16 }}>{kpiAmb}</span><span style={{ fontSize: 10, color: "var(--text-secondary)" }}>ambitious</span></div>}
+              {kpiRisk > 0 && <div style={{ display: "flex", alignItems: "center", gap: 6 }}><span style={{ fontSize: 10, fontWeight: 700, color: "#ef4444", minWidth: 16 }}>{kpiRisk}</span><span style={{ fontSize: 10, color: "var(--text-secondary)" }}>unrealistic</span></div>}
+            </div>
+          ) : (
+            <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+              {summary || "KPI targets benchmarked against historical campaign data."}
+            </div>
+          )}
+        </div>
+
       </div>
 
       {/* ── CDP Key Insight ────────────────────────────────────── */}

@@ -93,6 +93,7 @@ const BRANDS = [
   { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", logo: `${API_BASE_PUB}/brands/UBS%20Bank/serve/Logos/ubs-bank-logo.png`          },
   { id: "sunrise",     label: "Sunrise",            emoji: "🌅", logo: `${API_BASE_PUB}/brands/sunrise/serve/Logos/sunrise_logo_red.svg`           },
   { id: "Haleon",      label: "Haleon",             emoji: "💊", logo: `${API_BASE_PUB}/brands/Haleon/serve/Logos/haleon_logo_black.svg`           },
+  { id: "Barclays",   label: "Barclays",            emoji: "🦅", logo: `${API_BASE_PUB}/brands/Barclays/serve/Logos/barclays1_wb.png`             },
 ];
 
 
@@ -111,6 +112,9 @@ const BRAND_PRODUCTS: Record<string, string[]> = {
   "UBS Bank":  ["Wealth Management", "Private Banking", "Asset Management",
                "Investment Banking", "Sustainable Finance", "Family Office Services",
                "Philanthropy Advisory", "Corporate Solutions", "Personal Banking"],
+  Barclays:    ["Personal Current Account", "Premier Banking", "Business Account",
+               "Barclaycard", "Mortgage", "Smart Investor", "Barclays × Wimbledon",
+               "Savings Account", "Travel Abroad"],
 };
 
 const BRAND_CATEGORY: Record<string, string> = {
@@ -119,6 +123,7 @@ const BRAND_CATEGORY: Record<string, string> = {
   Boozt:       "Energy Drinks",
   Glenfiddich: "Single Malt Scotch Whisky × Aston Martin F1",
   "UBS Bank":  "Private Banking & Wealth Management",
+  Barclays:    "Retail & Business Banking",
 };
 
 const BRAND_FAN_TRUTHS: Record<string, string[]> = {
@@ -158,6 +163,14 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
     "A clearer financial future isn't a luxury. It's what the right partnership makes possible.",
     "Real wealth isn't just what you accumulate — it's what you protect for the next generation.",
   ],
+  Barclays: [
+    "That moment when your savings finally reach the number you've been working towards",
+    "Progress isn't always visible — until the statement proves it",
+    "The first time money felt like it was actually working for you",
+    "A mortgage approval letter — the moment a house becomes a home",
+    "When financial advice feels like someone is genuinely on your side",
+    "Barclays makes money work for you — every step of the way",
+  ],
 };
 
 const AGE_GROUPS       = ["13–17", "18–24", "25–34", "35–44", "45–54", "55+"];
@@ -168,6 +181,7 @@ const INTERESTS: Record<string, string[]> = {
   Boozt:       ["Athletes & gym-goers", "Students", "Festival-goers", "Gamers", "Young professionals", "Outdoor adventurers"],
   Glenfiddich: ["F1 enthusiasts", "Whisky connoisseurs", "Premium gifters", "Luxury collectors", "Corporate entertainers", "Motorsport fans", "Occasion celebrators"],
   "UBS Bank":  ["High-net-worth individuals", "Investors & wealth builders", "Entrepreneurs & founders", "Family offices", "Institutional investors", "Sustainable finance advocates", "Premium banking clients"],
+  Barclays:    ["First-time buyers", "Home movers", "Savers & investors", "Small business owners", "Students & graduates", "Sports & Wimbledon fans", "Everyday banking customers"],
   default:     ["Families", "Students", "Young professionals", "Beauty lovers", "Lifestyle"],
 };
 const REGIONS     = ["United Kingdom", "Australia", "United States", "New Zealand", "SEA", "Global"];
@@ -965,6 +979,75 @@ function BriefingPanel({ m, liveMsg, brand }: { m?: Record<string,unknown>; live
   );
 }
 
+function CompliancePanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
+  if (!m && !liveMsg) return (
+    <div style={{ textAlign: "center", color: "var(--text-tertiary)", fontSize: 13, padding: "32px 0" }}>
+      Brand compliance check running…
+    </div>
+  );
+  const passed   = m?.passed !== false;
+  const score    = typeof m?.score === "number" ? m.score : null;
+  const issues   = Array.isArray(m?.issues) ? m.issues as any[] : [];
+  const summary  = String(m?.summary ?? liveMsg ?? "");
+  const errors   = issues.filter((i: any) => i.severity === "error");
+  const warnings = issues.filter((i: any) => i.severity === "warning");
+
+  const pill = (label: string, bg: string, fg = "#fff") => (
+    <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 99,
+      fontSize: 11, fontWeight: 700, background: bg, color: fg, letterSpacing: "0.04em" }}>
+      {label}
+    </span>
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {/* Verdict row */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" as const }}>
+        {pill(passed ? "✓ PASS" : "✗ FAIL", passed ? "#16a34a" : "#dc2626")}
+        {score !== null && (
+          <span style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+            Score <strong style={{ color: passed ? "#16a34a" : "#dc2626" }}>{score}/100</strong>
+          </span>
+        )}
+        {errors.length > 0 && pill(`${errors.length} error${errors.length > 1 ? "s" : ""}`, "#dc2626")}
+        {warnings.length > 0 && pill(`${warnings.length} warning${warnings.length > 1 ? "s" : ""}`, "#d97706")}
+      </div>
+      {/* Summary */}
+      {summary && (
+        <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0, lineHeight: 1.55 }}>
+          {summary}
+        </p>
+      )}
+      {/* Issues list */}
+      {issues.length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {issues.slice(0, 8).map((issue: any, i: number) => {
+            const sev = issue.severity ?? "warning";
+            const clr = sev === "error" ? "#dc2626" : sev === "warning" ? "#d97706" : "#6366f1";
+            return (
+              <div key={i} style={{ background: "var(--card-bg)", border: `1px solid ${clr}33`,
+                borderRadius: 8, padding: "10px 12px" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 3 }}>
+                  {pill(sev.toUpperCase(), clr)}
+                  <span style={{ fontSize: 11, fontWeight: 600, color: "var(--text-tertiary)" }}>
+                    {issue.rule}
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: 12, color: "var(--text-secondary)" }}>{issue.detail}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {issues.length === 0 && score !== null && (
+        <p style={{ fontSize: 12, color: "#16a34a", margin: 0 }}>
+          No compliance issues detected. Brief cleared for creative production.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function StrategyPanel({ m }: { m?: Record<string,unknown> }) {
   const hero     = String(m?.hero_message ?? "");
   const big      = String(m?.big_idea ?? "");
@@ -1739,8 +1822,9 @@ function RunningView({
 
             {/* Agent-specific content panel */}
             <div key={displayKey ?? "idle"} className="msg-fade">
-              {displayKey === "briefing"  && <BriefingPanel m={milestones.briefing} liveMsg={liveMsg} brand={brand} />}
-              {displayKey === "strategy"  && <StrategyPanel m={milestones.strategy} />}
+              {displayKey === "briefing"   && <BriefingPanel m={milestones.briefing} liveMsg={liveMsg} brand={brand} />}
+              {displayKey === "compliance" && <CompliancePanel m={milestones.compliance as Record<string,unknown> | undefined} liveMsg={liveMsg} />}
+              {displayKey === "strategy"   && <StrategyPanel m={milestones.strategy} />}
               {displayKey === "copy"      && <CopyPanel m={milestones.copy} />}
               {displayKey === "culture"   && <CulturePanel m={milestones.culture} />}
               {displayKey === "kv"        && <KVPanel m={milestones.kv} liveMsg={liveMsg} reelMilestone={milestones.reel as Record<string,unknown> | undefined} />}
@@ -2571,19 +2655,28 @@ function ResultsView({ output, campaignId }: {
             AMBITIOUS:   { bg: "rgba(245,158,11,0.07)", color: "#f59e0b", border: "rgba(245,158,11,0.20)", icon: "↑" },
             UNREALISTIC: { bg: "rgba(239,68,68,0.07)",  color: "#ef4444", border: "rgba(239,68,68,0.20)",  icon: "!" },
           };
+          // KPI score: % of KPIs within benchmark (OK=100, AMBITIOUS=70, UNREALISTIC=20)
+          const _kpiScore = kpis.length > 0
+            ? Math.round(kpis.reduce((s: number, k: any) => s + (k.flag === "OK" ? 100 : k.flag === "AMBITIOUS" ? 70 : 20), 0) / kpis.length)
+            : null;
           const dashResult = {
-            score:     ftScore,
-            verdict:   ft.verdict === "PASS" ? "PASS" : (brief.status === "READY" ? "PASS" : "NEEDS WORK"),
-            brand:     brief.brand   ?? "",
-            product:   brief.product ?? "",
-            fan_truth: ft.statement  ?? (typeof brief.fan_truth === "string" ? brief.fan_truth : ""),
-            audience:  typeof brief.audience === "object"
+            score:            ftScore,
+            score_brand_guidelines: typeof brief.validation_score === "number" && brief.validation_score > 0
+              ? brief.validation_score
+              : (typeof ft.specific === "number" && ft.specific > 0 ? ft.specific : null),
+            score_target_audience:  typeof ft.shared  === "number" && ft.shared  > 0 ? ft.shared  : null,
+            score_historical:       _kpiScore ?? (typeof ft.special === "number" && ft.special > 0 ? ft.special : null),
+            verdict:     ft.verdict === "PASS" ? "PASS" : (brief.status === "READY" ? "PASS" : "NEEDS WORK"),
+            brand:       brief.brand   ?? "",
+            product:     brief.product ?? "",
+            fan_truth:   ft.statement  ?? (typeof brief.fan_truth === "string" ? brief.fan_truth : ""),
+            audience:    typeof brief.audience === "object"
               ? [brief.audience?.segment, brief.audience?.age_group].filter(Boolean).join(", ")
               : (brief.audience ?? ""),
-            market:    brief.market  ?? "",
-            season:    brief.season  ?? "",
-            goal:      brief.goal    ?? "",
-            summary:   brief.brief_summary ?? "",
+            market:      brief.market  ?? "",
+            season:      brief.season  ?? "",
+            goal:        brief.goal    ?? "",
+            summary:     brief.brief_summary ?? "",
           };
           return (
             <StageCard step={n} label="Brief Validation" color="#7c3aed">
@@ -3402,18 +3495,27 @@ function BriefIntakeView({
   const _ftAxes3 = [ft?.specific, ft?.shared, ft?.special].filter((v: any) => typeof v === "number" && v > 0) as number[];
   const _ftAxeAvg3 = _ftAxes3.length > 0 ? Math.round(_ftAxes3.reduce((a, b) => a + b, 0) / _ftAxes3.length) : undefined;
   const ftScore = (ft?.overall && ft.overall > 0) ? ft.overall as number : _ftAxeAvg3;
+  const _briefKpis = (brief?.kpis ?? []) as any[];
+  const _kpiScore3 = _briefKpis.length > 0
+    ? Math.round(_briefKpis.reduce((s: number, k: any) => s + (k.flag === "OK" ? 100 : k.flag === "AMBITIOUS" ? 70 : 20), 0) / _briefKpis.length)
+    : null;
   const dashboardResult = {
-    score:     ftScore ?? 90,
-    verdict:   (ftScore ?? 90) >= 70 ? "PASS" : "NEEDS WORK",
-    brand:     brief?.brand     ?? "",
-    product:   brief?.product   ?? "",
-    fan_truth: ft?.statement    ?? brief?.fan_truth ?? "",
-    audience:  brief?.audience?.segment ?? "",
-    market:    brief?.market    ?? "",
-    season:    brief?.season    ?? "",
-    goal:      brief?.goal      ?? "",
-    summary:   "",
-    _chunks:   47,
+    score:                  ftScore ?? 90,
+    score_brand_guidelines: typeof (brief as any)?.validation_score === "number" && (brief as any).validation_score > 0
+      ? (brief as any).validation_score
+      : (typeof ft?.specific === "number" && ft.specific > 0 ? ft.specific : null),
+    score_target_audience:  typeof ft?.shared  === "number" && ft.shared  > 0 ? ft.shared  : null,
+    score_historical:       _kpiScore3 ?? (typeof ft?.special === "number" && ft.special > 0 ? ft.special : null),
+    verdict:     (ftScore ?? 90) >= 70 ? "PASS" : "NEEDS WORK",
+    brand:       brief?.brand     ?? "",
+    product:     brief?.product   ?? "",
+    fan_truth:   ft?.statement    ?? brief?.fan_truth ?? "",
+    audience:    brief?.audience?.segment ?? "",
+    market:      brief?.market    ?? "",
+    season:      brief?.season    ?? "",
+    goal:        brief?.goal      ?? "",
+    summary:     "",
+    _chunks:     47,
   };
 
   const handleDashboardRegenerate = (

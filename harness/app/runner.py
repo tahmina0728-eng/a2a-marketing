@@ -155,9 +155,29 @@ TASK
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 Validate the campaign brief above using ALL context provided. Your scoring must be grounded in the data:
 
-1. Fan Truth: Score Specific/Shared/Special (0-100 each). Overall = average of the three.
-   Use fan_truth_summary and audience_insights CDP benchmarks to calibrate.
+1. Fan Truth: Score each axis independently (0-100). Overall = average of the three.
    verdict = "PASS" if overall >= 70, else "FAIL".
+   The three axes measure different things — scores MUST differ unless the evidence is identical:
+
+   SPECIFIC (cultural specificity): Does the fan truth name a precise moment, ritual, or situation?
+     90-100 = names an exact recognisable moment (e.g. "that first sip after a long day")
+     70-89  = clear situation but somewhat generic
+     50-69  = vague sentiment, could apply to many categories
+     <50    = completely generic
+
+   SHARED (audience resonance): Does this truth resonate broadly across the target segment?
+     90-100 = universally felt by the target — CDP data confirms high behavioural alignment
+     70-89  = most of the segment relates, some edge cases excluded
+     50-69  = resonates with a sub-segment only
+     <50    = niche or polarising
+
+   SPECIAL (brand distinctiveness): Does this truth make people feel something only THIS brand can own?
+     90-100 = only this brand's product/history/role can authentically claim this
+     70-89  = brand fits well but a competitor could also use it
+     50-69  = generic enough that any brand in the category could own it
+     <50    = no brand connection
+
+   Use fan_truth_summary and audience_insights CDP benchmarks to calibrate.
 
 2. KPIs: Compare each target to campaign and channel benchmarks.
    flag = "OK" / "AMBITIOUS" / "UNREALISTIC" based on benchmark data.
@@ -380,7 +400,64 @@ async def run_copy_agent(machine_brief: dict, strategy: dict, brand_locks: str,
         else ""
     )
 
-    prompt = f"""{COPY_AGENT_INSTRUCTIONS}{_lang_rule}
+    # Compliance issues from a prior failed check — injected as hard constraints
+    _compliance_issues = (machine_brief.get("compliance_issues") or "").strip()
+    _compliance_block = (
+        f"\n\nCRITICAL COMPLIANCE — PREVIOUS VERSION FAILED:\n"
+        f"The following issues were detected and MUST be fixed in this version:\n"
+        f"{_compliance_issues}\n"
+        f"Do NOT use any of the prohibited phrases. Rewrite entirely without them."
+        if _compliance_issues else ""
+    )
+
+    # Brand-specific copy guidance injected per brand
+    _brand_name = (machine_brief.get("brand") or "").strip()
+    _fan_truth  = (machine_brief.get("fan_truth") or "").strip()
+    _is_wimbledon_copy = (_brand_name.lower() == "barclays" and
+                          "wimbledon" in _fan_truth.lower())
+    _brand_copy_block = ""
+    if _brand_name.lower() == "barclays":
+        _wimbledon_note = (
+            "\n\nWIMBLEDON PARTNERSHIP — campaign is tied to Barclays as Official Bank of "
+            "Wimbledon. Subline should reference the partnership narrative: backing champions, "
+            "supporting the journey, enabling progress on and off the court. "
+            "Never mention specific players or match results."
+            if _is_wimbledon_copy else ""
+        )
+        _brand_copy_block = f"""
+
+BRAND-SPECIFIC RULES — BARCLAYS (FINANCIAL SERVICES):
+This is a regulated financial services brand operating within the FCA framework.
+The campaign platform is "Moments of Progress" — quiet confidence, human truth, never hype.
+
+HEADLINE RULES:
+  – Understated, human, emotionally resonant — not a product pitch
+  – Never: "exclusive", "innovative", "seamless", "solutions", "leverage", "journey"
+  – Never financial jargon or rate/return claims
+  – Must work as a standalone statement at billboard scale
+
+MEDIUM.SUBLINE RULES (THIS IS RENDERED DIRECTLY ON THE CAMPAIGN BANNER):
+  – Completes the headline's emotional territory by naming what Barclays does
+  – Speaks to the human benefit, not the product feature
+  – Feels like a natural continuation of the headline — not a separate thought
+  – ≤20 words, no financial jargon
+
+SUBLINE EXAMPLES BY HEADLINE:
+  "Greatness is never a solo sport."
+  → "Behind every achievement is support that believes."
+
+  "For every point. For every dream."
+  → "Backing the journey from first serve to centre court."
+
+  "Moments of progress shape what's possible."
+  → "We're here to support every step forward."
+
+  "Relentless today."
+  → "Remarkable tomorrow." (short.subline appropriate here too)
+
+CTA: "Discover more" / "Find out how" / "Learn more" — max 3 words, never salesy{_wimbledon_note}"""
+
+    prompt = f"""{COPY_AGENT_INSTRUCTIONS}{_lang_rule}{_compliance_block}{_brand_copy_block}
 
 CREATIVE STRATEGY:
 {json.dumps(strategy, indent=2)[:2000]}
@@ -396,8 +473,8 @@ Only include the channel fields listed below.
 
 {{
   "campaign_id": "{machine_brief.get('campaign_id', '')}",
-  "short": {{"headline": "<max 6 words, billboard-ready>", "subline": null}},
-  "medium": {{"headline": "<max 10 words>", "subline": "<max 20 words>"}},
+  "short": {{"headline": "<max 6 words, billboard-ready>", "subline": "<optional ≤12 words — rendered below headline on banner>"}},
+  "medium": {{"headline": "<max 10 words>", "subline": "<≤20 words — rendered as supporting copy on banner>"}},
   "long": {{"headline": "<headline>", "subline": "<optional>", "body": "<max 60 words, present tense, sensory>"}},
   "cta": "<max 3 words, verb-led>",
 {channel_json_lines}
@@ -800,6 +877,362 @@ def _draw_haleon_logo_img(height_px: int, font_path: str | None) -> "Image":
     return logo
 
 
+def _apply_barclays_overlay(
+    img_data:     bytes,
+    headline:     str,
+    logo_uri:     str = "",
+    is_wimbledon: bool = False,
+    font_path:    str | None = None,
+    copy_subline: str = "",
+    copy_cta:     str = "",
+) -> bytes:
+    """
+    Barclays official ad template overlay — matches brand reference images:
+
+    Structure (outer → inner):
+      1. Barclays Blue (#00AEEF) border frame around the full image
+      2. White eagle mark in top-right corner of the blue border
+      3. Dark gradient scrim over the top ~60% of the photo (headline readability)
+      4. Effra Bold white headline top-left on photo
+      5. Semi-transparent dark bottom bar (~22% height)
+         - Left: body copy + "Here for your every goal." (Wimbledon) or tagline
+         - Right: Barclays or Barclays+Wimbledon co-brand lockup on white pill
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        import io as _io
+        from pathlib import Path as _P
+
+        BLUE  = (0, 174, 239)    # Barclays Blue  #00AEEF
+        WHITE = (255, 255, 255)
+        BLACK = (0, 0, 0)
+
+        Image.MAX_IMAGE_PIXELS = None
+        photo = Image.open(_io.BytesIO(img_data)).convert("RGBA")
+        if max(photo.size) > 1400:
+            _sc = 1400 / max(photo.size)
+            photo = photo.resize((int(photo.width * _sc), int(photo.height * _sc)), Image.LANCZOS)
+        PW, PH = photo.size
+
+        # Blue border: ~4% of shorter dimension, minimum 18px
+        border = max(18, int(min(PW, PH) * 0.042))
+
+        # Canvas = photo + blue border on all 4 sides
+        TW = PW + border * 2
+        TH = PH + border * 2
+        canvas = Image.new("RGBA", (TW, TH), (*BLUE, 255))
+        canvas.alpha_composite(photo, (border, border))
+
+        # Offsets for drawing inside photo area
+        PX, PY = border, border
+
+        def _fnt(size: int):
+            if font_path:
+                try:
+                    return ImageFont.truetype(font_path, size)
+                except Exception:
+                    pass
+            try:
+                return ImageFont.load_default(size=size)
+            except Exception:
+                return ImageFont.load_default()
+
+        # ── Helper: resolve sibling logo files ───────────────────────────────
+        def _logo_siblings() -> list[str]:
+            """Return local paths / GCS URIs for sibling logos in the same folder."""
+            if not logo_uri:
+                return []
+            if logo_uri.startswith("gs://"):
+                _base = logo_uri.rsplit("/", 1)[0]
+                return [
+                    f"{_base}/barclays-symbol_wb.png",
+                    f"{_base}/barclays-symbol_db.png",
+                    f"{_base}/barclays1_wb.png",
+                    f"{_base}/barclays-wimbledon_wb.png",
+                    f"{_base}/barclays_wb.png",
+                ]
+            else:
+                _dir = _P(logo_uri).parent
+                _names = (
+                    "barclays-symbol_wb.png",
+                    "barclays-symbol_db.png",
+                    "barclays1_wb.png",
+                    "barclays-wimbledon_wb.png",
+                    "barclays_wb.png",
+                )
+                return [str(_dir / n) for n in _names if (_dir / n).exists()]
+
+        def _load_img(uri: str) -> "Image.Image | None":
+            try:
+                from app.creative_pipeline import _load_bytes as _clb
+                _b = _clb(uri)
+                if _b:
+                    return Image.open(_io.BytesIO(_b)).convert("RGBA")
+            except Exception:
+                pass
+            return None
+
+        def _tint_white(src: "Image.Image") -> "Image.Image":
+            """Convert logo to white silhouette: non-white pixels → white opaque,
+            near-white bg pixels → transparent."""
+            _pix = src.load()
+            _alpha = Image.new("L", src.size, 0)
+            _ap = _alpha.load()
+            for _py in range(src.height):
+                for _px in range(src.width):
+                    _r, _g, _b, _a = _pix[_px, _py]
+                    if _a > 30 and not (_r > 215 and _g > 215 and _b > 215):
+                        _ap[_px, _py] = 255
+            _wh = Image.new("L", src.size, 255)
+            return Image.merge("RGBA", [_wh, _wh, _wh, _alpha])
+
+        # ── 1. White eagle mark — top-right blue border ───────────────────────
+        _siblings = _logo_siblings()
+        _eagle_src = None
+        for _s in _siblings:
+            _ei = _load_img(_s)
+            if _ei:
+                _eagle_src = _ei
+                break
+        if _eagle_src is None and logo_uri:
+            _eagle_src = _load_img(logo_uri)
+
+        _eagle_src_orig = _eagle_src  # keep full-res copy for the watermark
+        if _eagle_src:
+            # Scale to fit in the border square (small — border is only ~18-30px)
+            eh = max(int(border * 0.75), 18)
+            _esc = eh / _eagle_src.height
+            ew = int(_eagle_src.width * _esc)
+            _eagle_border = _eagle_src.resize((ew, eh), Image.LANCZOS)
+            _eagle_white = _tint_white(_eagle_border)
+            # Centre the eagle in the top-right blue border cell
+            ex = TW - border + (border - ew) // 2
+            ey = (border - eh) // 2
+            ex = max(0, min(ex, TW - ew))
+            ey = max(0, ey)
+            canvas.alpha_composite(_eagle_white, (ex, ey))
+
+        # ── 2. Dark gradient scrim — top 60% of photo ────────────────────────
+        scrim = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
+        sd = ImageDraw.Draw(scrim)
+        scrim_h = int(PH * 0.62)
+        steps = 52
+        for s in range(steps):
+            y0 = PY + s * scrim_h // steps
+            y1 = PY + (s + 1) * scrim_h // steps
+            alpha = int(200 * (1.0 - s / steps) ** 0.52)
+            sd.rectangle([PX, y0, PX + PW, y1], fill=(*BLACK, alpha))
+        canvas.alpha_composite(scrim)
+        draw = ImageDraw.Draw(canvas)
+
+        # ── 3. Headline text — top-left on photo ─────────────────────────────
+        margin = max(16, int(PW * 0.055))
+        text_x = PX + margin
+        text_y = PY + margin
+
+        # Auto-fit: headline must fit in 75% of photo width
+        text_max_w = int(PW * 0.75)
+        head_sz = max(28, int(PH * 0.092))
+        while head_sz > 14:
+            _tf = _fnt(head_sz)
+            _words = (headline or "").split()
+            _test = " ".join(_words[:5]) if len(_words) > 5 else " ".join(_words)
+            _bb = _tf.getbbox(_test)
+            if (_bb[2] - _bb[0]) <= text_max_w:
+                break
+            head_sz -= 2
+
+        # Split into 2-3 display lines (by sentence boundary or midpoint)
+        raw_words = (headline or "MOMENTS OF PROGRESS").split()
+        sents: list[str] = []
+        cur: list[str] = []
+        for w in raw_words:
+            cur.append(w)
+            if w and w[-1] in ".!?,":
+                sents.append(" ".join(cur)); cur = []
+        if cur:
+            sents.append(" ".join(cur))
+        if not sents:
+            sents = [headline or "MOMENTS OF PROGRESS"]
+        if len(sents) > 3:
+            _n = len(raw_words)
+            sents = [
+                " ".join(raw_words[:_n // 3]),
+                " ".join(raw_words[_n // 3: (_n * 2) // 3]),
+                " ".join(raw_words[(_n * 2) // 3:]),
+            ]
+        if len(sents) == 1 and len(raw_words) >= 3:
+            _mid = len(raw_words) // 2
+            sents = [" ".join(raw_words[:_mid]), " ".join(raw_words[_mid:])]
+
+        _hf = _fnt(head_sz)
+        line_h = int(head_sz * 1.20)
+
+        # Wimbledon: last sentence line rendered in Barclays Blue (refs 3-5 pattern)
+        for li, line in enumerate(sents):
+            _line_col = BLUE if (is_wimbledon and li == len(sents) - 1) else WHITE
+            draw.text((text_x, text_y + li * line_h), line, fill=_line_col, font=_hf)
+
+        _headline_bottom = text_y + len(sents) * line_h
+
+        # ── 4a. Wimbledon sub-copy below headline ─────────────────────────────
+        sub_sz  = max(10, int(PH * 0.022))
+        sub_fnt = _fnt(sub_sz)
+        sub_lh  = int(sub_sz * 1.35)
+        _sub_bottom = _headline_bottom
+
+        if is_wimbledon:
+            _sub_y = _headline_bottom + int(head_sz * 0.4)
+            _sub_text = (copy_subline.strip()
+                         if copy_subline and copy_subline.strip()
+                         else "Behind every champion is support that believes.")
+            draw.text((text_x, _sub_y), _sub_text, fill=WHITE, font=sub_fnt)
+            _sub_bottom = _sub_y + sub_lh
+            # "Proud partner of Wimbledon" — Barclays Blue, smaller
+            _proud_sz  = max(9, int(PH * 0.019))
+            _proud_fnt = _fnt(_proud_sz)
+            draw.text((text_x, _sub_bottom + int(_proud_sz * 0.3)),
+                      "Proud partner of Wimbledon",
+                      fill=BLUE, font=_proud_fnt)
+            _sub_bottom += sub_lh + _proud_sz
+
+        # ── 4b. Large Barclays Blue eagle watermark — bottom-right (Wimbledon) ─
+        if is_wimbledon and _eagle_src_orig:
+            try:
+                # Scale to ~38% of photo width — large decorative silhouette
+                _wm_w = int(PW * 0.38)
+                _wm_sc = _wm_w / _eagle_src_orig.width
+                _wm_h  = int(_eagle_src_orig.height * _wm_sc)
+                _wm = _eagle_src_orig.resize((_wm_w, _wm_h), Image.LANCZOS)
+                # Tint every pixel to Barclays Blue at ~35% opacity
+                _wm_pix = _wm.load()
+                _wm_out = Image.new("RGBA", _wm.size, (0, 0, 0, 0))
+                _wm_op  = _wm_out.load()
+                for _wy in range(_wm_h):
+                    for _wx in range(_wm_w):
+                        _r, _g, _b, _a = _wm_pix[_wx, _wy]
+                        # Non-background pixel → Barclays Blue at 90 alpha
+                        if _a > 30 and not (_r > 215 and _g > 215 and _b > 215):
+                            _wm_op[_wx, _wy] = (*BLUE, 90)
+                # Position: bottom-right of photo, slightly cropped at edges
+                _wx0 = PX + PW - int(_wm_w * 0.78)
+                _wy0 = PY + PH - int(_wm_h * 0.85)
+                canvas.alpha_composite(_wm_out, (_wx0, _wy0))
+                draw = ImageDraw.Draw(canvas)
+            except Exception:
+                pass
+
+        # ── 5. Dark bottom bar ────────────────────────────────────────────────
+        bar_h = int(PH * 0.22)
+        bar_y = PY + PH - bar_h
+
+        bar_layer = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
+        _bd = ImageDraw.Draw(bar_layer)
+        # Wimbledon: lighter bar (lockup sits on it without heavy contrast)
+        _bar_alpha = 155 if is_wimbledon else 178
+        _bd.rectangle([PX, bar_y, PX + PW, PY + PH], fill=(*BLACK, _bar_alpha))
+        canvas.alpha_composite(bar_layer)
+        draw = ImageDraw.Draw(canvas)
+
+        # ── 6. Bottom bar content ─────────────────────────────────────────────
+        _logo_dir_path = None
+        if logo_uri and not logo_uri.startswith("gs://"):
+            _logo_dir_path = _P(logo_uri).parent
+
+        def _load_logo_file(names: list[str]) -> "Image.Image | None":
+            for _n in names:
+                if _logo_dir_path and (_logo_dir_path / _n).exists():
+                    _img = _load_img(str(_logo_dir_path / _n))
+                    if _img:
+                        return _img
+                elif logo_uri.startswith("gs://"):
+                    _base = logo_uri.rsplit("/", 1)[0]
+                    _img = _load_img(f"{_base}/{_n}")
+                    if _img:
+                        return _img
+            return None
+
+        if is_wimbledon:
+            # Left: Wimbledon shield + pipe + "OFFICIAL BANK OF WIMBLEDON" text
+            _wimb_shield = _load_logo_file(["wimbledon_wb.png", "barclays-wimbledon_wb.png"])
+            _lockup_y = bar_y + (bar_h - int(PH * 0.10)) // 2
+            _shield_right = text_x
+
+            if _wimb_shield:
+                sh = max(22, int(bar_h * 0.52))
+                _ssc = sh / _wimb_shield.height
+                sw = int(_wimb_shield.width * _ssc)
+                _wimb_shield = _wimb_shield.resize((sw, sh), Image.LANCZOS)
+                # Place on white pill
+                _sp = max(4, int(sh * 0.12))
+                _spill = Image.new("RGBA", (sw + _sp * 2, sh + _sp * 2), (*WHITE, 255))
+                _sf = Image.new("RGBA", _wimb_shield.size, (*WHITE, 255))
+                _sf.alpha_composite(_wimb_shield)
+                _spill.paste(_sf, (_sp, _sp))
+                _sly = bar_y + (bar_h - sh - _sp * 2) // 2
+                canvas.alpha_composite(_spill, (text_x, _sly))
+                _shield_right = text_x + sw + _sp * 2 + max(8, int(PW * 0.012))
+                draw = ImageDraw.Draw(canvas)
+
+            # Pipe + "OFFICIAL BANK / OF WIMBLEDON" text
+            _ob_sz  = max(8, int(PH * 0.016))
+            _ob_fnt = _fnt(_ob_sz)
+            _pipe_x = _shield_right
+            _ob_y1  = bar_y + (bar_h // 2) - _ob_sz - 2
+            _ob_y2  = bar_y + (bar_h // 2) + 2
+            draw.line([(_pipe_x, bar_y + int(bar_h * 0.20)),
+                       (_pipe_x, bar_y + int(bar_h * 0.80))],
+                      fill=WHITE, width=1)
+            _ob_x = _pipe_x + max(6, int(PW * 0.010))
+            draw.text((_ob_x, _ob_y1), "OFFICIAL BANK", fill=WHITE, font=_ob_fnt)
+            draw.text((_ob_x, _ob_y2), "OF WIMBLEDON", fill=WHITE, font=_ob_fnt)
+
+            # Right: Barclays eagle + wordmark (barclays1_wb) — white pill
+            _bk_lockup = _load_logo_file(["barclays1_wb.png", "barclays_wb.png"])
+            if _bk_lockup:
+                lh = max(22, int(bar_h * 0.50))
+                _lsc = lh / _bk_lockup.height
+                lw  = int(_bk_lockup.width * _lsc)
+                _bk_lockup = _bk_lockup.resize((lw, lh), Image.LANCZOS)
+                pad = 6
+                pill = Image.new("RGBA", (lw + pad * 2, lh + pad * 2), (*WHITE, 255))
+                _lf = Image.new("RGBA", _bk_lockup.size, (*WHITE, 255))
+                _lf.alpha_composite(_bk_lockup)
+                pill.paste(_lf, (pad, pad))
+                lx = PX + PW - lw - pad * 2 - margin
+                ly = bar_y + (bar_h - lh - pad * 2) // 2
+                canvas.alpha_composite(pill, (lx, ly))
+
+        else:
+            # Standard: CTA left + Barclays lockup right pill
+            _std_cta = (copy_cta.strip() if copy_cta and copy_cta.strip()
+                        else "Here for your every goal.")
+            draw.text((text_x, bar_y + int(bar_h * 0.30)),
+                      _std_cta, fill=WHITE, font=sub_fnt)
+            _std_lockup = _load_logo_file(["barclays1_wb.png", "barclays_wb.png"])
+            if _std_lockup:
+                lh = max(26, int(bar_h * 0.48))
+                _lsc = lh / _std_lockup.height
+                lw  = int(_std_lockup.width * _lsc)
+                _std_lockup = _std_lockup.resize((lw, lh), Image.LANCZOS)
+                pad = 8
+                pill = Image.new("RGBA", (lw + pad * 2, lh + pad * 2), (*WHITE, 255))
+                _lf = Image.new("RGBA", _std_lockup.size, (*WHITE, 255))
+                _lf.alpha_composite(_std_lockup)
+                pill.paste(_lf, (pad, pad))
+                lx = PX + PW - lw - pad * 2 - margin
+                ly = bar_y + (bar_h - lh - pad * 2) // 2
+                canvas.alpha_composite(pill, (lx, ly))
+
+        buf = _io.BytesIO()
+        canvas.convert("RGB").save(buf, format="JPEG", quality=93)
+        return buf.getvalue()
+
+    except Exception as _e:
+        logger.warning("barclays_overlay_failed", error=str(_e))
+        return img_data
+
+
 def _apply_brand_overlay(
     img_data:     bytes,
     brand:        str,
@@ -807,6 +1240,9 @@ def _apply_brand_overlay(
     product_uris: list,
     product_name: str = "",
     market:       str = "",
+    logo_uri:     str = "",
+    copy_subline: str = "",
+    copy_cta:     str = "",
 ) -> bytes:
     """
     Full-bleed advertising overlay — no split panel.
@@ -836,6 +1272,20 @@ def _apply_brand_overlay(
             _ubs_font_dir = _P(__file__).parent.parent / "bucket" / "brands" / "UBS Bank" / "Font"
             return _apply_ubs_overlay(img_data, headline, product_name, str(_ubs_font_dir))
 
+        # Barclays uses two-layer financial services overlay — redirect immediately
+        if brand == "Barclays":
+            _bfp = None
+            _bfont_dir = _P(__file__).parent.parent / "bucket" / "brands" / "Barclays" / "Font"
+            for _bn in ("Effra_Bd.ttf", "Effra_Rg.ttf"):
+                _bc = _bfont_dir / _bn
+                if _bc.exists():
+                    _bfp = str(_bc); break
+            _is_wimb = "wimbledon" in (logo_uri or "").lower() or "wimbledon" in (headline or "").lower()
+            return _apply_barclays_overlay(
+                img_data, headline, logo_uri, _is_wimb, _bfp,
+                copy_subline=copy_subline, copy_cta=copy_cta,
+            )
+
         BRAND_FONT_PREFS = {
             "Sunglow":     ["Alatsi"],
             "Rnorr":       ["Antonio", "Rubik"],
@@ -844,13 +1294,31 @@ def _apply_brand_overlay(
             "sunrise":     ["Figtree"],
             "Sunrise":     ["Figtree"],
             "Haleon":      ["New_Hero_Bold", "New_Hero_SemiBold", "New_Hero"],
+            "Barclays":    ["Effra_Bd", "Effra_Rg", "Effra"],  # Bold for headlines per guidelines
         }
         font_dir  = _P(__file__).parent.parent / "bucket" / "brands" / brand / "Font"
         font_path = None
         _all_fonts = sorted(
             [f for f in font_dir.glob("*.ttf") if "italic" not in f.name.lower()] +
             [f for f in font_dir.glob("*.otf") if "italic" not in f.name.lower()]
-        )
+        ) if font_dir.exists() else []
+
+        # Barclays fonts live in GCS only (no local bucket folder) — download Effra Bold to tmp
+        if not _all_fonts and brand == "Barclays":
+            try:
+                import tempfile as _tmp
+                from app.brand_assets import get_asset_loader as _fgal
+                _floader = _fgal()
+                for _effra_name in ("Effra_Bd.ttf", "Effra_Rg.ttf"):
+                    _effra_bytes = _floader._gcs_read_bytes(brand, f"Font/{_effra_name}")
+                    if _effra_bytes:
+                        _tfp = _tmp.NamedTemporaryFile(suffix=".ttf", delete=False)
+                        _tfp.write(_effra_bytes); _tfp.flush()
+                        _all_fonts.append(_P(_tfp.name))
+                        break
+            except Exception:
+                pass
+
         for pref in BRAND_FONT_PREFS.get(brand, []):
             for f in _all_fonts:
                 if pref.lower() in f.name.lower():
@@ -878,12 +1346,13 @@ def _apply_brand_overlay(
 
         # ── Brand accent colour ───────────────────────────────────────────────
         BRAND_ACCENT = {
-            "Sunglow":  (255, 199,  44),
-            "Rnorr":    (255, 222,   0),
-            "Boozt":    (  0, 134, 254),
-            "sunrise":  (218,  41,  28),   # Sunrise Red #DA291C (brand spec §3.4)
-            "Sunrise":  (218,  41,  28),
-            "Haleon":   (101, 172,  30),   # Haleon Green #65AC1E (comms/UI — not logo green)
+            "Sunglow":   (255, 199,  44),
+            "Rnorr":     (255, 222,   0),
+            "Boozt":     (  0, 134, 254),
+            "sunrise":   (218,  41,  28),   # Sunrise Red #DA291C (brand spec §3.4)
+            "Sunrise":   (218,  41,  28),
+            "Haleon":    (101, 172,  30),   # Haleon Green #65AC1E (comms/UI — not logo green)
+            "Barclays":  (  0, 174, 239),   # Barclays Blue #00AEEF — accent rule: fill/device only, never text on white
             # Glenfiddich intentionally omitted — chartreuse blends with the AMF1 swirl background
         }
         accent_rgb = BRAND_ACCENT.get(brand, (255, 255, 255))
@@ -2538,11 +3007,13 @@ async def run_creative_pipeline_direct(
     brand_guidelines: str = "",
     big_idea_seed: str = "",
     copy_headline: str = "",
+    copy_subline: str = "",
     copy_headlines: list = None,
     copy_cta: str = "",
     product_name: str = "",
     fan_truth: str = "",
     season: str = "",
+    brand_profile_dict: dict = None,
     market: str = "",
     language: str = "",
     channels: list = None,
@@ -2638,9 +3109,10 @@ Be specific, avoid generic boilerplate.""")
     log.info("p2_brand_summariser_start")
     await _emit("kv", "running", f"Extracting {brand} brand locks & creative rules…")
     _BRAND_PALETTE_LOCK = {
-        "Sunglow": "primary #B00064 Magenta, accent #FFC72C Sunshine Yellow, base #F9F9F9 Off-White, font Alatsi",
-        "Rnorr":   "primary #008641 Rnorr Green, accent #FFDE00 Yellow, base #FFFFFF White, fonts Antonio + Rubik",
-        "Boozt":   "primary #0E105E Midnight, accent #0086FE Boozt Blue, highlight #00BFFE Sky, base #FFFFFF White, font Rubik — energy drink brand",
+        "Sunglow":  "primary #B00064 Magenta, accent #FFC72C Sunshine Yellow, base #F9F9F9 Off-White, font Alatsi",
+        "Rnorr":    "primary #008641 Rnorr Green, accent #FFDE00 Yellow, base #FFFFFF White, fonts Antonio + Rubik",
+        "Boozt":    "primary #0E105E Midnight, accent #0086FE Boozt Blue, highlight #00BFFE Sky, base #FFFFFF White, font Rubik — energy drink brand",
+        "Barclays": "primary #00AEEF Barclays Blue (fill/device ONLY — NEVER text on white), dark ground #1A2142 Barclays Night (default text + reversed-layout ground), white #FFFFFF (reversed type on dark), font Effra Bold 700 headlines / Effra Regular 400 body — financial services brand, NO product packshots",
     }
     _palette_lock = _BRAND_PALETTE_LOCK.get(brand, "use brand primary colours")
 
@@ -2685,9 +3157,10 @@ Create a Big Idea for this campaign. Output:
     log.info("p2_prompt_agent_start")
     await _emit("kv", "running", "Crafting 2 scene concepts from your brief…")
     _BRAND_PALETTE = {
-        "Sunglow": "hot magenta pink, sunshine yellow, off-white cream",
-        "Rnorr":   "deep forest green, bright sunshine yellow, white",
-        "Boozt":   "deep midnight navy, electric cobalt blue, sky blue, white — energy drink can with condensation",
+        "Sunglow":  "hot magenta pink, sunshine yellow, off-white cream",
+        "Rnorr":    "deep forest green, bright sunshine yellow, white",
+        "Boozt":    "deep midnight navy, electric cobalt blue, sky blue, white — energy drink can with condensation",
+        "Barclays": "Barclays Night #1A2142 deep navy (primary dark ground), Barclays Blue #00AEEF (accent fill only, NOT text on white), white — professional, understated banking",
     }
     _brand_palette_str = _BRAND_PALETTE.get(brand, "brand primary colour, accent colour, white")
 
@@ -2732,6 +3205,14 @@ Create a Big Idea for this campaign. Output:
             "wardrobe": "high-performance outdoor sportswear or casual urban — vibrant colours, absolutely NO Sunrise branding on clothing",
             "energy":   "fearless living, freedom, bold spontaneous adventure — 'Dream Big. Do Big.'",
         },
+        "Barclays": {
+            "effects":  "soft directional window light, warm film-like depth of field, subtle blue tonal grade, quiet confidence in every shadow — no sparkle, no neon, no gimmicks",
+            "model":    "real, relatable UK person (age 25-50) in a genuine human moment of financial progress — NOT stock-photo smiling, but a quiet private expression of relief, pride, or calm confidence",
+            "hair":     "natural, understated — this is a financial services brand, not a beauty campaign",
+            "bg":       "Barclays Night #1A2142 deep navy OR warm contemporary interior with subtle Barclays Blue accent lighting — leave generous negative space upper-left for copy overlay",
+            "wardrobe": "smart-casual UK contemporary — muted tones, no logos, no bright colours that compete with Barclays Blue",
+            "energy":   "confident, supported, quietly optimistic — a trusted partner is in your corner — NEVER triumphant, NEVER fear/pressure framing",
+        },
     }
     _magic = _BRAND_MAGIC.get(brand, {
         "effects":  "sparkling light particles, soft bokeh, premium studio lighting",
@@ -2760,11 +3241,210 @@ Create a Big Idea for this campaign. Output:
             "Concept 1 — PEAK MOMENT: One person at the absolute peak of an outdoor action — jumping dramatically off a lakeside rock into alpine water at golden sunset, reaching the top of a mountain with arms raised to the sky, or sprinting on a rugged alpine trail with peaks behind. Heroic low-angle composition. Pure triumph and freedom. NO products, NO branded items, NO bottles or accessories anywhere.",
             "Concept 2 — SPONTANEOUS ADVENTURE: Two or three friends caught mid-spontaneous outdoor moment — longboarding together down a mountain road in autumn, playing tennis on a clay court with Alps in background, or laughing on a cliff edge overlooking a Swiss lake panorama at dusk. Genuine connection and joy. NO products, NO branded items, NO bottles or accessories anywhere.",
         ),
+        "Barclays": (
+            "Concept 1 — T1 BRAND/PARTNERSHIP (dark ground): Deep Barclays Night navy #1A2142 background, abstract architectural photography — a clean geometric composition of a modern building, light through a window, or a tennis court baseline at dusk, with strong Barclays Blue #00AEEF accent lighting raking across the frame. Upper-left quadrant is CLEAN DARK SPACE for headline overlay. No people. No logos. No text. Cinematic and understated. Award-winning art direction.",
+            "Concept 2 — T3 PHOTOGRAPHIC (human moment): Warm, real, intimate UK domestic or professional interior. A single person (age 25-45, non-identifiable from behind or in soft focus) caught in a private moment of quiet financial progress — looking up from a desk, holding keys, or pausing in a bright new room. Barclays Night tones in shadow, soft warm window light. NO product packshots, NO bank logos, NO app screens, NO text. Upper-left space kept clear for copy. Real life, not stock photo smiling.",
+        ),
     }
     _c1_dir, _c2_dir = _BRAND_CONCEPT_DIRS.get(brand, (
         "Concept 1 — DYNAMIC ENERGY: Model is in full motion (jump, spin, or dramatic reach). Background has maximum magical effects. Products displayed dramatically.",
         "Concept 2 — INTIMATE GLOW: Model is closer to camera, intense eye contact, softer but deeply saturated. Background glows behind them. Products at their side.",
     ))
+
+    # ── Wimbledon override: campaign theme selects one of 5 creative territories ──
+    _is_wimbledon = _is_barclays and any(
+        "wimbledon" in str(v).lower()
+        for v in [fan_truth, product_name, big_idea_seed, audience]
+        if v
+    )
+    if _is_wimbledon:
+        # Each entry: ([theme keywords], (concept_1, concept_2))
+        # Keywords matched against big_idea_seed + copy_headline + fan_truth.
+        # First match wins; partnership concept is the fallback (strongest default).
+        _WIMBLEDON_CONCEPT_MAP = [
+            (
+                # Theme: PARTNERSHIP — "Greatness is never a solo sport"
+                ["solo sport", "greatness", "partnership", "together with", "we're with"],
+                (
+                    "Concept 1 — PARTNERSHIP (T3 photographic): A sophisticated businesswoman and "
+                    "businessman standing together on a Wimbledon stadium balcony overlooking a grass "
+                    "court during an important match. Natural, confident conversation — partnership, "
+                    "shared achievement. Wimbledon court and crowd beautifully out of focus in background. "
+                    "Warm golden-hour light mixed with subtle stadium glow. Both figures positioned RIGHT. "
+                    "GENEROUS CLEAN DARK SPACE on the LEFT for campaign headline typography. "
+                    "Deep Barclays Night (#1A2142) atmospheric shadows. Cinematic depth of field. "
+                    "Premium UK financial advertising quality. NO logos, NO text, NO branded items.",
+                    "Concept 2 — MENTOR (T3 intimate): An experienced professional and a younger aspiring "
+                    "player in genuine conversation courtside at Wimbledon — the mentor leaning in, the "
+                    "young player listening with focused attention. Wimbledon green court visible behind, "
+                    "soft English afternoon light. Scene communicates: someone believed in me, someone "
+                    "made this possible. Both figures RIGHT-of-frame. LEFT side open, dark, clean for "
+                    "copy. Warm, human, not corporate stock photography. NO logos, NO text.",
+                ),
+            ),
+            (
+                # Theme: PROGRESS / JOURNEY — "Moments of progress"
+                ["moments of progress", "progress", "journey", "first step", "possible", "beginning"],
+                (
+                    "Concept 1 — THE JOURNEY (T3 photographic): A young tennis player walking onto an "
+                    "immaculate Wimbledon-style grass court, carrying a racket, facing away from camera "
+                    "toward the court. Not yet a champion — this is the beginning of the journey. "
+                    "Ambition, growth, the threshold of possibility. Early morning English summer light, "
+                    "soft mist on the grass, dew on the blades. Distant Wimbledon stadium structure "
+                    "softly visible in background. Player positioned toward the RIGHT THIRD of frame. "
+                    "CLEAN OPEN SPACE on the LEFT — mist and morning sky for large typography. "
+                    "Barclays Night (#1A2142) deep tones in shadowed areas. Hopeful, cinematic. "
+                    "NO logos, NO text, NO branded clothing.",
+                    "Concept 2 — PREPARATION (T3 intimate): A young diverse tennis player sitting quietly "
+                    "in a Wimbledon corridor, racket resting beside them, looking ahead with quiet "
+                    "determination — the moment before stepping out. Warm tungsten corridor light, deep "
+                    "shadows, narrow depth of field. Face communicates: focused, ready, this matters. "
+                    "Subject RIGHT of frame, LEFT side in soft dark shadow for copy overlay. "
+                    "Authentic, human, cinematic — premium UK advertising photography. "
+                    "NO logos, NO text, NO branded items.",
+                ),
+            ),
+            (
+                # Theme: FOCUS / BELIEF — "Every point. Every dream."
+                ["every point", "every dream", "belief", "focus", "relentless", "remarkable"],
+                (
+                    "Concept 1 — THE SERVE (T3 photographic): A tennis player caught at the exact peak "
+                    "moment before a powerful serve — intense concentration, tennis ball held up, racket "
+                    "drawn back, sunlight catching the ball. Wimbledon crowd softly bokeh-blurred behind. "
+                    "English summer blue sky. Player positioned RIGHT. Large atmospheric DARK NEGATIVE "
+                    "SPACE on the LEFT — natural shadow from stadium structure — for headline typography. "
+                    "Barclays Blue #00AEEF subtle architectural element on far right edge. "
+                    "Communicates: focus, pressure, possibility, belief. "
+                    "Canon 400mm f/2.8 DSLR sports photography quality. "
+                    "NO logos, NO text, NO branded items.",
+                    "Concept 2 — GRASSROOTS (T3 intimate): A young girl (age 9-12, diverse) on a local "
+                    "community tennis court, racket raised mid-swing, face alive with pure joy and effort. "
+                    "She is at the beginning — not yet Wimbledon. Dappled afternoon sunlight, blurred "
+                    "park trees behind. Bridges grassroots ambition with a future at Wimbledon. "
+                    "Subject RIGHT-of-centre. LEFT side naturally bright sky and bokeh for copy. "
+                    "Authentic, warm, emotionally powerful — not stock photography. "
+                    "NO logos, NO text, NO branded clothing.",
+                ),
+            ),
+            (
+                # Theme: COLLABORATION / COMMUNITY — "Backing progress on and off the court"
+                ["backing progress", "community", "off the court", "opportunity", "collaboration"],
+                (
+                    "Concept 1 — AFTER THE SESSION (T3 photographic): Three young diverse professionals "
+                    "(25-35) sitting together on the grass beside a Wimbledon-style tennis court after "
+                    "a training session — rackets resting, natural laughter and conversation. "
+                    "Scene communicates: collaboration, ambition, community, shared progress. "
+                    "UK setting, natural daylight, sophisticated but relaxed wardrobe, authentic diversity. "
+                    "Group positioned RIGHT-of-frame. GENEROUS LEFT-SIDE SPACE — open sky and court green "
+                    "create natural negative space for headline. No exaggerated corporate posing. "
+                    "Photorealistic premium advertising photography. NO logos, NO text.",
+                    "Concept 2 — THE CONVERSATION (T3 intimate): A tennis coach and a young professional "
+                    "in animated conversation on a Wimbledon terrace balcony. Open body language — "
+                    "encouraging, genuine two-way exchange. Court sunlit in background. Scene communicates: "
+                    "mentorship, opportunity, progress made off the court. Figures RIGHT-of-frame, "
+                    "open terrace and court LEFT for copy. Golden afternoon light, authentic, warm. "
+                    "NO logos, NO text, NO branded items.",
+                ),
+            ),
+            (
+                # Theme: ACHIEVEMENT / TRADITION — "Honouring tradition. Backing champions."
+                ["honouring tradition", "tradition", "champion", "trophy", "achievement", "history"],
+                (
+                    "Concept 1 — THE MOMENT (T3 photographic): Dramatic close-up of a tennis champion's "
+                    "hands lifting a prestigious trophy — fingers wrapped around the base, trophy raised, "
+                    "stadium lights creating a radiant halo. Crowd out of focus, celebrating. Shallow "
+                    "depth of field. Athlete partially silhouetted against dramatic stadium light. "
+                    "Trophy and hands LEFT-OF-CENTRE, stadium glow fills RIGHT. "
+                    "Dark Barclays Night (#1A2142) atmosphere upper frame for headline copy. "
+                    "Cinematic, emotionally powerful, reverential. "
+                    "NO logos, NO text anywhere in the image.",
+                    "Concept 2 — HERITAGE (T1 brand): Abstract architectural photography of Wimbledon — "
+                    "the iconic green-and-purple striped awning, the geometry of Centre Court at dusk, "
+                    "or the pristine grass surface at twilight catching stadium light. NO people. "
+                    "Deep Barclays Night (#1A2142) sky. Barclays Blue #00AEEF light raking across a "
+                    "structural element. CLEAN MINIMAL composition, reverential of tradition. "
+                    "Upper-left quadrant is PURE DARK SPACE for headline overlay. "
+                    "Award-winning art direction. Cinematic. NO logos, NO text.",
+                ),
+            ),
+        ]
+
+        _seed_lower = " ".join(filter(None, [big_idea_seed, copy_headline, fan_truth])).lower()
+        _selected_pair = None
+        for _kws, _pair in _WIMBLEDON_CONCEPT_MAP:
+            if any(_kw in _seed_lower for _kw in _kws):
+                _selected_pair = _pair
+                break
+        if not _selected_pair:
+            _selected_pair = _WIMBLEDON_CONCEPT_MAP[0][1]  # partnership as default
+        _c1_dir, _c2_dir = _selected_pair
+
+    # ── Channel Skill — composition directive injected into image prompt ────────
+    # Tells the image model the target format so it composes for the right ratio
+    # and negative-space position from the start (rather than cropping after).
+    _CHANNEL_COMPOSITION = {
+        "instagram": (
+            "CHANNEL: Instagram (1:1 square / 4:5 portrait)\n"
+            "- Tight, emotion-first composition — one clear focal point\n"
+            "- Strong visual impact at small mobile screen scale\n"
+            "- Subject positioned RIGHT-of-centre, left side clean for copy\n"
+            "- High contrast — must read instantly in a fast-scroll feed"
+        ),
+        "facebook": (
+            "CHANNEL: Facebook (1.91:1 landscape or 1:1 square)\n"
+            "- Wider composition with room for supporting visual context\n"
+            "- Subject right-of-centre, generous left-side negative space\n"
+            "- Warm, approachable tone — community feel"
+        ),
+        "linkedin": (
+            "CHANNEL: LinkedIn (1.91:1 landscape)\n"
+            "- Wide cinematic professional frame — authoritative composition\n"
+            "- Subject/scene positioned right or right-centre\n"
+            "- GENEROUS left-side negative space — headline needs room at this scale\n"
+            "- Sophisticated, understated — corporate but human"
+        ),
+        "twitter": (
+            "CHANNEL: Twitter/X (16:9 landscape or 1:1 square)\n"
+            "- Clean bold composition, fast read at scroll speed\n"
+            "- Subject right-of-centre, left side clear for copy overlay\n"
+            "- High contrast, uncluttered"
+        ),
+        "outdoor": (
+            "CHANNEL: Outdoor / Billboard (16:9 or 4:1 ultra-wide)\n"
+            "- EXTREME wide composition — viewed at distance and speed\n"
+            "- Maximum negative space on LEFT 40%% of frame for large headline\n"
+            "- Single powerful image with no fine detail — just impact\n"
+            "- Bold, high contrast, readable at 10 metres"
+        ),
+        "display": (
+            "CHANNEL: Digital Display (multiple ratios — landscape primary)\n"
+            "- Subject anchored RIGHT, clear space LEFT and top for copy\n"
+            "- Strong focal point that survives portrait and square crops"
+        ),
+        "stories": (
+            "CHANNEL: Stories / Reels (9:16 portrait — VERTICAL)\n"
+            "- VERTICAL composition — tall frame, subject positioned LOWER-THIRD\n"
+            "- Upper 60%% is sky, environment, or negative space for large copy\n"
+            "- Immersive, full-screen feel — no landscape thinking\n"
+            "- Keep key subject away from top/bottom 15%% (platform UI safe zones)"
+        ),
+        "youtube": (
+            "CHANNEL: YouTube (16:9 landscape thumbnail)\n"
+            "- Wide cinematic frame, subject right-of-centre\n"
+            "- Bold contrast, readable at thumbnail scale\n"
+            "- LEFT side open for copy overlay"
+        ),
+    }
+    _ch_primary = next(
+        (c.lower().strip() for c in (channels or []) if c),
+        None
+    )
+    _channel_dir = _CHANNEL_COMPOSITION.get(
+        _ch_primary.split()[0] if _ch_primary else "",
+        "CHANNEL: Digital / multi-format (default)\n"
+        "- Full bleed, subject RIGHT-of-centre\n"
+        "- Generous LEFT-side negative space for copy overlay",
+    )
 
     # ── Scene variety: season + objective drive people count and scene type ──
     # When a campaign is festive, social, or family-oriented the images should
@@ -3025,9 +3705,10 @@ Create a Big Idea for this campaign. Output:
     _market_demo  = next((v for k, v in _MARKET_DEMOGRAPHICS.items() if k in _market_lower), "")
     # Brand expression/pose always preserved — audience changes WHO, brand DNA stays HOW
     _BRAND_EXPRESSION = {
-        "Sunglow": "ECSTATIC expression, dramatic hair-flip or head thrown back mid-laugh, hair FLYING and catching golden light — hair is always the ABSOLUTE HERO",
-        "Rnorr":   "genuinely delighted expression, caught mid-moment of cooking — tasting, stirring, or reacting to the aroma with pure joy",
-        "Boozt":   "POWERFUL pose — Boozt can raised, mid-drink or thrust forward toward camera, radiating unstoppable electric charged energy",
+        "Sunglow":  "ECSTATIC expression, dramatic hair-flip or head thrown back mid-laugh, hair FLYING and catching golden light — hair is always the ABSOLUTE HERO",
+        "Rnorr":    "genuinely delighted expression, caught mid-moment of cooking — tasting, stirring, or reacting to the aroma with pure joy",
+        "Boozt":    "POWERFUL pose — Boozt can raised, mid-drink or thrust forward toward camera, radiating unstoppable electric charged energy",
+        "Barclays": "quiet private expression of progress — a person who has just received good financial news, signing papers for their first home, or looking up from a laptop with a small private smile of relief and confidence — real, not performed",
     }
     # Brand-specific settings anchored to product world — keyed to exact UI interest strings
     _BRAND_SETTING = {
@@ -3061,6 +3742,19 @@ Create a Big Idea for this campaign. Output:
             "young professionals":  "city streets or modern office lobby, electric blue neon reflections",
             "outdoor adventurers":  "dramatic outdoor vista — mountain, cliffside, or urban rooftop at golden hour",
             "default":              "dramatic studio with electric cobalt lighting, high-contrast, can centre-stage",
+        },
+        "Barclays": {
+            "first-time buyers":          "bright contemporary living room, moving boxes half-unpacked, keys on the table, warm natural window light — the quiet joy of a first home",
+            "home movers":                "airy kitchen of a new home, morning light, coffee on the counter, person pausing in a private moment of contentment",
+            "savers & investors":         "calm home office or study, person looking up from a laptop screen showing upward numbers, soft directional window light",
+            "small business owners":      "small independent shop or studio, owner tidying up at end of a successful day, warm interior light, quiet pride",
+            "students & graduates":       "bright shared flat or library, young person on laptop, notification light catching their face, private smile of achievement",
+            "sports & wimbledon fans":    "Wimbledon grass court atmosphere — dynamic tennis action, player mid-serve or ball on perfect grass, brilliant summer English light, no branded clothing",
+            "everyday banking customers": "ordinary UK domestic moment — kitchen table, morning, phone or card in hand, calm and in control",
+            "young professionals":        "modern open-plan office or co-working space, early morning light, calm focus, slight upturn of a private smile",
+            "families & home buyers":     "family living room, parents and child at the table, warm evening domestic light, a sense of settled security",
+            "wealth builders":            "clean contemporary home study, book-lined shelves, measured and considered atmosphere, subdued warm light",
+            "default":                    "warm contemporary UK interior, soft directional window light, person in a quiet private moment of financial confidence",
         },
     }
 
@@ -3100,46 +3794,72 @@ Create a Big Idea for this campaign. Output:
             + (f". Market: {_market_demo}" if _market_demo else "")
         )
 
-    _sr_life = brand.lower() in ("sunrise",) and not bool(product_name)
+    _sr_life      = brand.lower() in ("sunrise",) and not bool(product_name)
+    _is_barclays  = brand.lower() == "barclays"
+    _is_service_brand = _is_barclays   # service brands have no product packshots
 
-    _product_ref_section = (
-        "LIFESTYLE / BRAND CAMPAIGN — ABSOLUTELY NO PRODUCTS IN SCENE:\n"
-        "This is a pure lifestyle campaign. There are NO physical products to show.\n"
-        "Do NOT add any branded bottles, cans, merchandise, accessories, phones, or devices anywhere.\n"
-        "The image shows ONLY people and the environment (alpine landscape, sports court, city backdrop).\n"
-        "The brand mark is applied via logo overlay after generation — keep the scene completely product-free."
-        if _sr_life
-        else (
+    if _is_barclays:
+        _product_ref_section = (
+            "SERVICE BRAND — ABSOLUTELY NO PRODUCT PACKAGING IN SCENE:\n"
+            "Barclays is a financial services brand. There are NO physical products to show.\n"
+            "Do NOT add any bottles, cans, card terminals, or branded merchandise.\n"
+            "A bank card may appear naturally in hand ONLY if it fits the human moment.\n"
+            "The Barclays logo is applied via overlay after generation — do NOT generate the eagle or wordmark.\n"
+            "NEVER generate the Barclays eagle, wordmark, or any text — these are composited separately.\n"
+            f"Selected campaign: {_product_ctx} — show this as a human life moment, not a product shot."
+        )
+        _creative_director_intro = (
+            "You are a world-class financial services advertising creative director.\n"
+            "Reference visual styles: Barclays 'Moments of Progress', NatWest human-moment campaigns, "
+            "Lloyds Bank real-life stories, HSBC world-class empathetic photography — "
+            "warm real human moments of financial progress, quiet confidence, understated British authenticity.\n"
+            "NEVER reference FMCG, beauty, energy drink, or lifestyle brand aesthetics.\n"
+            "This is banking: professional, human, trustworthy — not exciting, not flashy."
+        )
+        _positioning_rule = (
+            "- Subject off-centre, upper-left quadrant deliberately left as NEGATIVE SPACE for copy overlay\n"
+            "- Barclays Night (#1A2142) dark ground OR warm interior — NOT white or bright backgrounds\n"
+            "- For T1 (partnership/brand): dark Barclays Night ground, abstract or architectural composition\n"
+            "- For T3 (photographic): human moment, bottom-third available for scrim + copy"
+        )
+        _no_product_rule = (
+            "- NO product packshots, NO bank app screenshots, NO fabricated financial data\n"
+            "- NO identifiable real people's faces (rights clearance required in production)\n"
+            "- Barclays Blue #00AEEF as fill/accent ONLY — NEVER as text colour\n"
+            "- Bold saturated colours are WRONG — use muted, professional, understated tones\n"
+            "- NO sparkles, NO neon, NO studio strobes — soft directional natural light only"
+        )
+    elif _sr_life:
+        _product_ref_section = (
+            "LIFESTYLE / BRAND CAMPAIGN — ABSOLUTELY NO PRODUCTS IN SCENE:\n"
+            "This is a pure lifestyle campaign. There are NO physical products to show.\n"
+            "Do NOT add any branded bottles, cans, merchandise, accessories, phones, or devices anywhere.\n"
+            "The image shows ONLY people and the environment (alpine landscape, sports court, city backdrop).\n"
+            "The brand mark is applied via logo overlay after generation — keep the scene completely product-free."
+        )
+        _creative_director_intro = (
+            "You are a world-class outdoor adventure advertising creative director.\n"
+            "Reference visual styles: Red Bull extreme sports, Patagonia alpine photography, Nike trail running, The North Face mountain campaigns — dramatic landscapes, solo peak moments, extreme athletic action, zero products in scene."
+        )
+        _positioning_rule = "- Subject positioned left or centre-left, landscape fills right — wide cinematic composition"
+        _no_product_rule = (
+            "- ZERO products, ZERO branded bottles/cans/accessories/devices in the image — lifestyle only\n"
+            "- Landscape and human action fill every inch of the frame"
+        )
+    else:
+        _product_ref_section = (
             f"Selected product: {_product_ctx}\n"
             f"I am providing reference images of the actual {brand} {_product_ctx} packaging and logo.\n"
             f"Reproduce the EXACT product design, colours, and label from those reference images.\n"
             f"Every product in the image MUST show '{brand}' and '{_product_ctx}' on the label.\n"
             f"Show 2-3 of these products prominently in the RIGHT zone."
         )
-    )
-
-    _creative_director_intro = (
-        "You are a world-class outdoor adventure advertising creative director.\n"
-        "Reference visual styles: Red Bull extreme sports, Patagonia alpine photography, Nike trail running, The North Face mountain campaigns — dramatic landscapes, solo peak moments, extreme athletic action, zero products in scene."
-        if _sr_life
-        else (
+        _creative_director_intro = (
             "You are a world-class FMCG advertising creative director.\n"
             "Study these reference ad styles: Sunsilk (dynamic hair, sparkles, vibrant energy), Pantene (cinematic hair movement, golden glow), Knorr (warm kitchen magic, steam, real moments), L'Oréal (empowered model, bold colour, premium feel)."
         )
-    )
-
-    _positioning_rule = (
-        "- Subject positioned left or centre-left, landscape fills right — wide cinematic composition"
-        if _sr_life
-        else "- Model and products positioned centre-right or right, facing slightly left into the frame"
-    )
-
-    _no_product_rule = (
-        "- ZERO products, ZERO branded bottles/cans/accessories/devices in the image — lifestyle only\n"
-        "- Landscape and human action fill every inch of the frame"
-        if _sr_life
-        else ""
-    )
+        _positioning_rule = "- Model and products positioned centre-right or right, facing slightly left into the frame"
+        _no_product_rule = ""
 
     scene_concepts_raw = await _llm(f"""{_creative_director_intro}
 
@@ -3172,6 +3892,9 @@ Colours: {_brand_palette_str}
 {_c1_dir}
 {_c2_dir}
 
+═══ CHANNEL COMPOSITION REQUIREMENT ═══
+{_channel_dir}
+
 Output EXACTLY this format (nothing else):
 [CONCEPT 1 - DYNAMIC]: <170-200 word detailed image generation prompt>
 [CONCEPT 2 - INTIMATE]: <170-200 word detailed image generation prompt>
@@ -3180,12 +3903,14 @@ Output EXACTLY this format (nothing else):
 - FULL BLEED — subject and background fill the entire frame edge to edge, no flat panels
 {_positioning_rule}
 - Photorealistic DSLR advertising photography quality
-- Magical effects: {_magic['effects']}
-- Bold saturated colours — award-winning art direction
-- NO text anywhere in the image — headline is injected separately after generation
-{_no_product_rule}- Fan truth ({_ft_ctx}) visible in model's expression and scene energy
+- Lighting: {_magic['effects']}
+{"- Understated professional tones — Barclays Night navy + soft warm fills, NOT bold saturated FMCG colours" if _is_barclays else "- Bold saturated colours — award-winning art direction"}
+- NO text anywhere in the image — headline is composited separately after generation
+- NO logos, NO eagle marks, NO wordmarks — all brand marks are applied by code overlay
+{_no_product_rule}
+- Fan truth ({_ft_ctx}) visible in the human moment and scene feeling
 - Season ({_season_ctx}) woven into atmosphere, lighting temperature, and mood
-- Natural balanced lighting across the full frame — no artificial dark zone on the left""", temp=0.9)
+{"- Leave upper-left quadrant as clean negative space for copy placement" if _is_barclays else "- Natural balanced lighting across the full frame — no artificial dark zone on the left"}""", temp=0.9)
 
     # Parse the 2 concept prompts
     import re as _re
@@ -3580,17 +4305,59 @@ Output EXACTLY this format (nothing else):
                  n_images=len([p for p in _ref_parts if not isinstance(p, str)]),
                  n_colours=len(colour_uris or []))
 
-        # -- Step D: Generate one image per concept in parallel -------------------
-        image_model = _get_settings().gemini_model_image
+        # -- Step D: Route to best image model, then generate ----------------------
+        from app.model_router import route_image_model as _route_model, provider_for_model as _provider_for
+        _s_ref = _get_settings()
+        image_model, _fallback_image_model, _route_rationale = _route_model(
+            brand_profile_dict   = brand_profile_dict,
+            gemini_image_model   = _s_ref.gemini_model_image,
+            imagen_model         = _s_ref.imagen_model,
+            gpt_image_model      = _s_ref.gpt_image_model,
+            fallback_image_model = _s_ref.fallback_image_model,
+        )
+        log.info("p2_model_routed",
+                 brand=brand, model=image_model, provider=_provider_for(image_model),
+                 fallback=_fallback_image_model, rationale=_route_rationale)
         log.info("p2_generate_image_start", model=image_model, n=len(enriched_concepts))
         await _emit("kv", "running", f"Generating {len(enriched_concepts)} campaign visuals with brand references…")
 
-        _fallback_image_model = _get_settings().fallback_image_model
         _image_models = (
             [image_model, _fallback_image_model]
             if _fallback_image_model and _fallback_image_model != image_model
             else [image_model]
         )
+
+        async def _gen_one_gpt_image(prompt: str, model: str) -> bytes | None:
+            """Generate a single image via OpenAI's image API (gpt-image-1 / dall-e-3)."""
+            import base64 as _b64
+            try:
+                import openai as _oai
+            except ImportError:
+                log.warning("openai_not_installed", hint="pip install openai")
+                return None
+
+            _oai_key = _s_ref.openai_api_key
+            if not _oai_key:
+                log.warning("openai_api_key_missing", model=model)
+                return None
+
+            _oai_client = _oai.AsyncOpenAI(api_key=_oai_key)
+
+            # GPT Image / DALL-E style — text-only prompt (no image references supported)
+            _text_prompt = prompt if isinstance(prompt, str) else str(prompt)
+            try:
+                resp = await _oai_client.images.generate(
+                    model   = model,
+                    prompt  = _text_prompt[:4000],
+                    n       = 1,
+                    size    = "1792x1024",     # closest 16:9 for dall-e-3 / gpt-image-1
+                    response_format = "b64_json",
+                )
+                raw_b64 = resp.data[0].b64_json
+                return _b64.b64decode(raw_b64) if raw_b64 else None
+            except Exception as _ge:
+                log.warning("gpt_image_generation_failed", model=model, error=str(_ge))
+                return None
 
         async def _gen_one_image(prompt: str) -> bytes | None:
             loop = asyncio.get_event_loop()
@@ -3601,7 +4368,19 @@ Output EXACTLY this format (nothing else):
             _img_waits = [60, 90, 120]  # Vertex AI quota windows are ~60s
 
             for _mi, _cur_model in enumerate(_image_models):
-                _max_attempts = 4 if _mi == 0 else 2  # fewer retries on fallback
+                _provider = _provider_for(_cur_model)
+
+                # ── GPT Image backend ──────────────────────────────────────────
+                if _provider == "openai":
+                    result = await _gen_one_gpt_image(prompt, _cur_model)
+                    if result:
+                        return result
+                    # GPT failed → fall through to next model in list (Gemini fallback)
+                    log.warning("p2_gpt_image_fallback", from_model=_cur_model)
+                    continue
+
+                # ── Vertex backend (Gemini + Imagen) ───────────────────────────
+                _max_attempts = 4 if _mi == 0 else 2
                 for attempt in range(_max_attempts):
                     try:
                         resp = await loop.run_in_executor(None, lambda m=_cur_model: client.models.generate_content(
@@ -3656,7 +4435,10 @@ Output EXACTLY this format (nothing else):
         for i, _img_bytes in enumerate(generated_bytes_list):
             _hl = _concept_lines[i] if i < len(_concept_lines) else _headline_short
             _overlaid = _apply_brand_overlay(
-                _img_bytes, brand, _hl, product_uris, product_name, market
+                _img_bytes, brand, _hl, product_uris, product_name, market,
+                logo_uri=logo_uri,
+                copy_subline=copy_subline,
+                copy_cta=copy_cta,
             )
             images_b64.append(base64.b64encode(_overlaid).decode("utf-8"))
         image_b64 = images_b64[0] if images_b64 else None
@@ -4047,4 +4829,335 @@ kpi_validation must include one entry per validated KPI target listed above."""
     from app.config import get_settings as _gs_perf
     raw = await _vertex_generate(_gc, _gs_perf().creative_model, prompt)
     return _parse_agent_response(raw)
+
+
+# ── BRAND COMPLIANCE CHECK ────────────────────────────────────────────────────
+
+async def run_brand_compliance_check(
+    brand_profile_json: str,
+    machine_brief: dict,
+    generated_text: str = "",
+) -> dict:
+    """
+    Check a generated brief / copy / creative direction against the brand's
+    brand.json compliance rules.
+
+    Two-stage check:
+    1. Fast rule-based: scan for prohibited phrases and missing required terms.
+    2. LLM-based: ask the model to evaluate creative rules and tone.
+
+    Returns a ComplianceResult-shaped dict:
+      {"passed": bool, "score": int, "issues": [...], "summary": str}
+
+    This is a FIRST-CLASS pipeline stage, not an afterthought — for regulated
+    industries (banking, pharma, alcohol) it gates whether the brief proceeds.
+    """
+    import re
+    import google.genai as _g
+    from app.config import get_settings as _gs
+    from app.models import BrandProfile, ComplianceResult, ComplianceIssue
+
+    # Parse brand profile
+    try:
+        profile_dict = json.loads(brand_profile_json) if isinstance(brand_profile_json, str) else (brand_profile_json or {})
+        profile = BrandProfile(**profile_dict) if profile_dict else None
+    except Exception:
+        profile = None
+
+    issues: list[dict] = []
+    score   = 100
+    brand_name = machine_brief.get("brand", "")
+
+    # ── Stage 1: rule-based scan ─────────────────────────────────────────────
+    if profile and profile.compliance:
+        cp = profile.compliance
+        content_lower = generated_text.lower() if generated_text else ""
+        brief_text    = json.dumps(machine_brief).lower()
+        all_content   = content_lower + " " + brief_text
+
+        for phrase in cp.prohibited_phrases:
+            pattern = r'\b' + re.escape(phrase.lower()) + r'\b'
+            if re.search(pattern, all_content):
+                issues.append({
+                    "severity": "error",
+                    "rule": "prohibited_phrase",
+                    "detail": f'Contains prohibited phrase: "{phrase}"',
+                })
+                score -= 25
+
+    if profile and profile.creative_rules:
+        cr = profile.creative_rules
+        content_lower = generated_text.lower() if generated_text else ""
+        for term in cr.avoid:
+            if len(term) > 6 and term.lower() in content_lower:
+                issues.append({
+                    "severity": "warning",
+                    "rule": "creative_rule_avoid",
+                    "detail": f'Potential violation of creative rule: "{term}"',
+                })
+                score -= 10
+
+    score = max(score, 0)
+
+    # ── Stage 2: LLM compliance evaluation ──────────────────────────────────
+    if profile and generated_text:
+        _ss  = _gs()
+        _gc  = _g.Client(vertexai=True, project=_ss.gcp_project, location=_ss.gcp_region)
+
+        compliance_prompt = f"""You are a brand compliance checker for {brand_name}.
+
+BRAND PROFILE (AUTHORITATIVE):
+{profile.to_context_str() if profile else 'No profile loaded'}
+
+CONTENT TO CHECK:
+{generated_text[:3000]}
+
+CAMPAIGN BRIEF:
+{json.dumps(machine_brief, indent=2)[:2000]}
+
+Your task: Check whether the content above complies with ALL brand rules.
+
+Respond ONLY with valid JSON in this exact format:
+{{
+  "passed": true/false,
+  "llm_score": 0-100,
+  "llm_issues": [
+    {{"severity": "error|warning|info", "rule": "<rule name>", "detail": "<specific issue>"}}
+  ],
+  "llm_summary": "<one sentence: overall compliance verdict>"
+}}
+
+Be specific. Reference exact phrases or elements that triggered any issue.
+Only flag genuine compliance problems — not stylistic preferences."""
+
+        try:
+            raw = await _vertex_generate(_gc, _ss.creative_model, compliance_prompt)
+            llm_result = _parse_agent_response(raw)
+            if isinstance(llm_result, dict):
+                llm_issues = llm_result.get("llm_issues", [])
+                issues.extend(llm_issues)
+                llm_score = int(llm_result.get("llm_score", 80))
+                score     = min(score, llm_score)
+                llm_summary = llm_result.get("llm_summary", "")
+            else:
+                llm_summary = ""
+        except Exception as e:
+            logger.warning("compliance_llm_failed", error=str(e))
+            llm_summary = ""
+    else:
+        llm_summary = ""
+
+    # ── Determine pass/fail ──────────────────────────────────────────────────
+    has_errors = any(i.get("severity") == "error" for i in issues)
+    passed     = not has_errors and score >= 60
+
+    summary = llm_summary or (
+        f"PASS — {brand_name} brand compliance check passed (score {score}/100)."
+        if passed else
+        f"FAIL — {len([i for i in issues if i.get('severity') == 'error'])} error(s) found. "
+        f"Score {score}/100. Review required before proceeding."
+    )
+
+    return {
+        "passed":  passed,
+        "score":   score,
+        "issues":  issues,
+        "summary": summary,
+    }
+
+
+async def run_image_adaptation(
+    asset_urls: list[str],
+    brand: str,
+    brand_profile_dict: "dict | None",
+    copy_headline: str = "",
+    copy_cta: str = "",
+    channels: list[str] = None,
+    logo_uri: str = "",
+    campaign_id: str = "",
+    progress_cb=None,
+) -> dict:
+    """
+    Adapt existing brand images for a new campaign using the image adapter model.
+
+    Takes uploaded asset URLs (GCS URIs or HTTPS), loads each image, then uses
+    gemini_model_image_adapter to re-render it with:
+      - Brand profile colours, tone and compliance rules
+      - Campaign headline + CTA overlaid
+      - Brand logo preserved
+      - Channel-appropriate composition
+
+    Returns:
+        {
+          "images_b64": [<base64 PNG>, ...],
+          "channel_adaptations": {<key>: {"label": str, "image_b64": str}},
+          "adapted_count": int,
+          "source_count": int,
+        }
+    """
+    from app.creative_pipeline import _load_bytes, _mime_for
+    import google.genai as _genai
+    import google.genai.types as _gtypes
+    from app.config import get_settings as _gs
+
+    _s   = _gs()
+    _gc  = _genai.Client(vertexai=True, project=_s.gcp_project, location=_s.gcp_region)
+    _adapter_model = _s.gemini_model_image_adapter or _s.gemini_model_image
+    loop = asyncio.get_event_loop()
+    log  = logger.bind(campaign_id=campaign_id, brand=brand)
+
+    async def _emit(agent: str, status: str, msg: str):
+        if progress_cb:
+            await progress_cb(agent, status, msg)
+
+    # ── Build brand context from profile ──────────────────────────────────────
+    _profile_colours = "#00AEEF, #1A2142"   # safe Barclays default
+    _profile_font    = "clean modern sans-serif"
+    _profile_tone    = "professional and trustworthy"
+    _profile_avoid   = ""
+
+    if brand_profile_dict:
+        vi = brand_profile_dict.get("visual_identity", {})
+        cr = brand_profile_dict.get("creative_rules", {})
+        _primary = vi.get("primary_colors", [])
+        if _primary:
+            _profile_colours = ", ".join(_primary)
+        _profile_font = vi.get("font") or _profile_font
+        _profile_tone = cr.get("tone") or _profile_tone
+        _avoid_list   = cr.get("avoid", [])
+        if _avoid_list:
+            _profile_avoid = "AVOID: " + "; ".join(_avoid_list[:4])
+
+    # ── Load brand logo ───────────────────────────────────────────────────────
+    _logo_bytes: bytes | None = None
+    _logo_mime  = "image/png"
+    if logo_uri:
+        try:
+            _logo_bytes = _load_bytes(logo_uri)
+            _logo_mime  = _mime_for(logo_uri)
+        except Exception:
+            _logo_bytes = None
+
+    # ── Adaptation prompt template ─────────────────────────────────────────────
+    def _build_prompt(channel_label: str, aspect_note: str) -> str:
+        headline_line = f'Campaign headline: "{copy_headline}"' if copy_headline else ""
+        cta_line      = f'CTA: "{copy_cta}"'                   if copy_cta      else ""
+        return f"""You are a brand creative adapting an existing {brand} campaign image.
+
+BRAND IDENTITY — {brand}:
+Primary colours: {_profile_colours}
+Typography: {_profile_font}
+Tone: {_profile_tone}
+{_profile_avoid}
+
+ADAPTATION TASK:
+Take the provided existing {brand} image and adapt it for {channel_label} format ({aspect_note}).
+{headline_line}
+{cta_line}
+
+RULES:
+1. Preserve the {brand} colour palette exactly — use {_profile_colours}
+2. Keep the overall visual mood and photography style from the source image
+3. Recompose for {channel_label} — {aspect_note} composition
+4. If a logo is provided, embed it cleanly in the adapted image
+5. Maintain brand professionalism — no visual clutter, clear hierarchy
+6. Generate the adapted image only — no text explanation
+
+Generate the adapted {channel_label} image now."""
+
+    # ── Channel format specs ───────────────────────────────────────────────────
+    _selected = {c.lower() for c in (channels or [])}
+    _ch_formats = [
+        ("16:9 landscape (1920×1080)",   "Hero / Key Visual",     "kv"),
+        ("1:1 square (1080×1080)",        "Instagram Feed",        "instagram_feed"),
+        ("9:16 portrait (1080×1920)",     "Instagram Stories",     "instagram_story"),
+        ("4:5 portrait (1080×1350)",      "Instagram Portrait",    "instagram_portrait"),
+        ("1200×628 landscape",            "Website Banner",        "website"),
+        ("1200×628 landscape (LinkedIn)", "LinkedIn Banner",       "linkedin"),
+    ]
+
+    images_b64:          list[str]       = []
+    channel_adaptations: dict[str, dict] = {}
+
+    # ── Process each uploaded asset ───────────────────────────────────────────
+    for asset_idx, asset_url in enumerate(asset_urls[:3]):   # max 3 source images
+        await _emit("kv", "running",
+            f"Adapting asset {asset_idx + 1}/{min(len(asset_urls), 3)} — {brand} brand…")
+
+        src_bytes: bytes | None = None
+        try:
+            src_bytes = _load_bytes(asset_url)
+        except Exception as _le:
+            log.warning("adaptation_asset_load_failed", url=asset_url, error=str(_le))
+            continue
+
+        if not src_bytes or len(src_bytes) < 1024:
+            log.warning("adaptation_asset_too_small", url=asset_url)
+            continue
+
+        src_mime = _mime_for(asset_url) if not asset_url.startswith("data:") else "image/jpeg"
+
+        # Adapt for KV (16:9) as primary + each selected channel
+        for aspect_note, ch_label, ch_key in _ch_formats:
+            if ch_key != "kv" and _selected and ch_key not in _selected:
+                continue
+
+            prompt = _build_prompt(ch_label, aspect_note)
+
+            contents: list = [prompt]
+            if _logo_bytes:
+                contents.append("Brand logo — embed this in the adapted image:")
+                contents.append(_gtypes.Part.from_bytes(data=_logo_bytes, mime_type=_logo_mime))
+            contents.append("Existing brand image to adapt:")
+            contents.append(_gtypes.Part.from_bytes(data=src_bytes, mime_type=src_mime))
+
+            try:
+                resp = await loop.run_in_executor(None, lambda: _gc.models.generate_content(
+                    model    = _adapter_model,
+                    contents = contents,
+                    config   = _gtypes.GenerateContentConfig(
+                        response_modalities = ["IMAGE", "TEXT"],
+                        image_config        = _gtypes.ImageConfig(
+                            aspect_ratio = "16:9" if ch_key in ("kv", "website", "linkedin") else
+                                           "1:1"  if "feed" in ch_key else
+                                           "9:16",
+                        ),
+                    ),
+                ))
+
+                out_bytes: bytes | None = None
+                for cand in resp.candidates:
+                    for part in cand.content.parts:
+                        if hasattr(part, "inline_data") and part.inline_data is not None:
+                            out_bytes = part.inline_data.data
+                            break
+                    if out_bytes:
+                        break
+
+                if out_bytes:
+                    import base64 as _b64enc
+                    b64_str = _b64enc.b64encode(out_bytes).decode()
+                    if ch_key == "kv" and asset_idx == 0:
+                        images_b64.insert(0, b64_str)   # first KV is the hero
+                    elif ch_key == "kv":
+                        images_b64.append(b64_str)
+                    else:
+                        channel_adaptations[f"{ch_key}_{asset_idx}"] = {
+                            "label":     f"{ch_label} (asset {asset_idx + 1})",
+                            "image_b64": b64_str,
+                        }
+                    log.info("adaptation_ok", ch_key=ch_key, asset_idx=asset_idx)
+                else:
+                    log.warning("adaptation_no_image", ch_key=ch_key, asset_idx=asset_idx)
+
+            except Exception as _ae:
+                log.warning("adaptation_failed",
+                            ch_key=ch_key, asset_idx=asset_idx, error=str(_ae))
+
+    return {
+        "images_b64":          images_b64,
+        "channel_adaptations": channel_adaptations,
+        "adapted_count":       len(images_b64) + len(channel_adaptations),
+        "source_count":        len(asset_urls),
+    }
 

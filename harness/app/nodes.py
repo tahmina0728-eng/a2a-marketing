@@ -117,6 +117,28 @@ def load_brand_context(
     product_paths    = loader.list_products(brand)   if brand else []
     logo_paths       = loader.list_logos(brand)      if brand else []
 
+    # Load the structured brand profile (brand.json) — brand-owner approved,
+    # never AI-invented. Used for compliance checking and as structured context.
+    brand_profile_dict = loader.load_brand_profile(brand) if brand else None
+
+    # For brands with a compliance config, prepend a compact profile block to
+    # the guidelines so the briefing agent has explicit rules as hard constraints.
+    if brand_profile_dict:
+        from app.models import BrandProfile as _BPModel
+        try:
+            _bp = _BPModel(**brand_profile_dict)
+            _profile_block = "BRAND PROFILE (AUTHORITATIVE — DO NOT OVERRIDE)\n" + _bp.to_context_str()
+            brand_guidelines = (_profile_block + "\n\n---\n\n" + brand_guidelines).strip()
+        except Exception as _bp_err:
+            logger.warning("brand_profile_inject_failed", brand=brand, error=str(_bp_err))
+
+    # Barclays: append the Logos agent SKILL file to brand guidelines so the
+    # briefing agent follows FCA compliance rules and Barclays-specific tone.
+    if brand.lower() == "barclays":
+        logos_skill = loader.load_agent_skill(brand, "Logos")
+        if logos_skill:
+            brand_guidelines = (brand_guidelines + "\n\n---\n\n" + logos_skill).strip()
+
     # Haleon: reorder product_paths so the matched sub-brand image is first.
     # list_products() returns all 23 images alphabetically; pipeline only uses
     # product_uris[:1] as the Gemini reference, so the wrong image would be sent.
@@ -284,6 +306,7 @@ def load_brand_context(
         "brand_visual_rules":          brand_visual_rules,
         "brand_name":                  brand,
         "brand_locks_json":            json.dumps(brand_locks_dict),
+        "brand_profile_json":          json.dumps(brand_profile_dict) if brand_profile_dict else "{}",
         "product_image_map":           json.dumps(product_image_map),
         "product_description_map":     json.dumps(product_description_map),
         "product_name":                product,

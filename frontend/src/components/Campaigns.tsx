@@ -15,7 +15,7 @@ interface GeneratedResult {
   tagline?:   string;
 }
 
-const BRANDS    = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank","Sunrise","Haleon"];
+const BRANDS    = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank","Sunrise","Haleon","Barclays"];
 const GOALS     = ["Brand Awareness","Drive Sales","Lead Generation","Product Launch","Engagement"];
 const DEFAULT_AUDIENCES = ["Women 18–35","Men 25–45","Gen Z 16–24","Professionals 30–50","Families"];
 const BRAND_AUDIENCES: Record<string, string[]> = {
@@ -53,6 +53,13 @@ const BRAND_AUDIENCES: Record<string, string[]> = {
     "Active Adults 35–65",
     "Seniors 60+",
     "Health-Conscious Millennials 25–40",
+  ],
+  "Barclays": [
+    "Young Professionals 22–35",
+    "Families & Home Buyers 28–45",
+    "Small Business Owners",
+    "Wealth Builders 35–55",
+    "Students & Graduates 18–25",
   ],
 };
 const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Website","Email"];
@@ -101,6 +108,7 @@ const BRAND_ICONS: Record<string, string> = {
   "UBS Bank":    "/brands/UBS Bank/serve/Logos/ubs-bank-logo.png",
   "sunrise":     "/brands/sunrise/serve/Logos/sunrise_logo_red.svg",
   "Haleon":      "/brands/Haleon/serve/Logos/haleon_logo_black.svg",
+  "Barclays":    "/brands/Barclays/serve/Logos/barclays1_wb.png",
 };
 
 const G = "linear-gradient(135deg,#7c3aed,#a855f7,#6366f1)";

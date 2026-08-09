@@ -59,7 +59,7 @@ from app.config import get_settings
 from app.models import BriefRequest
 from app.pipeline import briefing_pipeline, root_agent
 from app.creative_pipeline import experiment_pipeline
-from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq, run_copy_agent, run_creative_pipeline_direct, run_performance_forecast
+from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq, run_copy_agent, run_creative_pipeline_direct, run_performance_forecast, run_brand_compliance_check, run_image_adaptation
 
 logger   = structlog.get_logger()
 settings = get_settings()
@@ -449,9 +449,14 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             l = next((x for x in lines if key.lower() in x.lower()), "")
             return l.split(":")[-1].strip() if ":" in l else ""
 
+        _ft_dict = ft if isinstance(ft, dict) else {}
+        _val     = machine_brief.get("validation", {})
+        _val_score = int(_val.get("score") or 0) if isinstance(_val, dict) else 0
         await push_event(campaign_id, "briefing", "done", json.dumps({
             "_text": f"Brief validated ✓ — Fan Truth {ft_verdict} {ft_score}/100",
-            "fan_truth": ft if isinstance(ft, dict) else {},
+            "score":            ft_score or _val_score,
+            "validation_score": _val_score,
+            "fan_truth": _ft_dict,
             "kpis": machine_brief.get("kpis", []),
             "validation_notes": machine_brief.get("validation_notes", ""),
             "audience": {
@@ -463,9 +468,52 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         # Log machine_brief to BigQuery (fire-and-forget — don't block pipeline)
         asyncio.create_task(_bq_log_machine_brief(campaign_id, machine_brief, brief))
 
-        await asyncio.sleep(10)  # 10 s so user can read fan truth + CDP results
+        await asyncio.sleep(6)
 
-        # ── Stage 1b: Creative strategy ───────────────────────────────────
+        # ── Stage 1b: Brand compliance check ─────────────────────────────
+        # Runs for ALL brands that have a brand.json profile. For regulated
+        # industries (banking, pharma, alcohol) this gates the pipeline.
+        _brand_profile_json = machine_brief.get("brand_profile_json", "{}")
+        if not _brand_profile_json or _brand_profile_json == "{}":
+            from app.brand_assets import get_asset_loader as _get_loader
+            _bpj = _get_loader().load_brand_profile(brief.brand)
+            _brand_profile_json = json.dumps(_bpj) if _bpj else "{}"
+
+        if _brand_profile_json and _brand_profile_json != "{}":
+            await push_event(campaign_id, "compliance", "running",
+                f"Checking {brief.brand} brand compliance rules…")
+            try:
+                _brief_text = json.dumps(machine_brief)
+                _compliance = await run_brand_compliance_check(
+                    brand_profile_json = _brand_profile_json,
+                    machine_brief      = machine_brief,
+                    generated_text     = _brief_text,
+                )
+                _c_passed  = _compliance.get("passed", True)
+                _c_score   = _compliance.get("score", 100)
+                _c_issues  = _compliance.get("issues", [])
+                _c_summary = _compliance.get("summary", "")
+                _c_errors  = [i for i in _c_issues if i.get("severity") == "error"]
+                _c_warns   = [i for i in _c_issues if i.get("severity") == "warning"]
+                await push_event(campaign_id, "compliance", "done", json.dumps({
+                    "_text":   f"{'✓ PASS' if _c_passed else '✗ FAIL'} — Brand compliance {_c_score}/100",
+                    "passed":  _c_passed,
+                    "score":   _c_score,
+                    "errors":  len(_c_errors),
+                    "warnings": len(_c_warns),
+                    "issues":  _c_issues,
+                    "summary": _c_summary,
+                }))
+            except Exception as _ce:
+                logger.warning("compliance_check_failed", error=str(_ce))
+                await push_event(campaign_id, "compliance", "done", json.dumps({
+                    "_text": "Compliance check skipped", "passed": True, "score": 100, "issues": [],
+                }))
+            await asyncio.sleep(4)
+
+        await asyncio.sleep(4)  # Let user read compliance result
+
+        # ── Stage 1d: Creative strategy ───────────────────────────────────
         await push_event(campaign_id, "strategy", "running", "Building creative strategy & hero message…")
         hb2 = asyncio.create_task(_heartbeat(campaign_id, "strategy", [
             "Analysing brand voice & creative principles…",
@@ -531,8 +579,14 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
                                         language=brief.language or "" if hasattr(brief, "language") else "")
         finally:
             hb3.cancel()
-        short_hl  = (copy.get("short")  or {}).get("headline", "")
-        medium_hl = (copy.get("medium") or {}).get("headline", "")
+        short_hl   = (copy.get("short")  or {}).get("headline", "")
+        short_sub  = (copy.get("short")  or {}).get("subline",  "") or ""
+        medium_hl  = (copy.get("medium") or {}).get("headline", "")
+        medium_sub = (copy.get("medium") or {}).get("subline",  "") or ""
+        # Prefer the short subline if populated; fall back to medium subline.
+        # This becomes the supporting line rendered on the campaign banner.
+        copy_subline = (short_sub or medium_sub).strip()
+
         if not short_hl and not medium_hl:
             logger.warning("copy_agent_headline_missing",
                            has_raw_output="raw_output" in copy,
@@ -548,6 +602,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         await push_event(campaign_id, "copy", "done", json.dumps({
             "_text":           f'Copy ready — "{short_hl}"' if short_hl else "Copy variants ready ✓",
             "short_headline":  short_hl,
+            "subline":         copy_subline,
             "medium_headline": medium_hl,
             "long_headline":   (copy.get("long") or {}).get("headline", ""),
             "body":            (copy.get("long") or {}).get("body", "")[:160] if copy.get("long") else "",
@@ -555,6 +610,72 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "channel_copy":    _channel_copy,
         }))
         await asyncio.sleep(8)  # Let user read copy deck
+
+        # ── Stage 1e: Post-copy compliance check + regenerate loop ───────────
+        # Runs only when a brand.json profile exists. Checks the generated copy
+        # text for prohibited phrases / tone violations and retries the copy
+        # agent up to 2 times if errors are found — before the image is generated.
+        _copy_compliance_passed = True
+        if _brand_profile_json and _brand_profile_json != "{}":
+            _copy_text = " ".join(filter(None, [
+                short_hl, medium_hl,
+                (copy.get("long") or {}).get("headline", ""),
+                (copy.get("long") or {}).get("body", ""),
+                copy.get("cta", ""),
+            ]))
+            _MAX_COPY_RETRIES = 2
+            for _retry in range(_MAX_COPY_RETRIES):
+                try:
+                    _cc = await run_brand_compliance_check(
+                        brand_profile_json = _brand_profile_json,
+                        machine_brief      = machine_brief,
+                        generated_text     = _copy_text,
+                    )
+                except Exception:
+                    _cc = {"passed": True, "score": 100, "issues": []}
+
+                _cc_passed = _cc.get("passed", True)
+                _cc_errors = [i for i in _cc.get("issues", []) if i.get("severity") == "error"]
+
+                if _cc_passed or not _cc_errors:
+                    break   # copy is compliant — no regeneration needed
+
+                # Copy has prohibited phrases → regenerate with issue context
+                logger.warning("copy_compliance_fail_retry",
+                               campaign_id=campaign_id, retry=_retry + 1,
+                               errors=len(_cc_errors))
+                await push_event(campaign_id, "compliance", "running",
+                    f"Copy compliance issues found — regenerating copy (attempt {_retry + 2})…")
+
+                _issue_guidance = "; ".join(i.get("detail", "") for i in _cc_errors)
+                machine_brief["compliance_issues"] = _issue_guidance
+                try:
+                    copy = await run_copy_agent(
+                        machine_brief, strategy, brand_locks,
+                        channels=_channels_list,
+                        language=brief.language or "" if hasattr(brief, "language") else "",
+                    )
+                    short_hl  = (copy.get("short")  or {}).get("headline", "") or short_hl
+                    medium_hl = (copy.get("medium") or {}).get("headline", "") or medium_hl
+                    _copy_text = " ".join(filter(None, [
+                        short_hl, medium_hl,
+                        (copy.get("long") or {}).get("headline", ""),
+                        (copy.get("long") or {}).get("body", ""),
+                        copy.get("cta", ""),
+                    ]))
+                except Exception as _cr_err:
+                    logger.warning("copy_regenerate_failed", error=str(_cr_err))
+                    break
+            else:
+                # All retries exhausted — flag compliance FAIL but don't block
+                _copy_compliance_passed = False
+                await push_event(campaign_id, "compliance", "done", json.dumps({
+                    "_text": f"✗ FAIL — Copy compliance could not be resolved after {_MAX_COPY_RETRIES} retries",
+                    "passed": False, "score": _cc.get("score", 0),
+                    "errors": len(_cc_errors), "warnings": 0,
+                    "issues": _cc.get("issues", []),
+                    "summary": _cc.get("summary", ""),
+                }))
 
         if audience_insights:
             machine_brief["audience_insights"] = audience_insights
@@ -594,31 +715,65 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         _jpg_products = [p for p in _src_products if not p.lower().endswith(".png")]
         _ordered_products = (_png_products + _jpg_products)[:5]
 
-        # Primary logo: prefer whiteBG or plain logo (best contrast on dark backgrounds)
-        _logo_primary = next(
-            (p for p in logos if "whitebg" in p.lower() or "whiteBG" in p), None
-        ) or (logos[0] if logos else "")
+        # Primary logo — for Barclays, auto-select the co-brand Wimbledon lockup
+        # when the campaign is Wimbledon-related (product or fan truth mentions it).
+        _is_wimbledon_campaign = (
+            brief.brand.lower() == "barclays" and any(
+                "wimbledon" in str(v).lower()
+                for v in [
+                    getattr(brief, "product", ""),
+                    getattr(brief, "fan_truth", ""),
+                    getattr(brief, "notes", "") or "",
+                ]
+            )
+        )
+        if _is_wimbledon_campaign:
+            # Use the co-brand lockup on white bg for light grounds (default)
+            _logo_primary = next(
+                (p for p in logos if "wimbledon_wb" in p.lower() or "barclays-wimbledon_wb" in p.lower()), None
+            ) or next(
+                (p for p in logos if "wimbledon" in p.lower()), None
+            ) or (logos[0] if logos else "")
+            logger.info("barclays_wimbledon_logo_selected", logo=_logo_primary)
+        else:
+            # Standard Barclays — prefer stacked whiteBG lockup (barclays1_wb)
+            _logo_primary = next(
+                (p for p in logos if "barclays1_wb" in p.lower()), None
+            ) or next(
+                (p for p in logos if "whitebg" in p.lower() or "_wb" in p.lower()
+                 and "wimbledon" not in p.lower()), None
+            ) or (logos[0] if logos else "")
+
+        # Resolve brand profile dict for model router (already loaded earlier as JSON)
+        _bpd_for_router: dict | None = None
+        if _brand_profile_json and _brand_profile_json != "{}":
+            try:
+                _bpd_for_router = json.loads(_brand_profile_json)
+            except Exception:
+                pass
 
         creative_result = await run_creative_pipeline_direct(
-            brand            = brief.brand,
-            audience         = audience_desc,
-            product_uris     = _ordered_products,
-            asset_uris       = assets[:6],
-            logo_uri         = _logo_primary,
-            colour_uris      = colours[:2],
-            brand_guidelines = brand_guidelines,
-            big_idea_seed    = strategy.get("hero_message", ""),
-            copy_headline    = short_hl or medium_hl,
-            copy_headlines   = [short_hl or medium_hl, medium_hl or short_hl],
-            copy_cta         = copy.get("cta", ""),
-            product_name     = brief.product if hasattr(brief, "product") else "",
-            fan_truth        = str(machine_brief.get("fan_truth_score", machine_brief.get("fan_truth", {})).get("statement", "")),
-            season           = brief.season if hasattr(brief, "season") else "",
-            market           = brief.market if hasattr(brief, "market") else "",
-            language         = brief.language or "" if hasattr(brief, "language") else "",
-            channels         = [str(c).lower() for c in brief.channels] if brief.channels else [],
-            campaign_id      = campaign_id,
-            progress_cb      = _progress,
+            brand              = brief.brand,
+            audience           = audience_desc,
+            product_uris       = _ordered_products,
+            asset_uris         = assets[:6],
+            logo_uri           = _logo_primary,
+            colour_uris        = colours[:2],
+            brand_guidelines   = brand_guidelines,
+            big_idea_seed      = strategy.get("hero_message", ""),
+            copy_headline      = short_hl or medium_hl,
+            copy_subline       = copy_subline,
+            copy_headlines     = [short_hl or medium_hl, medium_hl or short_hl],
+            copy_cta           = copy.get("cta", ""),
+            product_name       = brief.product if hasattr(brief, "product") else "",
+            fan_truth          = str(machine_brief.get("fan_truth_score", machine_brief.get("fan_truth", {})).get("statement", "")),
+            season             = brief.season if hasattr(brief, "season") else "",
+            market             = brief.market if hasattr(brief, "market") else "",
+            language           = brief.language or "" if hasattr(brief, "language") else "",
+            channels           = [str(c).lower() for c in brief.channels] if brief.channels else [],
+            campaign_id        = campaign_id,
+            progress_cb        = _progress,
+            brand_profile_dict = _bpd_for_router,
         )
         ms2 = int((time.time() - t2) * 1000)
         # Support both single image_b64 and multiple images_b64 list
@@ -728,12 +883,18 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
 
 
 async def _run_adaptation_pipeline(campaign_id: str, brief: BriefRequest) -> None:
-    """Lighter pipeline for Adapt Existing mode: brief validation → adaptation agent only."""
+    """
+    Adapt Existing mode pipeline:
+      1. Brief validation (Logos agent)
+      2. Brand compliance check on brief
+      3. AI image adaptation via gemini_model_image_adapter
+      4. Channel variants via smart-crop (Pillow)
+    """
     t_start = time.time()
     try:
+        # ── Stage 1: Brief validation ─────────────────────────────────────────
         await push_event(campaign_id, "briefing", "running",
             f"Validating brief for adaptation — {brief.brand} · {brief.product}")
-
         hb = asyncio.create_task(_heartbeat(campaign_id, "briefing", [
             "Loading brand guidelines",
             "Checking fan truth alignment",
@@ -750,37 +911,112 @@ async def _run_adaptation_pipeline(campaign_id: str, brief: BriefRequest) -> Non
 
         machine_brief.setdefault("campaign_id", campaign_id)
         machine_brief.setdefault("brand", brief.brand)
-
         await push_event(campaign_id, "briefing", "done",
             json.dumps({**machine_brief, "processing_time_ms": ms1}))
+        await asyncio.sleep(3)
 
+        # ── Stage 1b: Brand compliance check ─────────────────────────────────
+        from app.brand_assets import get_asset_loader as _gal
+        _ldr = _gal()
+        _bpd = _ldr.load_brand_profile(brief.brand) if brief.brand else None
+        _bpj = json.dumps(_bpd) if _bpd else "{}"
+
+        if _bpj and _bpj != "{}":
+            await push_event(campaign_id, "compliance", "running",
+                f"Checking {brief.brand} compliance rules before adapting…")
+            try:
+                _cc = await run_brand_compliance_check(
+                    brand_profile_json = _bpj,
+                    machine_brief      = machine_brief,
+                    generated_text     = json.dumps(machine_brief),
+                )
+                _cc_passed = _cc.get("passed", True)
+                _cc_issues = _cc.get("issues", [])
+                await push_event(campaign_id, "compliance", "done", json.dumps({
+                    "_text":    f"{'✓ PASS' if _cc_passed else '✗ FAIL'} — Brand compliance {_cc.get('score', 100)}/100",
+                    "passed":   _cc_passed,
+                    "score":    _cc.get("score", 100),
+                    "errors":   sum(1 for i in _cc_issues if i.get("severity") == "error"),
+                    "warnings": sum(1 for i in _cc_issues if i.get("severity") == "warning"),
+                    "issues":   _cc_issues,
+                    "summary":  _cc.get("summary", ""),
+                }))
+            except Exception:
+                await push_event(campaign_id, "compliance", "done", json.dumps({
+                    "_text": "Compliance check skipped", "passed": True, "score": 100, "issues": [],
+                }))
+            await asyncio.sleep(3)
+
+        # ── Stage 2: AI image adaptation ──────────────────────────────────────
         asset_count = len(brief.uploaded_assets)
-        await push_event(campaign_id, "strategy", "running",
-            f"Adapting {asset_count} existing asset{'s' if asset_count != 1 else ''} "
-            f"for {', '.join(brief.channels[:3])}")
+        if not brief.uploaded_assets:
+            await push_event(campaign_id, "kv", "done", json.dumps({
+                "_text": "No assets uploaded — nothing to adapt",
+                "images_b64": [], "channel_adaptations": {},
+            }))
+        else:
+            await push_event(campaign_id, "kv", "running",
+                f"Adapting {asset_count} existing {brief.brand} asset{'s' if asset_count != 1 else ''} "
+                f"for {', '.join(brief.channels[:3])}…")
 
-        await push_event(campaign_id, "strategy", "done", json.dumps({
-            "campaign_id":        campaign_id,
-            "adaptation_mode":    True,
-            "asset_count":        asset_count,
-            "channels":           brief.channels,
-            "hero_message":       f"Adapted: {brief.fan_truth[:60]}",
-            "big_idea":           f"{brief.brand} · Existing Campaign Adaptation",
-            "strategic_framework": (
-                f"Adapting {asset_count} existing assets for {brief.goal} "
-                f"across {', '.join(brief.channels)}. "
-                f"Fan truth '{brief.fan_truth[:80]}' preserved throughout."
-            ),
-        }))
+            # Load brand logo for the adapter to embed
+            _logos = _ldr.list_logos(brief.brand) if brief.brand else []
+            _logo_primary = next(
+                (p for p in _logos if "whitebg" in p.lower() or "whiteBG" in p), None
+            ) or (_logos[0] if _logos else "")
+
+            # Extract copy from machine brief for headline/CTA overlay
+            _copy_hl  = (machine_brief.get("short") or {}).get("headline", "")
+            _copy_cta = machine_brief.get("cta", "")
+
+            async def _adapt_progress(agent: str, status: str, msg: str):
+                await push_event(campaign_id, agent, status, msg)
+
+            adapt_result = await run_image_adaptation(
+                asset_urls         = brief.uploaded_assets,
+                brand              = brief.brand,
+                brand_profile_dict = _bpd,
+                copy_headline      = _copy_hl,
+                copy_cta           = _copy_cta,
+                channels           = brief.channels,
+                logo_uri           = _logo_primary,
+                campaign_id        = campaign_id,
+                progress_cb        = _adapt_progress,
+            )
+
+            _images      = adapt_result.get("images_b64", [])
+            _ch_adapt    = adapt_result.get("channel_adaptations", {})
+            _adapted_n   = adapt_result.get("adapted_count", 0)
+
+            # Upload adapted images to GCS (reuse the KV upload helper from the full pipeline)
+            try:
+                from app.brand_assets import get_asset_loader as _gal2
+                import base64 as _b64u
+                _ldr2 = _gal2()
+                for _ki, _ib64 in enumerate(_images[:2]):
+                    _raw = _b64u.b64decode(_ib64)
+                    _uri = _ldr2.upload_output(_raw, f"outputs/{campaign_id}/adapted_kv_{_ki + 1}.jpg")
+                    if _uri:
+                        _images[_ki] = _uri   # keep GCS URI if upload succeeded
+            except Exception:
+                pass
+
+            await push_event(campaign_id, "kv", "done", json.dumps({
+                "_text":               f"{_adapted_n} adapted visual{'s' if _adapted_n != 1 else ''} ready ✓",
+                "images_b64":          _images,
+                "channel_adaptations": _ch_adapt,
+                "adapted_count":       _adapted_n,
+                "source_count":        asset_count,
+                "adaptation_mode":     True,
+            }))
 
         ms_total = int((time.time() - t_start) * 1000)
-        result = {
+        await push_event(campaign_id, "__done__", "done", json.dumps({
             "campaign_id":        campaign_id,
             "mode":               "adapt",
             "machine_brief":      machine_brief,
             "processing_time_ms": ms_total,
-        }
-        await push_event(campaign_id, "__done__", "done", json.dumps(result))
+        }))
 
     except Exception as e:
         logger.error("adaptation_error", campaign_id=campaign_id, error=str(e))

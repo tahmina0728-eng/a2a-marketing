@@ -25,6 +25,7 @@ const BRANDS = [
   { id: "UBS Bank",    label: "UBS Bank",           emoji: "🏦", industry: "Financial Services", logo: `${API_BASE_PUB}/brands/UBS%20Bank/serve/Logos/ubs-bank-logo.png`                },
   { id: "sunrise",     label: "Sunrise",            emoji: "🌅", industry: "Telecommunications", logo: `${API_BASE_PUB}/brands/sunrise/serve/Logos/sunrise_logo_red.svg`                },
   { id: "Haleon",      label: "Haleon",             emoji: "💊", industry: "Consumer Health",    logo: `${API_BASE_PUB}/brands/Haleon/serve/Logos/haleon_logo_black.svg`                },
+  { id: "Barclays",   label: "Barclays",            emoji: "🦅", industry: "Retail & Business Banking", logo: `${API_BASE_PUB}/brands/Barclays/serve/Logos/barclays1_wb.png`           },
 ];
 
 // ── Inline Feather-style icons ───────────────────────────────────────────────

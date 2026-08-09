@@ -422,6 +422,30 @@ Then check the LONG body:
   – Cut any sentence that could be deleted without loss. Then cut more.
 
 ════════════════════════════════════════════════════════
+BANNER COPY ARCHITECTURE — HOW THE COPY IS RENDERED
+════════════════════════════════════════════════════════
+
+Your copy is rendered as a two-layer banner — the image model generates
+the photograph, then your words are composited on top by code. This means:
+
+  SHORT.headline   → the large headline (Effra Bold, ~72px, top-left of image)
+  MEDIUM.subline   → the supporting line directly below the headline (~22px)
+  CTA              → rendered in the bottom bar of the banner
+
+The MEDIUM.subline is the most important supporting piece. It must:
+  • Complete the emotional territory the headline opens
+  • Say something the headline leaves out (the HOW or the WHO)
+  • Work legibly as a single line at advertising display scale (≤20 words)
+  • Never restate the headline — it earns its space or it gets cut
+
+Example relationship:
+  SHORT.headline:  "Greatness is never a solo sport."
+  MEDIUM.subline:  "Behind every achievement is support that believes."
+
+  SHORT.headline:  "For every point. For every dream."
+  MEDIUM.subline:  "Backing the journey from first serve to centre court."
+
+════════════════════════════════════════════════════════
 LANGUAGE
 ════════════════════════════════════════════════════════
 

@@ -458,3 +458,87 @@ class PerformanceForecast(BaseModel):
     top_opportunity:          str            = Field(..., description="Single biggest upside opportunity")
     first_48h_watchlist:      list[str]      = Field(default_factory=list, description="3-5 specific metrics to monitor in first 48h post-launch")
     recommended_budget_split: dict[str, float] = Field(default_factory=dict, description="Channel -> recommended % of total budget")
+
+
+# ── BRAND PROFILE ─────────────────────────────────────────────────────────
+
+class BrandVisualIdentity(BaseModel):
+    """Canonical visual identity values — colours, logo, typography."""
+    primary_colors:   list[str]     = Field(default_factory=list, description="Primary hex colours, most prominent first")
+    secondary_colors: list[str]     = Field(default_factory=list)
+    logo_files:       list[str]     = Field(default_factory=list, description="Logo filenames in the brand's Logos/ folder")
+    font:             Optional[str] = None
+    style:            str           = ""
+
+
+class BrandCreativeRules(BaseModel):
+    """Creative do's and don'ts loaded from brand.json, not invented by AI."""
+    logo_required:                    bool      = True
+    avoid_unapproved_logo_variations: bool      = True
+    tone:                             str       = ""
+    avoid:                            list[str] = Field(default_factory=list)
+    require:                          list[str] = Field(default_factory=list)
+
+
+class BrandComplianceConfig(BaseModel):
+    """Regulatory / compliance rules for this brand (e.g. FCA for banks)."""
+    regulator:            Optional[str] = None
+    required_disclaimers: list[str]     = Field(default_factory=list)
+    prohibited_phrases:   list[str]     = Field(default_factory=list)
+    approval_required:    list[str]     = Field(default_factory=list)
+
+
+class BrandProfile(BaseModel):
+    """
+    Structured brand configuration loaded from brands/{brand}/brand.json.
+    This is the single source of truth for visual identity, creative rules
+    and compliance requirements — never invented by AI, always brand-owner approved.
+    """
+    brand:           dict                          = Field(default_factory=dict)
+    visual_identity: BrandVisualIdentity           = Field(default_factory=BrandVisualIdentity)
+    creative_rules:  BrandCreativeRules            = Field(default_factory=BrandCreativeRules)
+    compliance:      Optional[BrandComplianceConfig] = None
+    co_brands:       list[dict]                    = Field(default_factory=list)
+
+    def to_context_str(self) -> str:
+        """Render as a compact text block for injection into agent system prompts."""
+        b = self.brand
+        v = self.visual_identity
+        c = self.creative_rules
+        lines = [
+            f"BRAND PROFILE: {b.get('name', '')} | {b.get('industry', '')} | {b.get('market', 'UK')}",
+            f"Primary colours: {', '.join(v.primary_colors)}",
+            f"Font: {v.font or 'not specified'}  |  Style: {v.style}",
+            f"Tone: {c.tone}",
+        ]
+        if c.avoid:
+            lines.append("AVOID: " + "; ".join(c.avoid))
+        if c.require:
+            lines.append("REQUIRE: " + "; ".join(c.require))
+        if self.compliance:
+            cp = self.compliance
+            if cp.prohibited_phrases:
+                lines.append("PROHIBITED PHRASES: " + ", ".join(f'"{p}"' for p in cp.prohibited_phrases))
+            if cp.required_disclaimers:
+                lines.append("REQUIRED DISCLAIMERS: " + ", ".join(cp.required_disclaimers))
+        return "\n".join(lines)
+
+
+# ── BRAND COMPLIANCE CHECK ────────────────────────────────────────────────
+
+class ComplianceIssue(BaseModel):
+    severity: str  = Field(..., description="error | warning | info")
+    rule:     str  = Field(..., description="Which brand/compliance rule was triggered")
+    detail:   str  = Field(..., description="Specific phrase or element that caused the issue")
+
+
+class ComplianceResult(BaseModel):
+    """
+    Output of the brand compliance check stage.
+    A PASS means the brief/creative met all brand rules.
+    A FAIL triggers the regenerate loop.
+    """
+    passed:  bool
+    score:   int               = Field(..., ge=0, le=100, description="Compliance score 0–100")
+    issues:  list[ComplianceIssue] = Field(default_factory=list)
+    summary: str               = ""

@@ -35,3 +35,13 @@ frontend/.env.*
 # OS
 .DS_Store
 Thumbs.db
+
+# Local GCS asset cache — lives in GCS bucket in production, downloaded for dev only
+harness/bucket/
+
+# Test artefacts
+harness/sunrise_test.png
+
+# Temp / presentation files
+~$*
+contacts.csv

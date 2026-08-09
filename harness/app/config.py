@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     gemini_model_image_adapter:   str = ""   # GEMINI_MODEL_IMAGE_ADAPTER (falls back to gemini_model_image if blank)
     creative_model:               str = ""   # CREATIVE_MODEL
     veo_model:                    str = ""   # VEO_MODEL
+    imagen_model:                 str = ""   # IMAGEN_MODEL (Vertex Imagen; model_router prefers for regulated/luxury)
+    gpt_image_model:              str = ""   # GPT_IMAGE_MODEL (OpenAI image API, e.g. "gpt-image-1" or "dall-e-3")
+    openai_api_key:               str = ""   # OPENAI_API_KEY
     fallback_creative_model:      str = ""   # FALLBACK_CREATIVE_MODEL (optional quota-overflow fallback)
     fallback_image_model:         str = ""   # FALLBACK_IMAGE_MODEL (optional quota-overflow fallback)
     gemini_embedding_model:       str = ""   # GEMINI_EMBEDDING_MODEL
