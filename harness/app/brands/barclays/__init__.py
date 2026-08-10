@@ -699,13 +699,38 @@ def _render_wimbledon_lockup(canvas, draw, bar_y: int, bar_h: int, PX: int, PW: 
         draw.text((shield_right, ct_y), line, fill=_WHITE, font=ct_fnt)
         ct_y += ct_lh
 
-    # Right: Barclays wordmark — primary_white renders directly on dark bar
-    bk = _load_logo_file(logo_uri, [_assets["logos"]["primary_white"], _assets["logos"]["wordmark_white"]])
-    if bk:
-        lh = max(22, int(bar_h * 0.50))
-        lw = int(bk.width * lh / bk.height)
-        bk = bk.resize((lw, lh), Image.LANCZOS)
-        canvas.alpha_composite(bk, (PX + PW - lw - margin, bar_y + (bar_h - lh) // 2))
+    # Right: Barclays horizontal lockup — eagle symbol LEFT + "BARCLAYS" text RIGHT
+    # Composite approach guarantees the horizontal layout regardless of which PNG variant loads.
+    sym = _load_logo_file(logo_uri, [_assets["logos"]["symbol_white"]])
+    if sym:
+        sym_h   = max(22, int(bar_h * 0.50))
+        sym_w   = int(sym.width * sym_h / sym.height)
+        sym     = sym.resize((sym_w, sym_h), Image.LANCZOS)
+
+        bk_sz   = max(12, int(sym_h * 0.58))
+        bk_fnt  = fnt(bk_sz)
+        bk_bb   = draw.textbbox((0, 0), "BARCLAYS", font=bk_fnt)
+        bk_w    = bk_bb[2] - bk_bb[0]
+        bk_h    = bk_bb[3] - bk_bb[1]
+        gap     = max(5, int(sym_h * 0.15))
+        total_w = sym_w + gap + bk_w
+
+        sym_x   = PX + PW - total_w - margin
+        sym_y   = bar_y + (bar_h - sym_h) // 2
+        canvas.alpha_composite(sym, (sym_x, sym_y))
+        draw    = _ID.Draw(canvas)
+
+        text_bx = sym_x + sym_w + gap
+        text_by = bar_y + (bar_h - bk_h) // 2 - bk_bb[1]
+        draw.text((text_bx, text_by), "BARCLAYS", fill=_WHITE, font=bk_fnt)
+    else:
+        # fallback: prefer horizontal wordmark_white over stacked primary_white
+        bk = _load_logo_file(logo_uri, [_assets["logos"]["wordmark_white"], _assets["logos"]["primary_white"]])
+        if bk:
+            lh = max(22, int(bar_h * 0.50))
+            lw = int(bk.width * lh / bk.height)
+            bk = bk.resize((lw, lh), Image.LANCZOS)
+            canvas.alpha_composite(bk, (PX + PW - lw - margin, bar_y + (bar_h - lh) // 2))
 
     return canvas
 
