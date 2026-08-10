@@ -302,7 +302,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   const [barclaysCampaign, setBarclaysCampaign] = useState(initialContext?.barclaysCampaign ?? "");
 
   const [formats, setFormats] = useState<Set<FormatType>>(new Set());
-  const [imgSz, setImgSz]     = useState("16:9");
+  const [imgSz, setImgSz]     = useState("4:5");
   const [tvcLen, setTvcLen]   = useState("15");
   const [vidLen, setVidLen]   = useState("30s");
 
@@ -487,10 +487,13 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         }
         if (market) body.market = market;
         if (audience) body.audience = audience;
-        if (copyRes?.headline && fmt === "image") {
-          body.copy_headline = copyRes.headline;
-          body.copy_subline  = copyRes.subline || "";
-          body.copy_cta      = copyRes.cta     || "";
+        if (fmt === "image") {
+          body.aspect_ratio = imgSz;
+          if (copyRes?.headline) {
+            body.copy_headline = copyRes.headline;
+            body.copy_subline  = copyRes.subline || "";
+            body.copy_cta      = copyRes.cta     || "";
+          }
         }
         const key = fmt==="image"?"kv":fmt==="tvc"?"tvc":"reel";
         const r = await fetch(`${API_BASE}/agents/${key}/run`, {
