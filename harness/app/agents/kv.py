@@ -74,6 +74,9 @@ def run_kv(
     market: str = "",
     audience: str = "",
     copy_headline: str = "",
+    copy_subline: str = "",
+    copy_body: str = "",
+    copy_cta: str = "",
     campaign_type: str = "",
     campaign_id: str = "",
     concept_id: str = "",
@@ -404,8 +407,8 @@ def run_kv(
                     logo_uri     = _logo_uri or "",
                     is_wimbledon = True,
                     font_path    = _bfp,
-                    copy_subline = "",
-                    copy_cta     = "",
+                    copy_subline = copy_subline,
+                    copy_cta     = copy_cta,
                 )
             else:
                 from app.runner import _apply_brand_overlay
@@ -419,4 +422,4 @@ def run_kv(
     except Exception as e:
         logger.warning("standalone_kv_failed", brand=brand, error=str(e))
 
-    return {"agent": "kv", "brand": brand, "headline": headline, "image_b64": image_b64}
+    return {"agent": "kv", "brand": brand, "headline": headline, "subline": copy_subline, "cta": copy_cta, "image_b64": image_b64}

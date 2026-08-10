@@ -2291,6 +2291,9 @@ class AgentStandaloneRequest(_BaseModel):
     market:        str = ""  # Market/region for currency resolution
     audience:      str = ""  # Target audience (drives scene people in Sunrise offer images)
     copy_headline: str = ""  # Headline from Copy Agent step — used instead of generating a new one
+    copy_subline:  str = ""  # Subline from Copy Agent — rendered below headline on banner
+    copy_body:     str = ""  # Body copy from Copy Agent — for channel/email use
+    copy_cta:      str = ""  # CTA from Copy Agent — rendered in bottom bar on standard banners
     campaign_type: str = ""  # Legacy: kept for backwards compat; prefer campaign_id
     campaign_id:   str = ""  # Explicit campaign identifier, e.g. "wimbledon" — exact match, no substring
     concept_id:    str = ""  # Specific creative concept, e.g. "c1_journey" — skips keyword matching
@@ -2308,9 +2311,13 @@ async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
     try:
         result = await asyncio.to_thread(
             agent_standalone.run_agent_standalone,
-            agent_key, req.prompt, req.duration, req.image_b64,
-            req.product_name, req.market, req.audience, req.copy_headline,
-            req.campaign_type, req.campaign_id, req.concept_id, req.aspect_ratio,
+            agent_key, req.prompt,
+            duration=req.duration, image_b64=req.image_b64,
+            product_name=req.product_name, market=req.market, audience=req.audience,
+            copy_headline=req.copy_headline, copy_subline=req.copy_subline,
+            copy_body=req.copy_body, copy_cta=req.copy_cta,
+            campaign_type=req.campaign_type, campaign_id=req.campaign_id,
+            concept_id=req.concept_id, aspect_ratio=req.aspect_ratio,
         )
         return result
     except ValueError as e:

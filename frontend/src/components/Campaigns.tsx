@@ -306,7 +306,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   const [tvcLen, setTvcLen]   = useState("15");
   const [vidLen, setVidLen]   = useState("30s");
 
-  const [copyRes, setCopyRes] = useState<{headline:string;body:string;cta:string}|null>(null);
+  const [copyRes, setCopyRes] = useState<{headline:string;subline:string;body:string;cta:string}|null>(null);
   const [copyBusy, setCopyBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [results, setResults] = useState<Partial<Record<FormatType, GeneratedResult>>>(initialResults ?? {});
@@ -456,11 +456,12 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
       const d = await r.json();
       if (d.error) throw new Error(d.error);
       const headline = d.short?.headline || d.headline || "";
+      const subline  = d.short?.subline  || d.subline  || "";
       const body     = d.long?.body     || d.body     || "";
       if (!headline && !body) throw new Error("Empty response from copy agent");
-      setCopyRes({ headline, body, cta: d.cta || "Learn More" });
+      setCopyRes({ headline, subline, body, cta: d.cta || "Learn More" });
     } catch (e) {
-      setCopyRes({ headline: "", body: "", cta: `Error: ${(e as Error).message}` });
+      setCopyRes({ headline: "", subline: "", body: "", cta: `Error: ${(e as Error).message}` });
     } finally { setCopyBusy(false); }
   };
 
@@ -486,7 +487,11 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         }
         if (market) body.market = market;
         if (audience) body.audience = audience;
-        if (copyRes?.headline && fmt === "image") body.copy_headline = copyRes.headline;
+        if (copyRes?.headline && fmt === "image") {
+          body.copy_headline = copyRes.headline;
+          body.copy_subline  = copyRes.subline || "";
+          body.copy_cta      = copyRes.cta     || "";
+        }
         const key = fmt==="image"?"kv":fmt==="tvc"?"tvc":"reel";
         const r = await fetch(`${API_BASE}/agents/${key}/run`, {
           method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body),
@@ -766,9 +771,10 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
             ) : (
               <div style={{ display:"flex", flexDirection:"column" as const, gap:14 }}>
                 {[
-                  { key:"Headline", val:copyRes.headline, large:true },
-                  { key:"Body Copy", val:copyRes.body, large:false },
-                  { key:"Call to Action", val:copyRes.cta, large:false },
+                  { key:"Headline",       val:copyRes.headline, large:true  },
+                  { key:"Subline",        val:copyRes.subline,  large:false },
+                  { key:"Body Copy",      val:copyRes.body,     large:false },
+                  { key:"Call to Action", val:copyRes.cta,      large:false },
                 ].map(f => (
                   <div key={f.key} style={{ padding:"16px 20px", borderRadius:14,
                     background:"var(--card-bg)", border:"1.5px solid var(--card-border)",

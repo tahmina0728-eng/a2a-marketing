@@ -104,6 +104,9 @@ def run_agent_standalone(
     market: str = "",
     audience: str = "",
     copy_headline: str = "",
+    copy_subline: str = "",
+    copy_body: str = "",
+    copy_cta: str = "",
     campaign_type: str = "",
     campaign_id: str = "",
     concept_id: str = "",
@@ -130,6 +133,7 @@ def run_agent_standalone(
             brand, text,
             product_name=product_name, market=market,
             audience=audience, copy_headline=copy_headline,
+            copy_subline=copy_subline, copy_body=copy_body, copy_cta=copy_cta,
             campaign_type=campaign_type, campaign_id=campaign_id,
             concept_id=concept_id, aspect_ratio=aspect_ratio,
         )
