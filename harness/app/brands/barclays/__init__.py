@@ -587,7 +587,7 @@ def _render_subcopy(draw, copy_subline: str, is_wimbledon: bool, fnt, text_x: in
     if not is_wimbledon:
         return draw
     _BLUE, _WHITE = BLUE, WHITE
-    sub_sz  = max(10, int(PH * 0.022))
+    sub_sz  = max(14, int(PH * 0.030))
     sub_fnt = fnt(sub_sz)
     sub_lh  = int(sub_sz * 1.35)
 
@@ -626,7 +626,7 @@ def _render_bottom_bar(canvas, PX: int, PY: int, PW: int, PH: int, TW: int, TH: 
     from PIL import Image, ImageDraw
     bar_h = int(PH * 0.22)
     bar_y = PY + PH - bar_h
-    bar_alpha = 155 if is_wimbledon else 178
+    bar_alpha = 105 if is_wimbledon else 155
     layer = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
     d.rectangle([PX, bar_y, PX + PW, PY + PH], fill=(*BLACK, bar_alpha))
@@ -678,18 +678,13 @@ def _render_wimbledon_lockup(canvas, draw, bar_y: int, bar_h: int, PX: int, PW: 
         from PIL import ImageDraw as _ID
         draw = _ID.Draw(canvas)
 
-    # Right: Barclays wordmark pill
+    # Right: Barclays wordmark — primary_white asset renders directly on the dark bar
     bk = _load_logo_file(logo_uri, [_assets["logos"]["primary_white"], _assets["logos"]["wordmark_white"]])
     if bk:
-        lh = max(22, int(bar_h * 0.50))
+        lh = max(22, int(bar_h * 0.48))
         lw = int(bk.width * lh / bk.height)
         bk = bk.resize((lw, lh), Image.LANCZOS)
-        pad = 6
-        pill = Image.new("RGBA", (lw + pad * 2, lh + pad * 2), (*_WHITE, 255))
-        lf = Image.new("RGBA", bk.size, (*_WHITE, 255))
-        lf.alpha_composite(bk)
-        pill.paste(lf, (pad, pad))
-        canvas.alpha_composite(pill, (PX + PW - lw - pad * 2 - margin, bar_y + (bar_h - lh - pad * 2) // 2))
+        canvas.alpha_composite(bk, (PX + PW - lw - margin, bar_y + (bar_h - lh) // 2))
 
     return canvas
 

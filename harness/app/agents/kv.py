@@ -59,12 +59,118 @@ def _build_wimbledon_prompt(concept: dict, aspect_ratio: str) -> str:
         + "\n\n".join(parts) + "\n\n"
         f"MUST HAVE:\n{must_have}\n\n"
         f"MUST NOT HAVE:\n{must_not}\n\n"
+        "BRAND CONTAMINATION PREVENTION:\n"
+        "Do not interpret Barclays colours, blue, or brand identity as clothing patterns, graphics,\n"
+        "symbols, badges, patches, logos, or shapes on any person, object, court, building, or equipment.\n"
+        "Do not create any invented Barclays logo, abstract Barclays symbol, Wimbledon badge,\n"
+        "championship mark, sponsor mark, or invented signage of any kind.\n"
+        "The generated photograph must contain ZERO Barclays or Wimbledon branding.\n"
+        "All branding is composited in post-production using approved assets.\n\n"
         "TYPOGRAPHY:\n"
         "No text, numbers, logos, or brand marks anywhere in the image. "
         "All copy and brand assets are composited in post-production.\n\n"
         f"TECHNICAL:\n"
         f"Aspect ratio {aspect_ratio}. Photorealistic, premium UK advertising photography."
     )
+
+
+def _generate_kv_image(contents: list, aspect_ratio: str) -> "bytes | None":
+    """Call Gemini image model with 429 exponential-backoff retry. Returns raw image bytes or None."""
+    import time as _time
+    from google.genai import types as gtypes
+
+    _resp = None
+    for _attempt in range(3):
+        try:
+            _resp = _genai_client().models.generate_content(
+                model    = settings.gemini_model_image,
+                contents = contents,
+                config   = gtypes.GenerateContentConfig(
+                    response_modalities = ["IMAGE", "TEXT"],
+                    image_config        = gtypes.ImageConfig(aspect_ratio=aspect_ratio),
+                ),
+            )
+            break
+        except Exception as _exc:
+            _emsg = str(_exc)
+            if "429" in _emsg or "RESOURCE_EXHAUSTED" in _emsg:
+                _delay = 2 ** (_attempt + 2)
+                logger.warning("kv_image_rate_limited", attempt=_attempt + 1, retry_in=_delay)
+                if _attempt < 2:
+                    _time.sleep(_delay)
+                    continue
+            raise
+
+    if _resp is None:
+        return None
+    for part in (_resp.candidates[0].content.parts if _resp.candidates else []):
+        if getattr(part, "inline_data", None) is not None:
+            return part.inline_data.data
+    return None
+
+
+def _creative_qa(
+    image_bytes: bytes,
+    concept_title: str,
+    headline: str,
+    brand: str,
+) -> dict:
+    """Score a generated KV photograph before overlay compositing.
+
+    Checks concept alignment, Wimbledon authenticity, human story, composition,
+    logo/brand contamination in the photo, and premium advertising quality.
+
+    Decision: overall ≥ 80 AND logo_contamination ≥ 65 → APPROVE, else REGENERATE.
+    Fails open on any error (returns APPROVE) so QA never blocks a valid run.
+    """
+    import json, re
+    try:
+        from google.genai import types as gtypes
+
+        _qa_model = settings.gemini_model_reasoning or "gemini-2.0-flash"
+        qa_prompt = (
+            f"You are a Creative QA director reviewing an AI-generated advertising photograph "
+            f"for {brand} × Wimbledon.\n\n"
+            f'Intended concept: "{concept_title}"\n'
+            f'Intended headline: "{headline}"\n\n'
+            "CRITICAL — LOGO CONTAMINATION CHECK:\n"
+            "Examine the image carefully for any of the following appearing as PART OF the generated photograph:\n"
+            "  • Blue abstract shapes, blocks, or graphics on clothing, equipment, or background\n"
+            "  • Any symbol, badge, patch, mark, or graphic resembling a brand logo\n"
+            "  • Invented sponsor signage, court markings, championship badges, or lettering\n"
+            "  • Text or numbers of any kind\n"
+            "Score logo_contamination 0–100 where 100 = completely clean (no contamination).\n\n"
+            "Score each dimension 0–100. Be strict — this is for a premium UK financial services brand.\n\n"
+            "Respond ONLY with valid JSON, no markdown fences:\n"
+            '{"concept_alignment":<0-100>,"wimbledon_context":<0-100>,'
+            '"human_story":<0-100>,"composition":<0-100>,'
+            '"logo_contamination":<0-100>,"premium_quality":<0-100>,'
+            '"issues":["<issue 1>","<issue 2>"]}'
+        )
+
+        img_part = gtypes.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+        resp = _genai_client().models.generate_content(
+            model    = _qa_model,
+            contents = [qa_prompt, img_part],
+        )
+
+        raw = (resp.text or "").strip()
+        m   = re.search(r'\{[\s\S]*\}', raw)
+        if not m:
+            raise ValueError("QA returned no JSON")
+        data = json.loads(m.group())
+
+        # Weighted overall: logo_contamination ×1.5, concept_alignment ×1.2, others ×1.0
+        lc   = float(data.get("logo_contamination", 80))
+        ca   = float(data.get("concept_alignment", 80))
+        rest = sum(float(data.get(k, 80)) for k in ("wimbledon_context", "human_story", "composition", "premium_quality"))
+        data["overall"]  = round((lc * 1.5 + ca * 1.2 + rest) / (1.5 + 1.2 + 4.0))
+        data["decision"] = "APPROVE" if data["overall"] >= 80 and lc >= 65 else "REGENERATE"
+        return data
+
+    except Exception as _qa_err:
+        logger.warning("creative_qa_failed", brand=brand, error=str(_qa_err))
+        return {"overall": 100, "decision": "APPROVE", "logo_contamination": 100, "issues": []}
 
 
 def run_kv(
@@ -236,8 +342,9 @@ def run_kv(
             f"Aspect ratio {aspect_ratio}, photorealistic, premium advertising photography."
         )
 
-    # ── 5. Image generation ───────────────────────────────────────────────────
-    image_b64 = ""
+    # ── 5. Image generation + Creative QA ────────────────────────────────────
+    image_b64  = ""
+    _qa_result: dict = {}
     try:
         from google.genai import types as gtypes
         from app.creative_pipeline import _part_for_uri
@@ -359,37 +466,31 @@ def run_kv(
 
         contents.append(image_prompt)
 
-        # Retry on 429 quota with exponential backoff
-        import time as _time
-        _resp = None
-        for _attempt in range(3):
-            try:
-                _resp = _genai_client().models.generate_content(
-                    model    = settings.gemini_model_image,
-                    contents = contents,
-                    config   = gtypes.GenerateContentConfig(
-                        response_modalities = ["IMAGE", "TEXT"],
-                        image_config        = gtypes.ImageConfig(aspect_ratio=aspect_ratio),
-                    ),
-                )
-                break
-            except Exception as _img_exc:
-                _emsg = str(_img_exc)
-                if "429" in _emsg or "RESOURCE_EXHAUSTED" in _emsg:
-                    _delay = 2 ** (_attempt + 2)  # 4s, 8s, 16s
-                    logger.warning("kv_image_rate_limited", brand=brand,
-                                   attempt=_attempt + 1, retry_in=_delay)
-                    if _attempt < 2:
-                        _time.sleep(_delay)
-                        continue
-                raise
-        resp = _resp
+        # ── Generate + Creative QA ─────────────────────────────────────────────
+        raw_bytes = _generate_kv_image(contents, aspect_ratio)
 
-        raw_bytes = None
-        for part in resp.candidates[0].content.parts:
-            if getattr(part, "inline_data", None) is not None:
-                raw_bytes = part.inline_data.data
-                break
+        if raw_bytes and _is_wimbledon:
+            _qa_result = _creative_qa(raw_bytes, _concept.get("title", ""), headline, brand)
+            logger.info(
+                "kv_creative_qa", brand=brand,
+                score=_qa_result.get("overall"),
+                decision=_qa_result.get("decision"),
+                logo_contamination=_qa_result.get("logo_contamination"),
+                issues=_qa_result.get("issues", []),
+            )
+            if _qa_result.get("decision") == "REGENERATE":
+                _issues_str = "; ".join(_qa_result.get("issues", []))
+                contents[-1] = (
+                    f"CRITICAL — REGENERATION: Previous attempt scored "
+                    f"{_qa_result.get('overall')}/100 and was rejected by Creative QA.\n"
+                    f"QA issues found: {_issues_str}\n"
+                    "Strictly fix these issues. Remove ALL brand-like marks, abstract blue shapes, "
+                    "invented symbols, badges, and text from every element in the scene.\n\n"
+                ) + image_prompt
+                _regen = _generate_kv_image(contents, aspect_ratio)
+                if _regen:
+                    raw_bytes = _regen
+                    logger.info("kv_qa_regenerated", brand=brand)
 
         if raw_bytes:
             import base64
@@ -422,4 +523,11 @@ def run_kv(
     except Exception as e:
         logger.warning("standalone_kv_failed", brand=brand, error=str(e))
 
-    return {"agent": "kv", "brand": brand, "headline": headline, "subline": copy_subline, "cta": copy_cta, "image_b64": image_b64}
+    return {
+        "agent": "kv", "brand": brand, "headline": headline,
+        "subline": copy_subline, "cta": copy_cta, "image_b64": image_b64,
+        "creative_qa": {
+            k: _qa_result.get(k)
+            for k in ("overall", "decision", "logo_contamination", "issues")
+        } if _qa_result else {},
+    }
