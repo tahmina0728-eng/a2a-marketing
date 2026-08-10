@@ -599,7 +599,7 @@ def _render_subcopy(draw, copy_subline: str, is_wimbledon: bool, fnt, text_x: in
     proud_sz  = max(9, int(PH * 0.019))
     proud_fnt = fnt(proud_sz)
     proud_label = _wimb_campaign["relationship"]["short_display_name"]
-    draw.text((text_x, sub_y + sub_lh + int(proud_sz * 0.3)), proud_label, fill=_BLUE, font=proud_fnt)
+    draw.text((text_x, sub_y + sub_lh + int(proud_sz * 0.3)), proud_label, fill=_WHITE, font=proud_fnt)
     return draw
 
 
@@ -654,34 +654,55 @@ def _load_logo_file(logo_uri: str, names: list):
 
 
 def _render_wimbledon_lockup(canvas, draw, bar_y: int, bar_h: int, PX: int, PW: int, text_x: int, margin: int, logo_uri: str, fnt):
-    """Render the Wimbledon bottom bar: approved shield asset + Barclays wordmark pill.
+    """Render the Wimbledon bottom bar.
 
-    Partnership wording comes only from approved image assets — never reconstructed from text.
+    Layout matches real Barclays × Wimbledon ads:
+      [Wimbledon badge]  OFFICIAL BANK        [Barclays eagle + wordmark]
+                         OF WIMBLEDON
+
+    The Wimbledon badge PNG already carries its own circular white background —
+    no additional white pill is added (which was causing the "sticker" look).
     """
-    from PIL import Image
+    from PIL import Image, ImageDraw as _ID
     _WHITE = WHITE
     partner_assets = _assets["partnerships"]["wimbledon"]
 
-    # Left: Wimbledon shield (approved image asset — no dynamic text generation)
+    shield_right = text_x  # tracks where badge ends so text can start after it
+
+    # Left: Wimbledon shield — render directly; badge PNG has its own white circle
     shield = _load_logo_file(logo_uri, [partner_assets["shield"], partner_assets["lockup"]])
     if shield:
-        sh = max(22, int(bar_h * 0.52))
-        sw = int(shield.width * sh / shield.height)
+        sh  = max(24, int(bar_h * 0.62))
+        sw  = int(shield.width * sh / shield.height)
         shield = shield.resize((sw, sh), Image.LANCZOS)
-        sp = max(4, int(sh * 0.12))
-        pill = Image.new("RGBA", (sw + sp * 2, sh + sp * 2), (*_WHITE, 255))
-        bg = Image.new("RGBA", shield.size, (*_WHITE, 255))
-        bg.alpha_composite(shield)
-        pill.paste(bg, (sp, sp))
-        sly = bar_y + (bar_h - sh - sp * 2) // 2
-        canvas.alpha_composite(pill, (text_x, sly))
-        from PIL import ImageDraw as _ID
+        sly = bar_y + (bar_h - sh) // 2
+        canvas.alpha_composite(shield, (text_x, sly))
+        shield_right = text_x + sw + max(10, int(bar_h * 0.14))
         draw = _ID.Draw(canvas)
 
-    # Right: Barclays wordmark — primary_white asset renders directly on the dark bar
+    # Centre: "OFFICIAL BANK / OF WIMBLEDON" in white — matches real ad lockup
+    _label = _wimb_campaign["relationship"].get(
+        "bar_label",
+        _wimb_campaign["relationship"]["short_display_name"],
+    ).upper()
+    if " OF " in _label:
+        _idx  = _label.index(" OF ")
+        lines = [_label[:_idx], "OF " + _label[_idx + 4:]]
+    else:
+        lines = [_label]
+    ct_sz  = max(8, int(bar_h * 0.17))
+    ct_fnt = fnt(ct_sz)
+    ct_lh  = int(ct_sz * 1.30)
+    ct_total = len(lines) * ct_lh
+    ct_y = bar_y + (bar_h - ct_total) // 2
+    for line in lines:
+        draw.text((shield_right, ct_y), line, fill=_WHITE, font=ct_fnt)
+        ct_y += ct_lh
+
+    # Right: Barclays wordmark — primary_white renders directly on dark bar
     bk = _load_logo_file(logo_uri, [_assets["logos"]["primary_white"], _assets["logos"]["wordmark_white"]])
     if bk:
-        lh = max(22, int(bar_h * 0.48))
+        lh = max(22, int(bar_h * 0.50))
         lw = int(bk.width * lh / bk.height)
         bk = bk.resize((lw, lh), Image.LANCZOS)
         canvas.alpha_composite(bk, (PX + PW - lw - margin, bar_y + (bar_h - lh) // 2))
@@ -757,8 +778,10 @@ def apply_overlay(
         # 4. Border eagle (top-right blue border cell)
         canvas = _render_border_eagle(canvas, eagle_src, border, TW)
 
-        # 5. Dark gradient scrim (top 60%)
-        canvas = _render_gradient_scrim(canvas, PX, PY, PW, PH, TW, TH)
+        # 5. Gradient scrim — skipped for Wimbledon (real Barclays × Wimbledon ads
+        #    rely on the photograph's own contrast; scrim makes it look shadowed)
+        if not is_wimbledon:
+            canvas = _render_gradient_scrim(canvas, PX, PY, PW, PH, TW, TH)
 
         # 6. Headline
         margin = max(16, int(PW * 0.055))
