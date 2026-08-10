@@ -3448,7 +3448,9 @@ Create a Big Idea for this campaign. Output:
     # ── Wimbledon override: campaign theme selects one of 5 creative territories ──
     _is_wimbledon = _is_barclays and any(
         "wimbledon" in str(v).lower()
-        for v in [fan_truth, product_name, big_idea_seed, audience]
+        for v in [fan_truth, product_name, big_idea_seed, audience, season,
+                  logo_uri,  # logo_uri contains "wimbledon" when main.py selected co-brand logo
+                  copy_headline]
         if v
     )
     if _is_wimbledon:

@@ -716,15 +716,19 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         _ordered_products = (_png_products + _jpg_products)[:5]
 
         # Primary logo — for Barclays, auto-select the co-brand Wimbledon lockup
-        # when the campaign is Wimbledon-related (product or fan truth mentions it).
+        # when ANY brief field references Wimbledon (name, season, product, fan truth, notes).
         _is_wimbledon_campaign = (
             brief.brand.lower() == "barclays" and any(
                 "wimbledon" in str(v).lower()
                 for v in [
-                    getattr(brief, "product", ""),
-                    getattr(brief, "fan_truth", ""),
+                    getattr(brief, "campaign_name", "") or "",
+                    getattr(brief, "product", "") or "",
+                    getattr(brief, "fan_truth", "") or "",
+                    getattr(brief, "season", "") or "",
                     getattr(brief, "notes", "") or "",
+                    getattr(brief, "audience", "") or "",
                 ]
+                if v
             )
         )
         if _is_wimbledon_campaign:
