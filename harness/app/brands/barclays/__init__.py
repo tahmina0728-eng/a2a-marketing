@@ -258,6 +258,53 @@ def select_concepts(
     return _pair(themes[0])
 
 
+def select_concept(
+    big_idea_seed: str,
+    copy_headline: str,
+    fan_truth: str,
+    creative_theme: str = "",
+    concept_id: str = "",
+) -> dict:
+    """Return the best-matching concept dict (raw fields, not pre-formatted string).
+
+    Priority:
+      1. Exact concept_id match (e.g. "c1_journey")
+      2. Structured creative_theme match (e.g. "progress")
+      3. Keyword match across prompt + headline + fan_truth
+      4. Default theme first concept
+    """
+    themes = _wimb_concepts["themes"]
+
+    # 1. Exact concept_id
+    if concept_id:
+        for theme in themes:
+            for concept in theme["concepts"]:
+                if concept["id"] == concept_id:
+                    return concept
+
+    # 2. Structured theme key
+    if creative_theme:
+        for theme in themes:
+            if theme["id"] == creative_theme:
+                return theme["concepts"][0]
+
+    # 3. Keyword fallback — longest match first
+    seed = " ".join(filter(None, [big_idea_seed, copy_headline, fan_truth])).lower()
+    kw_index = [(kw, theme) for theme in themes for kw in theme.get("keywords", [])]
+    kw_index.sort(key=lambda p: -len(p[0]))
+    for kw, theme in kw_index:
+        if kw in seed:
+            return theme["concepts"][0]
+
+    # 4. Default
+    default_id = _wimb_concepts.get("default_theme", "partnership")
+    for theme in themes:
+        if theme["id"] == default_id:
+            return theme["concepts"][0]
+
+    return themes[0]["concepts"][0]
+
+
 # ── Reel — scene direction ────────────────────────────────────────────────────
 
 def _pick_reel_concept(big_idea: str, fan_truth: str, copy_headline: str, concept_key: str = "") -> tuple:

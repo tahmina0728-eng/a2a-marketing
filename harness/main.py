@@ -2291,7 +2291,10 @@ class AgentStandaloneRequest(_BaseModel):
     market:        str = ""  # Market/region for currency resolution
     audience:      str = ""  # Target audience (drives scene people in Sunrise offer images)
     copy_headline: str = ""  # Headline from Copy Agent step — used instead of generating a new one
-    campaign_type: str = ""  # Structured campaign identifier (e.g. "wimbledon") for brand-specific overrides
+    campaign_type: str = ""  # Legacy: kept for backwards compat; prefer campaign_id
+    campaign_id:   str = ""  # Explicit campaign identifier, e.g. "wimbledon" — exact match, no substring
+    concept_id:    str = ""  # Specific creative concept, e.g. "c1_journey" — skips keyword matching
+    aspect_ratio:  str = "16:9"  # Output image aspect ratio: "16:9" | "1:1" | "4:5" | "9:16"
 
 
 @app.post("/agents/{agent_key}/run")
@@ -2307,7 +2310,7 @@ async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
             agent_standalone.run_agent_standalone,
             agent_key, req.prompt, req.duration, req.image_b64,
             req.product_name, req.market, req.audience, req.copy_headline,
-            req.campaign_type,
+            req.campaign_type, req.campaign_id, req.concept_id, req.aspect_ratio,
         )
         return result
     except ValueError as e:

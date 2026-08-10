@@ -472,7 +472,10 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         const body: Record<string,unknown> = { prompt };
         if (brand)   body.brand = brand;
         if (fmt==="tvc") body.duration = parseInt(tvcLen);
-        if (brand === "Barclays" && barclaysCampaign) body.campaign_type = barclaysCampaign.toLowerCase();
+        if (brand === "Barclays" && barclaysCampaign) {
+          body.campaign_type = barclaysCampaign.toLowerCase();
+          body.campaign_id   = barclaysCampaign.toLowerCase(); // explicit ID — exact match, no substring
+        }
         if (product) {
           // product stores just the plan name ("Easy Internet"); build the full
           // formatted string with the current market's currency at send time so

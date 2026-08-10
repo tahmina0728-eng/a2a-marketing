@@ -10,20 +10,101 @@ from app.brands import barclays as _barclays
 logger   = structlog.get_logger()
 settings = get_settings()
 
+# Real enterprise brands — replace "fictional brand" prompt with
+# explicit "no logos — composited in post-production" instruction.
+_REAL_BRANDS = frozenset({"barclays", "haleon", "ubs bank", "sunrise", "glenfiddich", "boozt"})
 
-def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", audience: str = "", copy_headline: str = "", campaign_type: str = "") -> dict:
-    """
-    Standalone Morphis: one text call for a headline + visual scene, one image
-    call for the actual key visual, then the same Pillow brand-overlay
-    post-processing (_apply_brand_overlay) the full pipeline uses so the
-    headline actually renders on the image instead of falling back to just
-    the brand name.
 
-    Skips the full pipeline's reference-banner vision analysis step (an extra
-    Gemini call for marginal quality gain) and any upstream big-idea/copy
-    context — same standalone tradeoff already accepted for the other agents.
+def _build_wimbledon_prompt(concept: dict, aspect_ratio: str) -> str:
+    """Build a structured image generation prompt from a concepts.json creative_direction dict.
+
+    Every field that controls the image model comes from concepts.json — not
+    from the LLM at generation time. The model receives a deterministic brief
+    (CAMPAIGN / CONCEPT / SUBJECT / SETTING / MUST HAVE / MUST NOT HAVE).
     """
-    # Derive audience descriptor for scene persona
+    d     = concept.get("creative_direction", {})
+    title = concept.get("title", "WIMBLEDON")
+
+    parts = []
+    if d.get("subject"):      parts.append(f"SUBJECT:\n{d['subject']}")
+    if d.get("relationship"): parts.append(f"RELATIONSHIP:\n{d['relationship']}")
+    if d.get("action"):       parts.append(f"ACTION:\n{d['action']}")
+    if d.get("narrative"):    parts.append(f"NARRATIVE:\n{d['narrative']}")
+    if d.get("setting"):      parts.append(f"SETTING:\n{d['setting']}")
+    if d.get("emotion"):      parts.append(f"EMOTION:\n{d['emotion'].capitalize()}")
+    if d.get("composition"):  parts.append(f"COMPOSITION:\n{d['composition']}")
+    if d.get("lighting"):     parts.append(f"LIGHTING:\n{d['lighting']}")
+    if d.get("photography"):  parts.append(f"PHOTOGRAPHY STYLE:\n{d['photography']}")
+
+    must_have = (
+        "- Authentic Wimbledon tennis context (grass court, rackets, tennis clothing)\n"
+        "- Genuine human emotion and connection\n"
+        "- English summer atmosphere and light\n"
+        "- Premium cinematic photography quality — not stock photo poses\n"
+        "- Generous clean negative space on the LEFT THIRD for headline overlay in post-production"
+    )
+    must_not = (
+        "- Business suits, office attire, or corporate dress\n"
+        "- Office buildings, bank branches, or financial environments\n"
+        "- Financial products, app screens, or digital displays\n"
+        "- Logos, brand marks, wordmarks, or text of any kind\n"
+        "- Indoor sport facilities or non-Wimbledon settings\n"
+        "- Generic stock photography poses or staged expressions\n"
+        "- City skylines or urban corporate environments"
+    )
+
+    return (
+        f"CAMPAIGN: Barclays × Wimbledon — Official Banking Partner of The Championships\n"
+        f"CONCEPT: {title}\n\n"
+        + "\n\n".join(parts) + "\n\n"
+        f"MUST HAVE:\n{must_have}\n\n"
+        f"MUST NOT HAVE:\n{must_not}\n\n"
+        "TYPOGRAPHY:\n"
+        "No text, numbers, logos, or brand marks anywhere in the image. "
+        "All copy and brand assets are composited in post-production.\n\n"
+        f"TECHNICAL:\n"
+        f"Aspect ratio {aspect_ratio}. Photorealistic, premium UK advertising photography."
+    )
+
+
+def run_kv(
+    brand: str,
+    prompt: str,
+    product_name: str = "",
+    market: str = "",
+    audience: str = "",
+    copy_headline: str = "",
+    campaign_type: str = "",
+    campaign_id: str = "",
+    concept_id: str = "",
+    aspect_ratio: str = "16:9",
+) -> dict:
+    """
+    Standalone Morphis — key visual generator.
+
+    Architecture:
+      1. Campaign/concept loaded from JSON (brand.json + concepts.json) — not hallucinated.
+      2. Headline comes from the Copy Agent (copy_headline). Generating a fallback
+         is supported for standalone use but logs a warning.
+      3. Scene direction comes from concepts.json for structured campaigns (Wimbledon).
+         Other brands use an LLM-generated scene until their campaign JSON exists.
+      4. Image model receives a structured brief only — no logos passed to Gemini
+         for campaigns where brand marks must not appear in the photo.
+      5. Overlay (_barclays.apply_overlay / _apply_brand_overlay) composites all
+         brand assets — logo, lockup, headline, subline — in post-production.
+    """
+
+    # ── 1. Campaign detection ─────────────────────────────────────────────────
+    # Exact match on campaign_id (preferred). Fall back to campaign_type only
+    # when campaign_id is absent — both are sent by the frontend for compat.
+    # Exact match prevents "partnership" (a theme name) from being mistaken for
+    # "wimbledon" (a campaign name) when substring matching is used.
+    _campaign_id  = (campaign_id or campaign_type or "").lower().strip()
+    _is_wimbledon = brand.lower() == "barclays" and _campaign_id == "wimbledon"
+    _is_haleon    = brand.lower() == "haleon"
+    _is_real      = brand.lower() in _REAL_BRANDS
+
+    # ── 2. Audience persona ───────────────────────────────────────────────────
     _al = (audience or "").lower()
     if "famil" in _al:
         _who = "a family (parents in their 30s-40s with one or two children aged 8-14)"
@@ -42,143 +123,151 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
     else:
         _who = "two or three people of diverse ages"
 
-    _is_wimbledon = brand.lower() == "barclays" and "wimbledon" in campaign_type.lower()
-    _is_haleon_brand = brand.lower() == "haleon"
-
-    if _is_wimbledon:
-        # Headline only — scene direction comes from concepts.json, not the LLM.
-        _morphis_sys = (
-            "You are Morphis, the key visual designer for an AI marketing campaign system. "
-            "You specialise in sports partnership advertising. Your images feel aspirational, "
-            "human, and emotionally resonant — real people in meaningful sporting moments."
-        )
-        _morphis_instr = (
-            "The campaign is Barclays × Wimbledon — Official Banking Partner of The Championships. "
-            "The creative platform is progress through sport and human connection. "
-            'Respond ONLY with JSON, no markdown fences: '
-            '{"headline": "short aspirational campaign headline, 4-8 words — about progress, belief, or shared achievement. No financial product claims."}'
-        )
-    elif product_name and _is_haleon_brand:
-        # Haleon health products — scene must show the specific product, not a smartphone
-        _morphis_sys = (
-            "You are Morphis, the key visual designer for an AI marketing campaign system. "
-            "You specialise in healthcare and FMCG advertising. Your images feel warm, human, "
-            "and credible — real people in relatable everyday health moments."
-        )
-        _morphis_instr = (
-            f'The Haleon product being advertised is: "{product_name}". '
-            f'The target audience is: {_who}. '
-            'Respond ONLY with JSON, no markdown fences: '
-            '{"headline": "short empathetic campaign headline, 4-8 words", '
-            f'"scene": "2-3 sentences: show {_who} in a warm everyday moment where '
-            f'they are holding or have just used the {product_name} product pack/box/tube — '
-            'the product packaging is clearly visible and in focus in their hand or on a surface nearby. '
-            'People occupy the RIGHT TWO-THIRDS of the frame. The LEFT THIRD is clean, bright, '
-            'uncluttered (white wall, soft bokeh, or open daylight). '
-            'Warm natural daylight, no clinical settings, no text or logos."}'
-        )
-    elif product_name:
-        _morphis_sys = (
-            "You are Morphis, the key visual designer for an AI marketing campaign system. "
-            "You specialise in product offer advertising — your images must feel exciting, "
-            "energetic, and celebratory. The campaign is about a special deal or plan, "
-            "so the mood should convey joy, freedom, achievement, and the thrill of a great offer."
-        )
-        _morphis_instr = (
-            f'The product being promoted is: "{product_name}". '
-            f'The target audience is: {_who}. '
-            'Respond ONLY with JSON, no markdown fences: '
-            '{"headline": "bold 4-7 word offer headline — exciting, benefit-driven, action-oriented", '
-            f'"scene": "2-3 sentences: show {_who} actively using a smartphone together — '
-            'holding it, smiling at the screen, or sharing the display. They occupy the RIGHT HALF '
-            'of the frame. The upper-left area is naturally light, airy, and uncluttered — '
-            'bright sky, soft background, or blurred environment. Clean, aspirational, joyful. '
-            'Do not mention any text, words, logos, or price figures."}'
-        )
+    # ── 3. Headline ───────────────────────────────────────────────────────────
+    # Headline should come from the Copy Agent. If absent, generate a fallback
+    # and warn — standalone use requires this, but copy should be brand-approved
+    # before going to production.
+    if copy_headline and copy_headline.strip():
+        headline = copy_headline.strip()
     else:
-        _morphis_sys = (
-            "You are Morphis, the key visual designer for an AI marketing campaign system. "
-            "You write a short campaign headline and describe a visual scene for an image generator."
+        logger.warning(
+            "kv_no_copy_headline", brand=brand, campaign=_campaign_id,
+            note="headline should come from Copy Agent — generating standalone fallback",
         )
-        _morphis_instr = (
-            f'The target audience is: {_who}. '
-            'Respond ONLY with JSON, no markdown fences: '
-            '{"headline": "short punchy campaign headline, 4-8 words", '
-            f'"scene": "2-3 sentences: show {_who} in a vibrant, aspirational setting. '
-            'Setting, mood, lighting — no text, words, or logos in the image."}'
-        )
+        if _is_wimbledon:
+            _hl_sys  = ("You are Morphis, a sports partnership advertising specialist.")
+            _hl_instr = (
+                "The campaign is Barclays × Wimbledon — Official Banking Partner of The Championships. "
+                "Creative platform: progress through sport and human connection. "
+                'Respond ONLY with JSON: {"headline": "short aspirational headline, 4-8 words — '
+                'about progress, belief, or shared achievement. No financial product claims."}'
+            )
+        elif product_name and _is_haleon:
+            _hl_sys  = "You are Morphis, a healthcare and FMCG advertising specialist."
+            _hl_instr = (
+                f'Product: "{product_name}". '
+                'Respond ONLY with JSON: {"headline": "short empathetic headline, 4-8 words"}'
+            )
+        elif product_name:
+            _hl_sys  = "You are Morphis, a product offer advertising specialist."
+            _hl_instr = (
+                f'Product: "{product_name}". '
+                'Respond ONLY with JSON: {"headline": "bold 4-7 word offer headline"}'
+            )
+        else:
+            _hl_sys  = "You are Morphis, a creative advertising visual designer."
+            _hl_instr = 'Respond ONLY with JSON: {"headline": "short punchy headline, 4-8 words"}'
+        headline = (_generate(_hl_sys, brand, prompt, _hl_instr).get("headline", "") or prompt)
 
-    data = _generate(_morphis_sys, brand, prompt, _morphis_instr)
-
-    # Use copy agent's headline if provided; otherwise use LLM-generated one
-    headline = copy_headline.strip() if copy_headline and copy_headline.strip() else (data.get("headline", "") or prompt)
-
+    # ── 4. Scene / visual direction ───────────────────────────────────────────
     if _is_wimbledon:
-        # Scene comes from concepts.json, not the LLM.
-        # select_concepts() keyword-matches the prompt + headline against themes
-        # (partnership / progress / belief / community / tradition) and returns
-        # the structured creative_direction from the matching concept.
-        c1_dir, _ = _barclays.select_concepts(
-            big_idea_seed=prompt,
-            copy_headline=headline,
-            fan_truth="",
+        # Scene comes from concepts.json — not from the LLM.
+        # select_concept() keyword-matches the prompt + headline against the five
+        # creative territories; concept_id bypasses matching for explicit selection.
+        _concept      = _barclays.select_concept(
+            big_idea_seed=prompt, copy_headline=headline,
+            fan_truth="", concept_id=concept_id,
         )
-        scene = c1_dir
-        logger.info("kv_wimbledon_concept_selected", brand=brand, concept=scene[:80])
+        image_prompt  = _build_wimbledon_prompt(_concept, aspect_ratio)
+        logger.info("kv_wimbledon_concept", brand=brand,
+                    concept=_concept.get("title", ""), id=_concept.get("id", ""))
     else:
-        scene = data.get("scene", "") or prompt
+        # Non-structured path — LLM generates scene for brands without campaign JSON.
+        if product_name and _is_haleon:
+            _sc_sys  = (
+                "You are Morphis, the key visual designer for an AI marketing campaign system. "
+                "You specialise in healthcare and FMCG advertising."
+            )
+            _sc_instr = (
+                f'Product: "{product_name}". Audience: {_who}. '
+                'Respond ONLY with JSON: '
+                '{"scene": "2-3 sentences: show ' + _who + ' holding or having just used '
+                f'the {product_name} pack/box/tube — packaging clearly visible. '
+                'RIGHT TWO-THIRDS. LEFT THIRD clean, bright, uncluttered. '
+                'Warm natural daylight. No clinical settings, no text, no logos."}'
+            )
+        elif product_name:
+            _sc_sys  = (
+                "You are Morphis, the key visual designer for an AI marketing campaign system. "
+                "You specialise in product offer advertising."
+            )
+            _sc_instr = (
+                f'Product: "{product_name}". Audience: {_who}. '
+                'Respond ONLY with JSON: '
+                '{"scene": "2-3 sentences: show ' + _who + ' actively using a smartphone — '
+                'holding it, smiling at screen. RIGHT HALF of frame. '
+                'Upper-left light, airy, uncluttered. No text, logos, price figures."}'
+            )
+        else:
+            _sc_sys  = "You are Morphis, the key visual designer for an AI marketing campaign system."
+            _sc_instr = (
+                f'Audience: {_who}. '
+                'Respond ONLY with JSON: '
+                '{"scene": "2-3 sentences: show ' + _who + ' in a vibrant, aspirational setting. '
+                'Setting, mood, lighting — no text, words, or logos."}'
+            )
+        _scene = _generate(_sc_sys, brand, prompt, _sc_instr).get("scene", "") or prompt
 
+        # No-text rule — real brands get explicit "composited in post-production" wording;
+        # fictional/demo brands get the generic "no text" rule.
+        if _is_real:
+            _no_text = (
+                f"Do not render the {brand} logo, wordmark, or any brand marks — "
+                f"approved assets are composited in post-production.\n"
+                "No text, numbers, or typography anywhere in the image.\n\n"
+            )
+        else:
+            _no_text = (
+                "No text anywhere in the image except brand packaging labels if shown. "
+                "All headline copy is added in post-production.\n\n"
+            )
+
+        _product_rule = (
+            f"PRODUCT RULE: {product_name} packaging (box, tube, or bottle with its real colours "
+            f"and label) must be clearly visible — held in hand, on a surface, or on a shelf. "
+            f"Do NOT show any other product or unrelated packaging.\n\n"
+        ) if product_name and _is_haleon else ""
+
+        image_prompt = (
+            f"{_no_text}{_product_rule}{_scene}\n\n"
+            f"Aspect ratio {aspect_ratio}, photorealistic, premium advertising photography."
+        )
+
+    # ── 5. Image generation ───────────────────────────────────────────────────
     image_b64 = ""
     try:
         from google.genai import types as gtypes
         from app.creative_pipeline import _part_for_uri
 
-        loader = get_asset_loader()
-        brand_spelled = " - ".join(brand.upper())
-        if brand == "UBS Bank":
-            no_text_rule = (
-                "TYPOGRAPHY RULE: Absolutely NO text, logos, numbers, or words anywhere in the "
-                "image. All copy is added in post-production.\n\n"
-            )
-        else:
-            no_text_rule = (
-                f"CRITICAL BRAND RULE: Brand name spelled exactly: {brand_spelled} — this is a "
-                f"completely fictional brand, not a real-world product.\n"
-                "TYPOGRAPHY RULE: No text anywhere in the image except brand packaging labels "
-                "if products are shown. All headline copy is added in post-production.\n\n"
-            )
-        _product_rule = (
-            f"PRODUCT RULE: The product being advertised is {product_name}. "
-            f"The {product_name} packaging (its actual box, tube, or bottle with its real colours "
-            f"and label) must be clearly visible and prominent in the scene — "
-            f"held in someone's hand, on a surface, or on a shelf. "
-            f"Do NOT show any other product, generic bottle, or unrelated packaging.\n\n"
-        ) if product_name and _is_haleon_brand else ""
-        image_prompt = (
-            f"{no_text_rule}{_product_rule}{scene}\n\n"
-            "Aspect ratio 16:9, photorealistic, premium advertising photography."
-        )
-
+        loader   = get_asset_loader()
+        _bslug   = brand.split()[0].lower()
+        logos    = loader.list_logos(brand)
+        products = loader.list_products(brand)
         contents: list = []
-        logos = loader.list_logos(brand)
-        # Prefer a logo that contains the brand name and isn't a pure-white variant.
-        # Sunrise logo is skipped entirely — its distinctive S-circle causes Gemini to
-        # reproduce the logo in the generated image; we composite it in post-production.
-        _bslug = brand.split()[0].lower()
+
         _ref_logo = (
-            next((p for p in logos if _bslug in p.lower() and "_dark" in p.lower()), None) or
+            next((p for p in logos if _bslug in p.lower() and "_dark"  in p.lower()), None) or
             next((p for p in logos if _bslug in p.lower() and "_white" not in p.lower()), None) or
             next((p for p in logos if _bslug in p.lower()), None) or
             (logos[0] if logos else None)
         )
-        if _ref_logo and brand.lower() not in ("sunrise",) and (part := _part_for_uri(_ref_logo)):
-            contents.append(f"BRAND IDENTITY REFERENCE for {brand} — colour palette and style "
-                             f"only, do not render this logo in the image.")
-            contents.append(part)
-        products = loader.list_products(brand)
+
+        # For Wimbledon: do NOT pass any logo or brand image to Gemini — the
+        # generated photo must be brand-mark-free. The eagle, wordmark, and
+        # Wimbledon lockup are all composited by apply_overlay() afterwards.
+        # For other brands: pass logo as colour/style reference (not to be rendered).
+        if not _is_wimbledon and _ref_logo and _bslug not in ("sunrise",):
+            part = _part_for_uri(_ref_logo)
+            if part:
+                contents.append(
+                    f"BRAND IDENTITY REFERENCE for {brand} — colour palette and visual style only. "
+                    "Do NOT render this logo or any brand mark in the generated image."
+                )
+                contents.append(part)
+
         # Haleon: sort the matched sub-brand product to the front so Gemini
-        # gets the right packaging reference (not whatever comes first alphabetically).
-        if brand.lower() == "haleon" and product_name and products:
+        # sees the correct packaging reference first.
+        if _is_haleon and product_name and products:
             from pathlib import Path as _PPkv
             _pk = product_name.lower().replace("-", "").replace(" ", "")
             _pm = next(
@@ -188,21 +277,20 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
             )
             if _pm:
                 products = [_pm] + [p for p in products if p != _pm]
-        # For brands with no Products folder (e.g. Sunrise), use a campaign asset
-        # from the Assets folder as a visual style reference so Gemini can match
-        # the brand's actual photography style, palette, and mood.
-        # Sunrise is excluded: its campaign banner assets show the S-circle logo, and
-        # Gemini reproduces it in the generated image — causing a duplicate when we
-        # composite the programmatic logo in post-production via _apply_brand_overlay.
-        _style_refs = [] if products or brand.lower() in ("sunrise",) else [
+
+        # Style reference for brands with no Products folder (not Sunrise, not Wimbledon)
+        _style_refs = [] if products or _bslug in ("sunrise",) or _is_wimbledon else [
             a for a in loader.list_assets(brand)
             if not a.lower().endswith((".mp4", ".svg"))
         ][:1]
 
-        if products and (part := _part_for_uri(products[0])):
-            contents.append(f"PRODUCT REFERENCE for {brand} — match shape and colours if products "
-                             f"are shown in the scene.")
-            contents.append(part)
+        if products and not _is_wimbledon:
+            part = _part_for_uri(products[0])
+            if part:
+                contents.append(
+                    f"PRODUCT REFERENCE for {brand} — match shape and colours if products are shown."
+                )
+                contents.append(part)
         elif _style_refs:
             try:
                 from app.creative_pipeline import _load_bytes as _clb
@@ -214,96 +302,61 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
                     _ri = _PILr.open(_BIOr(_raw)).convert("RGB")
                     if max(_ri.size) > 1024:
                         _sc = 1024 / max(_ri.size)
-                        _ri = _ri.resize(
-                            (int(_ri.width * _sc), int(_ri.height * _sc)), _PILr.LANCZOS
-                        )
+                        _ri = _ri.resize((int(_ri.width * _sc), int(_ri.height * _sc)), _PILr.LANCZOS)
                     _rb = _BIOr()
                     _ri.save(_rb, format="JPEG", quality=85)
                     contents.append(
-                        f"BRAND CAMPAIGN STYLE REFERENCE for {brand} — match this exact visual style: "
-                        f"photography approach, colour palette, mood, lighting, and composition. "
-                        f"Generate the new image in the same aesthetic as this reference campaign."
+                        f"BRAND CAMPAIGN STYLE REFERENCE for {brand} — match this visual style: "
+                        "photography approach, colour palette, mood, lighting, and composition."
                     )
                     contents.append(_gt2.Part.from_bytes(data=_rb.getvalue(), mime_type="image/jpeg"))
             except Exception as _sre:
                 logger.warning("kv_style_ref_failed", brand=brand, error=str(_sre))
 
-        # Sunrise-specific composition rule — differs by mode
-        if brand.lower() in ("sunrise",):
-            # Applied to both modes: Sunrise campaign banners contain the S-circle; we
-            # skip those as references, but Gemini still knows the brand from guidelines.
-            # Explicitly forbid reproducing any circular brand marks or logo elements.
+        # Sunrise composition override
+        if _bslug == "sunrise":
             _no_logo_rule = (
-                "CRITICAL RULE: Do NOT render any S-circle icons, Sunrise logos, sun icons, "
-                "circular brand marks, semicircle symbols, or any recognisable brand symbols "
-                "anywhere in the image. All brand elements are composited in post-production.\n"
+                "CRITICAL: Do NOT render S-circle icons, Sunrise logos, sun icons, "
+                "circular brand marks, or any recognisable brand symbols — "
+                "all brand elements are composited in post-production.\n"
             )
             if product_name:
-                # Offer mode: full-bleed, person with phone/device on right, light upper-left
                 image_prompt = (
                     _no_logo_rule +
-                    "SUBJECT: A confident, happy person actively using a smartphone or mobile device — "
-                    "holding it to their ear, smiling at the screen, or gesturing with it naturally. "
+                    "SUBJECT: A confident, happy person actively using a smartphone or mobile device. "
                     "The device must be clearly and prominently visible. Professional, aspirational. "
                     "Swiss lifestyle or business context.\n"
-                    "COMPOSITION: Full-bleed portrait or landscape frame. Person positioned on the "
-                    "RIGHT HALF of the frame, facing slightly left or toward camera. "
-                    "The UPPER-LEFT area of the frame must be naturally light, airy, and uncluttered "
-                    "(bright sky, soft blurred background, or open space) — this area will receive "
-                    "the headline and price overlay in post-production. "
-                    "LIGHTING: Bright, clean, natural daylight or soft studio light. Avoid dark or "
-                    "heavily shadowed backgrounds in the upper-left quadrant. "
-                    "Do NOT render any text, numbers, logos, or brand symbols in the image.\n\n"
+                    "COMPOSITION: Person on RIGHT HALF, facing slightly left or toward camera. "
+                    "UPPER-LEFT must be naturally light, airy, and uncluttered — "
+                    "headline and price overlay added in post-production. "
+                    "LIGHTING: Bright, clean, natural daylight or soft studio light.\n\n"
                 ) + image_prompt
             else:
-                # Lifestyle mode: full-bleed, left third clear for white text overlay
                 image_prompt = (
                     _no_logo_rule +
-                    "COMPOSITION RULE: The subject, action, and visual interest must be "
-                    "concentrated in the CENTRE to RIGHT two-thirds of the frame. "
-                    "The LEFT THIRD of the image should be relatively uncluttered and "
-                    "slightly darker in tone — this area will receive large white text overlay. "
-                    "Swiss landscape, Swiss urban, or Swiss lifestyle context. "
+                    "COMPOSITION: Subject, action, and visual interest in the CENTRE to RIGHT two-thirds. "
+                    "LEFT THIRD relatively uncluttered — receives large white text overlay. "
+                    "Swiss landscape, urban, or lifestyle context. "
                     "Premium Swiss telecommunications advertising photography style.\n\n"
                 ) + image_prompt
 
-        # Barclays Wimbledon composition override
-        if _is_wimbledon:
+        # Haleon composition override
+        if _is_haleon:
             image_prompt = (
-                "SUBJECT: A young tennis player and an experienced coach or mentor — "
-                "sharing a meaningful, human moment of connection and progress. "
-                "Neither person wears business attire. Tennis clothing, natural sporting context.\n"
-                "SETTING: Outdoors on or near a grass tennis court at Wimbledon — "
-                "lush green grass, white court lines, English summer sky. "
-                "No indoor courts, no office buildings, no corporate environments.\n"
-                "LIGHTING: English summer — golden hour warmth, soft morning mist, or bright overcast. "
-                "Natural, warm, aspirational.\n"
-                "COMPOSITION: Subjects occupy the RIGHT TWO-THIRDS of the frame. "
-                "The LEFT THIRD is open — grass, sky, or soft bokeh — for white text overlay in post-production.\n"
-                "MOOD: Aspiration, progress, human connection, shared achievement.\n"
-                "FORBIDDEN: Business suits, office buildings, bank branches, financial products, "
-                "app screens, logos, text, or brand marks anywhere in the image.\n\n"
+                "SUBJECT: Real person in a relatable everyday health moment — "
+                "using, holding, or having just used the product. Warm, human, credible. "
+                "No lab coats, clinical settings, or illness portrayal. "
+                "Product pack/tube/bottle clearly visible and in focus.\n"
+                "COMPOSITION: Subject and product in RIGHT TWO-THIRDS. "
+                "LEFT THIRD clean, bright, uncluttered — receives headline overlay.\n"
+                "PALETTE: White-dominant with natural Haleon green accents. "
+                "Warm natural daylight. No dark or moody backgrounds.\n"
+                "CRITICAL: No text, logos, brand marks, or pricing in the image.\n\n"
             ) + image_prompt
-
-        # Haleon-specific composition rule
-        if brand.lower() == "haleon":
-            _haleon_subject = (
-                "SUBJECT: A real person in a relatable everyday health moment — "
-                "using, holding, or just having used the product. Warm, human, credible. "
-                "No lab coats, no clinical settings, no dramatic illness portrayal. "
-                "The product pack/tube/bottle must be clearly visible and in focus.\n"
-                "COMPOSITION: The subject and product must occupy the RIGHT TWO-THIRDS of the frame. "
-                "The LEFT THIRD must be clean, bright, and uncluttered — white wall, soft bokeh, "
-                "or open daylight — this area receives the headline overlay in post-production.\n"
-                "PALETTE: White-dominant background with natural Haleon green accents (plants, packaging, "
-                "fabric details). Warm, natural daylight or soft studio light. No dark or moody backgrounds.\n"
-                "CRITICAL: No text, logos, brand marks, or pricing anywhere in the image. "
-                "No overly clinical or pharmaceutical imagery.\n\n"
-            )
-            image_prompt = _haleon_subject + image_prompt
 
         contents.append(image_prompt)
 
+        # Retry on 429 quota with exponential backoff
         import time as _time
         _resp = None
         for _attempt in range(3):
@@ -313,7 +366,7 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
                     contents = contents,
                     config   = gtypes.GenerateContentConfig(
                         response_modalities = ["IMAGE", "TEXT"],
-                        image_config        = gtypes.ImageConfig(aspect_ratio="16:9"),
+                        image_config        = gtypes.ImageConfig(aspect_ratio=aspect_ratio),
                     ),
                 )
                 break
@@ -321,7 +374,8 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
                 _emsg = str(_img_exc)
                 if "429" in _emsg or "RESOURCE_EXHAUSTED" in _emsg:
                     _delay = 2 ** (_attempt + 2)  # 4s, 8s, 16s
-                    logger.warning("kv_image_rate_limited", brand=brand, attempt=_attempt + 1, retry_in=_delay)
+                    logger.warning("kv_image_rate_limited", brand=brand,
+                                   attempt=_attempt + 1, retry_in=_delay)
                     if _attempt < 2:
                         _time.sleep(_delay)
                         continue
@@ -337,31 +391,31 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
         if raw_bytes:
             import base64
             if _is_wimbledon:
-                # Use the Barclays-specific overlay directly so is_wimbledon=True is
-                # guaranteed. _apply_brand_overlay detects Wimbledon from the logo URI
-                # or headline text — both can miss when the headline is copy-only
-                # ("Greatness is never a solo sport."). Calling apply_overlay() directly
-                # bypasses that fragile heuristic.
+                # Call apply_overlay() directly with is_wimbledon=True — guaranteed.
+                # _apply_brand_overlay detects Wimbledon from logo_uri or headline
+                # text, which are both unreliable (headline may contain no "wimbledon").
                 from pathlib import Path as _PB
                 _bfont_dir = _PB(__file__).resolve().parent.parent / "bucket" / "brands" / "Barclays"
-                _bfp = _barclays.resolve_font_path(_bfont_dir)
-                _logo_uri = _ref_logo or (logos[0] if logos else "")
-                logger.info("kv_overlay", brand=brand, wimbledon=True, logo_uri=str(_logo_uri)[:60])
+                _bfp       = _barclays.resolve_font_path(_bfont_dir)
+                _logo_uri  = _ref_logo or (logos[0] if logos else "")
+                logger.info("kv_overlay", brand=brand, wimbledon=True)
                 overlaid = _barclays.apply_overlay(
-                    raw_bytes,
-                    headline,
-                    logo_uri    = _logo_uri or "",
-                    is_wimbledon= True,
-                    font_path   = _bfp,
-                    copy_subline= "",
-                    copy_cta    = "",
+                    raw_bytes, headline,
+                    logo_uri     = _logo_uri or "",
+                    is_wimbledon = True,
+                    font_path    = _bfp,
+                    copy_subline = "",
+                    copy_cta     = "",
                 )
             else:
                 from app.runner import _apply_brand_overlay
-                logger.info("kv_overlay", brand=brand, product_name=product_name, market=market,
+                logger.info("kv_overlay", brand=brand, product_name=product_name,
                             offer_mode=bool(product_name))
-                overlaid = _apply_brand_overlay(raw_bytes, brand, headline, products[:1], product_name, market)
+                overlaid = _apply_brand_overlay(
+                    raw_bytes, brand, headline, products[:1], product_name, market,
+                )
             image_b64 = base64.b64encode(overlaid).decode("utf-8")
+
     except Exception as e:
         logger.warning("standalone_kv_failed", brand=brand, error=str(e))
 
