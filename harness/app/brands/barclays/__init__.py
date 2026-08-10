@@ -706,6 +706,9 @@ def _render_wimbledon_lockup(canvas, draw, bar_y: int, bar_h: int, PX: int, PW: 
         sym_h   = max(22, int(bar_h * 0.50))
         sym_w   = int(sym.width * sym_h / sym.height)
         sym     = sym.resize((sym_w, sym_h), Image.LANCZOS)
+        # Strip white/light background so the eagle renders as a clean white
+        # silhouette on the dark bar (same treatment as the border eagle).
+        sym     = _tint_white(sym)
 
         bk_sz   = max(12, int(sym_h * 0.58))
         bk_fnt  = fnt(bk_sz)
