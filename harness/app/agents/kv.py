@@ -5,6 +5,7 @@ import structlog
 from app.config import get_settings
 from app.brand_assets import get_asset_loader
 from app.agents._utils import _generate, _genai_client
+from app.brands import barclays as _barclays
 
 logger   = structlog.get_logger()
 settings = get_settings()
@@ -43,7 +44,9 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
 
     _is_wimbledon = brand.lower() == "barclays" and "wimbledon" in campaign_type.lower()
     _is_haleon_brand = brand.lower() == "haleon"
+
     if _is_wimbledon:
+        # Headline only — scene direction comes from concepts.json, not the LLM.
         _morphis_sys = (
             "You are Morphis, the key visual designer for an AI marketing campaign system. "
             "You specialise in sports partnership advertising. Your images feel aspirational, "
@@ -53,14 +56,7 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
             "The campaign is Barclays × Wimbledon — Official Banking Partner of The Championships. "
             "The creative platform is progress through sport and human connection. "
             'Respond ONLY with JSON, no markdown fences: '
-            '{"headline": "short aspirational campaign headline, 4-8 words — about progress, belief, or shared achievement. No financial product claims.", '
-            '"scene": "2-3 sentences: show a young tennis player and an experienced coach or mentor '
-            "sharing a meaningful moment on or near a grass tennis court at Wimbledon. "
-            "The setting is outdoors — English summer light, lush green grass, soft golden hour or morning mist. "
-            "Mood: aspiration, progress, human connection. "
-            "Subjects occupy the RIGHT TWO-THIRDS of the frame. The LEFT THIRD is naturally light and open — "
-            'grass, sky, or soft bokeh — for text overlay. '
-            'No business suits, no office buildings, no corporate environments, no financial products, no logos, no text."}'
+            '{"headline": "short aspirational campaign headline, 4-8 words — about progress, belief, or shared achievement. No financial product claims."}'
         )
     elif product_name and _is_haleon_brand:
         # Haleon health products — scene must show the specific product, not a smartphone
@@ -111,10 +107,26 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
             f'"scene": "2-3 sentences: show {_who} in a vibrant, aspirational setting. '
             'Setting, mood, lighting — no text, words, or logos in the image."}'
         )
+
     data = _generate(_morphis_sys, brand, prompt, _morphis_instr)
+
     # Use copy agent's headline if provided; otherwise use LLM-generated one
     headline = copy_headline.strip() if copy_headline and copy_headline.strip() else (data.get("headline", "") or prompt)
-    scene    = data.get("scene", "") or prompt
+
+    if _is_wimbledon:
+        # Scene comes from concepts.json, not the LLM.
+        # select_concepts() keyword-matches the prompt + headline against themes
+        # (partnership / progress / belief / community / tradition) and returns
+        # the structured creative_direction from the matching concept.
+        c1_dir, _ = _barclays.select_concepts(
+            big_idea_seed=prompt,
+            copy_headline=headline,
+            fan_truth="",
+        )
+        scene = c1_dir
+        logger.info("kv_wimbledon_concept_selected", brand=brand, concept=scene[:80])
+    else:
+        scene = data.get("scene", "") or prompt
 
     image_b64 = ""
     try:
@@ -323,11 +335,32 @@ def run_kv(brand: str, prompt: str, product_name: str = "", market: str = "", au
                 break
 
         if raw_bytes:
-            from app.runner import _apply_brand_overlay
-            logger.info("kv_overlay", brand=brand, product_name=product_name, market=market,
-                        offer_mode=bool(product_name))
-            overlaid = _apply_brand_overlay(raw_bytes, brand, headline, products[:1], product_name, market)
             import base64
+            if _is_wimbledon:
+                # Use the Barclays-specific overlay directly so is_wimbledon=True is
+                # guaranteed. _apply_brand_overlay detects Wimbledon from the logo URI
+                # or headline text — both can miss when the headline is copy-only
+                # ("Greatness is never a solo sport."). Calling apply_overlay() directly
+                # bypasses that fragile heuristic.
+                from pathlib import Path as _PB
+                _bfont_dir = _PB(__file__).resolve().parent.parent / "bucket" / "brands" / "Barclays"
+                _bfp = _barclays.resolve_font_path(_bfont_dir)
+                _logo_uri = _ref_logo or (logos[0] if logos else "")
+                logger.info("kv_overlay", brand=brand, wimbledon=True, logo_uri=str(_logo_uri)[:60])
+                overlaid = _barclays.apply_overlay(
+                    raw_bytes,
+                    headline,
+                    logo_uri    = _logo_uri or "",
+                    is_wimbledon= True,
+                    font_path   = _bfp,
+                    copy_subline= "",
+                    copy_cta    = "",
+                )
+            else:
+                from app.runner import _apply_brand_overlay
+                logger.info("kv_overlay", brand=brand, product_name=product_name, market=market,
+                            offer_mode=bool(product_name))
+                overlaid = _apply_brand_overlay(raw_bytes, brand, headline, products[:1], product_name, market)
             image_b64 = base64.b64encode(overlaid).decode("utf-8")
     except Exception as e:
         logger.warning("standalone_kv_failed", brand=brand, error=str(e))
