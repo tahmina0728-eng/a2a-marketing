@@ -1,0 +1,274 @@
+{
+  "schema_version": "1.0",
+  "campaign_id":    "barclays-wimbledon-2026",
+
+  "format":           "9:16",
+  "duration_seconds": 6,
+  "beats":            4,
+  "default_concept":  "wimbledon_hero",
+
+  "brand": {
+    "id":      "barclays",
+    "profile": "barclays-brand-v1"
+  },
+
+  "property": {
+    "id":      "wimbledon",
+    "profile": "wimbledon-partnership-v1"
+  },
+
+  "generation": {
+    "text_in_video":        false,
+    "logos_in_video":       false,
+    "brand_assets_in_video": false,
+    "negative_prompt": [
+      "text", "words", "logos", "brand marks", "subtitles", "watermarks",
+      "app screens", "financial data", "fabricated claims",
+      "distorted hands", "extra fingers", "deformed racket",
+      "duplicate tennis ball", "warped tennis court",
+      "unrealistic crowd density", "floating objects",
+      "camera jitter", "motion blur artefacts", "compression artefacts",
+      "violence", "explicit content"
+    ]
+  },
+
+  "concepts": {
+
+    "moments_of_progress": {
+      "title":          "Moments of Progress",
+      "creative_theme": "progress",
+      "keywords":       ["moments of progress", "progress", "journey", "first step"],
+
+      "copy_slots": [
+        { "id": "mid_reel",  "purpose": "reinforce_progress",       "max_words": 5, "scene_id": 3 },
+        { "id": "end_frame", "purpose": "campaign_closing_message",  "max_words": 8, "scene_id": 4 }
+      ],
+
+      "scenes": [
+        {
+          "scene_id": 1, "start": 0,   "end": 1.5,
+          "camera":   "Extreme close-up",
+          "visual":   "Young tennis player's hands tying shoes, gripping racket handle. Determination and anticipation.",
+          "emotion":  "anticipation",
+          "audio":    "shoe sounds, subtle heartbeat",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 2, "start": 1.5, "end": 3,
+          "camera":   "Tracking from behind",
+          "visual":   "Player steps from tunnel onto pristine grass tennis court — slow tracking shot from behind, morning mist on grass, English summer light.",
+          "emotion":  "hope",
+          "audio":    "crowd ambience building",
+          "transition": "dissolve"
+        },
+        {
+          "scene_id": 3, "start": 3,   "end": 4.5,
+          "camera":   "Slow-motion",
+          "visual":   "Player tosses the ball and delivers a powerful serve. Crowd softly blurred in background. Kinetic energy and focus.",
+          "emotion":  "focus",
+          "audio":    "crowd ambience rising",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 4, "start": 4.5, "end": 6,
+          "camera":   "Wide cinematic shot",
+          "visual":   "Sweeping wide stadium shot — golden hour, crowd energy, transitioning to clean dark brand end frame.",
+          "emotion":  "triumph",
+          "audio":    "uplifting music resolve",
+          "transition": "fade_to_brand"
+        }
+      ]
+    },
+
+    "greatness_never_solo": {
+      "title":          "Greatness Is Never a Solo Sport",
+      "creative_theme": "partnership",
+      "keywords":       ["greatness", "solo sport", "partnership", "never alone"],
+
+      "copy_slots": [
+        { "id": "mid_reel",  "purpose": "reinforce_partnership",     "max_words": 6, "scene_id": 2 },
+        { "id": "end_frame", "purpose": "campaign_closing_message",  "max_words": 8, "scene_id": 4 }
+      ],
+
+      "scenes": [
+        {
+          "scene_id": 1, "start": 0,   "end": 1.5,
+          "camera":   "Two-shot",
+          "visual":   "Young tennis player and coach prepare courtside together — the coach's steady, reassuring presence beside the player before they step out.",
+          "emotion":  "connection",
+          "audio":    "crowd ambience soft",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 2, "start": 1.5, "end": 3,
+          "camera":   "Court level",
+          "visual":   "Player competes — powerful serve, rally in full swing, crowd rising in anticipation. Visible effort and focus.",
+          "emotion":  "focus",
+          "audio":    "crowd rising",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 3, "start": 3,   "end": 4.5,
+          "camera":   "Return two-shot",
+          "visual":   "Coach on the sideline — quiet focus and absolute belief in their player. The person behind the achievement.",
+          "emotion":  "pride",
+          "audio":    "soaring orchestral swell",
+          "transition": "dissolve"
+        },
+        {
+          "scene_id": 4, "start": 4.5, "end": 6,
+          "camera":   "Wide → brand cut",
+          "visual":   "Player wins a point — coach rises to celebrate. Shared moment of quiet triumph. Wide stadium atmosphere fading to dark brand end frame.",
+          "emotion":  "resolution",
+          "audio":    "orchestral resolve",
+          "transition": "fade_to_brand"
+        }
+      ]
+    },
+
+    "every_point": {
+      "title":          "Every Point. Every Dream.",
+      "creative_theme": "belief",
+      "keywords":       ["every point", "every dream", "belief", "relentless"],
+
+      "copy_slots": [
+        { "id": "scene_2_copy", "purpose": "moment_intensity",       "max_words": 3, "scene_id": 2 },
+        { "id": "scene_3_copy", "purpose": "moment_release",         "max_words": 3, "scene_id": 3 },
+        { "id": "end_frame",    "purpose": "campaign_closing_message","max_words": 6, "scene_id": 4 }
+      ],
+
+      "scenes": [
+        {
+          "scene_id": 1, "start": 0,   "end": 1.5,
+          "camera":   "Close-up",
+          "visual":   "Tennis ball being bounced, player's focused face soft behind — pure concentration and inner quiet before action.",
+          "emotion":  "focus",
+          "audio":    "heartbeat",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 2, "start": 1.5, "end": 3,
+          "camera":   "Medium",
+          "visual":   "Player positions for serve — ball toss, racket drawn back, perfect stillness before power. English summer light.",
+          "emotion":  "intensity",
+          "audio":    "silence before impact",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 3, "start": 3,   "end": 4.5,
+          "camera":   "Slow-motion",
+          "visual":   "Slow-motion racket impact — ball launches toward camera, kinetic energy, crowd frozen in the moment.",
+          "emotion":  "release",
+          "audio":    "racket impact snap",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 4, "start": 4.5, "end": 6,
+          "camera":   "Wide → brand cut",
+          "visual":   "Crowd erupts in slow motion — then hard cut to clean dark brand end frame.",
+          "emotion":  "triumph",
+          "audio":    "crowd eruption, musical resolve",
+          "transition": "hard_cut_to_brand"
+        }
+      ]
+    },
+
+    "backing_progress": {
+      "title":          "Backing Progress",
+      "creative_theme": "community",
+      "keywords":       ["backing progress", "community", "off the court"],
+
+      "copy_slots": [
+        { "id": "end_frame", "purpose": "campaign_closing_message",  "max_words": 8, "scene_id": 4 }
+      ],
+
+      "scenes": [
+        {
+          "scene_id": 1, "start": 0,   "end": 1.5,
+          "camera":   "Medium two-shot",
+          "visual":   "Young grassroots tennis player on a community court. Coach gives calm, specific feedback — the player listens intently.",
+          "emotion":  "learning",
+          "audio":    "ambient court sounds",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 2, "start": 1.5, "end": 3,
+          "camera":   "Single focus",
+          "visual":   "Player tries again — improved technique, sharper focus. The difference visible in their movement.",
+          "emotion":  "aspiration",
+          "audio":    "racket impact, crowd building softly",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 3, "start": 3,   "end": 4.5,
+          "camera":   "Match point",
+          "visual":   "Player hits a confident shot. Coach reacts with a quiet nod of recognition. Progress made, not declared.",
+          "emotion":  "shared_progress",
+          "audio":    "rising crowd",
+          "transition": "dissolve"
+        },
+        {
+          "scene_id": 4, "start": 4.5, "end": 6,
+          "camera":   "Wide → brand cut",
+          "visual":   "Wide atmospheric tennis shot — crowd, court, natural light, transitioning to clean dark brand end frame.",
+          "emotion":  "resolution",
+          "audio":    "uplifting resolve",
+          "transition": "fade_to_brand"
+        }
+      ]
+    },
+
+    "wimbledon_hero": {
+      "title":          "Wimbledon Hero",
+      "creative_theme": "achievement",
+      "keywords":       [],
+
+      "copy_slots": [
+        { "id": "end_frame", "purpose": "campaign_closing_message",  "max_words": 8, "scene_id": 4 }
+      ],
+
+      "scenes": [
+        {
+          "scene_id": 1, "start": 0,   "end": 1.5,
+          "camera":   "Extreme close-up",
+          "visual":   "Young tennis player's determined face, racket gripped, grass court visible ahead.",
+          "emotion":  "determination",
+          "audio":    "crowd ambience",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 2, "start": 1.5, "end": 3,
+          "camera":   "Tracking from behind",
+          "visual":   "Player steps onto immaculate grass court — tracking from behind, English summer morning light, soft mist.",
+          "emotion":  "anticipation",
+          "audio":    "heartbeat building",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 3, "start": 3,   "end": 4.5,
+          "camera":   "Slow-motion",
+          "visual":   "Slow-motion serve — ball toss, racket swing, crowd bokeh-blurred, stadium light catching the ball.",
+          "emotion":  "power",
+          "audio":    "crowd rising, impact",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 4, "start": 4.5, "end": 6,
+          "camera":   "Wide cinematic shot",
+          "visual":   "Wide stadium atmosphere, crowd, golden hour, pulling to clean dark brand end frame for logo and copy overlay.",
+          "emotion":  "triumph",
+          "audio":    "musical resolve",
+          "transition": "fade_to_brand"
+        }
+      ]
+    }
+
+  },
+
+  "approval": {
+    "status":                       "concept",
+    "brand_approval_required":      true,
+    "partnership_approval_required": true,
+    "legal_review_required":        true
+  }
+}

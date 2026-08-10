@@ -1,0 +1,37 @@
+{
+  "logos": {
+    "primary_white":  "barclays1_wb.png",
+    "primary_dark":   "barclays1_db.png",
+    "symbol_white":   "barclays-symbol_wb.png",
+    "symbol_dark":    "barclays-symbol_db.png",
+    "wordmark_white": "barclays_wb.png"
+  },
+
+  "sibling_priority": [
+    "barclays-symbol_wb.png",
+    "barclays-symbol_db.png",
+    "barclays1_wb.png",
+    "barclays-wimbledon_wb.png",
+    "barclays_wb.png"
+  ],
+
+  "partnerships": {
+    "wimbledon": {
+      "lockup":          "barclays-wimbledon_wb.png",
+      "shield":          "wimbledon_wb.png",
+      "reel_logo_stem":  "barclays-wimbledon_wb",
+      "approved_lockup": null
+    }
+  },
+
+  "channel_logo_stem": {
+    "default":   "barclays1_wb",
+    "instagram": "barclays1_wb",
+    "linkedin":  "barclays1_wb",
+    "stories":   "barclays1_wb",
+    "reels":     "barclays1_wb",
+    "outdoor":   "barclays1_wb",
+    "facebook":  "barclays1_wb",
+    "youtube":   "barclays1_wb"
+  }
+}

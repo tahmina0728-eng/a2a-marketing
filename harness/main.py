@@ -2291,6 +2291,7 @@ class AgentStandaloneRequest(_BaseModel):
     market:        str = ""  # Market/region for currency resolution
     audience:      str = ""  # Target audience (drives scene people in Sunrise offer images)
     copy_headline: str = ""  # Headline from Copy Agent step — used instead of generating a new one
+    campaign_type: str = ""  # Structured campaign identifier (e.g. "wimbledon") for brand-specific overrides
 
 
 @app.post("/agents/{agent_key}/run")
@@ -2306,6 +2307,7 @@ async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
             agent_standalone.run_agent_standalone,
             agent_key, req.prompt, req.duration, req.image_b64,
             req.product_name, req.market, req.audience, req.copy_headline,
+            req.campaign_type,
         )
         return result
     except ValueError as e:

@@ -1,0 +1,59 @@
+{
+  "id": "barclays",
+  "name": "Barclays",
+  "sector": "financial_services",
+  "market": "UK",
+  "campaign_platform": "Moments of Progress",
+  "tone": ["trusted", "supportive", "innovative", "responsible"],
+
+  "colors": {
+    "blue":  { "hex": "#00AEEF", "rgb": [0, 174, 239],   "name": "Barclays Blue",  "usage": "fill_and_device_only__never_text_on_white" },
+    "night": { "hex": "#1A2142", "rgb": [26, 33, 66],    "name": "Barclays Night", "usage": "primary_dark_ground_and_reversed_layout" },
+    "white": { "hex": "#FFFFFF", "rgb": [255, 255, 255], "name": "White",          "usage": "reversed_type_on_dark" }
+  },
+
+  "fonts": {
+    "headline": { "family": "Effra", "weight": "Bold",    "stem": "Effra_Bd", "files": ["Effra_Bd.ttf", "Effra_Bd.otf"] },
+    "body":     { "family": "Effra", "weight": "Regular", "stem": "Effra_Rg", "files": ["Effra_Rg.ttf", "Effra_Rg.otf"] }
+  },
+
+  "rules": {
+    "blue_as_text_on_white": false,
+    "no_product_packshots":  true,
+    "no_app_screenshots":    true,
+    "no_financial_data":     true,
+    "no_financial_jargon":   ["exclusive", "innovative", "seamless", "solutions", "leverage", "journey"]
+  },
+
+  "visual": {
+    "effects":    "soft directional window light, warm film-like depth of field, subtle blue tonal grade, quiet confidence in every shadow — no sparkle, no neon, no gimmicks",
+    "subject":    "real, relatable UK person (age 25-50) in a genuine human moment of financial progress — NOT stock-photo smiling, but a quiet private expression of relief, pride, or calm confidence",
+    "background": "Barclays Night #1A2142 deep navy OR warm contemporary interior with subtle Barclays Blue accent lighting — leave generous negative space upper-left for copy overlay",
+    "wardrobe":   "smart-casual UK contemporary — muted tones, no logos, no bright colours that compete with Barclays Blue",
+    "energy":     "confident, supported, quietly optimistic — a trusted partner is in your corner — NEVER triumphant, NEVER fear/pressure framing"
+  },
+
+  "copy_rules": {
+    "headline_rules": [
+      "Understated, human, emotionally resonant — not a product pitch",
+      "Must work as a standalone statement at billboard scale",
+      "Never financial jargon or rate/return claims"
+    ],
+    "subline_rules": [
+      "Completes the headline's emotional territory by naming what Barclays does",
+      "Speaks to the human benefit, not the product feature",
+      "Feels like a natural continuation of the headline — not a separate thought",
+      "20 words maximum, no financial jargon"
+    ],
+    "cta_options": ["Discover more", "Find out how", "Learn more"],
+    "subline_examples": [
+      { "headline": "Greatness is never a solo sport.",         "subline": "Behind every achievement is support that believes." },
+      { "headline": "For every point. For every dream.",        "subline": "Backing the journey from first serve to centre court." },
+      { "headline": "Moments of progress shape what's possible.", "subline": "We're here to support every step forward." },
+      { "headline": "Relentless today.",                        "subline": "Remarkable tomorrow." }
+    ]
+  },
+
+  "palette_lock": "primary #00AEEF Barclays Blue (fill/device ONLY — NEVER text on white), dark ground #1A2142 Barclays Night (default text + reversed-layout ground), white #FFFFFF (reversed type on dark), font Effra Bold 700 headlines / Effra Regular 400 body — financial services brand, NO product packshots",
+  "palette_str":  "Barclays Night #1A2142 deep navy (primary dark ground), Barclays Blue #00AEEF (accent fill only, NOT text on white), white — professional, understated banking"
+}

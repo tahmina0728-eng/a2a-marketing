@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "campaign_id":    "barclays-wimbledon-2026",
+
+  "id":       "wimbledon",
+  "property": "The Championships, Wimbledon",
+  "type":     "partnership",
+  "brand":    "barclays",
+
+  "relationship": {
+    "type":               "official_banking_partner",
+    "display_name":       "Official Banking Partner of The Championships, Wimbledon",
+    "short_display_name": "Official Banking Partner",
+    "verified":           true,
+    "verification_source": "wimbledon_official",
+    "announced_from_year": 2023,
+    "effective_period": {
+      "start_year": 2023,
+      "end_year":   null,
+      "source":     "wimbledon_official"
+    }
+  },
+
+  "approved_assets": {
+    "lockup": {
+      "asset_id": "barclays-wimbledon-approved-lockup",
+      "source":   "approved_asset_library",
+      "editable": false
+    }
+  },
+
+  "detection": {
+    "keywords": ["wimbledon", "wimbledon tennis", "the championships"],
+    "fields":   ["campaign_name", "campaign_type", "product", "fan_truth", "season", "audience", "notes"]
+  },
+
+  "objectives": [
+    "brand_awareness",
+    "emotional_connection",
+    "showcase_partnership",
+    "highlight_progress_and_opportunity"
+  ],
+
+  "allowed_themes": [
+    "partnership",
+    "progress",
+    "belief",
+    "community",
+    "tradition"
+  ],
+
+  "visual_overrides": {
+    "subjects":    ["tennis_player", "coach", "spectator", "young_professional_group"],
+    "environment": ["wimbledon_court", "grass_court", "wimbledon_balcony", "wimbledon_corridor", "wimbledon_terrace"],
+    "lighting":    "english_summer_golden_hour_or_morning_mist",
+    "mood":        "aspiration_partnership_progress_human_connection",
+    "forbidden":   ["financial_products", "app_screens", "bank_branches", "indoor_sport_courts"]
+  },
+
+  "copy_rules": {
+    "creative_direction": [
+      "supporting journeys",
+      "creating opportunities",
+      "progress through sport",
+      "community impact",
+      "shared achievement"
+    ],
+    "avoid": [
+      "specific financial product claims",
+      "specific player claims",
+      "match results",
+      "unverified sponsorship claims",
+      "performance guarantees"
+    ]
+  },
+
+  "approval": {
+    "status":                       "approved_relationship_concept_campaign_unapproved",
+    "brand_review_required":        true,
+    "partnership_review_required":  true,
+    "legal_review_required":        true
+  }
+}

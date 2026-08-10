@@ -77,7 +77,12 @@ class BrandAssetLoader:
         return sorted(p.name for p in self._local_root.iterdir() if p.is_dir())
 
     def load_guidelines(self, brand: str) -> str:
-        """Return brand guidelines text. Tries several known filenames in order."""
+        """Return brand guidelines text.
+
+        Priority:
+        1. GCS / local file (Guidelines/brand_guidelines.md etc.)
+        2. brand_guidelines_text() from the brand's Python package (e.g. app.brands.barclays)
+        """
         for filename in (
             "Guidelines/brand_guidelines.md",
             "Guidelines/brand_guidelines.txt",
@@ -89,6 +94,22 @@ class BrandAssetLoader:
                 text = self._local_read_text(brand, filename)
             if text:
                 return text
+
+        # Fallback: brand Python package (brands that use the structured JSON approach)
+        return self._package_guidelines(brand)
+
+    def _package_guidelines(self, brand: str) -> str:
+        """Return brand_guidelines_text() from app.brands.<slug> if the function exists."""
+        slug = brand.lower().replace(" ", "_").replace("-", "_")
+        try:
+            import importlib
+            mod = importlib.import_module(f"app.brands.{slug}")
+            fn  = getattr(mod, "brand_guidelines_text", None)
+            if callable(fn):
+                logger.info("brand_guidelines_from_package", brand=brand, slug=slug)
+                return fn()
+        except Exception as exc:
+            logger.debug("brand_package_guidelines_failed", brand=brand, error=str(exc))
         return ""
 
     def load_agent_skill(self, brand: str, skill_name: str) -> str:
@@ -259,7 +280,13 @@ class BrandAssetLoader:
             )
             return blob.download_as_text(encoding="utf-8")
         except Exception as e:
-            logger.warning("gcs_read_failed", brand=brand, relative=relative, error=str(e))
+            err = str(e)
+            # 404 "No such object" is expected for brands that use the Python package
+            # approach (e.g. Barclays) — load_guidelines() falls back to _package_guidelines()
+            if "404" in err and "No such object" in err:
+                logger.debug("gcs_object_not_found", brand=brand, relative=relative)
+            else:
+                logger.warning("gcs_read_failed", brand=brand, relative=relative, error=err)
             return ""
 
     def _gcs_read_bytes(self, brand: str, relative: str) -> bytes:

@@ -1,0 +1,335 @@
+{
+  "schema_version": "1.0",
+  "campaign_id":    "barclays-wimbledon-2026",
+
+  "brand": {
+    "id":      "barclays",
+    "profile": "barclays-brand-v1"
+  },
+
+  "property": {
+    "id":      "wimbledon",
+    "profile": "wimbledon-partnership-v1"
+  },
+
+  "default_theme": "partnership",
+
+  "themes": [
+    {
+      "id":             "partnership",
+      "label":          "Greatness is never a solo sport",
+      "creative_theme": "partnership",
+      "keywords":       ["solo sport", "greatness", "partnership", "together with", "we're with"],
+
+      "concepts": [
+        {
+          "id":       "c1_partnership",
+          "title":    "PARTNERSHIP",
+          "template": "T3_photographic",
+
+          "creative_direction": {
+            "subject":      "Young tennis player and experienced coach or mentor at Wimbledon",
+            "relationship": "Coach stands beside the player with visible support and quiet belief — the person behind the achievement",
+            "setting":      "Wimbledon grass court or covered walkway, pre-match atmosphere, crowd distantly visible",
+            "emotion":      "connection",
+            "composition":  "Both figures on right third of frame, generous clean space on left for headline typography",
+            "lighting":     "Warm English summer afternoon light, soft stadium ambient glow",
+            "photography":  "Premium cinematic depth of field, authentic — not corporate stock"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": true
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    false
+          }
+        },
+        {
+          "id":       "c2_mentor",
+          "title":    "MENTOR",
+          "template": "T3_intimate",
+
+          "creative_direction": {
+            "subject":      "Experienced professional and younger aspiring player in genuine conversation courtside at Wimbledon",
+            "relationship": "Mentor leaning in, young player listening with focused attention — someone believed in me, someone made this possible",
+            "setting":      "Wimbledon green court visible behind, English afternoon light",
+            "emotion":      "belonging, mentorship",
+            "composition":  "Both figures right-of-frame, left side open, dark and clean for copy overlay",
+            "lighting":     "Soft English afternoon light, warm and human",
+            "photography":  "Authentic, intimate — not corporate stock"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": true
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    false
+          }
+        }
+      ]
+    },
+
+    {
+      "id":             "progress",
+      "label":          "Moments of progress",
+      "creative_theme": "progress",
+      "keywords":       ["moments of progress", "progress", "journey", "first step", "possible", "beginning"],
+
+      "concepts": [
+        {
+          "id":       "c1_journey",
+          "title":    "THE JOURNEY",
+          "template": "T3_photographic",
+
+          "creative_direction": {
+            "subject":      "Young tennis player walking onto an immaculate grass tennis court, carrying a racket, facing away from camera toward the court",
+            "narrative":    "Not yet a champion — this is the beginning of the journey. Ambition, growth, the threshold of possibility.",
+            "setting":      "Early morning grass court, soft mist, dew on the blades, distant stadium structure softly visible in background",
+            "emotion":      "hope, ambition",
+            "composition":  "Player positioned right third of frame, clean open space on left — mist and morning sky for large headline typography",
+            "lighting":     "Early morning English summer light, soft mist",
+            "photography":  "Hopeful, cinematic — premium UK advertising quality"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": false
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    false
+          }
+        },
+        {
+          "id":       "c2_preparation",
+          "title":    "PREPARATION",
+          "template": "T3_intimate",
+
+          "creative_direction": {
+            "subject":   "Young diverse tennis player sitting quietly in a Wimbledon corridor, racket resting beside them",
+            "narrative": "Looking ahead with quiet determination — the moment before stepping out",
+            "setting":   "Wimbledon corridor, narrow and atmospheric",
+            "emotion":   "focus, readiness",
+            "composition": "Subject right of frame, left side in soft dark shadow for copy overlay",
+            "lighting":  "Warm tungsten corridor light, deep shadows, narrow depth of field",
+            "photography": "Authentic, human, cinematic — premium UK advertising quality"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": false
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    false
+          }
+        }
+      ]
+    },
+
+    {
+      "id":             "belief",
+      "label":          "Every point. Every dream.",
+      "creative_theme": "belief",
+      "keywords":       ["every point", "every dream", "belief", "focus", "relentless", "remarkable"],
+
+      "concepts": [
+        {
+          "id":       "c1_serve",
+          "title":    "THE SERVE",
+          "template": "T3_photographic",
+
+          "creative_direction": {
+            "subject":      "Tennis player caught at the exact peak moment before a powerful serve — intense concentration, tennis ball held up, racket drawn back",
+            "setting":      "Wimbledon, crowd softly bokeh-blurred behind, English summer sky",
+            "emotion":      "focus, pressure, possibility, belief",
+            "composition":  "Player positioned right, large atmospheric dark negative space on left — natural shadow from stadium structure — for headline typography",
+            "lighting":     "Natural sunlight catching the ball, English summer",
+            "photography":  "Canon 400mm f/2.8 DSLR sports photography quality, cinematic"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": false
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    false
+          }
+        },
+        {
+          "id":       "c2_grassroots",
+          "title":    "GRASSROOTS",
+          "template": "T3_intimate",
+
+          "creative_direction": {
+            "subject":   "Young girl (age 9–12, diverse) on a local community tennis court",
+            "action":    "Racket raised mid-swing, face alive with pure joy and effort — she is at the beginning, not yet Wimbledon",
+            "setting":   "Dappled afternoon sunlight, blurred park trees behind — bridges grassroots ambition with a future at Wimbledon",
+            "emotion":   "joy, aspiration",
+            "composition": "Subject right-of-centre, left side naturally bright sky and bokeh for copy overlay",
+            "photography": "Authentic, warm, emotionally powerful — not stock photography"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": false
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    false
+          }
+        }
+      ]
+    },
+
+    {
+      "id":             "community",
+      "label":          "Backing progress on and off the court",
+      "creative_theme": "community",
+      "keywords":       ["backing progress", "community", "off the court", "opportunity", "collaboration"],
+
+      "concepts": [
+        {
+          "id":       "c1_after_session",
+          "title":    "AFTER THE SESSION",
+          "template": "T3_photographic",
+
+          "creative_direction": {
+            "subject":      "Young grassroots tennis player and coach on a UK community tennis court after a practice session",
+            "relationship": "Coach gives encouragement and specific feedback; player listens with focus and gratitude. The relationship communicates: someone is invested in this person's progress.",
+            "setting":      "UK community tennis court, natural daylight, relaxed post-session atmosphere",
+            "emotion":      "mentorship, shared progress, belonging",
+            "composition":  "Both figures right-of-frame, generous open left space — court and sky create natural negative space for headline",
+            "lighting":     "Natural daylight, relaxed — not studio lit",
+            "photography":  "Authentic, warm — not corporate stock, not exaggerated posing"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": false
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    false
+          }
+        },
+        {
+          "id":       "c2_conversation",
+          "title":    "THE CONVERSATION",
+          "template": "T3_intimate",
+
+          "creative_direction": {
+            "subject":      "Tennis coach and a young professional in animated conversation on a Wimbledon terrace balcony",
+            "relationship": "Open body language — encouraging, genuine two-way exchange. Communicates: mentorship, opportunity, progress made off the court.",
+            "setting":      "Wimbledon terrace balcony, court sunlit in background",
+            "emotion":      "opportunity, mentorship",
+            "composition":  "Figures right-of-frame, open terrace and court on left for copy overlay",
+            "lighting":     "Golden afternoon light, authentic and warm"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": true
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    false
+          }
+        }
+      ]
+    },
+
+    {
+      "id":             "tradition",
+      "label":          "Honouring tradition. Backing champions.",
+      "creative_theme": "achievement",
+      "keywords":       ["honouring tradition", "tradition", "champion", "trophy", "achievement", "history"],
+
+      "concepts": [
+        {
+          "id":       "c1_moment",
+          "title":    "THE MOMENT",
+          "template": "T3_photographic",
+
+          "creative_direction": {
+            "subject":   "Tennis champion's hands lifting a prestigious trophy — fingers wrapped around the base, trophy raised",
+            "setting":   "Stadium lights creating a radiant halo behind the trophy, crowd out of focus and celebrating",
+            "emotion":   "triumph, reverence, achievement",
+            "composition": "Trophy and hands left-of-centre, stadium glow fills right, dark atmospheric shadows in upper frame for headline copy",
+            "lighting":  "Dramatic stadium light, athlete partially silhouetted",
+            "photography": "Cinematic, emotionally powerful, reverential — shallow depth of field"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": true
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    true,
+            "licensed_assets_note": "Specific trophy imagery requires partnership licensing confirmation"
+          }
+        },
+        {
+          "id":       "c2_heritage",
+          "title":    "HERITAGE",
+          "template": "T1_brand",
+
+          "creative_direction": {
+            "subject":      "Abstract architectural photography of Wimbledon — iconic awning, geometry of Centre Court at dusk, or pristine grass surface at twilight",
+            "narrative":    "No people. Reverential of tradition.",
+            "setting":      "Wimbledon, evening or twilight, stadium light raking across a structural element",
+            "emotion":      "reverence, tradition",
+            "composition":  "Clean minimal — upper-left quadrant pure dark space for headline overlay",
+            "photography":  "Award-winning art direction, cinematic"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": true
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    true,
+            "licensed_assets_note": "Wimbledon architectural elements may require partnership clearance"
+          }
+        }
+      ]
+    }
+  ]
+}

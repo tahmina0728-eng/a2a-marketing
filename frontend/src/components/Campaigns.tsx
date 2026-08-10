@@ -87,6 +87,14 @@ const SUNRISE_PRODUCT_PLANS = [
   { name: "Business Connect",  amount: "49.90" },
 ];
 
+const BARCLAYS_CAMPAIGNS = [
+  "Wimbledon",
+  "Premier League",
+  "Brand Awareness",
+  "Mortgage",
+  "Business Banking",
+];
+
 const MARKET_CURRENCY_SYMBOL: Record<string, string> = {
   "United Kingdom": "£",
   "Australia":      "A$",
@@ -269,7 +277,7 @@ function FormatCard({ label, desc, icon, selected, onClick, sizes, selSize, onSi
 }
 
 // ── Main Component ─────────────────────────────────────────────
-export default function Campaigns({ initialName, initialBrand, initialResults, initialContext, onSaved, onPublish }: { initialName?: string; initialBrand?: string; initialResults?: Partial<Record<FormatType, GeneratedResult>>; initialContext?: { brief?: string; audience?: string; market?: string; language?: string; product?: string }; onSaved?: () => void; onPublish?: (data: { brand: string; brief: string; headline?: string; body?: string; image_b64?: string; contentType: "image" | "video" }) => void } = {}) {
+export default function Campaigns({ initialName, initialBrand, initialResults, initialContext, onSaved, onPublish }: { initialName?: string; initialBrand?: string; initialResults?: Partial<Record<FormatType, GeneratedResult>>; initialContext?: { brief?: string; audience?: string; market?: string; language?: string; product?: string; barclaysCampaign?: string }; onSaved?: () => void; onPublish?: (data: { brand: string; brief: string; headline?: string; body?: string; image_b64?: string; contentType: "image" | "video" }) => void } = {}) {
   const [step, setStep]         = useState<1|2|3|4>(initialResults ? 4 : 1);
   const [campaignName, setCampaignName] = useState(initialName ?? "");
   const [brief, setBrief]       = useState(initialContext?.brief ?? "");
@@ -290,6 +298,8 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
       return DEFAULT_VOICES;
     } catch { return DEFAULT_VOICES; }
   });
+
+  const [barclaysCampaign, setBarclaysCampaign] = useState(initialContext?.barclaysCampaign ?? "");
 
   const [formats, setFormats] = useState<Set<FormatType>>(new Set());
   const [imgSz, setImgSz]     = useState("16:9");
@@ -363,7 +373,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
       localStorage.setItem("a2a_campaigns", JSON.stringify(updated));
       // 2. Brief context (small, always fits)
       if (brief.trim()) {
-        localStorage.setItem(`a2a_brief_${id}`, JSON.stringify({ brief, audience, market, language, product }));
+        localStorage.setItem(`a2a_brief_${id}`, JSON.stringify({ brief, audience, market, language, product, barclaysCampaign }));
       }
     } catch (e) {
       console.warn("campaign metadata save failed:", e);
@@ -393,7 +403,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         } catch { /* quota exceeded — cross-session thumbnail won't persist, current session still works */ }
       });
     }
-  }, [anyRes, campaignName, brand, brief, audience, market, language, product, onSaved, results]);
+  }, [anyRes, campaignName, brand, brief, audience, market, language, product, barclaysCampaign, onSaved, results]);
 
   const [modifyBusy, setModifyBusy] = useState(false);
 
@@ -460,7 +470,9 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
     for (const fmt of Array.from(formats)) {
       try {
         const body: Record<string,unknown> = { prompt };
+        if (brand)   body.brand = brand;
         if (fmt==="tvc") body.duration = parseInt(tvcLen);
+        if (brand === "Barclays" && barclaysCampaign) body.campaign_type = barclaysCampaign.toLowerCase();
         if (product) {
           // product stores just the plan name ("Easy Internet"); build the full
           // formatted string with the current market's currency at send time so
@@ -599,6 +611,8 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
               <ChipSel label="Brand" value={brand} onChange={v => {
                   setBrand(v);
                   if (v !== "Sunrise") setProduct("");
+                  if (v !== "Barclays") setBarclaysCampaign("");
+                  if (v === "Barclays" && !market) { setMarket("United Kingdom"); setLanguage("English"); }
                   const newAudiences = BRAND_AUDIENCES[v] ?? DEFAULT_AUDIENCES;
                   if (audience && !newAudiences.includes(audience)) setAudience("");
                 }} opts={BRANDS}
@@ -627,6 +641,11 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                     icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
                 );
               })()}
+              {brand === "Barclays" && (
+                <ChipSel label="Campaign" value={barclaysCampaign} onChange={setBarclaysCampaign}
+                  opts={BARCLAYS_CAMPAIGNS}
+                  icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>} />
+              )}
               <ChipSel label="Campaign Goal" value={goal} onChange={setGoal} opts={GOALS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/></svg>} />
               <ChipSel label="Target Audience" value={audience} onChange={setAudience} opts={audiences}

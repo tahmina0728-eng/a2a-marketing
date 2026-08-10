@@ -13,6 +13,8 @@ import re
 import time
 import uuid
 
+from app.brands import barclays as _barclays
+
 
 def _clean_api_key(key: str) -> str:
     """Strip BOM, newlines, carriage returns, null bytes and non-ASCII from API keys."""
@@ -412,50 +414,10 @@ async def run_copy_agent(machine_brief: dict, strategy: dict, brand_locks: str,
 
     # Brand-specific copy guidance injected per brand
     _brand_name = (machine_brief.get("brand") or "").strip()
-    _fan_truth  = (machine_brief.get("fan_truth") or "").strip()
-    _is_wimbledon_copy = (_brand_name.lower() == "barclays" and
-                          "wimbledon" in _fan_truth.lower())
-    _brand_copy_block = ""
-    if _brand_name.lower() == "barclays":
-        _wimbledon_note = (
-            "\n\nWIMBLEDON PARTNERSHIP — campaign is tied to Barclays as Official Bank of "
-            "Wimbledon. Subline should reference the partnership narrative: backing champions, "
-            "supporting the journey, enabling progress on and off the court. "
-            "Never mention specific players or match results."
-            if _is_wimbledon_copy else ""
-        )
-        _brand_copy_block = f"""
-
-BRAND-SPECIFIC RULES — BARCLAYS (FINANCIAL SERVICES):
-This is a regulated financial services brand operating within the FCA framework.
-The campaign platform is "Moments of Progress" — quiet confidence, human truth, never hype.
-
-HEADLINE RULES:
-  – Understated, human, emotionally resonant — not a product pitch
-  – Never: "exclusive", "innovative", "seamless", "solutions", "leverage", "journey"
-  – Never financial jargon or rate/return claims
-  – Must work as a standalone statement at billboard scale
-
-MEDIUM.SUBLINE RULES (THIS IS RENDERED DIRECTLY ON THE CAMPAIGN BANNER):
-  – Completes the headline's emotional territory by naming what Barclays does
-  – Speaks to the human benefit, not the product feature
-  – Feels like a natural continuation of the headline — not a separate thought
-  – ≤20 words, no financial jargon
-
-SUBLINE EXAMPLES BY HEADLINE:
-  "Greatness is never a solo sport."
-  → "Behind every achievement is support that believes."
-
-  "For every point. For every dream."
-  → "Backing the journey from first serve to centre court."
-
-  "Moments of progress shape what's possible."
-  → "We're here to support every step forward."
-
-  "Relentless today."
-  → "Remarkable tomorrow." (short.subline appropriate here too)
-
-CTA: "Discover more" / "Find out how" / "Learn more" — max 3 words, never salesy{_wimbledon_note}"""
+    _brand_copy_block = (
+        _barclays.copy_prompt_block(machine_brief)
+        if _brand_name.lower() == "barclays" else ""
+    )
 
     prompt = f"""{COPY_AGENT_INSTRUCTIONS}{_lang_rule}{_compliance_block}{_brand_copy_block}
 
@@ -877,360 +839,6 @@ def _draw_haleon_logo_img(height_px: int, font_path: str | None) -> "Image":
     return logo
 
 
-def _apply_barclays_overlay(
-    img_data:     bytes,
-    headline:     str,
-    logo_uri:     str = "",
-    is_wimbledon: bool = False,
-    font_path:    str | None = None,
-    copy_subline: str = "",
-    copy_cta:     str = "",
-) -> bytes:
-    """
-    Barclays official ad template overlay — matches brand reference images:
-
-    Structure (outer → inner):
-      1. Barclays Blue (#00AEEF) border frame around the full image
-      2. White eagle mark in top-right corner of the blue border
-      3. Dark gradient scrim over the top ~60% of the photo (headline readability)
-      4. Effra Bold white headline top-left on photo
-      5. Semi-transparent dark bottom bar (~22% height)
-         - Left: body copy + "Here for your every goal." (Wimbledon) or tagline
-         - Right: Barclays or Barclays+Wimbledon co-brand lockup on white pill
-    """
-    try:
-        from PIL import Image, ImageDraw, ImageFont
-        import io as _io
-        from pathlib import Path as _P
-
-        BLUE  = (0, 174, 239)    # Barclays Blue  #00AEEF
-        WHITE = (255, 255, 255)
-        BLACK = (0, 0, 0)
-
-        Image.MAX_IMAGE_PIXELS = None
-        photo = Image.open(_io.BytesIO(img_data)).convert("RGBA")
-        if max(photo.size) > 1400:
-            _sc = 1400 / max(photo.size)
-            photo = photo.resize((int(photo.width * _sc), int(photo.height * _sc)), Image.LANCZOS)
-        PW, PH = photo.size
-
-        # Blue border: ~4% of shorter dimension, minimum 18px
-        border = max(18, int(min(PW, PH) * 0.042))
-
-        # Canvas = photo + blue border on all 4 sides
-        TW = PW + border * 2
-        TH = PH + border * 2
-        canvas = Image.new("RGBA", (TW, TH), (*BLUE, 255))
-        canvas.alpha_composite(photo, (border, border))
-
-        # Offsets for drawing inside photo area
-        PX, PY = border, border
-
-        def _fnt(size: int):
-            if font_path:
-                try:
-                    return ImageFont.truetype(font_path, size)
-                except Exception:
-                    pass
-            try:
-                return ImageFont.load_default(size=size)
-            except Exception:
-                return ImageFont.load_default()
-
-        # ── Helper: resolve sibling logo files ───────────────────────────────
-        def _logo_siblings() -> list[str]:
-            """Return local paths / GCS URIs for sibling logos in the same folder."""
-            if not logo_uri:
-                return []
-            if logo_uri.startswith("gs://"):
-                _base = logo_uri.rsplit("/", 1)[0]
-                return [
-                    f"{_base}/barclays-symbol_wb.png",
-                    f"{_base}/barclays-symbol_db.png",
-                    f"{_base}/barclays1_wb.png",
-                    f"{_base}/barclays-wimbledon_wb.png",
-                    f"{_base}/barclays_wb.png",
-                ]
-            else:
-                _dir = _P(logo_uri).parent
-                _names = (
-                    "barclays-symbol_wb.png",
-                    "barclays-symbol_db.png",
-                    "barclays1_wb.png",
-                    "barclays-wimbledon_wb.png",
-                    "barclays_wb.png",
-                )
-                return [str(_dir / n) for n in _names if (_dir / n).exists()]
-
-        def _load_img(uri: str) -> "Image.Image | None":
-            try:
-                from app.creative_pipeline import _load_bytes as _clb
-                _b = _clb(uri)
-                if _b:
-                    return Image.open(_io.BytesIO(_b)).convert("RGBA")
-            except Exception:
-                pass
-            return None
-
-        def _tint_white(src: "Image.Image") -> "Image.Image":
-            """Convert logo to white silhouette: non-white pixels → white opaque,
-            near-white bg pixels → transparent."""
-            _pix = src.load()
-            _alpha = Image.new("L", src.size, 0)
-            _ap = _alpha.load()
-            for _py in range(src.height):
-                for _px in range(src.width):
-                    _r, _g, _b, _a = _pix[_px, _py]
-                    if _a > 30 and not (_r > 215 and _g > 215 and _b > 215):
-                        _ap[_px, _py] = 255
-            _wh = Image.new("L", src.size, 255)
-            return Image.merge("RGBA", [_wh, _wh, _wh, _alpha])
-
-        # ── 1. White eagle mark — top-right blue border ───────────────────────
-        _siblings = _logo_siblings()
-        _eagle_src = None
-        for _s in _siblings:
-            _ei = _load_img(_s)
-            if _ei:
-                _eagle_src = _ei
-                break
-        if _eagle_src is None and logo_uri:
-            _eagle_src = _load_img(logo_uri)
-
-        _eagle_src_orig = _eagle_src  # keep full-res copy for the watermark
-        if _eagle_src:
-            # Scale to fit in the border square (small — border is only ~18-30px)
-            eh = max(int(border * 0.75), 18)
-            _esc = eh / _eagle_src.height
-            ew = int(_eagle_src.width * _esc)
-            _eagle_border = _eagle_src.resize((ew, eh), Image.LANCZOS)
-            _eagle_white = _tint_white(_eagle_border)
-            # Centre the eagle in the top-right blue border cell
-            ex = TW - border + (border - ew) // 2
-            ey = (border - eh) // 2
-            ex = max(0, min(ex, TW - ew))
-            ey = max(0, ey)
-            canvas.alpha_composite(_eagle_white, (ex, ey))
-
-        # ── 2. Dark gradient scrim — top 60% of photo ────────────────────────
-        scrim = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
-        sd = ImageDraw.Draw(scrim)
-        scrim_h = int(PH * 0.62)
-        steps = 52
-        for s in range(steps):
-            y0 = PY + s * scrim_h // steps
-            y1 = PY + (s + 1) * scrim_h // steps
-            alpha = int(200 * (1.0 - s / steps) ** 0.52)
-            sd.rectangle([PX, y0, PX + PW, y1], fill=(*BLACK, alpha))
-        canvas.alpha_composite(scrim)
-        draw = ImageDraw.Draw(canvas)
-
-        # ── 3. Headline text — top-left on photo ─────────────────────────────
-        margin = max(16, int(PW * 0.055))
-        text_x = PX + margin
-        text_y = PY + margin
-
-        # Auto-fit: headline must fit in 75% of photo width
-        text_max_w = int(PW * 0.75)
-        head_sz = max(28, int(PH * 0.092))
-        while head_sz > 14:
-            _tf = _fnt(head_sz)
-            _words = (headline or "").split()
-            _test = " ".join(_words[:5]) if len(_words) > 5 else " ".join(_words)
-            _bb = _tf.getbbox(_test)
-            if (_bb[2] - _bb[0]) <= text_max_w:
-                break
-            head_sz -= 2
-
-        # Split into 2-3 display lines (by sentence boundary or midpoint)
-        raw_words = (headline or "MOMENTS OF PROGRESS").split()
-        sents: list[str] = []
-        cur: list[str] = []
-        for w in raw_words:
-            cur.append(w)
-            if w and w[-1] in ".!?,":
-                sents.append(" ".join(cur)); cur = []
-        if cur:
-            sents.append(" ".join(cur))
-        if not sents:
-            sents = [headline or "MOMENTS OF PROGRESS"]
-        if len(sents) > 3:
-            _n = len(raw_words)
-            sents = [
-                " ".join(raw_words[:_n // 3]),
-                " ".join(raw_words[_n // 3: (_n * 2) // 3]),
-                " ".join(raw_words[(_n * 2) // 3:]),
-            ]
-        if len(sents) == 1 and len(raw_words) >= 3:
-            _mid = len(raw_words) // 2
-            sents = [" ".join(raw_words[:_mid]), " ".join(raw_words[_mid:])]
-
-        _hf = _fnt(head_sz)
-        line_h = int(head_sz * 1.20)
-
-        # Wimbledon: last sentence line rendered in Barclays Blue (refs 3-5 pattern)
-        for li, line in enumerate(sents):
-            _line_col = BLUE if (is_wimbledon and li == len(sents) - 1) else WHITE
-            draw.text((text_x, text_y + li * line_h), line, fill=_line_col, font=_hf)
-
-        _headline_bottom = text_y + len(sents) * line_h
-
-        # ── 4a. Wimbledon sub-copy below headline ─────────────────────────────
-        sub_sz  = max(10, int(PH * 0.022))
-        sub_fnt = _fnt(sub_sz)
-        sub_lh  = int(sub_sz * 1.35)
-        _sub_bottom = _headline_bottom
-
-        if is_wimbledon:
-            _sub_y = _headline_bottom + int(head_sz * 0.4)
-            _sub_text = (copy_subline.strip()
-                         if copy_subline and copy_subline.strip()
-                         else "Behind every champion is support that believes.")
-            draw.text((text_x, _sub_y), _sub_text, fill=WHITE, font=sub_fnt)
-            _sub_bottom = _sub_y + sub_lh
-            # "Proud partner of Wimbledon" — Barclays Blue, smaller
-            _proud_sz  = max(9, int(PH * 0.019))
-            _proud_fnt = _fnt(_proud_sz)
-            draw.text((text_x, _sub_bottom + int(_proud_sz * 0.3)),
-                      "Proud partner of Wimbledon",
-                      fill=BLUE, font=_proud_fnt)
-            _sub_bottom += sub_lh + _proud_sz
-
-        # ── 4b. Large Barclays Blue eagle watermark — bottom-right (Wimbledon) ─
-        if is_wimbledon and _eagle_src_orig:
-            try:
-                # Scale to ~38% of photo width — large decorative silhouette
-                _wm_w = int(PW * 0.38)
-                _wm_sc = _wm_w / _eagle_src_orig.width
-                _wm_h  = int(_eagle_src_orig.height * _wm_sc)
-                _wm = _eagle_src_orig.resize((_wm_w, _wm_h), Image.LANCZOS)
-                # Tint every pixel to Barclays Blue at ~35% opacity
-                _wm_pix = _wm.load()
-                _wm_out = Image.new("RGBA", _wm.size, (0, 0, 0, 0))
-                _wm_op  = _wm_out.load()
-                for _wy in range(_wm_h):
-                    for _wx in range(_wm_w):
-                        _r, _g, _b, _a = _wm_pix[_wx, _wy]
-                        # Non-background pixel → Barclays Blue at 90 alpha
-                        if _a > 30 and not (_r > 215 and _g > 215 and _b > 215):
-                            _wm_op[_wx, _wy] = (*BLUE, 90)
-                # Position: bottom-right of photo, slightly cropped at edges
-                _wx0 = PX + PW - int(_wm_w * 0.78)
-                _wy0 = PY + PH - int(_wm_h * 0.85)
-                canvas.alpha_composite(_wm_out, (_wx0, _wy0))
-                draw = ImageDraw.Draw(canvas)
-            except Exception:
-                pass
-
-        # ── 5. Dark bottom bar ────────────────────────────────────────────────
-        bar_h = int(PH * 0.22)
-        bar_y = PY + PH - bar_h
-
-        bar_layer = Image.new("RGBA", (TW, TH), (0, 0, 0, 0))
-        _bd = ImageDraw.Draw(bar_layer)
-        # Wimbledon: lighter bar (lockup sits on it without heavy contrast)
-        _bar_alpha = 155 if is_wimbledon else 178
-        _bd.rectangle([PX, bar_y, PX + PW, PY + PH], fill=(*BLACK, _bar_alpha))
-        canvas.alpha_composite(bar_layer)
-        draw = ImageDraw.Draw(canvas)
-
-        # ── 6. Bottom bar content ─────────────────────────────────────────────
-        _logo_dir_path = None
-        if logo_uri and not logo_uri.startswith("gs://"):
-            _logo_dir_path = _P(logo_uri).parent
-
-        def _load_logo_file(names: list[str]) -> "Image.Image | None":
-            for _n in names:
-                if _logo_dir_path and (_logo_dir_path / _n).exists():
-                    _img = _load_img(str(_logo_dir_path / _n))
-                    if _img:
-                        return _img
-                elif logo_uri.startswith("gs://"):
-                    _base = logo_uri.rsplit("/", 1)[0]
-                    _img = _load_img(f"{_base}/{_n}")
-                    if _img:
-                        return _img
-            return None
-
-        if is_wimbledon:
-            # Left: Wimbledon shield + pipe + "OFFICIAL BANK OF WIMBLEDON" text
-            _wimb_shield = _load_logo_file(["wimbledon_wb.png", "barclays-wimbledon_wb.png"])
-            _lockup_y = bar_y + (bar_h - int(PH * 0.10)) // 2
-            _shield_right = text_x
-
-            if _wimb_shield:
-                sh = max(22, int(bar_h * 0.52))
-                _ssc = sh / _wimb_shield.height
-                sw = int(_wimb_shield.width * _ssc)
-                _wimb_shield = _wimb_shield.resize((sw, sh), Image.LANCZOS)
-                # Place on white pill
-                _sp = max(4, int(sh * 0.12))
-                _spill = Image.new("RGBA", (sw + _sp * 2, sh + _sp * 2), (*WHITE, 255))
-                _sf = Image.new("RGBA", _wimb_shield.size, (*WHITE, 255))
-                _sf.alpha_composite(_wimb_shield)
-                _spill.paste(_sf, (_sp, _sp))
-                _sly = bar_y + (bar_h - sh - _sp * 2) // 2
-                canvas.alpha_composite(_spill, (text_x, _sly))
-                _shield_right = text_x + sw + _sp * 2 + max(8, int(PW * 0.012))
-                draw = ImageDraw.Draw(canvas)
-
-            # Pipe + "OFFICIAL BANK / OF WIMBLEDON" text
-            _ob_sz  = max(8, int(PH * 0.016))
-            _ob_fnt = _fnt(_ob_sz)
-            _pipe_x = _shield_right
-            _ob_y1  = bar_y + (bar_h // 2) - _ob_sz - 2
-            _ob_y2  = bar_y + (bar_h // 2) + 2
-            draw.line([(_pipe_x, bar_y + int(bar_h * 0.20)),
-                       (_pipe_x, bar_y + int(bar_h * 0.80))],
-                      fill=WHITE, width=1)
-            _ob_x = _pipe_x + max(6, int(PW * 0.010))
-            draw.text((_ob_x, _ob_y1), "OFFICIAL BANK", fill=WHITE, font=_ob_fnt)
-            draw.text((_ob_x, _ob_y2), "OF WIMBLEDON", fill=WHITE, font=_ob_fnt)
-
-            # Right: Barclays eagle + wordmark (barclays1_wb) — white pill
-            _bk_lockup = _load_logo_file(["barclays1_wb.png", "barclays_wb.png"])
-            if _bk_lockup:
-                lh = max(22, int(bar_h * 0.50))
-                _lsc = lh / _bk_lockup.height
-                lw  = int(_bk_lockup.width * _lsc)
-                _bk_lockup = _bk_lockup.resize((lw, lh), Image.LANCZOS)
-                pad = 6
-                pill = Image.new("RGBA", (lw + pad * 2, lh + pad * 2), (*WHITE, 255))
-                _lf = Image.new("RGBA", _bk_lockup.size, (*WHITE, 255))
-                _lf.alpha_composite(_bk_lockup)
-                pill.paste(_lf, (pad, pad))
-                lx = PX + PW - lw - pad * 2 - margin
-                ly = bar_y + (bar_h - lh - pad * 2) // 2
-                canvas.alpha_composite(pill, (lx, ly))
-
-        else:
-            # Standard: CTA left + Barclays lockup right pill
-            _std_cta = (copy_cta.strip() if copy_cta and copy_cta.strip()
-                        else "Here for your every goal.")
-            draw.text((text_x, bar_y + int(bar_h * 0.30)),
-                      _std_cta, fill=WHITE, font=sub_fnt)
-            _std_lockup = _load_logo_file(["barclays1_wb.png", "barclays_wb.png"])
-            if _std_lockup:
-                lh = max(26, int(bar_h * 0.48))
-                _lsc = lh / _std_lockup.height
-                lw  = int(_std_lockup.width * _lsc)
-                _std_lockup = _std_lockup.resize((lw, lh), Image.LANCZOS)
-                pad = 8
-                pill = Image.new("RGBA", (lw + pad * 2, lh + pad * 2), (*WHITE, 255))
-                _lf = Image.new("RGBA", _std_lockup.size, (*WHITE, 255))
-                _lf.alpha_composite(_std_lockup)
-                pill.paste(_lf, (pad, pad))
-                lx = PX + PW - lw - pad * 2 - margin
-                ly = bar_y + (bar_h - lh - pad * 2) // 2
-                canvas.alpha_composite(pill, (lx, ly))
-
-        buf = _io.BytesIO()
-        canvas.convert("RGB").save(buf, format="JPEG", quality=93)
-        return buf.getvalue()
-
-    except Exception as _e:
-        logger.warning("barclays_overlay_failed", error=str(_e))
-        return img_data
 
 
 def _apply_brand_overlay(
@@ -1274,14 +882,10 @@ def _apply_brand_overlay(
 
         # Barclays uses two-layer financial services overlay — redirect immediately
         if brand == "Barclays":
-            _bfp = None
-            _bfont_dir = _P(__file__).parent.parent / "bucket" / "brands" / "Barclays" / "Font"
-            for _bn in ("Effra_Bd.ttf", "Effra_Rg.ttf"):
-                _bc = _bfont_dir / _bn
-                if _bc.exists():
-                    _bfp = str(_bc); break
+            _bfont_dir = _P(__file__).parent.parent / "bucket" / "brands" / "Barclays"
+            _bfp = _barclays.resolve_font_path(_bfont_dir)
             _is_wimb = "wimbledon" in (logo_uri or "").lower() or "wimbledon" in (headline or "").lower()
-            return _apply_barclays_overlay(
+            return _barclays.apply_overlay(
                 img_data, headline, logo_uri, _is_wimb, _bfp,
                 copy_subline=copy_subline, copy_cta=copy_cta,
             )
@@ -1294,7 +898,6 @@ def _apply_brand_overlay(
             "sunrise":     ["Figtree"],
             "Sunrise":     ["Figtree"],
             "Haleon":      ["New_Hero_Bold", "New_Hero_SemiBold", "New_Hero"],
-            "Barclays":    ["Effra_Bd", "Effra_Rg", "Effra"],  # Bold for headlines per guidelines
         }
         font_dir  = _P(__file__).parent.parent / "bucket" / "brands" / brand / "Font"
         font_path = None
@@ -1303,21 +906,6 @@ def _apply_brand_overlay(
             [f for f in font_dir.glob("*.otf") if "italic" not in f.name.lower()]
         ) if font_dir.exists() else []
 
-        # Barclays fonts live in GCS only (no local bucket folder) — download Effra Bold to tmp
-        if not _all_fonts and brand == "Barclays":
-            try:
-                import tempfile as _tmp
-                from app.brand_assets import get_asset_loader as _fgal
-                _floader = _fgal()
-                for _effra_name in ("Effra_Bd.ttf", "Effra_Rg.ttf"):
-                    _effra_bytes = _floader._gcs_read_bytes(brand, f"Font/{_effra_name}")
-                    if _effra_bytes:
-                        _tfp = _tmp.NamedTemporaryFile(suffix=".ttf", delete=False)
-                        _tfp.write(_effra_bytes); _tfp.flush()
-                        _all_fonts.append(_P(_tfp.name))
-                        break
-            except Exception:
-                pass
 
         for pref in BRAND_FONT_PREFS.get(brand, []):
             for f in _all_fonts:
@@ -1352,8 +940,8 @@ def _apply_brand_overlay(
             "sunrise":   (218,  41,  28),   # Sunrise Red #DA291C (brand spec §3.4)
             "Sunrise":   (218,  41,  28),
             "Haleon":    (101, 172,  30),   # Haleon Green #65AC1E (comms/UI — not logo green)
-            "Barclays":  (  0, 174, 239),   # Barclays Blue #00AEEF — accent rule: fill/device only, never text on white
             # Glenfiddich intentionally omitted — chartreuse blends with the AMF1 swirl background
+            # Barclays handled by _barclays.apply_overlay() — never reaches this dict
         }
         accent_rgb = BRAND_ACCENT.get(brand, (255, 255, 255))
         _is_haleon = brand.lower() == "haleon"
@@ -2650,82 +2238,6 @@ async def generate_campaign_reel(
         for v in [big_idea, fan_truth, product_name, audience] if v
     )
 
-    def _barclays_scene(_: str) -> str:
-        """Barclays Wimbledon 6-second reel — campaign theme selects the 4-beat structure."""
-        _seed = " ".join(filter(None, [big_idea, fan_truth, copy_headline])).lower()
-
-        if any(k in _seed for k in ["moments of progress", "progress", "journey", "first step"]):
-            return (
-                "BARCLAYS × WIMBLEDON — MOMENTS OF PROGRESS. "
-                "Beat 1 (0–1.5s): Extreme close-up — young tennis player's hands tying shoes, gripping "
-                "racket handle. Determination and anticipation. Deep Barclays Night shadows. "
-                "Beat 2 (1.5–3s): Player steps from tunnel onto pristine Wimbledon grass court — "
-                "slow tracking shot from behind, morning mist on grass, English summer light. "
-                "Beat 3 (3–4.5s): Slow-motion serve — ball toss, racket impact, ball frozen mid-air, "
-                "Wimbledon crowd blurred behind. Barclays Blue #00AEEF arc of light following the ball. "
-                "Beat 4 (4.5–6s): Sweeping wide Wimbledon stadium shot — golden hour, crowd energy, "
-                "then pull to Barclays Night #1A2142 dark ground for brand end frame. "
-                "Audio: shoe sounds → subtle heartbeat → crowd ambience rising → uplifting music resolve. "
-                "NO logos, NO text in generated footage."
-            )
-        elif any(k in _seed for k in ["greatness", "solo sport", "partnership", "never alone"]):
-            return (
-                "BARCLAYS × WIMBLEDON — GREATNESS IS NEVER A SOLO SPORT. "
-                "Beat 1 (0–1.5s): Two professionals — warm conversation on Wimbledon stadium balcony, "
-                "the court glowing below in soft evening light, crowd faintly visible. "
-                "Beat 2 (1.5–3s): Cut to court level — tennis rally in full swing, player in concentrated "
-                "focus, crowd rising in anticipation. "
-                "Beat 3 (3–4.5s): Return to balcony — the professionals share a genuine moment of "
-                "quiet pride as they watch. Barclays Night tones, warm stadium light. "
-                "Beat 4 (4.5–6s): Wide Wimbledon stadium atmosphere, golden hour, crowd energy fading "
-                "to Barclays Night #1A2142 dark ground. "
-                "Audio: crowd ambience → soaring orchestral swell → resolve. "
-                "NO logos, NO text in generated footage."
-            )
-        elif any(k in _seed for k in ["every point", "every dream", "belief", "relentless"]):
-            return (
-                "BARCLAYS × WIMBLEDON — EVERY POINT. EVERY DREAM. "
-                "Beat 1 (0–1.5s): Close-up of tennis ball being bounced, player's focused face "
-                "in soft focus behind — pure concentration. "
-                "Beat 2 (1.5–3s): Player positions for serve — ball toss, racket drawn back, "
-                "perfect stillness before power. English summer light. "
-                "Beat 3 (3–4.5s): Slow-motion racket impact — ball launches toward camera, "
-                "Barclays Blue #00AEEF light arc, kinetic energy. "
-                "Beat 4 (4.5–6s): Crowd erupts in slow motion — then hard cut to Barclays Night "
-                "#1A2142 end frame. "
-                "Audio: heartbeat → racket impact snap → crowd eruption → musical resolve. "
-                "NO logos, NO text in generated footage."
-            )
-        elif any(k in _seed for k in ["backing progress", "community", "off the court"]):
-            return (
-                "BARCLAYS × WIMBLEDON — BACKING PROGRESS. "
-                "Beat 1 (0–1.5s): Three young diverse professionals sitting beside Wimbledon court "
-                "after training — natural laughter, rackets resting beside them. "
-                "Beat 2 (1.5–3s): One of them watches a player on court, leaning forward — "
-                "ambition and recognition in their expression. "
-                "Beat 3 (3–4.5s): Match point — the player wins, arms raised. The group on the "
-                "sideline mirrors the joy. "
-                "Beat 4 (4.5–6s): Wide Wimbledon atmosphere — crowd, green court, golden light, "
-                "then Barclays Night end frame. "
-                "Audio: ambient court sounds → rising crowd → uplifting resolve. "
-                "NO logos, NO text in generated footage."
-            )
-        else:
-            # Default: the serve sequence — most visually dynamic, works for any Wimbledon brief
-            return (
-                "BARCLAYS × WIMBLEDON — CINEMATIC TENNIS REEL. "
-                "Beat 1 (0–1.5s): Extreme close-up — young tennis player's determined face, "
-                "racket gripped, Wimbledon grass visible ahead. Deep Barclays Night shadows. "
-                "Beat 2 (1.5–3s): Player steps onto immaculate Wimbledon grass court — "
-                "tracking from behind, English summer morning light, soft mist. "
-                "Beat 3 (3–4.5s): Slow-motion serve — ball toss, racket swing, crowd "
-                "bokeh-blurred, Barclays Blue #00AEEF arc of stadium light. "
-                "Beat 4 (4.5–6s): Wide Wimbledon stadium atmosphere, crowd, golden hour, "
-                "pulling to clean Barclays Night #1A2142 dark ground for brand overlay. "
-                "Audio: crowd ambience → heartbeat → impact → musical resolve. "
-                "NO logos, NO text in generated footage."
-            )
-
     _BRAND_SCENE_FN = {
         "Sunglow":     _sunglow_scene,
         "Rnorr":       _rnorr_scene,
@@ -2734,7 +2246,7 @@ async def generate_campaign_reel(
         "sunrise":     _sunrise_scene,
         "Sunrise":     _sunrise_scene,
         "Haleon":      _haleon_scene,
-        "Barclays":    _barclays_scene,
+        "Barclays":    lambda _: _barclays.reel_scene(big_idea, fan_truth, copy_headline),
     }
     # Sunrise lifestyle (no product selected): use hard-coded adventure scenes.
     # _sunrise_scene defaults to "friends in Zurich with phones" which Veo
@@ -2948,46 +2460,7 @@ async def generate_campaign_reel(
     # Emitted via storyboard_cb if provided by the caller.
     if _is_wimbledon_reel and storyboard_cb:
         try:
-            _sb_seed = " ".join(filter(None, [big_idea, fan_truth, copy_headline])).lower()
-            if any(k in _sb_seed for k in ["moments of progress", "progress", "journey"]):
-                _sb_concept = "Moments of Progress"
-                _sb_scenes = [
-                    {"time": "0–1.5s", "camera": "Extreme close-up", "visual": "Young player tying shoes and gripping racket", "copy": "Every dream starts somewhere."},
-                    {"time": "1.5–3s", "camera": "Tracking from behind", "visual": "Player steps onto Wimbledon grass court — morning mist, English light", "copy": None},
-                    {"time": "3–4.5s", "camera": "Slow-motion", "visual": "Serve — ball toss, racket impact, ball mid-air, crowd blurred", "copy": "Every point. Every step."},
-                    {"time": "4.5–6s", "camera": "Wide → brand cut", "visual": "Wimbledon stadium golden hour → Barclays Night end frame", "copy": "Greatness is never a solo sport."},
-                ]
-            elif any(k in _sb_seed for k in ["greatness", "solo sport", "partnership"]):
-                _sb_concept = "Greatness Is Never A Solo Sport"
-                _sb_scenes = [
-                    {"time": "0–1.5s", "camera": "Two-shot", "visual": "Professionals in conversation on Wimbledon balcony, court below", "copy": None},
-                    {"time": "1.5–3s", "camera": "Court level", "visual": "Tennis rally — player in full concentration, crowd rising", "copy": "Every achievement is shared."},
-                    {"time": "3–4.5s", "camera": "Return two-shot", "visual": "Professionals share a quiet proud moment watching the match", "copy": None},
-                    {"time": "4.5–6s", "camera": "Wide → brand cut", "visual": "Golden hour stadium → Barclays Night end frame", "copy": "Greatness is never a solo sport."},
-                ]
-            elif any(k in _sb_seed for k in ["every point", "every dream", "belief"]):
-                _sb_concept = "Every Point. Every Dream."
-                _sb_scenes = [
-                    {"time": "0–1.5s", "camera": "Close-up", "visual": "Ball being bounced, player's focused face in soft focus", "copy": None},
-                    {"time": "1.5–3s", "camera": "Medium", "visual": "Player positions for serve — stillness before power", "copy": "Every point."},
-                    {"time": "3–4.5s", "camera": "Slow-motion", "visual": "Racket impact — ball launches toward camera, kinetic energy", "copy": "Every dream."},
-                    {"time": "4.5–6s", "camera": "Wide → brand cut", "visual": "Crowd erupts → Barclays Night end frame", "copy": "We're with you."},
-                ]
-            else:
-                _sb_concept = "Barclays × Wimbledon"
-                _sb_scenes = [
-                    {"time": "0–1.5s", "camera": "Extreme close-up", "visual": "Player's determined face, racket gripped, Wimbledon grass ahead", "copy": None},
-                    {"time": "1.5–3s", "camera": "Tracking from behind", "visual": "Player steps onto Wimbledon grass — morning light, soft mist", "copy": None},
-                    {"time": "3–4.5s", "camera": "Slow-motion", "visual": "Serve — ball toss, racket swing, crowd blurred behind", "copy": copy_headline or "Greatness is never a solo sport."},
-                    {"time": "4.5–6s", "camera": "Wide → brand cut", "visual": "Stadium golden hour → Barclays Night end frame", "copy": None},
-                ]
-            _storyboard = {
-                "concept": _sb_concept,
-                "duration": 6,
-                "format": "9:16",
-                "brand": "Barclays × Wimbledon",
-                "scenes": _sb_scenes,
-            }
+            _storyboard = _barclays.reel_storyboard(big_idea, fan_truth, copy_headline)
             await storyboard_cb(_storyboard)
         except Exception as _sb_err:
             log.warning("storyboard_generation_skipped", error=str(_sb_err))
@@ -2999,21 +2472,7 @@ async def generate_campaign_reel(
         _veo_aspect_ratio = "16:9"
 
     if _is_barclays_reel:
-        # Barclays: premium financial services framing, no FMCG language, no product packshot
-        _voiceover_line = (
-            f'Subtle ambient sound design — crowd ambience, heartbeat, musical resolve — '
-            f'no dialogue voiceover unless brand-approved.'
-        )
-        _prompt_rules = (
-            f"- Photorealistic premium UK financial-services advertising quality — NOT FMCG\n"
-            f"- Deep Barclays Night (#1A2142) and Barclays Blue (#00AEEF) colour palette\n"
-            f"- Cinematic, understated, emotionally powerful — sophisticated not flashy\n"
-            f"- AUDIO: {_voiceover_line}\n"
-            f"- NO product packshots, NO bank app screens, NO financial data\n"
-            f"- NO text or typography in the generated footage — text composited separately\n"
-            f"- NO logos or brand marks — composited after generation\n"
-            f"- Wimbledon atmosphere: immaculate grass, English summer light, authentic crowd energy"
-        )
+        _prompt_rules = _barclays.reel_veo_rules()
     else:
         _language_rule = (
             f"\nLanguage: {_lang_label} — the voiceover MUST be delivered entirely in {_lang_label}."
@@ -3065,8 +2524,7 @@ Output the prompt only.""",
         for _attempt in range(4):
             try:
                 _neg = (
-                    "text, words, logos, brand marks, subtitles, app screens, "
-                    "financial data, fabricated claims, violence, explicit content"
+                    _barclays.reel_negative_prompt()
                     if _is_barclays_reel else
                     "text, words, subtitles, competing products, multiple brands, "
                     "other product packaging, fictional brands, unrelated products, "
@@ -3306,7 +2764,7 @@ Be specific, avoid generic boilerplate.""")
         "Sunglow":  "primary #B00064 Magenta, accent #FFC72C Sunshine Yellow, base #F9F9F9 Off-White, font Alatsi",
         "Rnorr":    "primary #008641 Rnorr Green, accent #FFDE00 Yellow, base #FFFFFF White, fonts Antonio + Rubik",
         "Boozt":    "primary #0E105E Midnight, accent #0086FE Boozt Blue, highlight #00BFFE Sky, base #FFFFFF White, font Rubik — energy drink brand",
-        "Barclays": "primary #00AEEF Barclays Blue (fill/device ONLY — NEVER text on white), dark ground #1A2142 Barclays Night (default text + reversed-layout ground), white #FFFFFF (reversed type on dark), font Effra Bold 700 headlines / Effra Regular 400 body — financial services brand, NO product packshots",
+        "Barclays": _barclays.PALETTE_LOCK,
     }
     _palette_lock = _BRAND_PALETTE_LOCK.get(brand, "use brand primary colours")
 
@@ -3354,7 +2812,7 @@ Create a Big Idea for this campaign. Output:
         "Sunglow":  "hot magenta pink, sunshine yellow, off-white cream",
         "Rnorr":    "deep forest green, bright sunshine yellow, white",
         "Boozt":    "deep midnight navy, electric cobalt blue, sky blue, white — energy drink can with condensation",
-        "Barclays": "Barclays Night #1A2142 deep navy (primary dark ground), Barclays Blue #00AEEF (accent fill only, NOT text on white), white — professional, understated banking",
+        "Barclays": _barclays.PALETTE_STR,
     }
     _brand_palette_str = _BRAND_PALETTE.get(brand, "brand primary colour, accent colour, white")
 
@@ -3399,14 +2857,7 @@ Create a Big Idea for this campaign. Output:
             "wardrobe": "high-performance outdoor sportswear or casual urban — vibrant colours, absolutely NO Sunrise branding on clothing",
             "energy":   "fearless living, freedom, bold spontaneous adventure — 'Dream Big. Do Big.'",
         },
-        "Barclays": {
-            "effects":  "soft directional window light, warm film-like depth of field, subtle blue tonal grade, quiet confidence in every shadow — no sparkle, no neon, no gimmicks",
-            "model":    "real, relatable UK person (age 25-50) in a genuine human moment of financial progress — NOT stock-photo smiling, but a quiet private expression of relief, pride, or calm confidence",
-            "hair":     "natural, understated — this is a financial services brand, not a beauty campaign",
-            "bg":       "Barclays Night #1A2142 deep navy OR warm contemporary interior with subtle Barclays Blue accent lighting — leave generous negative space upper-left for copy overlay",
-            "wardrobe": "smart-casual UK contemporary — muted tones, no logos, no bright colours that compete with Barclays Blue",
-            "energy":   "confident, supported, quietly optimistic — a trusted partner is in your corner — NEVER triumphant, NEVER fear/pressure framing",
-        },
+        "Barclays": _barclays.BRAND_MAGIC,
     }
     _magic = _BRAND_MAGIC.get(brand, {
         "effects":  "sparkling light particles, soft bokeh, premium studio lighting",
@@ -3454,126 +2905,7 @@ Create a Big Idea for this campaign. Output:
         if v
     )
     if _is_wimbledon:
-        # Each entry: ([theme keywords], (concept_1, concept_2))
-        # Keywords matched against big_idea_seed + copy_headline + fan_truth.
-        # First match wins; partnership concept is the fallback (strongest default).
-        _WIMBLEDON_CONCEPT_MAP = [
-            (
-                # Theme: PARTNERSHIP — "Greatness is never a solo sport"
-                ["solo sport", "greatness", "partnership", "together with", "we're with"],
-                (
-                    "Concept 1 — PARTNERSHIP (T3 photographic): A sophisticated businesswoman and "
-                    "businessman standing together on a Wimbledon stadium balcony overlooking a grass "
-                    "court during an important match. Natural, confident conversation — partnership, "
-                    "shared achievement. Wimbledon court and crowd beautifully out of focus in background. "
-                    "Warm golden-hour light mixed with subtle stadium glow. Both figures positioned RIGHT. "
-                    "GENEROUS CLEAN DARK SPACE on the LEFT for campaign headline typography. "
-                    "Deep Barclays Night (#1A2142) atmospheric shadows. Cinematic depth of field. "
-                    "Premium UK financial advertising quality. NO logos, NO text, NO branded items.",
-                    "Concept 2 — MENTOR (T3 intimate): An experienced professional and a younger aspiring "
-                    "player in genuine conversation courtside at Wimbledon — the mentor leaning in, the "
-                    "young player listening with focused attention. Wimbledon green court visible behind, "
-                    "soft English afternoon light. Scene communicates: someone believed in me, someone "
-                    "made this possible. Both figures RIGHT-of-frame. LEFT side open, dark, clean for "
-                    "copy. Warm, human, not corporate stock photography. NO logos, NO text.",
-                ),
-            ),
-            (
-                # Theme: PROGRESS / JOURNEY — "Moments of progress"
-                ["moments of progress", "progress", "journey", "first step", "possible", "beginning"],
-                (
-                    "Concept 1 — THE JOURNEY (T3 photographic): A young tennis player walking onto an "
-                    "immaculate Wimbledon-style grass court, carrying a racket, facing away from camera "
-                    "toward the court. Not yet a champion — this is the beginning of the journey. "
-                    "Ambition, growth, the threshold of possibility. Early morning English summer light, "
-                    "soft mist on the grass, dew on the blades. Distant Wimbledon stadium structure "
-                    "softly visible in background. Player positioned toward the RIGHT THIRD of frame. "
-                    "CLEAN OPEN SPACE on the LEFT — mist and morning sky for large typography. "
-                    "Barclays Night (#1A2142) deep tones in shadowed areas. Hopeful, cinematic. "
-                    "NO logos, NO text, NO branded clothing.",
-                    "Concept 2 — PREPARATION (T3 intimate): A young diverse tennis player sitting quietly "
-                    "in a Wimbledon corridor, racket resting beside them, looking ahead with quiet "
-                    "determination — the moment before stepping out. Warm tungsten corridor light, deep "
-                    "shadows, narrow depth of field. Face communicates: focused, ready, this matters. "
-                    "Subject RIGHT of frame, LEFT side in soft dark shadow for copy overlay. "
-                    "Authentic, human, cinematic — premium UK advertising photography. "
-                    "NO logos, NO text, NO branded items.",
-                ),
-            ),
-            (
-                # Theme: FOCUS / BELIEF — "Every point. Every dream."
-                ["every point", "every dream", "belief", "focus", "relentless", "remarkable"],
-                (
-                    "Concept 1 — THE SERVE (T3 photographic): A tennis player caught at the exact peak "
-                    "moment before a powerful serve — intense concentration, tennis ball held up, racket "
-                    "drawn back, sunlight catching the ball. Wimbledon crowd softly bokeh-blurred behind. "
-                    "English summer blue sky. Player positioned RIGHT. Large atmospheric DARK NEGATIVE "
-                    "SPACE on the LEFT — natural shadow from stadium structure — for headline typography. "
-                    "Barclays Blue #00AEEF subtle architectural element on far right edge. "
-                    "Communicates: focus, pressure, possibility, belief. "
-                    "Canon 400mm f/2.8 DSLR sports photography quality. "
-                    "NO logos, NO text, NO branded items.",
-                    "Concept 2 — GRASSROOTS (T3 intimate): A young girl (age 9-12, diverse) on a local "
-                    "community tennis court, racket raised mid-swing, face alive with pure joy and effort. "
-                    "She is at the beginning — not yet Wimbledon. Dappled afternoon sunlight, blurred "
-                    "park trees behind. Bridges grassroots ambition with a future at Wimbledon. "
-                    "Subject RIGHT-of-centre. LEFT side naturally bright sky and bokeh for copy. "
-                    "Authentic, warm, emotionally powerful — not stock photography. "
-                    "NO logos, NO text, NO branded clothing.",
-                ),
-            ),
-            (
-                # Theme: COLLABORATION / COMMUNITY — "Backing progress on and off the court"
-                ["backing progress", "community", "off the court", "opportunity", "collaboration"],
-                (
-                    "Concept 1 — AFTER THE SESSION (T3 photographic): Three young diverse professionals "
-                    "(25-35) sitting together on the grass beside a Wimbledon-style tennis court after "
-                    "a training session — rackets resting, natural laughter and conversation. "
-                    "Scene communicates: collaboration, ambition, community, shared progress. "
-                    "UK setting, natural daylight, sophisticated but relaxed wardrobe, authentic diversity. "
-                    "Group positioned RIGHT-of-frame. GENEROUS LEFT-SIDE SPACE — open sky and court green "
-                    "create natural negative space for headline. No exaggerated corporate posing. "
-                    "Photorealistic premium advertising photography. NO logos, NO text.",
-                    "Concept 2 — THE CONVERSATION (T3 intimate): A tennis coach and a young professional "
-                    "in animated conversation on a Wimbledon terrace balcony. Open body language — "
-                    "encouraging, genuine two-way exchange. Court sunlit in background. Scene communicates: "
-                    "mentorship, opportunity, progress made off the court. Figures RIGHT-of-frame, "
-                    "open terrace and court LEFT for copy. Golden afternoon light, authentic, warm. "
-                    "NO logos, NO text, NO branded items.",
-                ),
-            ),
-            (
-                # Theme: ACHIEVEMENT / TRADITION — "Honouring tradition. Backing champions."
-                ["honouring tradition", "tradition", "champion", "trophy", "achievement", "history"],
-                (
-                    "Concept 1 — THE MOMENT (T3 photographic): Dramatic close-up of a tennis champion's "
-                    "hands lifting a prestigious trophy — fingers wrapped around the base, trophy raised, "
-                    "stadium lights creating a radiant halo. Crowd out of focus, celebrating. Shallow "
-                    "depth of field. Athlete partially silhouetted against dramatic stadium light. "
-                    "Trophy and hands LEFT-OF-CENTRE, stadium glow fills RIGHT. "
-                    "Dark Barclays Night (#1A2142) atmosphere upper frame for headline copy. "
-                    "Cinematic, emotionally powerful, reverential. "
-                    "NO logos, NO text anywhere in the image.",
-                    "Concept 2 — HERITAGE (T1 brand): Abstract architectural photography of Wimbledon — "
-                    "the iconic green-and-purple striped awning, the geometry of Centre Court at dusk, "
-                    "or the pristine grass surface at twilight catching stadium light. NO people. "
-                    "Deep Barclays Night (#1A2142) sky. Barclays Blue #00AEEF light raking across a "
-                    "structural element. CLEAN MINIMAL composition, reverential of tradition. "
-                    "Upper-left quadrant is PURE DARK SPACE for headline overlay. "
-                    "Award-winning art direction. Cinematic. NO logos, NO text.",
-                ),
-            ),
-        ]
-
-        _seed_lower = " ".join(filter(None, [big_idea_seed, copy_headline, fan_truth])).lower()
-        _selected_pair = None
-        for _kws, _pair in _WIMBLEDON_CONCEPT_MAP:
-            if any(_kw in _seed_lower for _kw in _kws):
-                _selected_pair = _pair
-                break
-        if not _selected_pair:
-            _selected_pair = _WIMBLEDON_CONCEPT_MAP[0][1]  # partnership as default
-        _c1_dir, _c2_dir = _selected_pair
+        _c1_dir, _c2_dir = _barclays.select_concepts(big_idea_seed, copy_headline, fan_truth)
 
     # ── Channel Skill — composition directive injected into image prompt ────────
     # Tells the image model the target format so it composes for the right ratio
