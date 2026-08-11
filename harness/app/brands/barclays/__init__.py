@@ -528,23 +528,26 @@ def _render_border_eagle(canvas, eagle_src, border: int, TW: int, PX: int = 0, P
         return canvas
     from PIL import Image
     if PW and PH:
-        # Eagle overlaid on photo — top-right corner
-        eh = max(int(PH * 0.08), 28)
+        # Barclays Blue eagle — top-right corner, just below the blue border strip
+        eh = max(int(PH * 0.09), 32)
         ew = int(eagle_src.width * eh / eagle_src.height)
-        margin = max(12, int(PW * 0.025))
+        margin = max(8, int(PW * 0.015))
         ex = PX + PW - ew - margin
-        ey = PY + margin
+        ey = PY + margin   # flush below the blue border
+        small = eagle_src.resize((ew, eh), Image.LANCZOS)
+        # Keep the original Barclays Blue — no white tinting
+        canvas.alpha_composite(small, (ex, ey))
     else:
         eh = max(int(border * 0.72), 16)
         ew = int(eagle_src.width * eh / eagle_src.height)
         if ew > border:
             ew = border
             eh = int(eagle_src.height * ew / eagle_src.width)
+        small = eagle_src.resize((ew, eh), Image.LANCZOS)
+        white = _tint_white(small)
         ex = TW - border + (border - ew) // 2
         ey = max(0, (border - eh) // 2)
-    small = eagle_src.resize((ew, eh), Image.LANCZOS)
-    white = _tint_white(small)
-    canvas.alpha_composite(white, (ex, ey))
+        canvas.alpha_composite(white, (ex, ey))
     return canvas
 
 
