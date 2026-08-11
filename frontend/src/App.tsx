@@ -1582,14 +1582,14 @@ function RunningView({
   compact?: boolean;
   brand?: string;
 }) {
-  // Most recent running agent
+  // Most recent running agent — compliance is excluded (runs silently, no spotlight card)
   const activeKey = useMemo(() =>
-    [...liveLog].reverse().find(e => e.status === "running")?.agent ?? null,
+    [...liveLog].reverse().find(e => e.status === "running" && e.agent !== "compliance")?.agent ?? null,
   [liveLog]);
 
-  // Most recent done agent (to show completion card between agents)
+  // Most recent done agent — compliance excluded so it never becomes the dwell card
   const lastDoneEvent = useMemo(() =>
-    [...liveLog].reverse().find(e => e.status === "done"),
+    [...liveLog].reverse().find(e => e.status === "done" && e.agent !== "compliance"),
   [liveLog]);
 
   // Displayed key/mode — stays on "done" result for 10s before switching to next running agent
@@ -1640,7 +1640,7 @@ function RunningView({
   const v = displayKey ? (AGENT_VISUALS[displayKey] ?? DEFAULT_VISUAL) : DEFAULT_VISUAL;
   const stage = displayKey ? HARNESS_STAGES.find(s => s.key === displayKey) : null;
 
-  const doneCount = HARNESS_STAGES.filter(s => agentStatus[s.key] === "done").length;
+  const doneCount = HARNESS_STAGES.filter(s => s.key !== "compliance" && agentStatus[s.key] === "done").length;
 
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden", fontFamily: "Inter,sans-serif" }}>
@@ -1669,7 +1669,8 @@ function RunningView({
 
         {/* Step list */}
         <div style={{ display: "flex", flexDirection: "column" as const, gap: 5, flex: 1 }}>
-          {HARNESS_STAGES.map((s, i) => {
+          {HARNESS_STAGES.filter(s => s.key !== "compliance").map((s, i) => {
+            const origIdx = HARNESS_STAGES.findIndex(h => h.key === s.key);
             const st    = agentStatus[s.key];
             const isOn  = s.key === activeKey;
             const isDone = st === "done";
@@ -1696,7 +1697,7 @@ function RunningView({
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0, display: "flex", alignItems: "center", gap: 8 }}>
-                  <img src={AGENT_AVATARS[i]} alt={s.label}
+                  <img src={AGENT_AVATARS[origIdx]} alt={s.label}
                     style={{ width: 22, height: 22, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
                   <div style={{ fontSize: 12, fontWeight: 700,
                     color: isOn ? vis.g1 : isDone ? "#34d399" : "var(--text-tertiary)" }}>
@@ -1823,7 +1824,6 @@ function RunningView({
             {/* Agent-specific content panel */}
             <div key={displayKey ?? "idle"} className="msg-fade">
               {displayKey === "briefing"   && <BriefingPanel m={milestones.briefing} liveMsg={liveMsg} brand={brand} />}
-              {displayKey === "compliance" && <CompliancePanel m={milestones.compliance as Record<string,unknown> | undefined} liveMsg={liveMsg} />}
               {displayKey === "strategy"   && <StrategyPanel m={milestones.strategy} />}
               {displayKey === "copy"      && <CopyPanel m={milestones.copy} />}
               {displayKey === "culture"   && <CulturePanel m={milestones.culture} />}
