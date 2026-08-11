@@ -3496,7 +3496,7 @@ function BriefIntakeView({
   const _ftAxes3 = [ft?.specific, ft?.shared, ft?.special].filter((v: any) => typeof v === "number" && v > 0) as number[];
   const _ftAxeAvg3 = _ftAxes3.length > 0 ? Math.round(_ftAxes3.reduce((a, b) => a + b, 0) / _ftAxes3.length) : undefined;
   const ftScore = (ft?.overall && ft.overall > 0) ? ft.overall as number : _ftAxeAvg3;
-  const _briefKpis = (brief?.kpis ?? []) as any[];
+  const _briefKpis = (Array.isArray(brief?.kpis) ? brief!.kpis : []) as any[];
   const _kpiScore3 = _briefKpis.length > 0
     ? Math.round(_briefKpis.reduce((s: number, k: any) => s + (k.flag === "OK" ? 100 : k.flag === "AMBITIOUS" ? 70 : 20), 0) / _briefKpis.length)
     : null;
