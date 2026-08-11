@@ -51,6 +51,7 @@ export interface HarnessBriefRequest {
   tone: string;
   mode?: "new" | "adapt";
   uploaded_assets?: string[];
+  campaign_type?: string;
 }
 
 export interface HarnessPipelineResponse {

@@ -3133,14 +3133,15 @@ const LEFT_X  = -176;
 
 const CARD_OFF: [number, number][] = [
   [-58, -90],      // 0 Logos — centred above avatar
-  [RIGHT_X, -10],  // 1 Helia
-  [RIGHT_X, -12],  // 2 Ideon
-  [RIGHT_X,   6],  // 3 Aether
-  [LEFT_X,    6],  // 4 Morphis
-  [LEFT_X,  -12],  // 5 Kinetik
-  [LEFT_X,  -36],  // 6 Poly
-  [RIGHT_X,  28],  // 7 Nexus — lower right
-  [LEFT_X,  -14],  // 8 Director — upper left
+  [RIGHT_X, -10],  // 1 Compliance
+  [RIGHT_X, -12],  // 2 Helia
+  [RIGHT_X,   6],  // 3 Ideon
+  [LEFT_X,    6],  // 4 Aether
+  [LEFT_X,  -12],  // 5 Morphis
+  [LEFT_X,  -36],  // 6 Kinetik
+  [RIGHT_X,  28],  // 7 Poly
+  [LEFT_X,  -14],  // 8 Nexus
+  [LEFT_X,  -60],  // 9 Director — upper left
 ];
 function AgentNetworkWakeUp() {
   const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 160;
@@ -3267,7 +3268,7 @@ function AgentNetworkWakeUp() {
 
               {/* Info card */}
               <div style={{ position: "absolute" as const,
-                left: n.co[0], top: n.co[1],
+                left: n.co?.[0], top: n.co?.[1],
                 width: 170, padding: "9px 12px",
                 background: "var(--card-bg-translucent)",
                 backdropFilter: "blur(12px)",
