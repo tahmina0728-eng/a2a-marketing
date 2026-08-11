@@ -95,6 +95,33 @@ const BARCLAYS_CAMPAIGNS = [
   "Business Banking",
 ];
 
+// Haleon: two-level cascade (Category → Product), mirrors haleon_catalog.py
+const HALEON_CATEGORIES = [
+  "Oral Health",
+  "Vitamins, Minerals & Supplements",
+  "Respiratory",
+  "Pain Relief",
+  "Digestive Health",
+  "Therapeutic Skin Health",
+];
+const HALEON_BRANDS_BY_CATEGORY: Record<string, string[]> = {
+  "Oral Health":                      ["Sensodyne", "Polident", "parodontax"],
+  "Vitamins, Minerals & Supplements": ["Centrum", "Emergen-C", "Caltrate"],
+  "Respiratory":                      ["Otrivin", "Theraflu", "Flonase", "Robitussin"],
+  "Pain Relief":                      ["Voltaren", "Panadol", "Advil", "Fenbid", "Contac", "Grand-pa", "Excedrin"],
+  "Digestive Health":                 ["Tums", "Eno", "Benefiber"],
+  "Therapeutic Skin Health":          ["Fenistil", "Zovirax", "Bactroban"],
+};
+
+// Other brands: flat product/service list (Barclays and Sunrise handled separately)
+const BRAND_PRODUCTS: Record<string, string[]> = {
+  Glenfiddich: ["12 Year Old", "15 Year Old", "18 Year Old", "21 Year Old", "Gran Reserva", "Fire & Cane", "IPA Experiment"],
+  "UBS Bank":  ["Wealth Management", "Private Banking", "Investment Banking", "Personal Banking", "SME Banking"],
+  Rnorr:       ["Stock Cubes", "Soups & Broths", "Seasonings", "Recipe Mixes"],
+  Sunglow:     ["Shampoo", "Conditioner", "Hair Treatment", "Styling Products"],
+  Boozt:       ["Boozt Original", "Boozt Zero", "Boozt Sport", "Boozt Energy Shot"],
+};
+
 const MARKET_CURRENCY_SYMBOL: Record<string, string> = {
   "United Kingdom": "£",
   "Australia":      "A$",
@@ -300,6 +327,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   });
 
   const [barclaysCampaign, setBarclaysCampaign] = useState(initialContext?.barclaysCampaign ?? "");
+  const [haleonCategory, setHaleonCategory] = useState("");
 
   const [formats, setFormats] = useState<Set<FormatType>>(new Set());
   const [imgSz, setImgSz]     = useState("4:5");
@@ -479,12 +507,14 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
           body.campaign_id   = barclaysCampaign.toLowerCase(); // explicit ID — exact match, no substring
         }
         if (product) {
-          // product stores just the plan name ("Easy Internet"); build the full
-          // formatted string with the current market's currency at send time so
-          // a market switch never silently sends a stale currency symbol.
-          const _sym = MARKET_CURRENCY_SYMBOL[market] ?? "CHF";
+          // Sunrise: build formatted plan string with live currency symbol
+          // All other brands: pass product name as-is
+          const _sym  = MARKET_CURRENCY_SYMBOL[market] ?? "CHF";
           const _plan = SUNRISE_PRODUCT_PLANS.find(p => p.name === product);
           body.product_name = _plan ? `${product} – ${_sym} ${_plan.amount}/mth` : product;
+        }
+        if (brand === "Haleon" && haleonCategory) {
+          body.product_category = haleonCategory;
         }
         if (market) body.market = market;
         if (audience) body.audience = audience;
@@ -621,7 +651,8 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
             <div style={{ display:"flex", gap:10, marginTop:16, flexWrap:"wrap" as const }}>
               <ChipSel label="Brand" value={brand} onChange={v => {
                   setBrand(v);
-                  if (v !== "Sunrise") setProduct("");
+                  setProduct("");
+                  setHaleonCategory("");
                   if (v !== "Barclays") setBarclaysCampaign("");
                   if (v === "Barclays" && !market) { setMarket("United Kingdom"); setLanguage("English"); }
                   const newAudiences = BRAND_AUDIENCES[v] ?? DEFAULT_AUDIENCES;
@@ -656,6 +687,26 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                 <ChipSel label="Campaign" value={barclaysCampaign} onChange={setBarclaysCampaign}
                   opts={BARCLAYS_CAMPAIGNS}
                   icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>} />
+              )}
+              {/* Haleon: cascaded Category → Product */}
+              {brand === "Haleon" && (
+                <ChipSel label="Category" value={haleonCategory}
+                  onChange={v => { setHaleonCategory(v); setProduct(""); }}
+                  opts={HALEON_CATEGORIES}
+                  icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="2" y="3" width="8" height="8" rx="1"/><rect x="14" y="3" width="8" height="8" rx="1"/><rect x="2" y="13" width="8" height="8" rx="1"/><rect x="14" y="13" width="8" height="8" rx="1"/></svg>} />
+              )}
+              {brand === "Haleon" && haleonCategory && (
+                <ChipSel label="Product" value={product}
+                  onChange={setProduct}
+                  opts={HALEON_BRANDS_BY_CATEGORY[haleonCategory] ?? []}
+                  icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>} />
+              )}
+              {/* Other brands: flat Product or Service chip */}
+              {brand && !["Sunrise","Barclays","Haleon"].includes(brand) && (BRAND_PRODUCTS[brand] ?? []).length > 0 && (
+                <ChipSel label="Product" value={product}
+                  onChange={setProduct}
+                  opts={BRAND_PRODUCTS[brand] ?? []}
+                  icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>} />
               )}
               <ChipSel label="Campaign Goal" value={goal} onChange={setGoal} opts={GOALS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/></svg>} />
