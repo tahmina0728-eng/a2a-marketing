@@ -2967,6 +2967,9 @@ Create a Big Idea for this campaign. Output:
         "Concept 2 — INTIMATE GLOW: Model is closer to camera, intense eye contact, softer but deeply saturated. Background glows behind them. Products at their side.",
     ))
 
+    # ── Brand flags (needed by Wimbledon check and image-prompt sections below) ──
+    _is_barclays = brand.lower() == "barclays"
+
     # ── Wimbledon override: campaign theme selects one of 5 creative territories ──
     _is_wimbledon = _is_barclays and any(
         "wimbledon" in str(v).lower()
@@ -3393,8 +3396,7 @@ Create a Big Idea for this campaign. Output:
             + (f". Market: {_market_demo}" if _market_demo else "")
         )
 
-    _sr_life      = brand.lower() in ("sunrise",) and not bool(product_name)
-    _is_barclays  = brand.lower() == "barclays"
+    _sr_life          = brand.lower() in ("sunrise",) and not bool(product_name)
     _is_service_brand = _is_barclays   # service brands have no product packshots
 
     if _is_barclays:
