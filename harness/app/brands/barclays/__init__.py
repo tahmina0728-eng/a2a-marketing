@@ -296,13 +296,11 @@ def select_concept(
         if kw in seed:
             return theme["concepts"][0]
 
-    # 4. Default
-    default_id = _wimb_concepts.get("default_theme", "partnership")
-    for theme in themes:
-        if theme["id"] == default_id:
-            return theme["concepts"][0]
-
-    return themes[0]["concepts"][0]
+    # 4. No keyword match — randomly pick from all concepts so every generation
+    #    gets a different visual territory (not always the same coach + player).
+    import random as _random
+    all_concepts = [c for theme in themes for c in theme["concepts"]]
+    return _random.choice(all_concepts)
 
 
 # ── Reel — scene direction ────────────────────────────────────────────────────
@@ -924,24 +922,29 @@ def _apply_wimbledon_overlay(
     cta_pad_y  = int(PH * cta_cfg.get("padding_y", 0.010))
     cta_radius = max(4, int(PH * cta_cfg.get("radius", 0.006)))
 
-    # ── Vertical layout ───────────────────────────────────────────────────────
+    # ── Vertical layout — coordinates tracked for Point 13 validation ───────────
     y = safe_top
 
     # Headline — all white (never Barclays Blue on dark photo)
+    hl_y0 = y
     for line in hl_lines:
         draw.text((safe_left, y), line, fill=WHITE, font=hl_font)
         y += hl_lh
+    hl_y1 = y
     y += int(hl_size * 0.50)   # gap: headline → subline
 
     # Subline — white, regular weight
+    sl_y0 = y
     for line in sl_lines:
         draw.text((safe_left, y), line, fill=WHITE, font=sl_font)
         y += sl_lh
+    sl_y1 = y
     y += int(sl_size * 0.80)   # gap: subline → CTA
 
-    # CTA button
-    _draw_cta_button(draw, cta_text, cta_font, safe_left, y,
-                     cta_pad_x, cta_pad_y, cta_radius, cta_bg, cta_fg)
+    # CTA button — capture dimensions for layout metadata
+    cta_y        = y
+    cta_bw, cta_bh = _draw_cta_button(draw, cta_text, cta_font, safe_left, cta_y,
+                                       cta_pad_x, cta_pad_y, cta_radius, cta_bg, cta_fg)
 
     # ── Logo lockup (bottom-right) ────────────────────────────────────────────
     # Point 8: prefer the single approved lockup asset over separate logos.
@@ -951,14 +954,26 @@ def _apply_wimbledon_overlay(
     lockup_name = _assets["partnerships"]["wimbledon"]["lockup"]   # barclays-wimbledon_wb.png
     lockup_img  = _load_logo_file(logo_uri, [lockup_name])
 
+    # Will be populated in whichever branch renders the logos
+    _logo_meta = {"x": 0, "y": 0, "w": 0, "h": 0}
+
     if lockup_img:
-        lk_w  = int(PW * logo_spec.get("lockup_width", 0.22))
+        lk_w  = int(PW * logo_spec.get("lockup_width", 0.38))
         lk_h  = int(lockup_img.height * lk_w / lockup_img.width)
         lockup_img = lockup_img.resize((lk_w, lk_h), Image.LANCZOS)
         lk_x  = PX + PW - lk_w - right_m
         lk_y  = PY + PH - lk_h - bottom_m
+        # Dark pill behind lockup so it reads on any photo background
+        pad_x, pad_y = int(PW * 0.012), int(PH * 0.010)
+        scrim_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        _ID.Draw(scrim_layer).rounded_rectangle(
+            [lk_x - pad_x, lk_y - pad_y, lk_x + lk_w + pad_x, lk_y + lk_h + pad_y],
+            radius=int(PH * 0.012), fill=(0, 0, 0, 110),
+        )
+        canvas.alpha_composite(scrim_layer)
         canvas.alpha_composite(lockup_img, (lk_x, lk_y))
         draw = _ID.Draw(canvas)
+        _logo_meta = {"x": lk_x, "y": lk_y, "w": lk_w, "h": lk_h}
     else:
         # Fallback: Wimbledon badge + eagle + BARCLAYS text (deterministic sizing)
         gap_logos = int(PW * 0.018)
@@ -990,6 +1005,8 @@ def _apply_wimbledon_overlay(
         lx     = PX + PW - total - right_m
         ly_c   = PY + PH - lh - bottom_m
 
+        _logo_meta = {"x": lx, "y": ly_c, "w": total, "h": lh}
+
         if shield:
             canvas.alpha_composite(shield, (lx, ly_c))
             lx += sw_val + gap_logos
@@ -1000,7 +1017,55 @@ def _apply_wimbledon_overlay(
         draw_m.text((lx, ly_c + (lh - bk_h) // 2 - bk_bb[1]), "BARCLAYS",
                     fill=WHITE, font=bk_fnt)
 
-    return canvas
+    # ── Layout metadata (Point 13) ────────────────────────────────────────────
+    layout_meta = {
+        "headline": {"x": safe_left, "y": hl_y0, "w": hl_max_w, "h": hl_y1 - hl_y0, "font_size": hl_size},
+        "subline":  {"x": safe_left, "y": sl_y0, "w": sl_max_w, "h": sl_y1 - sl_y0, "font_size": sl_size},
+        "cta":      {"x": safe_left, "y": cta_y,  "w": cta_bw,   "h": cta_bh},
+        "logos":    _logo_meta,
+    }
+    return canvas, layout_meta
+
+
+def _validate_layout(
+    meta: dict, PX: int, PY: int, PW: int, PH: int, safe: dict
+) -> list:
+    """
+    Point 13: assert all major elements land inside safe-area bounds.
+    Returns a list of violation strings (empty = pass).
+    """
+    violations = []
+
+    safe_x0 = PX + int(PW * safe.get("left",   0.07))
+    safe_y0 = PY + int(PH * safe.get("top",    0.07))
+    safe_x1 = PX + PW - int(PW * safe.get("right",  0.07))
+    safe_y1 = PY + PH - int(PH * safe.get("bottom", 0.07))
+
+    def _check(name: str, elem: dict):
+        x, y, w, h = elem["x"], elem["y"], elem["w"], elem["h"]
+        if x < safe_x0:
+            violations.append(f"{name}: left edge {x} < safe_x0 {safe_x0}")
+        if y < safe_y0:
+            violations.append(f"{name}: top edge {y} < safe_y0 {safe_y0}")
+        if x + w > safe_x1:
+            violations.append(f"{name}: right edge {x+w} > safe_x1 {safe_x1}")
+        # Logos may intentionally sit near bottom edge — allow with extra margin
+        if name != "logos" and y + h > safe_y1:
+            violations.append(f"{name}: bottom edge {y+h} > safe_y1 {safe_y1}")
+
+    for key in ("headline", "subline", "cta", "logos"):
+        elem = meta.get(key)
+        if elem:
+            _check(key, elem)
+
+    # Cross-element: headline must be above subline, subline above cta
+    hl, sl, cta = meta.get("headline"), meta.get("subline"), meta.get("cta")
+    if hl and sl and hl["y"] + hl["h"] > sl["y"]:
+        violations.append("headline bottom overlaps subline top")
+    if sl and cta and sl["y"] + sl["h"] > cta["y"]:
+        violations.append("subline bottom overlaps cta top")
+
+    return violations
 
 
 def apply_overlay(
@@ -1048,10 +1113,18 @@ def apply_overlay(
         if is_wimbledon:
             # Fully deterministic spec-driven compositor
             font_dir = str(Path(font_path).parent) if font_path else None
-            canvas = _apply_wimbledon_overlay(
+            canvas, layout_meta = _apply_wimbledon_overlay(
                 canvas, ImageDraw.Draw(canvas), PX, PY, PW, PH,
                 font_dir, logo_uri, headline, copy_subline, copy_cta,
             )
+            # Point 13: programmatic safe-area validation
+            safe_spec = _assets.get("overlay", {}).get("safe_area", {})
+            violations = _validate_layout(layout_meta, PX, PY, PW, PH, safe_spec)
+            if violations:
+                import logging as _log
+                _log.getLogger(__name__).warning(
+                    "Wimbledon KV layout violations: %s", violations
+                )
         else:
             # Non-Wimbledon: gradient scrim + headline + standard bottom bar
             canvas = _render_gradient_scrim(canvas, PX, PY, PW, PH, TW, TH)

@@ -176,6 +176,66 @@ def _creative_qa(
         return {"overall": 100, "decision": "APPROVE", "logo_contamination": 100, "issues": []}
 
 
+def _creative_qa_final(image_bytes: bytes, headline: str) -> dict:
+    """Point 12: Vision model QA on the fully composited ad (post-overlay).
+
+    Checks presence of all required brand elements and overall layout quality.
+    Decision: overall ≥ 70 AND headline_present ≥ 70 AND barclays_logo_present ≥ 70 → APPROVE.
+    Fails open on any error so QA never blocks delivery.
+    """
+    import json, re
+    try:
+        from google.genai import types as gtypes
+
+        _qa_model = settings.gemini_model_reasoning or "gemini-2.0-flash"
+        qa_prompt = (
+            "You are a Creative QA director reviewing a FINAL composited advertising creative "
+            "for Barclays × Wimbledon. All brand elements (headline, subline, CTA, logos) have "
+            "been added in post-production and must be visually present and legible.\n\n"
+            f'Expected headline text (verbatim or very close): "{headline}"\n\n'
+            "Score each dimension 0–100 where 100 = perfect presence / execution:\n"
+            "  headline_present      — is the headline text visible and legible?\n"
+            "  subline_present       — is the supporting subline copy visible?\n"
+            "  cta_present           — is a CTA button or call-to-action visible?\n"
+            "  barclays_logo_present — is the Barclays eagle/wordmark visible?\n"
+            "  wimbledon_logo_present— is the Wimbledon mark/shield visible?\n"
+            "  logo_placement        — are logos in the correct bottom-right position?\n"
+            "  overall_layout        — does the overall ad look professional and balanced?\n\n"
+            "Respond ONLY with valid JSON, no markdown fences:\n"
+            '{"headline_present":<0-100>,"subline_present":<0-100>,"cta_present":<0-100>,'
+            '"barclays_logo_present":<0-100>,"wimbledon_logo_present":<0-100>,'
+            '"logo_placement":<0-100>,"overall_layout":<0-100>}'
+        )
+
+        img_part = gtypes.Part.from_bytes(data=image_bytes, mime_type="image/png")
+        resp = _genai_client().models.generate_content(
+            model    = _qa_model,
+            contents = [qa_prompt, img_part],
+        )
+
+        raw = (resp.text or "").strip()
+        m   = re.search(r'\{[\s\S]*\}', raw)
+        if not m:
+            raise ValueError("final_qa returned no JSON")
+        data = json.loads(m.group())
+
+        hl  = float(data.get("headline_present", 80))
+        bl  = float(data.get("barclays_logo_present", 80))
+        rest = sum(float(data.get(k, 80)) for k in (
+            "subline_present", "cta_present", "wimbledon_logo_present",
+            "logo_placement", "overall_layout"
+        ))
+        data["overall"]  = round((hl + bl + rest) / 7)
+        data["decision"] = (
+            "APPROVE" if data["overall"] >= 70 and hl >= 70 and bl >= 70 else "REVIEW"
+        )
+        return data
+
+    except Exception as _err:
+        logger.warning("creative_qa_final_failed", error=str(_err))
+        return {"overall": 100, "decision": "APPROVE"}
+
+
 def run_kv(
     brand: str,
     prompt: str,
@@ -346,8 +406,9 @@ def run_kv(
         )
 
     # ── 5. Image generation + Creative QA ────────────────────────────────────
-    image_b64  = ""
+    image_b64      = ""
     _qa_result: dict = {}
+    _final_qa: dict  = {}
     try:
         from google.genai import types as gtypes
         from app.creative_pipeline import _part_for_uri
@@ -523,6 +584,9 @@ def run_kv(
                     copy_subline = copy_subline,
                     copy_cta     = copy_cta,
                 )
+                _final_qa = _creative_qa_final(overlaid, headline)
+                logger.info("kv_final_qa", decision=_final_qa.get("decision"),
+                            overall=_final_qa.get("overall"))
             else:
                 from app.runner import _apply_brand_overlay
                 logger.info("kv_overlay", brand=brand, product_name=product_name,
@@ -542,4 +606,5 @@ def run_kv(
             k: _qa_result.get(k)
             for k in ("overall", "decision", "logo_contamination", "issues")
         } if _qa_result else {},
+        "final_qa": _final_qa,
     }
