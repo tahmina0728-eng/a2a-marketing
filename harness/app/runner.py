@@ -4478,7 +4478,12 @@ async def run_brand_compliance_check(
     if profile and profile.compliance:
         cp = profile.compliance
         content_lower = generated_text.lower() if generated_text else ""
-        brief_text    = json.dumps(machine_brief).lower()
+        # Exclude meta fields that contain the brand rules themselves — scanning them
+        # would flag every prohibited phrase against its own definition.
+        _SCAN_EXCLUDE = {"brand_profile_json", "brand_guidelines", "compliance_issues",
+                         "brand_locks_json", "audience_insights"}
+        _brief_scan = {k: v for k, v in machine_brief.items() if k not in _SCAN_EXCLUDE}
+        brief_text    = json.dumps(_brief_scan).lower()
         all_content   = content_lower + " " + brief_text
 
         for phrase in cp.prohibited_phrases:
