@@ -433,7 +433,11 @@ def _open_photo(img_data: bytes):
 def _create_canvas(photo, blue: tuple):
     from PIL import Image
     PW, PH = photo.size
-    border = max(18, int(min(PW, PH) * 0.042))
+    # Base border on the LONGER side so both 16:9 and 9:16 get the same
+    # absolute border thickness (using min gives a 18px floor for 16:9
+    # landscape images where height is small, which causes the eagle to
+    # bleed into the photo area).
+    border = max(28, int(max(PW, PH) * 0.028))
     TW, TH = PW + border * 2, PH + border * 2
     canvas = Image.new("RGBA", (TW, TH), (*blue, 255))
     canvas.alpha_composite(photo, (border, border))
@@ -480,16 +484,27 @@ def _load_eagle(logo_uri: str):
 
 
 def _tint_white(src):
-    """Convert a logo to a white silhouette (non-white pixels → opaque white)."""
+    """Convert a logo to a white silhouette (non-white pixels → opaque white).
+
+    If the source is already a white-on-transparent PNG (all visible pixels
+    are white), the algorithm would produce a fully-transparent result.
+    Detect that case and return the source unchanged so the white eagle
+    remains visible on the blue border.
+    """
     from PIL import Image
     pix = src.load()
     alpha = Image.new("L", src.size, 0)
     ap = alpha.load()
+    has_visible = False
     for y in range(src.height):
         for x in range(src.width):
             r, g, b, a = pix[x, y]
             if a > 30 and not (r > 215 and g > 215 and b > 215):
                 ap[x, y] = 255
+                has_visible = True
+    if not has_visible:
+        # Already white-on-transparent — use it directly.
+        return src.copy()
     wh = Image.new("L", src.size, 255)
     return Image.merge("RGBA", [wh, wh, wh, alpha])
 
@@ -513,11 +528,16 @@ def _render_border_eagle(canvas, eagle_src, border: int, TW: int):
     if not eagle_src:
         return canvas
     from PIL import Image
-    eh = max(int(border * 0.75), 18)
+    eh = max(int(border * 0.72), 16)
     ew = int(eagle_src.width * eh / eagle_src.height)
+    # Clamp width so the eagle never bleeds into the photo area.
+    if ew > border:
+        ew = border
+        eh = int(eagle_src.height * ew / eagle_src.width)
     small = eagle_src.resize((ew, eh), Image.LANCZOS)
     white = _tint_white(small)
-    ex = max(0, min(TW - border + (border - ew) // 2, TW - ew))
+    # Centre within the right border strip.
+    ex = TW - border + (border - ew) // 2
     ey = max(0, (border - eh) // 2)
     canvas.alpha_composite(white, (ex, ey))
     return canvas
