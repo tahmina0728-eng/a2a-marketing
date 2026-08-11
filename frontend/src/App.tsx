@@ -4833,7 +4833,7 @@ export default function App() {
       const as = state.agentStatus;
       if (["performance"].some(k => as[k] === "running" || as[k] === "done")) return "perform";
       if (["channel"].some(k => as[k] === "running" || as[k] === "done")) return "channel";
-      if (["culture","strategy","copy","kv","reel"].some(k => as[k] === "running" || as[k] === "done")) return "creative";
+      if (["compliance","culture","strategy","copy","kv","reel","tvc"].some(k => as[k] === "running" || as[k] === "done")) return "creative";
       return "brief";
     }
     if (state.status === "done") return "activate";
@@ -5138,9 +5138,19 @@ export default function App() {
               />
             )}
 
-            {/* Brief approved but creative agents not yet showing — brief transition */}
+            {/* Brief approved — waiting for first creative agent SSE event */}
             {state.status === "running" && !rerunMode && briefApproved && activeStageId === "brief" && (
-              <AgentNetworkWakeUp />
+              <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
+                alignItems: "center", justifyContent: "center", gap: 16,
+                background: "var(--page-bg)" }}>
+                <GradientOrb size={64} />
+                <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
+                  Brief approved — launching creative pipeline…
+                </div>
+                <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                  Agents are starting up
+                </div>
+              </div>
             )}
 
             {state.status === "running" && !rerunMode && briefApproved && activeStageId !== "brief" && (() => {
