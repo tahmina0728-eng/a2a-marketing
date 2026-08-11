@@ -98,32 +98,44 @@ export function speakAgentIntro(agentKey: string, onDone?: () => void) {
   }
 }
 
-export const AGENT_COLORS = ["#7c3aed","#06b6d4","#10b981","#f59e0b","#ec4899","#6366f1","#14b8a6","#f43f5e","#a855f7","#8b5cf6"];
-export const AGENT_DESCS  = [
-  "Understands your goals, audience, product and campaign objectives",
-  "Crafts big ideas and messaging territories that inspire",
-  "Writes compelling headlines, copy, scripts and captions",
-  "Analyzes cultural trends, insights and audience behaviors",
-  "Creates striking key visuals, ad designs and imagery",
-  "Produces engaging short videos and reels visually",
-  "Adapts content for every platform and channel",
-  "Forecasts reach, ROAS and performance before launch",
-  "Forecasts reach, ROAS and performance before launch",
-  "Generates 15s and 30s multi-scene TV commercials with Veo",
+// Indexed by HARNESS_STAGES position (0=briefing … 9=tvc).
+// compliance (1) is hidden from the diagram but kept in the array for consistent indexing.
+export const AGENT_COLORS = [
+  "#7c3aed", // 0 Logos      (briefing)
+  "#94a3b8", // 1 Compliance (hidden)
+  "#06b6d4", // 2 Helia      (strategy)
+  "#10b981", // 3 Ideon      (copy)
+  "#f59e0b", // 4 Aether     (culture)
+  "#ec4899", // 5 Morphis    (kv)
+  "#6366f1", // 6 Kinetik    (reel)
+  "#14b8a6", // 7 Poly       (channel)
+  "#f43f5e", // 8 Nexus      (performance)
+  "#8b5cf6", // 9 Director   (tvc)
+];
+export const AGENT_DESCS = [
+  "Validates campaign brief and scores Fan Truth quality",           // 0 Logos
+  "Checks brand profile and regulatory compliance rules",            // 1 Compliance (hidden)
+  "Crafts big ideas, strategy and creative territories that inspire",// 2 Helia
+  "Writes compelling headlines, copy, scripts and captions",         // 3 Ideon
+  "Analyzes cultural trends, insights and audience behaviors",       // 4 Aether
+  "Generates key visuals, ad designs and campaign imagery",          // 5 Morphis
+  "Produces engaging short videos and campaign reels",               // 6 Kinetik
+  "Publishes content across Instagram, TikTok and all channels",     // 7 Poly
+  "Forecasts reach, ROAS and campaign performance before launch",    // 8 Nexus
+  "Generates 15s and 30s multi-scene TV commercials with Veo",      // 9 Director
 ];
 
-// Local agent logo PNGs downloaded from GCS bucket (agent-logo/).
-// Keyed by HARNESS_STAGES index (0=Logos,1=Helia,...,7=Nexus).
-// "Kinetic.png" is the filename in the bucket for the Kinetik agent.
+// Keyed by HARNESS_STAGES index. Helia.png is the lady with hijab avatar at index 2.
 export const AGENT_AVATARS: Record<number, string> = {
-  0: "/agent-logo/Logo 2.png",      // Logos     (briefing)
-  1: "/agent-logo/Helia.png",       // Helia     (compliance — compliance inserted before strategy)
-  2: "/agent-logo/Ideon.png",       // Ideon     (strategy)
-  3: "/agent-logo/Aether.png",      // Aether    (copy)
-  4: "/agent-logo/Morphis.png",     // Morphis   (culture)
-  5: "/agent-logo/Kinetic.png",     // Kinetik   (kv)
-  6: "/agent-logo/Poly.png",        // Poly      (reel)
-  9: "/agent-logo/Morphis 1.png",   // Director  (tvc) — HARNESS_STAGES index 9
+  0: "/agent-logo/Logo 2.png",      // Logos      (briefing)
+  1: "/agent-logo/Helia.png",       // Compliance (hidden — reuses Helia file)
+  2: "/agent-logo/Helia.png",       // Helia      (strategy) — lady with hijab
+  3: "/agent-logo/Ideon.png",       // Ideon      (copy)
+  4: "/agent-logo/Aether.png",      // Aether     (culture)
+  5: "/agent-logo/Morphis.png",     // Morphis    (kv)
+  6: "/agent-logo/Kinetic.png",     // Kinetik    (reel)
+  7: "/agent-logo/Poly.png",        // Poly       (channel)
+  9: "/agent-logo/Morphis 1.png",   // Director   (tvc)
 };
 export const avatarUrl = (_label: string, idx: number): string =>
   AGENT_AVATARS[idx] ?? `https://i.pravatar.cc/150?img=${[12,5,32,47,23,68,17,55][idx] ?? 1}`;
