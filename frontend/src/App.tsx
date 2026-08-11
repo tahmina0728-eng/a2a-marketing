@@ -3727,16 +3727,23 @@ function CopyIntakeView({ milestone, liveMsg }: {
       <div style={{ maxWidth: 900, margin: "0 auto" }}>
         <AgentIntakeHeader label="IDEON" title="Campaign Copy" done={true} />
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-          {/* Billboard hero */}
+
+          {/* Billboard hero — headline + subline + CTA pill */}
           {m.short_headline && (
             <CCard title="Short Headline" full>
               <div style={{ background: `linear-gradient(135deg, ${g1}, ${g2})`,
-                borderRadius: 10, padding: "20px 24px", textAlign: "center" as const, marginBottom: 8 }}>
+                borderRadius: 10, padding: "24px 28px", textAlign: "center" as const }}>
                 <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.2 }}>
                   "{m.short_headline}"
                 </div>
+                {m.subline && (
+                  <div style={{ marginTop: 10, fontSize: 13, color: "rgba(255,255,255,0.82)",
+                    fontWeight: 500, lineHeight: 1.45 }}>
+                    {m.subline}
+                  </div>
+                )}
                 {m.cta && (
-                  <div style={{ marginTop: 12, display: "inline-block", padding: "6px 20px",
+                  <div style={{ marginTop: 14, display: "inline-block", padding: "7px 22px",
                     borderRadius: 99, background: "white", color: g1, fontSize: 12, fontWeight: 800 }}>
                     {m.cta}
                   </div>
@@ -3744,6 +3751,8 @@ function CopyIntakeView({ milestone, liveMsg }: {
               </div>
             </CCard>
           )}
+
+          {/* Medium Headline */}
           {m.medium_headline && (
             <CCard title="Medium Headline">
               <div style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.4 }}>
@@ -3751,13 +3760,33 @@ function CopyIntakeView({ milestone, liveMsg }: {
               </div>
             </CCard>
           )}
-          {m.body && (
-            <CCard title="Body Copy">
-              <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>
-                {String(m.body).slice(0, 200)}{String(m.body).length > 200 ? "…" : ""}
+
+          {/* CTA — standalone card */}
+          {m.cta && (
+            <CCard title="CTA">
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ padding: "9px 22px", borderRadius: 99,
+                  background: `linear-gradient(135deg, ${g1}, ${g2})`,
+                  color: "white", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" as const }}>
+                  {m.cta}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>
+                  Call-to-action — verb-led, max 3 words
+                </div>
               </div>
             </CCard>
           )}
+
+          {/* Body Copy */}
+          {m.body && (
+            <CCard title="Body Copy" full>
+              <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.8 }}>
+                {String(m.body).slice(0, 300)}{String(m.body).length > 300 ? "…" : ""}
+              </div>
+            </CCard>
+          )}
+
+          {/* Channel Copy */}
           {channelCopy && Object.keys(channelCopy).length > 0 && (
             <CCard title="Channel Copy" full>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
