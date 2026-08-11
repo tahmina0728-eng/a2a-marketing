@@ -3131,23 +3131,22 @@ function ResultsView({ output, campaignId }: {
 const RIGHT_X = 60;
 const LEFT_X  = -176;
 
-// 8 agents shown: Logos, Helia, Ideon, Aether, Morphis, Kinetik, Director, Nexus
-// i=0 top, i=1–3 right side, i=4–7 left side (8 even steps = 45° spacing)
+// 9 agents shown: Logos, Helia, Ideon, Aether, Morphis, Kinetik, Poly, Nexus, Director
+// i=0 top, i=1–4 right side, i=5–8 left side (9 even steps = 40° spacing)
 const CARD_OFF: [number, number][] = [
   [-58,    -90],   // 0 Logos    — top, card above
   [RIGHT_X,  -4],  // 1 Helia    — upper right
   [RIGHT_X,  -4],  // 2 Ideon    — right
   [RIGHT_X,  -4],  // 3 Aether   — lower right
-  [LEFT_X,   -4],  // 4 Morphis  — bottom left
-  [LEFT_X,   -4],  // 5 Kinetik  — lower left
-  [LEFT_X,   -4],  // 6 Director — left
-  [LEFT_X,   -4],  // 7 Nexus    — upper left
+  [RIGHT_X,  -4],  // 4 Morphis  — bottom right
+  [LEFT_X,   -4],  // 5 Kinetik  — bottom left
+  [LEFT_X,   -4],  // 6 Poly     — lower left
+  [LEFT_X,   -4],  // 7 Nexus    — left
+  [LEFT_X,   -4],  // 8 Director — upper left
 ];
 
-// 8 creative agents shown in the network diagram (compliance and channel excluded)
-const NETWORK_STAGES = HARNESS_STAGES.filter(
-  s => !["compliance", "channel"].includes(s.key)
-);
+// 9 agents shown in the network diagram (compliance excluded — runs silently in pipeline)
+const NETWORK_STAGES = HARNESS_STAGES.filter(s => s.key !== "compliance");
 
 function AgentNetworkWakeUp() {
   const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 160;
@@ -3198,7 +3197,7 @@ function AgentNetworkWakeUp() {
       <div style={{ textAlign: "center" as const, padding: "24px 16px 0", position: "relative", zIndex: 10 }}>
         <h2 style={{ fontSize: `clamp(16px, ${scale * 24}px, 24px)`, fontWeight: 800, color: "var(--text-primary)",
           letterSpacing: "-0.02em", marginBottom: 6, lineHeight: 1.3 }}>
-          Eight AI Agents.{" "}
+          Nine AI Agents.{" "}
           <span style={{ background: ORB_BG, WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
             One Powerful Campaign.
