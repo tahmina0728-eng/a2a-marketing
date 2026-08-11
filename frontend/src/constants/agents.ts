@@ -114,13 +114,14 @@ export const AGENT_DESCS  = [
 // Keyed by HARNESS_STAGES index (0=Logos,1=Helia,...,7=Nexus).
 // "Kinetic.png" is the filename in the bucket for the Kinetik agent.
 export const AGENT_AVATARS: Record<number, string> = {
-  0: "/agent-logo/Logo 2.png",   // Logos
-  1: "/agent-logo/Helia.png",    // Helia
-  2: "/agent-logo/Ideon.png",    // Ideon
-  3: "/agent-logo/Aether.png",   // Aether
-  4: "/agent-logo/Morphis.png",  // Morphis
-  5: "/agent-logo/Kinetic.png",  // Kinetik
-  6: "/agent-logo/Poly.png",     // Poly
+  0: "/agent-logo/Logo 2.png",      // Logos     (briefing)
+  1: "/agent-logo/Helia.png",       // Helia     (compliance — compliance inserted before strategy)
+  2: "/agent-logo/Ideon.png",       // Ideon     (strategy)
+  3: "/agent-logo/Aether.png",      // Aether    (copy)
+  4: "/agent-logo/Morphis.png",     // Morphis   (culture)
+  5: "/agent-logo/Kinetic.png",     // Kinetik   (kv)
+  6: "/agent-logo/Poly.png",        // Poly      (reel)
+  9: "/agent-logo/Morphis 1.png",   // Director  (tvc) — HARNESS_STAGES index 9
 };
 export const avatarUrl = (_label: string, idx: number): string =>
   AGENT_AVATARS[idx] ?? `https://i.pravatar.cc/150?img=${[12,5,32,47,23,68,17,55][idx] ?? 1}`;
