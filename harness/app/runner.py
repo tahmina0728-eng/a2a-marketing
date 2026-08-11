@@ -2299,7 +2299,7 @@ async def generate_campaign_reel(
     _is_barclays_reel = brand.lower() == "barclays"
     _is_wimbledon_reel = _is_barclays_reel and any(
         "wimbledon" in str(v).lower()
-        for v in [big_idea, fan_truth, product_name, audience] if v
+        for v in [big_idea, fan_truth, product_name, audience, season, copy_headline] if v
     )
 
     _BRAND_SCENE_FN = {
