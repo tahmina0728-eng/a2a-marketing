@@ -235,6 +235,8 @@ def generate_brand_website(brand: str, hero_message: str = "", tagline: str = ""
                             campaign_image_b64: str = "", hero_image_b64: str = "",
                             campaign_id: str = "", video_b64: str = "") -> str:
     """Route to the correct brand website generator."""
+    if brand.lower() == "barclays":
+        return generate_barclays_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     if brand.lower() == "rnorr":
         return generate_rnorr_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     if brand.lower() == "boozt":
@@ -247,6 +249,460 @@ def generate_brand_website(brand: str, hero_message: str = "", tagline: str = ""
         return generate_haleon_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     return _generate_sunglow_website(brand, hero_message, tagline, body_copy, cta,
                                      campaign_image_b64, campaign_id, hero_image_b64, video_b64)
+
+
+def generate_barclays_website(campaign_image_b64: str = "", campaign_id: str = "",
+                               hero_message: str = "", body_copy: str = "", cta: str = "",
+                               hero_image_b64: str = "", video_b64: str = "") -> str:
+    """
+    Barclays brand landing page — modelled on home.barclays/who-we-are/sponsorship/wimbledon/.
+    Split-panel hero, story cards, mint teal ambassador section, dark navy footer.
+    Wimbledon campaign path auto-activates when campaign_id == 'wimbledon'.
+    """
+    from app.brand_assets import get_asset_loader
+
+    loader   = get_asset_loader()
+    assets   = loader.list_assets("Barclays")
+    products = loader.list_products("Barclays")
+
+    # ── Palette ───────────────────────────────────────────────────────────────
+    NAVY      = "#003B70"   # deep corporate navy — hero left panel, bottom CTA, footer
+    BLUE      = "#00AEEF"   # Barclays Blue — eagle, CTAs, highlights
+    LINK_BLUE = "#006CA0"   # mid blue for text links
+    WHITE     = "#FFFFFF"
+    LIGHT_GRAY = "#F5F5F5"  # footer bg, card bg
+    BORDER    = "#E0E0E0"
+    TEXT      = "#1A1A1A"
+    MUTED     = "#555555"
+    MINT      = "#C8ECE9"   # "Here for the players" teal section
+    WIMB_GRN  = "#006633"   # Wimbledon green
+    WIMB_PURP = "#6C2577"   # Wimbledon purple
+
+    is_wimbledon = (
+        (campaign_id or "").lower() == "wimbledon"
+        or "wimbledon" in (hero_message or "").lower()
+    )
+
+    # ── Images ────────────────────────────────────────────────────────────────
+    _gcs_hero   = next((_gcs_to_b64(a, "image/jpeg", 1200) for a in assets[:4] if a), "")
+    hero_bg_src = _make_bg_src(hero_image_b64) or _make_bg_src(campaign_image_b64) or _gcs_hero
+    camp_src    = _make_bg_src(campaign_image_b64) or _gcs_hero
+
+    # ── Copy ──────────────────────────────────────────────────────────────────
+    headline = hero_message or ("Backing your future" if is_wimbledon else "Banking built around you")
+    sub      = body_copy    or (
+        "Barclays supports tennis through partnerships with Wimbledon and the LTA, "
+        "helping to grow the game and make it more accessible in communities across the UK and beyond."
+        if is_wimbledon else
+        "Whether it's your first home, your growing business or your savings goals — "
+        "Barclays gives you the tools, support and expertise to make it happen."
+    )
+    cta_text = cta or ("Explore Wimbledon Rewards" if is_wimbledon else "Find the right account")
+
+    # ── Wimbledon SVG partnership badge (circular, purple/green) ─────────────
+    wimb_badge_svg = f"""
+    <svg width="110" height="110" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="55" cy="55" r="54" fill="{WIMB_PURP}" stroke="white" stroke-width="1.5"/>
+      <circle cx="55" cy="55" r="42" fill="{WIMB_GRN}"/>
+      <circle cx="55" cy="55" r="38" fill="none" stroke="white" stroke-width="1"/>
+      <!-- crossed racquets -->
+      <g stroke="white" stroke-width="2" stroke-linecap="round">
+        <line x1="38" y1="38" x2="72" y2="72"/>
+        <line x1="72" y1="38" x2="38" y2="72"/>
+        <ellipse cx="38" cy="38" rx="8" ry="6" fill="none" stroke="white" stroke-width="1.5" transform="rotate(-45 38 38)"/>
+        <ellipse cx="72" cy="38" rx="8" ry="6" fill="none" stroke="white" stroke-width="1.5" transform="rotate(45 72 38)"/>
+      </g>
+      <!-- text arcs — top -->
+      <path id="top-arc" d="M 15,55 A 40,40 0 0,1 95,55" fill="none"/>
+      <text font-size="8" font-weight="700" letter-spacing="2" fill="white" font-family="system-ui,sans-serif">
+        <textPath href="#top-arc" startOffset="5%">THE CHAMPIONSHIPS</textPath>
+      </text>
+      <!-- text arcs — bottom -->
+      <path id="bot-arc" d="M 20,62 A 36,36 0 0,0 90,62" fill="none"/>
+      <text font-size="8" font-weight="700" letter-spacing="3" fill="white" font-family="system-ui,sans-serif">
+        <textPath href="#bot-arc" startOffset="12%">WIMBLEDON</textPath>
+      </text>
+      <!-- official partner label -->
+      <text x="55" y="82" text-anchor="middle" font-size="6" fill="white"
+            font-family="system-ui,sans-serif" letter-spacing="1">OFFICIAL PARTNER</text>
+    </svg>"""
+
+    # ── Story cards ───────────────────────────────────────────────────────────
+    if is_wimbledon:
+        cards = [
+            ("Create your unforgettable Wimbledon moments",
+             "As the Official Banking Partner of The Championships, Wimbledon, we're bringing "
+             "you closer to unforgettable moments, on the court and off it. Whether you're at "
+             "the Grounds or watching from home, there's more to experience with Barclays.",
+             "Explore Wimbledon offers"),
+            ("Here for more tennis",
+             "Barclays and the LTA have teamed up to help 150,000 more people play tennis for "
+             "free across Great Britain — through Barclays Free Park Tennis, Big Tennis Weekends, "
+             "and Local Tennis Leagues, making the sport accessible to all ages and backgrounds.",
+             "Book your session here"),
+        ]
+    else:
+        cards = [
+            ("Banking built around your life",
+             f"{headline} — {sub}",
+             cta_text),
+            ("Here for every milestone",
+             "From your first current account to planning for retirement, Barclays gives you "
+             "the tools, guidance and support to make every financial decision with confidence.",
+             "Find the right account"),
+        ]
+
+    story_cards_html = "".join(f"""
+      <div style="background:{WHITE};border-radius:8px;overflow:hidden;
+                  box-shadow:0 2px 12px rgba(0,0,0,0.08);transition:box-shadow 0.2s;"
+           onmouseover="this.style.boxShadow='0 8px 32px rgba(0,0,0,0.14)'"
+           onmouseout="this.style.boxShadow='0 2px 12px rgba(0,0,0,0.08)'">
+        <div style="height:260px;overflow:hidden;background:{MINT};">
+          {f'<img src="{camp_src}" alt="{title}" style="width:100%;height:100%;object-fit:cover;display:block;">'
+            if (camp_src and i == 0) else
+           f'<div style="width:100%;height:100%;background:linear-gradient(135deg,{NAVY},{BLUE});'
+           f'display:flex;align-items:center;justify-content:center;font-size:56px;">{"🎾" if is_wimbledon else "🏦"}</div>'}
+        </div>
+        <div style="padding:28px 28px 32px;">
+          <h3 style="font-size:20px;font-weight:700;color:{TEXT};margin-bottom:14px;line-height:1.3;">{title}</h3>
+          <p style="font-size:14px;color:{MUTED};line-height:1.7;margin-bottom:20px;">{body}</p>
+          <a href="#" style="color:{LINK_BLUE};font-weight:700;font-size:14px;text-decoration:none;
+             display:inline-flex;align-items:center;gap:6px;border-bottom:2px solid {LINK_BLUE};padding-bottom:2px;">
+            {link}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+      </div>""" for i, (title, body, link) in enumerate(cards))
+
+    # ── "Driving progress" / campaign content tab section ─────────────────────
+    tab_label_1 = "Set for Success" if is_wimbledon else "Campaign Story"
+    tab_label_2 = "Supporting the Community" if is_wimbledon else "Brand Impact"
+    tab1_body   = (
+        "The Wimbledon Foundation's Set for Success programme, in partnership with Barclays "
+        "and delivered by the Youth Sport Trust, helps young people from underserved communities "
+        "across the UK build life and leadership skills through mentoring with inspirational athletes. "
+        "Through Barclays' contribution, the programme is expanding from 15 to 150 schools in just "
+        "four years — reaching up to 3,900 young people."
+    ) if is_wimbledon else (
+        sub or "Barclays is committed to helping people and businesses thrive — delivering innovative "
+        "banking solutions and community investment that creates lasting, positive change."
+    )
+    tab2_body = (
+        "Barclays and the LTA have teamed up to help 150,000 more people play tennis for free across "
+        "Great Britain — providing equipment, instruction, and access to courts in local parks for "
+        "people of all ages, abilities, and backgrounds."
+    ) if is_wimbledon else (
+        "Every campaign we run puts community at its heart — from grassroots sport to enterprise "
+        "support, Barclays backs the people who make Britain thrive."
+    )
+
+    reel_embed = f"""
+      <div style="margin-top:24px;border-radius:8px;overflow:hidden;
+                  box-shadow:0 12px 40px rgba(0,0,0,0.15);">
+        <video controls autoplay loop muted playsinline style="width:100%;display:block;"
+               src="data:video/mp4;base64,{video_b64}"></video>
+      </div>""" if video_b64 else ""
+
+    # ── Ambassador / "Here for the players" section ────────────────────────────
+    ambassador_section = f"""
+<section style="background:{MINT};padding:80px 40px;">
+  <div style="max-width:1200px;margin:0 auto;">
+    <h2 style="font-size:clamp(28px,3vw,42px);font-weight:700;color:{TEXT};
+               text-align:center;margin-bottom:14px;">
+      {"Here for the players" if is_wimbledon else "Here for our customers"}
+    </h2>
+    <p style="font-size:16px;color:{LINK_BLUE};text-align:center;max-width:640px;
+              margin:0 auto 48px;line-height:1.6;">
+      {"The extraordinary story of how Barclays tennis partnerships change lives — on the court and beyond." if is_wimbledon else "Every product, every feature, every decision — made with our customers at the centre."}
+    </p>
+
+    <!-- Split: image left / quote right -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:8px;
+                overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);margin-bottom:24px;">
+      <div style="min-height:320px;overflow:hidden;">
+        {f'<img src="{camp_src}" alt="Campaign" style="width:100%;height:100%;object-fit:cover;display:block;">'
+          if camp_src else
+         f'<div style="width:100%;height:320px;background:linear-gradient(135deg,{NAVY},{BLUE} 60%);'
+         f'display:flex;align-items:center;justify-content:center;font-size:72px;">{"🎾" if is_wimbledon else "🏦"}</div>'}
+      </div>
+      <div style="background:{MINT};padding:48px 40px;display:flex;flex-direction:column;justify-content:center;">
+        <div style="font-size:32px;color:{LINK_BLUE};margin-bottom:16px;line-height:1;">"</div>
+        <blockquote style="font-size:18px;font-style:italic;color:{TEXT};line-height:1.7;
+                           margin-bottom:20px;text-wrap:balance;">
+          {"I'm thrilled to be working with Barclays to help change the lives of young people who typically wouldn't have the opportunity to experience the game of tennis."
+            if is_wimbledon else
+            headline}
+        </blockquote>
+        <cite style="font-size:13px;font-weight:700;color:{MUTED};font-style:normal;">
+          {"Barclays tennis ambassador" if is_wimbledon else "Barclays campaign"}
+        </cite>
+      </div>
+    </div>
+
+    <!-- Split: history text left / image right -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-radius:8px;
+                overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,0.12);">
+      <div style="background:{MINT};padding:48px 40px;display:flex;flex-direction:column;justify-content:center;">
+        <h3 style="font-size:20px;font-weight:700;color:{LINK_BLUE};margin-bottom:16px;">
+          {"Our history with Wimbledon" if is_wimbledon else "Our commitment to you"}
+        </h3>
+        <p style="font-size:14px;color:{MUTED};line-height:1.75;">
+          {"The first Barclays bank opened over 330 years ago and, as the world's oldest tennis tournament, Wimbledon was first staged in 1877. This banking partnership dates back to the 1960s, when Barclays' first sub-branch was built directly below the stands of Wimbledon's Centre Court — a unique venue which opened its doors only for the fortnight of The Championships."
+            if is_wimbledon else
+            sub}
+        </p>
+      </div>
+      <div style="min-height:280px;overflow:hidden;background:{NAVY};">
+        {f'<img src="{hero_bg_src}" alt="Heritage" style="width:100%;height:100%;object-fit:cover;display:block;opacity:0.85;">'
+          if hero_bg_src else
+         f'<div style="width:100%;height:280px;background:{NAVY};display:flex;align-items:center;'
+         f'justify-content:center;"><span style="font-size:64px;opacity:0.4;">🏛️</span></div>'}
+      </div>
+    </div>
+  </div>
+</section>"""
+
+    # ── Bottom CTA (dark navy, centred) ───────────────────────────────────────
+    bottom_cta = f"""
+<section style="background:{NAVY};padding:80px 40px;text-align:center;">
+  <div style="max-width:720px;margin:0 auto;">
+    <div style="font-size:52px;margin-bottom:20px;">🦅</div>
+    <h2 style="font-size:clamp(26px,3vw,40px);font-weight:700;color:{BLUE};
+               margin-bottom:16px;text-wrap:balance;">
+      {"Anything is possible with the right partner" if is_wimbledon else "Ready to get started?"}
+    </h2>
+    <p style="font-size:16px;color:rgba(255,255,255,0.78);line-height:1.7;margin-bottom:36px;">
+      {"Behind every great Wimbledon moment there's a team that made it possible. Barclays is proud to be the Official Banking Partner — backing players, fans and communities every step of the way."
+        if is_wimbledon else
+        "Open a Barclays account today and discover banking that puts you first — from your first step to your next big milestone."}
+    </p>
+    <a href="#" style="display:inline-block;background:{BLUE};color:{WHITE};
+       padding:16px 48px;border-radius:50px;font-weight:700;font-size:15px;
+       text-decoration:none;transition:opacity 0.15s;"
+       onmouseover="this.style.opacity='0.88'" onmouseout="this.style.opacity='1'">
+      {cta_text}
+    </a>
+  </div>
+</section>"""
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Barclays{" | Wimbledon" if is_wimbledon else " | Personal Banking"}</title>
+  <style>
+    *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+    body{{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+          background:#fff;color:{TEXT};line-height:1.6;}}
+    a{{text-decoration:none;color:inherit;}}
+
+    /* ── Nav ── */
+    .nav-outer{{position:sticky;top:0;z-index:200;background:#fff;
+                border-bottom:1px solid {BORDER};box-shadow:0 1px 8px rgba(0,59,112,0.07);}}
+    .nav-top{{background:#fff;border-bottom:1px solid {BORDER};
+              padding:10px 48px;display:flex;align-items:center;justify-content:space-between;}}
+    .nav-logo{{display:flex;align-items:center;gap:10px;}}
+    .nav-logo-text{{font-size:20px;font-weight:800;color:{BLUE};letter-spacing:0.04em;}}
+    .nav-actions{{display:flex;gap:10px;align-items:center;}}
+    .btn-outline{{font-size:13px;font-weight:700;color:{BLUE};border:2px solid {BLUE};
+                  border-radius:50px;padding:8px 20px;transition:background 0.15s,color 0.15s;}}
+    .btn-outline:hover{{background:{BLUE};color:#fff;}}
+    .btn-solid{{font-size:13px;font-weight:700;background:{BLUE};color:#fff;
+                border-radius:50px;padding:8px 20px;transition:opacity 0.15s;}}
+    .btn-solid:hover{{opacity:0.88;}}
+    .nav-search{{color:{BLUE};font-size:20px;cursor:pointer;padding:4px 8px;}}
+    .nav-links-bar{{padding:0 48px;display:flex;gap:32px;}}
+    .nav-links-bar a{{font-size:14px;color:{TEXT};padding:14px 0;
+                      border-bottom:3px solid transparent;transition:color 0.15s,border-color 0.15s;}}
+    .nav-links-bar a:hover{{color:{BLUE};border-color:{BLUE};}}
+
+    /* ── Split Hero ── */
+    .hero{{display:grid;grid-template-columns:40fr 60fr;min-height:480px;}}
+    .hero-left{{background:{NAVY};padding:64px 56px;display:flex;flex-direction:column;
+                justify-content:center;}}
+    .hero-label{{font-size:11px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;
+                 color:rgba(255,255,255,0.55);margin-bottom:16px;}}
+    .hero-h1{{font-size:clamp(30px,3.2vw,50px);font-weight:700;color:#fff;
+              line-height:1.15;text-wrap:balance;margin-bottom:20px;}}
+    .hero-body{{font-size:15px;color:rgba(255,255,255,0.78);line-height:1.7;max-width:400px;margin-bottom:32px;}}
+    .hero-cta{{display:inline-block;background:{BLUE};color:#fff;padding:13px 28px;
+               border-radius:50px;font-weight:700;font-size:14px;transition:opacity 0.15s;}}
+    .hero-cta:hover{{opacity:0.88;}}
+    .hero-right{{position:relative;overflow:hidden;min-height:400px;}}
+    .hero-right-img{{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}}
+    .hero-right-overlay{{position:absolute;inset:0;
+                         background:linear-gradient(160deg,rgba(0,59,112,0.35) 0%,transparent 60%);}}
+    .hero-badges{{position:absolute;bottom:32px;right:32px;display:flex;align-items:center;gap:20px;}}
+    .hero-brand-tag{{text-align:left;}}
+    .hero-brand-name{{font-size:18px;font-weight:800;color:{BLUE};letter-spacing:0.06em;}}
+    .hero-tagline{{font-size:14px;font-weight:700;color:{BLUE};}}
+
+    /* ── Story cards ── */
+    .cards-section{{padding:72px 48px;background:#fff;}}
+    .cards-inner{{max-width:1200px;margin:0 auto;}}
+    .cards-grid{{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:0;}}
+
+    /* ── Driving progress tabs ── */
+    .tabs-section{{padding:72px 48px;background:#fff;border-top:1px solid {BORDER};}}
+    .tabs-inner{{max-width:900px;margin:0 auto;}}
+    .tabs-bar{{display:flex;border-bottom:2px solid {BORDER};margin-bottom:32px;}}
+    .tab{{padding:12px 0;margin-right:40px;font-size:14px;font-weight:600;color:{MUTED};
+          cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-2px;
+          transition:color 0.15s,border-color 0.15s;}}
+    .tab.active{{color:{BLUE};border-color:{BLUE};}}
+
+    /* ── Responsive ── */
+    @media(max-width:900px){{
+      .hero{{grid-template-columns:1fr;}}
+      .hero-right{{min-height:300px;}}
+      .cards-grid{{grid-template-columns:1fr;}}
+      .nav-links-bar{{gap:16px;padding:0 20px;}}
+      .nav-links-bar a{{font-size:13px;}}
+      .hero-left{{padding:48px 28px;}}
+      .cards-section,.tabs-section{{padding:48px 24px;}}
+    }}
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ─────────────────────────────────────────────────── -->
+<nav class="nav-outer">
+  <div class="nav-top">
+    <div class="nav-logo">
+      <img src="/brand-logo/Barclays" alt="Barclays" style="height:32px;object-fit:contain;">
+      <span class="nav-logo-text">BARCLAYS</span>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="btn-outline">Contact Us</a>
+      <a href="#" class="btn-solid">Online Banking</a>
+      <span class="nav-search">&#128269;</span>
+    </div>
+  </div>
+  <div class="nav-links-bar">
+    <a href="#">News</a>
+    <a href="#">Insights</a>
+    <a href="#">{"Wimbledon" if is_wimbledon else "Who We Are"}</a>
+    <a href="#">Investors</a>
+    <a href="#">Sustainability</a>
+    <a href="#">Careers</a>
+  </div>
+</nav>
+
+<!-- ── Split Hero ─────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-label">{"WHO WE ARE" if is_wimbledon else "PERSONAL BANKING"}</div>
+    <h1 class="hero-h1">{("Barclays tennis" if is_wimbledon else headline)}</h1>
+    <p class="hero-body">{sub}</p>
+    <a href="#" class="hero-cta">{cta_text}</a>
+  </div>
+  <div class="hero-right">
+    {f'<img class="hero-right-img" src="{hero_bg_src or camp_src}" alt="Campaign visual">' if (hero_bg_src or camp_src) else f'<div style="width:100%;height:100%;background:linear-gradient(135deg,{BLUE},{NAVY});min-height:480px;"></div>'}
+    <div class="hero-right-overlay"></div>
+    <div class="hero-badges">
+      <div class="hero-brand-tag">
+        <div class="hero-brand-name">BARCLAYS</div>
+        <div class="hero-tagline">{headline if not is_wimbledon else "Backing your future"}</div>
+      </div>
+      {wimb_badge_svg if is_wimbledon else ""}
+    </div>
+  </div>
+</section>
+
+<!-- ── Story cards ────────────────────────────────────────────────── -->
+<section class="cards-section">
+  <div class="cards-inner">
+    <div class="cards-grid">
+      {story_cards_html}
+    </div>
+  </div>
+</section>
+
+<!-- ── Driving progress / campaign tabs ───────────────────────────── -->
+<section class="tabs-section">
+  <div class="tabs-inner">
+    <h2 style="font-size:clamp(28px,3vw,40px);font-weight:700;color:{TEXT};
+               text-align:center;margin-bottom:40px;">
+      {"Driving progress" if is_wimbledon else "Campaign impact"}
+    </h2>
+    <div class="tabs-bar">
+      <div class="tab active" onclick="showTab(0,this)">{tab_label_1}</div>
+      <div class="tab" onclick="showTab(1,this)">{tab_label_2}</div>
+    </div>
+    <div id="tab-panels">
+      <div id="tp0" style="display:block;">
+        <p style="font-size:15px;color:{MUTED};line-height:1.8;max-width:760px;">{tab1_body}</p>
+        {reel_embed}
+      </div>
+      <div id="tp1" style="display:none;">
+        <p style="font-size:15px;color:{MUTED};line-height:1.8;max-width:760px;">{tab2_body}</p>
+      </div>
+    </div>
+  </div>
+</section>
+<script>
+  function showTab(idx,el){{
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('#tab-panels>div').forEach((p,i)=>p.style.display=i===idx?'block':'none');
+  }}
+</script>
+
+<!-- ── "Here for the players" ambassador section ─────────────────── -->
+{ambassador_section}
+
+<!-- ── Bottom CTA ────────────────────────────────────────────────── -->
+{bottom_cta}
+
+<!-- ── Footer ─────────────────────────────────────────────────────── -->
+<footer style="background:#F5F5F5;padding:56px 48px 32px;border-top:1px solid {BORDER};">
+  <div style="max-width:1200px;margin:0 auto;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:32px;
+                padding-bottom:40px;border-bottom:1px solid {BORDER};">
+      <div>
+        <h4 style="font-size:12px;font-weight:700;color:{TEXT};letter-spacing:0.08em;
+                   text-transform:uppercase;margin-bottom:16px;">Policies</h4>
+        {"".join(f'<a href="#" style="display:block;font-size:13px;color:{LINK_BLUE};margin-bottom:10px;">{l}</a>'
+                  for l in ["Privacy Policy","Cookie policy","Website Accessibility","Terms of Use"])}
+      </div>
+      <div>
+        <h4 style="font-size:12px;font-weight:700;color:{TEXT};letter-spacing:0.08em;
+                   text-transform:uppercase;margin-bottom:16px;">News</h4>
+        {"".join(f'<a href="#" style="display:block;font-size:13px;color:{LINK_BLUE};margin-bottom:10px;">{l}</a>'
+                  for l in ["Financial results","Annual Reports","Press Releases","Regulatory news"])}
+      </div>
+      <div>
+        <h4 style="font-size:12px;font-weight:700;color:{TEXT};letter-spacing:0.08em;
+                   text-transform:uppercase;margin-bottom:16px;">Important information</h4>
+        {"".join(f'<a href="#" style="display:block;font-size:13px;color:{LINK_BLUE};margin-bottom:10px;">{l}</a>'
+                  for l in ["The General Data Protection Regulation","Regulatory information","Modern Slavery Statement","Terms of Use"])}
+      </div>
+      <div>
+        <h4 style="font-size:12px;font-weight:700;color:{TEXT};letter-spacing:0.08em;
+                   text-transform:uppercase;margin-bottom:16px;">Other sites</h4>
+        {"".join(f'<a href="#" style="display:block;font-size:13px;color:{LINK_BLUE};margin-bottom:10px;">{l}</a>'
+                  for l in ["Personal Banking","Business Banking","Investment Bank","Corporate Banking","Private Bank","International Bank","Wealth"])}
+      </div>
+    </div>
+    <div style="padding-top:24px;">
+      <p style="font-size:12px;color:{MUTED};line-height:1.6;margin-bottom:8px;">
+        Barclays Bank UK PLC and Barclays Bank PLC are each authorised by the Prudential Regulation Authority
+        and regulated by the Financial Conduct Authority and the Prudential Regulation Authority.
+      </p>
+      <p style="font-size:12px;color:{MUTED};line-height:1.6;">
+        All registered in England. Registered office for all: 1 Churchill Place, London E14 5HP.
+        &nbsp;·&nbsp; AI campaign by CampaignOS
+      </p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>"""
 
 
 def generate_sunrise_website(campaign_image_b64: str = "", campaign_id: str = "",

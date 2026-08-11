@@ -176,6 +176,7 @@ interface FD {
   brand: string; objective: string; market: string; language: string; budget: string;
   channels: string[]; age: string[]; season: string; moment: string; campaignName: string;
   fanTruth: string; kpiTargets: string; productService: string; haleonCategory: string;
+  campaignType: string;     // e.g. "wimbledon" — explicit partnership identifier
   // Sunrise-specific
   sunrisePlan: string;      // "Lifestyle KV" | plan name e.g. "Mobile Unlimited"
   sunriseAudience: string;
@@ -184,6 +185,7 @@ const INIT: FD = {
   brand:"", objective:"", market:"", language:"", budget:"",
   channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"",
   fanTruth:"", kpiTargets:"", productService:"", haleonCategory:"",
+  campaignType:"",
   sunrisePlan:"Lifestyle KV", sunriseAudience:"",
 };
 const toggle = <T,>(arr: T[], v: T): T[] => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
@@ -605,6 +607,7 @@ export default function CampaignForm({ onFullCampaign }: {
       },
       tone: "Warm & friendly",
       mode: "new",
+      campaign_type: data.campaignType || (data.brand === "Barclays" && data.productService ? data.productService.toLowerCase() : ""),
       uploaded_assets: [],
     });
   };

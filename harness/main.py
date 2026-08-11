@@ -776,6 +776,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             language           = brief.language or "" if hasattr(brief, "language") else "",
             channels           = [str(c).lower() for c in brief.channels] if brief.channels else [],
             campaign_id        = campaign_id,
+            campaign_type      = getattr(brief, "campaign_type", ""),
             kpis               = machine_brief.get("kpis") or [],
             progress_cb        = _progress,
             brand_profile_dict = _bpd_for_router,

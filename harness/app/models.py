@@ -85,6 +85,7 @@ class BriefRequest(BaseModel):
     guardrails:       Optional[str]    = None
     notes:            Optional[str]    = None
     mode:             str              = Field(default="new", description="'new' = full pipeline, 'adapt' = adaptation pipeline")
+    campaign_type:    str              = Field(default="", description="Partnership/campaign identifier e.g. 'wimbledon' — triggers brand-specific creative path")
     uploaded_assets:  list[str]        = Field(default_factory=list, description="Object URLs or GCS URIs of uploaded existing assets")
 
 

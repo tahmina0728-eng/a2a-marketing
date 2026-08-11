@@ -902,15 +902,16 @@ def _draw_haleon_logo_img(height_px: int, font_path: str | None) -> "Image":
 
 
 def _apply_brand_overlay(
-    img_data:     bytes,
-    brand:        str,
-    headline:     str,
-    product_uris: list,
-    product_name: str = "",
-    market:       str = "",
-    logo_uri:     str = "",
-    copy_subline: str = "",
-    copy_cta:     str = "",
+    img_data:      bytes,
+    brand:         str,
+    headline:      str,
+    product_uris:  list,
+    product_name:  str = "",
+    market:        str = "",
+    logo_uri:      str = "",
+    copy_subline:  str = "",
+    copy_cta:      str = "",
+    campaign_type: str = "",
 ) -> bytes:
     """
     Full-bleed advertising overlay — no split panel.
@@ -944,7 +945,10 @@ def _apply_brand_overlay(
         if brand == "Barclays":
             _bfont_dir = _P(__file__).parent.parent / "bucket" / "brands" / "Barclays"
             _bfp = _barclays.resolve_font_path(_bfont_dir)
-            _is_wimb = "wimbledon" in (logo_uri or "").lower() or "wimbledon" in (headline or "").lower()
+            _is_wimb = (campaign_type or "").lower() == "wimbledon" or any(
+                "wimbledon" in (s or "").lower()
+                for s in [logo_uri, headline, product_name]
+            )
             return _barclays.apply_overlay(
                 img_data, headline, logo_uri, _is_wimb, _bfp,
                 copy_subline=copy_subline, copy_cta=copy_cta,
@@ -2730,6 +2734,7 @@ async def run_creative_pipeline_direct(
     language: str = "",
     channels: list = None,
     campaign_id: str = "",
+    campaign_type: str = "",
     kpis: list = None,
     progress_cb=None,
 ) -> dict:
@@ -4034,6 +4039,7 @@ Output EXACTLY this format (nothing else):
                 logo_uri=logo_uri,
                 copy_subline=copy_subline,
                 copy_cta=copy_cta,
+                campaign_type=campaign_type,
             )
             images_b64.append(base64.b64encode(_overlaid).decode("utf-8"))
         image_b64 = images_b64[0] if images_b64 else None
