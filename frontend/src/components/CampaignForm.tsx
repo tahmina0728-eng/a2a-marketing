@@ -93,9 +93,27 @@ const MARKET_CURRENCY_SYMBOL: Record<string, string> = {
   "SEA": "$", "India": "₹", "Thailand": "฿", "China": "¥",
 };
 
+// Haleon: two-level cascade (Category → Product), mirrors haleon_catalog.py
+const HALEON_CATEGORIES = [
+  "Oral Health",
+  "Vitamins, Minerals & Supplements",
+  "Respiratory",
+  "Pain Relief",
+  "Digestive Health",
+  "Therapeutic Skin Health",
+];
+const HALEON_BRANDS_BY_CATEGORY: Record<string, string[]> = {
+  "Oral Health":                      ["Sensodyne", "Polident", "parodontax"],
+  "Vitamins, Minerals & Supplements": ["Centrum", "Emergen-C", "Caltrate"],
+  "Respiratory":                      ["Otrivin", "Theraflu", "Flonase", "Robitussin"],
+  "Pain Relief":                      ["Voltaren", "Panadol", "Advil", "Fenbid", "Contac", "Grand-pa", "Excedrin"],
+  "Digestive Health":                 ["Tums", "Eno", "Benefiber"],
+  "Therapeutic Skin Health":          ["Fenistil", "Zovirax", "Bactroban"],
+};
+
+// All other brands: single flat dropdown
 const BRAND_PRODUCTS: Record<string, string[]> = {
   Barclays:    ["Wimbledon", "Premier League", "Brand Awareness", "Mortgage", "Business Banking", "Personal Loans", "Savings Account", "Credit Card"],
-  Haleon:      ["Sensodyne", "Centrum", "Voltaren", "Panadol", "Otrivin", "Theraflu", "Robitussin", "Tums", "parodontax", "Emergen-C", "Zovirax", "Fenistil"],
   Glenfiddich: ["12 Year Old", "15 Year Old", "18 Year Old", "21 Year Old", "Gran Reserva", "Fire & Cane", "IPA Experiment"],
   "UBS Bank":  ["Wealth Management", "Private Banking", "Investment Banking", "Personal Banking", "SME Banking"],
   Rnorr:       ["Stock Cubes", "Soups & Broths", "Seasonings", "Recipe Mixes"],
@@ -157,7 +175,7 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
 interface FD {
   brand: string; objective: string; market: string; language: string; budget: string;
   channels: string[]; age: string[]; season: string; moment: string; campaignName: string;
-  fanTruth: string; kpiTargets: string; productService: string;
+  fanTruth: string; kpiTargets: string; productService: string; haleonCategory: string;
   // Sunrise-specific
   sunrisePlan: string;      // "Lifestyle KV" | plan name e.g. "Mobile Unlimited"
   sunriseAudience: string;
@@ -165,7 +183,7 @@ interface FD {
 const INIT: FD = {
   brand:"", objective:"", market:"", language:"", budget:"",
   channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"",
-  fanTruth:"", kpiTargets:"", productService:"",
+  fanTruth:"", kpiTargets:"", productService:"", haleonCategory:"",
   sunrisePlan:"Lifestyle KV", sunriseAudience:"",
 };
 const toggle = <T,>(arr: T[], v: T): T[] => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
@@ -248,11 +266,33 @@ function Page1({ data, onChange, onNext }: {
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div>
             <span style={label}>Brand</span>
-            <FormSelect value={data.brand} onChange={v => { onChange("brand", v); onChange("productService", ""); }}
-              placeholder="Select brand" options={brandOptions} />
+            <FormSelect value={data.brand} onChange={v => {
+              onChange("brand", v);
+              onChange("productService", "");
+              onChange("haleonCategory", "");
+            }} placeholder="Select brand" options={brandOptions} />
           </div>
 
-          {data.brand && (BRAND_PRODUCTS[data.brand] ?? []).length > 0 && (
+          {/* Haleon: cascaded Category → Product */}
+          {data.brand === "Haleon" && (
+            <div>
+              <span style={label}>Category</span>
+              <FormSelect value={data.haleonCategory} onChange={v => {
+                onChange("haleonCategory", v);
+                onChange("productService", "");
+              }} placeholder="Select category" options={HALEON_CATEGORIES} />
+            </div>
+          )}
+          {data.brand === "Haleon" && data.haleonCategory && (
+            <div>
+              <span style={label}>Product</span>
+              <FormSelect value={data.productService} onChange={v => onChange("productService", v)}
+                placeholder="Select product" options={HALEON_BRANDS_BY_CATEGORY[data.haleonCategory] ?? []} />
+            </div>
+          )}
+
+          {/* All other brands: single Product or Service dropdown */}
+          {data.brand && data.brand !== "Haleon" && (BRAND_PRODUCTS[data.brand] ?? []).length > 0 && (
             <div>
               <span style={label}>Product or Service</span>
               <FormSelect value={data.productService} onChange={v => onChange("productService", v)}
@@ -511,14 +551,14 @@ export default function CampaignForm({ onFullCampaign }: {
     }
 
     if (isHaleon) {
-      // Prefer dropdown selection; fall back to free-text extraction from objective
-      const corpus = data.productService || `${data.objective} ${data.campaignName}`;
-      const match = lookupHaleonSubBrand(corpus);
-      if (match) {
-        product         = match.brand;
-        productCategory = match.category;
-      } else if (data.productService) {
-        product = data.productService;
+      // Category + Product from cascaded dropdowns take priority
+      if (data.haleonCategory) productCategory = data.haleonCategory;
+      if (data.productService)  product         = data.productService;
+      // Fall back to free-text extraction if neither dropdown was used
+      if (!product) {
+        const corpus = `${data.objective} ${data.campaignName}`;
+        const match  = lookupHaleonSubBrand(corpus);
+        if (match) { product = match.brand; productCategory = match.category; }
       }
     } else if (!isSunrise && data.productService) {
       product = data.productService;
