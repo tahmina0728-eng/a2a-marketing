@@ -3131,18 +3131,23 @@ function ResultsView({ output, campaignId }: {
 const RIGHT_X = 60;
 const LEFT_X  = -176;
 
+// 9 agents in the diagram (Nexus/performance excluded). Positions with 9 even steps:
+// i=0 top, i=1–4 right side, i=5–8 left side
 const CARD_OFF: [number, number][] = [
-  [-58, -90],      // 0 Logos — centred above avatar
-  [RIGHT_X, -10],  // 1 Compliance
-  [RIGHT_X, -12],  // 2 Helia
-  [RIGHT_X,   6],  // 3 Ideon
-  [LEFT_X,    6],  // 4 Aether
-  [LEFT_X,  -12],  // 5 Morphis
-  [LEFT_X,  -36],  // 6 Kinetik
-  [RIGHT_X,  28],  // 7 Poly
-  [LEFT_X,  -14],  // 8 Nexus
-  [LEFT_X,  -60],  // 9 Director — upper left
+  [-58,    -90],   // 0 Logos      — top, card above
+  [RIGHT_X,  -4],  // 1 Compliance — upper right
+  [RIGHT_X,  -4],  // 2 Helia      — right
+  [RIGHT_X,  -4],  // 3 Ideon      — lower right
+  [RIGHT_X,  -4],  // 4 Aether     — bottom right
+  [LEFT_X,   -4],  // 5 Morphis    — bottom left
+  [LEFT_X,   -4],  // 6 Kinetik    — lower left
+  [LEFT_X,   -4],  // 7 Poly       — left
+  [LEFT_X,   -4],  // 8 Director   — upper left
 ];
+
+// Nexus (performance) runs in the pipeline but is not shown in the network diagram
+const NETWORK_STAGES = HARNESS_STAGES.filter(s => s.key !== "performance");
+
 function AgentNetworkWakeUp() {
   const W = 680, H = 400, cx = W / 2, cy = H / 2, R = 160;
 
@@ -3160,11 +3165,12 @@ function AgentNetworkWakeUp() {
     return () => obs.disconnect();
   }, []);
 
-  const nodes = HARNESS_STAGES.map((s, i) => {
-    const a = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
+  const nodes = NETWORK_STAGES.map((s, i) => {
+    const origIdx = HARNESS_STAGES.findIndex(h => h.key === s.key);
+    const a = (i / NETWORK_STAGES.length) * 2 * Math.PI - Math.PI / 2;
     return { ...s, x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R,
-      num: String(i + 1).padStart(2, "0"), color: AGENT_COLORS[i], desc: AGENT_DESCS[i],
-      co: CARD_OFF[i], avatar: avatarUrl(s.label, i) };
+      num: String(origIdx + 1).padStart(2, "0"), color: AGENT_COLORS[origIdx] ?? "#8b5cf6",
+      desc: AGENT_DESCS[origIdx] ?? s.desc, co: CARD_OFF[i], avatar: avatarUrl(s.label, origIdx) };
   });
 
   return (
@@ -3191,7 +3197,7 @@ function AgentNetworkWakeUp() {
       <div style={{ textAlign: "center" as const, padding: "24px 16px 0", position: "relative", zIndex: 10 }}>
         <h2 style={{ fontSize: `clamp(16px, ${scale * 24}px, 24px)`, fontWeight: 800, color: "var(--text-primary)",
           letterSpacing: "-0.02em", marginBottom: 6, lineHeight: 1.3 }}>
-          Seven AI Agents.{" "}
+          Nine AI Agents.{" "}
           <span style={{ background: ORB_BG, WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
             One Powerful Campaign.
@@ -3294,22 +3300,25 @@ function AgentNetworkWakeUp() {
         <div style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed",
           letterSpacing: "0.04em", marginRight: 8, lineHeight: 1.4,
           whiteSpace: "nowrap" as const }}>Working<br/>Together</div>
-        {HARNESS_STAGES.map((s, i) => (
+        {NETWORK_STAGES.map((s, i) => {
+          const origIdx = HARNESS_STAGES.findIndex(h => h.key === s.key);
+          return (
           <Fragment key={s.key}>
             <div style={{ display: "flex", alignItems: "center", gap: 4,
               padding: "3px 9px", borderRadius: 6,
               background: "rgba(124,58,237,0.10)",
               border: "1px solid rgba(124,58,237,0.22)" }}>
-              <img src={AGENT_AVATARS[i]} alt={s.label}
+              <img src={AGENT_AVATARS[origIdx] ?? ""} alt={s.label}
                 style={{ width: 14, height: 14, borderRadius: 3, objectFit: "cover", flexShrink: 0 }} />
               <span style={{ fontSize: 9.5, color: "#a78bfa", fontWeight: 600,
                 whiteSpace: "nowrap" as const }}>{s.label}</span>
             </div>
-            {i < HARNESS_STAGES.length - 1 && (
+            {i < NETWORK_STAGES.length - 1 && (
               <span style={{ color: "#7c3aed", fontSize: 10, flexShrink: 0 }}>→</span>
             )}
           </Fragment>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

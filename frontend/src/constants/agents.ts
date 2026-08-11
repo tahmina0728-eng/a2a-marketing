@@ -98,7 +98,7 @@ export function speakAgentIntro(agentKey: string, onDone?: () => void) {
   }
 }
 
-export const AGENT_COLORS = ["#7c3aed","#06b6d4","#10b981","#f59e0b","#ec4899","#6366f1","#14b8a6","#f43f5e"];
+export const AGENT_COLORS = ["#7c3aed","#06b6d4","#10b981","#f59e0b","#ec4899","#6366f1","#14b8a6","#f43f5e","#a855f7","#8b5cf6"];
 export const AGENT_DESCS  = [
   "Understands your goals, audience, product and campaign objectives",
   "Crafts big ideas and messaging territories that inspire",
@@ -108,6 +108,8 @@ export const AGENT_DESCS  = [
   "Produces engaging short videos and reels visually",
   "Adapts content for every platform and channel",
   "Forecasts reach, ROAS and performance before launch",
+  "Forecasts reach, ROAS and performance before launch",
+  "Generates 15s and 30s multi-scene TV commercials with Veo",
 ];
 
 // Local agent logo PNGs downloaded from GCS bucket (agent-logo/).
