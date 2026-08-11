@@ -11,6 +11,7 @@
     "type":               "official_banking_partner",
     "display_name":       "Official Banking Partner of The Championships, Wimbledon",
     "short_display_name": "Official Banking Partner",
+    "bar_label":          "Official Bank of Wimbledon",
     "verified":           true,
     "verification_source": "wimbledon_official",
     "announced_from_year": 2023,

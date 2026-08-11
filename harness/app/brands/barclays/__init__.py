@@ -602,11 +602,29 @@ def _render_headline(draw, headline: str, is_wimbledon: bool, fnt, text_x: int, 
     return draw, text_y + len(sents) * line_h, head_sz
 
 
-def _render_subcopy(draw, copy_subline: str, is_wimbledon: bool, fnt, text_x: int, head_bottom: int, head_sz: int, PH: int):
+def _wrap_text(draw, text: str, font, max_w: int) -> list:
+    """Word-wrap text to fit within max_w pixels. Returns list of lines."""
+    words = text.split()
+    lines, current = [], ""
+    for word in words:
+        test = (current + " " + word).strip()
+        bb = draw.textbbox((0, 0), test, font=font)
+        if bb[2] - bb[0] <= max_w:
+            current = test
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines or [text]
+
+
+def _render_subcopy(draw, copy_subline: str, is_wimbledon: bool, fnt, text_x: int, head_bottom: int, head_sz: int, PH: int, PW: int = 0):
     """Render Wimbledon sub-copy + 'Proud partner' line. Returns draw."""
     if not is_wimbledon:
         return draw
-    _BLUE, _WHITE = BLUE, WHITE
+    _WHITE = WHITE
     sub_sz  = max(14, int(PH * 0.030))
     sub_fnt = fnt(sub_sz)
     sub_lh  = int(sub_sz * 1.35)
@@ -614,12 +632,18 @@ def _render_subcopy(draw, copy_subline: str, is_wimbledon: bool, fnt, text_x: in
     sub_y = head_bottom + int(head_sz * 0.4)
     sub_text = (copy_subline.strip() if copy_subline and copy_subline.strip()
                 else "Behind every champion is support that believes.")
-    draw.text((text_x, sub_y), sub_text, fill=_WHITE, font=sub_fnt)
+
+    # Word-wrap to 65% of photo width so text never bleeds off the right edge.
+    max_sub_w = int(PW * 0.65) if PW else int(PH * 0.55)
+    lines = _wrap_text(draw, sub_text, sub_fnt, max_sub_w)
+    for line in lines:
+        draw.text((text_x, sub_y), line, fill=_WHITE, font=sub_fnt)
+        sub_y += sub_lh
 
     proud_sz  = max(9, int(PH * 0.019))
     proud_fnt = fnt(proud_sz)
-    proud_label = _wimb_campaign["relationship"]["short_display_name"]
-    draw.text((text_x, sub_y + sub_lh + int(proud_sz * 0.3)), proud_label, fill=_WHITE, font=proud_fnt)
+    proud_label = "Proud partner of Wimbledon"
+    draw.text((text_x, sub_y + int(proud_sz * 0.3)), proud_label, fill=_WHITE, font=proud_fnt)
     return draw
 
 
@@ -700,6 +724,23 @@ def _render_wimbledon_lockup(canvas, draw, bar_y: int, bar_h: int, PX: int, PW: 
         shield_right = text_x + sw + max(10, int(bar_h * 0.14))
         draw = _ID.Draw(canvas)
 
+    # ── Pre-calculate right lockup width so center text never overlaps it ────
+    sym = _load_logo_file(logo_uri, [_assets["logos"]["symbol_white"]])
+    sym_h = sym_w = bk_w = bk_h = gap = bk_fnt = bk_bb = 0
+    if sym:
+        sym_h  = max(22, int(bar_h * 0.50))
+        sym_w  = int(sym.width * sym_h / sym.height)
+        sym    = sym.resize((sym_w, sym_h), Image.LANCZOS)
+        sym    = _tint_white(sym)
+        bk_sz  = max(12, int(sym_h * 0.58))
+        bk_fnt = fnt(bk_sz)
+        bk_bb  = draw.textbbox((0, 0), "BARCLAYS", font=bk_fnt)
+        bk_w   = bk_bb[2] - bk_bb[0]
+        bk_h   = bk_bb[3] - bk_bb[1]
+        gap    = max(5, int(sym_h * 0.15))
+    right_lockup_w   = sym_w + gap + bk_w if sym_w else 0
+    right_lockup_left = PX + PW - right_lockup_w - margin  # where right section starts
+
     # Centre: "OFFICIAL BANK / OF WIMBLEDON" in white — matches real ad lockup
     _label = _wimb_campaign["relationship"].get(
         "bar_label",
@@ -710,38 +751,30 @@ def _render_wimbledon_lockup(canvas, draw, bar_y: int, bar_h: int, PX: int, PW: 
         lines = [_label[:_idx], "OF " + _label[_idx + 4:]]
     else:
         lines = [_label]
-    ct_sz  = max(8, int(bar_h * 0.17))
-    ct_fnt = fnt(ct_sz)
-    ct_lh  = int(ct_sz * 1.30)
+    ct_sz    = max(8, int(bar_h * 0.17))
+    ct_fnt   = fnt(ct_sz)
+    ct_lh    = int(ct_sz * 1.30)
     ct_total = len(lines) * ct_lh
-    ct_y = bar_y + (bar_h - ct_total) // 2
+    ct_y     = bar_y + (bar_h - ct_total) // 2
+    ct_gap   = max(10, int(bar_h * 0.12))
+    ct_max_x = right_lockup_left - ct_gap   # hard stop before right section
     for line in lines:
+        bb = draw.textbbox((0, 0), line, font=ct_fnt)
+        line_w = bb[2] - bb[0]
+        # Truncate line if it would collide with the right lockup
+        while line_w > (ct_max_x - shield_right) and len(line) > 4:
+            line = line[:-1]
+            bb = draw.textbbox((0, 0), line + "…", font=ct_fnt)
+            line_w = bb[2] - bb[0]
         draw.text((shield_right, ct_y), line, fill=_WHITE, font=ct_fnt)
         ct_y += ct_lh
 
     # Right: Barclays horizontal lockup — eagle symbol LEFT + "BARCLAYS" text RIGHT
-    # Composite approach guarantees the horizontal layout regardless of which PNG variant loads.
-    sym = _load_logo_file(logo_uri, [_assets["logos"]["symbol_white"]])
-    if sym:
-        sym_h   = max(22, int(bar_h * 0.50))
-        sym_w   = int(sym.width * sym_h / sym.height)
-        sym     = sym.resize((sym_w, sym_h), Image.LANCZOS)
-        # Strip white/light background so the eagle renders as a clean white
-        # silhouette on the dark bar (same treatment as the border eagle).
-        sym     = _tint_white(sym)
-
-        bk_sz   = max(12, int(sym_h * 0.58))
-        bk_fnt  = fnt(bk_sz)
-        bk_bb   = draw.textbbox((0, 0), "BARCLAYS", font=bk_fnt)
-        bk_w    = bk_bb[2] - bk_bb[0]
-        bk_h    = bk_bb[3] - bk_bb[1]
-        gap     = max(5, int(sym_h * 0.15))
-        total_w = sym_w + gap + bk_w
-
-        sym_x   = PX + PW - total_w - margin
-        sym_y   = bar_y + (bar_h - sym_h) // 2
+    if sym is not None and sym_w:
+        sym_x = right_lockup_left
+        sym_y = bar_y + (bar_h - sym_h) // 2
         canvas.alpha_composite(sym, (sym_x, sym_y))
-        draw    = _ID.Draw(canvas)
+        draw = _ID.Draw(canvas)
 
         text_bx = sym_x + sym_w + gap
         text_by = bar_y + (bar_h - bk_h) // 2 - bk_bb[1]
@@ -838,12 +871,9 @@ def apply_overlay(
         draw, head_bottom, head_sz = _render_headline(draw, headline, is_wimbledon, fnt, text_x, text_y, PW, PH)
 
         # 7. Sub-copy (Wimbledon only)
-        draw = _render_subcopy(draw, copy_subline, is_wimbledon, fnt, text_x, head_bottom, head_sz, PH)
+        draw = _render_subcopy(draw, copy_subline, is_wimbledon, fnt, text_x, head_bottom, head_sz, PH, PW)
 
-        # 8. Eagle watermark bottom-right (Wimbledon only)
-        if is_wimbledon and eagle_orig:
-            canvas = _render_eagle_watermark(canvas, eagle_orig, PX, PY, PW, PH)
-            draw = ImageDraw.Draw(canvas)
+        # 8. Eagle watermark — removed: too visually prominent, not present in reference ads.
 
         # 9. Dark bottom bar
         canvas, bar_y, bar_h = _render_bottom_bar(canvas, PX, PY, PW, PH, TW, TH, is_wimbledon)
