@@ -467,6 +467,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
 
   const genContent = async () => {
     if (!brief.trim()||formats.size===0) return;
+    setStep(4);
     setGenerating(true);
     for (const fmt of Array.from(formats)) {
       try {
@@ -505,7 +506,6 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
       } catch {}
     }
     setGenerating(false);
-    setStep(4);
   };
 
   const fmtDefs = [
@@ -807,11 +807,13 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                 style={{ padding:"10px 20px", borderRadius:10, fontWeight:600, fontSize:13,
                   border:"1.5px solid var(--card-border)", background:"transparent",
                   color:"var(--text-secondary)", cursor:"pointer" }}>← Back</button>
-              <button onClick={()=>setStep(4)}
+              <button onClick={genContent} disabled={formats.size===0||!brief.trim()}
                 style={{ padding:"10px 32px", borderRadius:10, fontWeight:700, fontSize:14,
-                  border:"none", background:G, color:"white", cursor:"pointer",
+                  border:"none", background:G, color:"white",
+                  cursor:formats.size>0&&brief.trim()?"pointer":"not-allowed",
+                  opacity:formats.size>0&&brief.trim()?1:0.4,
                   boxShadow:"0 4px 20px rgba(124,58,237,0.45)" }}>
-                Next: Generate Content ✦
+                ✦ {formats.has("image")&&formats.size===1?"Generate Image":formats.has("reel")&&formats.size===1?"Generate Reel":"Generate Content"}
               </button>
             </div>
           </div>
@@ -867,21 +869,13 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
               )}
             </div>
 
-            {/* Generate button — shown when no results yet and not generating */}
+            {/* Back button — shown when landed on Step 4 with no results */}
             {!anyRes && !generating && (
-              <div style={{ display:"flex", gap:10, marginBottom:24, justifyContent:"flex-end" as const }}>
+              <div style={{ display:"flex", gap:10, marginBottom:24 }}>
                 <button onClick={()=>setStep(3)}
                   style={{ padding:"10px 20px", borderRadius:10, fontWeight:600, fontSize:13,
                     border:"1.5px solid var(--card-border)", background:"transparent",
                     color:"var(--text-secondary)", cursor:"pointer" }}>← Back</button>
-                <button onClick={genContent} disabled={formats.size===0||!brief.trim()}
-                  style={{ padding:"10px 32px", borderRadius:10, fontWeight:700, fontSize:14,
-                    border:"none", background:G, color:"white",
-                    cursor:formats.size>0&&brief.trim()?"pointer":"not-allowed",
-                    opacity:formats.size>0&&brief.trim()?1:0.4,
-                    boxShadow:"0 4px 20px rgba(124,58,237,0.45)" }}>
-                  ✦ Generate Content
-                </button>
               </div>
             )}
 
@@ -1044,7 +1038,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
             ) : (
               <div style={{ padding:"60px 0", textAlign:"center" as const }}>
                 <div style={{ fontSize:14, color:"var(--text-secondary)" }}>
-                  Click "Generate Content" to start
+                  Go back to Copy Agent and click Generate to start
                 </div>
               </div>
             )}
