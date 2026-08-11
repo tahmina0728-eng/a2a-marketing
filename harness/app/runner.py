@@ -308,6 +308,45 @@ async def run_agent(
     return result, ms
 
 
+def _kpi_orientation_block(kpis_raw) -> tuple:
+    """Return (kpi_lines_str, orientation_label, creative_implication) from raw KPI data."""
+    if not kpis_raw:
+        return "(no KPI targets set)", "BALANCED", "maintain brand equity while driving engagement"
+
+    if isinstance(kpis_raw, list):
+        lines = [
+            f"• {k.get('metric','')}: {k.get('target','')} [{k.get('flag','OK')}] — {k.get('note','')}"
+            for k in kpis_raw if isinstance(k, dict)
+        ]
+        metrics_str = " ".join(k.get("metric", "").lower() for k in kpis_raw if isinstance(k, dict))
+    else:
+        lines = [f"• {kpis_raw}"]
+        metrics_str = str(kpis_raw).lower()
+
+    kpi_lines = "\n".join(lines) or "(no KPI targets set)"
+
+    _perf   = any(w in metrics_str for w in ("roas", "ctr", "cpc", "cpa", "convers", "lead", "purchase", "acquisition", "click"))
+    _aware  = any(w in metrics_str for w in ("reach", "impression", "brand lift", "brand awareness", "ad recall", "video views", "completion", "frequency"))
+
+    if _perf and not _aware:
+        orientation   = "PERFORMANCE / DIRECT RESPONSE"
+        implication   = ("Copy must be action-driven with strong verb CTAs (Shop Now, Apply Now, Get Started). "
+                         "Strategy should prioritise conversion pathways. "
+                         "KV imagery should feel product-forward and drive immediate response.")
+    elif _aware and not _perf:
+        orientation   = "AWARENESS / BRAND BUILDING"
+        implication   = ("Copy should be aspirational and emotionally resonant — prioritise memorability over urgency. "
+                         "Strategy should maximise cultural reach and brand recall. "
+                         "KV imagery should build emotional connection with the audience.")
+    else:
+        orientation   = "MIXED (awareness + performance)"
+        implication   = ("Lead with an emotional brand hook to drive awareness, then close with a clear conversion CTA. "
+                         "Strategy balances reach with direct response. "
+                         "KV imagery should feel premium yet action-oriented.")
+
+    return kpi_lines, orientation, implication
+
+
 async def run_strategy_with_groq(machine_brief: dict, brand_guidelines: str, brand_locks: str, language: str = "") -> dict:
     """Generate creative strategy from validated machine brief."""
     import litellm
@@ -323,6 +362,8 @@ async def run_strategy_with_groq(machine_brief: dict, brand_guidelines: str, bra
         else ""
     )
 
+    _s_kpi_lines, _s_kpi_orient, _s_kpi_impl = _kpi_orientation_block(machine_brief.get("kpis"))
+
     prompt = f"""{STRATEGY_AGENT_INSTRUCTIONS}{_lang_rule_s}
 
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -335,6 +376,11 @@ BRAND GUIDELINES:
 BRAND LOCKS:
 {brand_locks[:500]}
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+KPI TARGETS (strategy must serve these metrics):
+{_s_kpi_lines}
+KPI ORIENTATION: {_s_kpi_orient}
+→ {_s_kpi_impl}
 
 Produce a creative strategy as valid JSON only â€" no markdown, no explanation:
 {{
@@ -419,6 +465,8 @@ async def run_copy_agent(machine_brief: dict, strategy: dict, brand_locks: str,
         if _brand_name.lower() == "barclays" else ""
     )
 
+    _c_kpi_lines, _c_kpi_orient, _c_kpi_impl = _kpi_orientation_block(machine_brief.get("kpis"))
+
     prompt = f"""{COPY_AGENT_INSTRUCTIONS}{_lang_rule}{_compliance_block}{_brand_copy_block}
 
 CREATIVE STRATEGY:
@@ -429,6 +477,11 @@ BRAND LOCKS:
 
 CAMPAIGN BRIEF:
 {json.dumps(machine_brief, indent=2)[:1500]}
+
+KPI TARGETS (copy must serve these metrics):
+{_c_kpi_lines}
+KPI ORIENTATION: {_c_kpi_orient}
+→ {_c_kpi_impl}
 
 Produce campaign copy as valid JSON only - no markdown, no explanation.
 Only include the channel fields listed below.
@@ -453,6 +506,8 @@ async def run_copy_with_groq(machine_brief: dict, strategy: dict, brand_locks: s
     import litellm
     from app.instructions import COPY_AGENT_INSTRUCTIONS
 
+    _g_kpi_lines, _g_kpi_orient, _g_kpi_impl = _kpi_orientation_block(machine_brief.get("kpis"))
+
     prompt = f"""{COPY_AGENT_INSTRUCTIONS}
 
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -465,6 +520,11 @@ BRAND LOCKS:
 CAMPAIGN BRIEF:
 {json.dumps(machine_brief, indent=2)[:1500]}
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+KPI TARGETS (copy must serve these metrics):
+{_g_kpi_lines}
+KPI ORIENTATION: {_g_kpi_orient}
+→ {_g_kpi_impl}
 
 Produce campaign copy as valid JSON only â€" no markdown, no explanation:
 {{
@@ -2670,6 +2730,7 @@ async def run_creative_pipeline_direct(
     language: str = "",
     channels: list = None,
     campaign_id: str = "",
+    kpis: list = None,
     progress_cb=None,
 ) -> dict:
     """
@@ -2787,6 +2848,9 @@ Cover: colours (with HEX), typography/font, logo rules, tone, forbidden treatmen
 
     # Stage 3: Creative director → Big Idea
     log.info("p2_creative_director_start")
+
+    _kpi_lines_kv, _kpi_orient_kv, _kpi_impl_kv = _kpi_orientation_block(kpis or [])
+
     big_idea = await _llm(f"""You are a Creative Director.
 
 Brand: {brand}
@@ -2795,6 +2859,8 @@ Cultural intelligence: {culture}
 Brand locks: {brand_summary}
 {f'Seed idea: {big_idea_seed}' if big_idea_seed else ''}
 
+
+Campaign KPI Goal: {_kpi_orient_kv} — {_kpi_impl_kv}
 Create a Big Idea for this campaign. Output:
 - Big Idea title (â‰¤6 words, memorable)
 - Visual world (2-3 sentences â€" what the campaign looks and feels like)
@@ -3403,6 +3469,7 @@ Fan Truth: {_ft_ctx}
 Audience: {_aud_ctx}
 Season: {_season_ctx} — reflect in lighting, atmosphere, wardrobe
 Market: {_market_ctx} — reflect in model authenticity
+KPI Goal: {_kpi_orient_kv} — {_kpi_impl_kv}
 
 ═══ BRAND VISUAL DNA ═══
 Background: {_magic['bg']}
