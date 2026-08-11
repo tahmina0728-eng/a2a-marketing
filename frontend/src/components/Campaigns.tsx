@@ -684,7 +684,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                 );
               })()}
               {brand === "Barclays" && (
-                <ChipSel label="Campaign" value={barclaysCampaign} onChange={setBarclaysCampaign}
+                <ChipSel label="Services" value={barclaysCampaign} onChange={setBarclaysCampaign}
                   opts={BARCLAYS_CAMPAIGNS}
                   icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>} />
               )}
