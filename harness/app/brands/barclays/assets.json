@@ -17,7 +17,7 @@
 
   "partnerships": {
     "wimbledon": {
-      "lockup":          "barclays-wimbledon_wb.png",
+      "lockup":          "barclays-wimbledon_db.png",
       "shield":          "wimbledon_wb.png",
       "reel_logo_stem":  "barclays-wimbledon_wb",
       "approved_lockup": null
