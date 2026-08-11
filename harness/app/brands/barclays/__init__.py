@@ -947,10 +947,11 @@ def _apply_wimbledon_overlay(
     sl_y1 = y
     y += int(sl_size * 0.80)   # gap: subline → CTA
 
-    # CTA button — capture dimensions for layout metadata
-    cta_y        = y
-    cta_bw, cta_bh = _draw_cta_button(draw, cta_text, cta_font, safe_left, cta_y,
-                                       cta_pad_x, cta_pad_y, cta_radius, cta_bg, cta_fg)
+    # CTA — plain Barclays Blue text, no button border/background
+    cta_y  = y
+    draw.text((safe_left, cta_y), cta_text, fill=(*cta_bg, 255), font=cta_font)
+    _cta_bb = draw.textbbox((safe_left, cta_y), cta_text, font=cta_font)
+    cta_bw, cta_bh = _cta_bb[2] - _cta_bb[0], _cta_bb[3] - _cta_bb[1]
 
     # ── Logo lockup (bottom-right) ────────────────────────────────────────────
     # Point 8: prefer the single approved lockup asset over separate logos.

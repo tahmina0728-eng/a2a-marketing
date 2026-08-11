@@ -28,16 +28,16 @@
     "safe_area": { "left": 0.07, "right": 0.07, "top": 0.07, "bottom": 0.07 },
     "copy": {
       "anchor": "left",
-      "max_width":      0.40,
-      "headline_width": 0.38,
-      "subline_width":  0.32,
+      "max_width":      0.55,
+      "headline_width": 0.52,
+      "subline_width":  0.42,
       "headline": {
         "font":         "Effra_Bd.ttf",
-        "size_ratio":   0.060,
-        "min_size":     42,
-        "max_size":     96,
+        "size_ratio":   0.088,
+        "min_size":     56,
+        "max_size":     148,
         "color":        "#FFFFFF",
-        "line_spacing": 1.10,
+        "line_spacing": 1.08,
         "max_lines":    3
       },
       "subline": {
