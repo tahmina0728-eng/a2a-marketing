@@ -66,9 +66,12 @@ def _build_wimbledon_prompt(concept: dict, aspect_ratio: str) -> str:
         "championship mark, sponsor mark, or invented signage of any kind.\n"
         "The generated photograph must contain ZERO Barclays or Wimbledon branding.\n"
         "All branding is composited in post-production using approved assets.\n\n"
-        "TYPOGRAPHY:\n"
-        "No text, numbers, logos, or brand marks anywhere in the image. "
-        "All copy and brand assets are composited in post-production.\n\n"
+        "GENERATED IMAGE BOUNDARY — the image model is responsible ONLY for:\n"
+        "  photography · people · environment · lighting · composition · atmosphere\n\n"
+        "The image model MUST NOT generate:\n"
+        "  headline · subline · CTA · typography · numbers · logos · sponsor marks\n"
+        "  Wimbledon marks · Barclays marks · signage · badges · watermarks\n\n"
+        "All copy and brand assets are composited deterministically in post-production.\n\n"
         f"TECHNICAL:\n"
         f"Aspect ratio {aspect_ratio}. Photorealistic, premium UK advertising photography."
     )
@@ -355,12 +358,21 @@ def run_kv(
         products = loader.list_products(brand)
         contents: list = []
 
-        _ref_logo = (
-            next((p for p in logos if _bslug in p.lower() and "_dark"  in p.lower()), None) or
-            next((p for p in logos if _bslug in p.lower() and "_white" not in p.lower()), None) or
-            next((p for p in logos if _bslug in p.lower()), None) or
-            (logos[0] if logos else None)
-        )
+        # For Wimbledon: resolve the approved co-brand lockup directly rather
+        # than searching filenames generically — the campaign JSON marks it editable:false.
+        if _is_wimbledon:
+            _ref_logo = (
+                next((p for p in logos if "barclays-wimbledon" in p.lower()), None) or
+                next((p for p in logos if _bslug in p.lower()), None) or
+                (logos[0] if logos else None)
+            )
+        else:
+            _ref_logo = (
+                next((p for p in logos if _bslug in p.lower() and "_dark"  in p.lower()), None) or
+                next((p for p in logos if _bslug in p.lower() and "_white" not in p.lower()), None) or
+                next((p for p in logos if _bslug in p.lower()), None) or
+                (logos[0] if logos else None)
+            )
 
         # For Wimbledon: do NOT pass any logo or brand image to Gemini — the
         # generated photo must be brand-mark-free. The eagle, wordmark, and

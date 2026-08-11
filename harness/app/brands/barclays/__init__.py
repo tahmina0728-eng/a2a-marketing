@@ -406,17 +406,18 @@ def reel_negative_prompt() -> str:
 
 # ── Banner overlay ────────────────────────────────────────────────────────────
 #
-# apply_overlay() orchestrates the following rendering steps:
-#   1. _open_photo()            — load + resize the source image
-#   2. _create_canvas()         — add Barclays Blue border frame
-#   3. _load_eagle()            — resolve border eagle + watermark source
-#   4. _render_border_eagle()   — white eagle in top-right border cell
-#   5. _render_gradient_scrim() — dark gradient over top 60% (headline legibility)
-#   6. _render_headline()       — Effra Bold headline, last line Barclays Blue (Wimbledon)
-#   7. _render_subcopy()        — Wimbledon: subline + "Proud partner" line
-#   8. _render_eagle_watermark()— Wimbledon: large tinted eagle bottom-right
-#   9. _render_bottom_bar()     — semi-transparent dark bar ~22% height
-#  10. _render_wimbledon_lockup()  or  _render_standard_bottom()
+# Wimbledon path — fully deterministic compositor (spec-driven):
+#   1. _open_photo()              — load + resize the source image
+#   2. _create_canvas()           — Barclays Blue border frame
+#   3. _render_border_eagle()     — white eagle in top-right border cell
+#   4. _apply_wimbledon_overlay() — ALL brand elements from assets.json overlay spec:
+#        headline (Effra Bold, white, responsive, auto-wrap + shrink)
+#        subline  (Effra Regular, white, responsive, auto-wrap)
+#        CTA      (rounded-rect, #00AEEF bg, #1A2142 text)
+#        logo     (approved barclays-wimbledon_wb.png lockup, bottom-right)
+#
+# Non-Wimbledon path (unchanged):
+#   gradient scrim → _render_headline → _render_standard_bottom
 #  11. Encode JPEG
 
 def _open_photo(img_data: bytes):
@@ -815,6 +816,193 @@ def _render_standard_bottom(canvas, draw, bar_y: int, bar_h: int, PX: int, PW: i
     return canvas
 
 
+# ── Deterministic compositor helpers ─────────────────────────────────────────
+
+def _responsive_font_size(image_width: int, ratio: float, min_size: int, max_size: int) -> int:
+    return max(min_size, min(max_size, int(image_width * ratio)))
+
+
+def _hex_to_rgb(hex_color: str) -> tuple:
+    h = hex_color.lstrip("#")
+    return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+
+
+def _draw_cta_button(draw, text: str, font, x: int, y: int,
+                     pad_x: int, pad_y: int, radius: int,
+                     bg: tuple, fg: tuple):
+    """Rounded-rect Barclays Blue CTA button."""
+    bb     = draw.textbbox((0, 0), text, font=font)
+    tw, th = bb[2] - bb[0], bb[3] - bb[1]
+    bw, bh = tw + pad_x * 2, th + pad_y * 2
+    draw.rounded_rectangle([x, y, x + bw, y + bh], radius=radius, fill=(*bg, 255))
+    draw.text((x + pad_x, y + pad_y - bb[1]), text, fill=(*fg, 255), font=font)
+    return bw, bh
+
+
+def _apply_wimbledon_overlay(
+    canvas, draw, PX: int, PY: int, PW: int, PH: int,
+    font_dir: "str | None",
+    logo_uri: str,
+    headline: str,
+    copy_subline: str,
+    copy_cta: str,
+):
+    """
+    Fully deterministic Wimbledon brand compositor driven by assets.json overlay spec.
+
+    Responsibility boundary:
+      Gemini  → photography, people, environment, lighting, atmosphere
+      This fn → headline, subline, CTA, logo lockup, safe areas, typography scale
+    """
+    from PIL import Image, ImageDraw as _ID, ImageFont
+
+    spec      = _assets.get("overlay", {})
+    safe      = spec.get("safe_area", {"left": 0.07, "right": 0.07, "top": 0.07, "bottom": 0.07})
+    copy_spec = spec.get("copy", {})
+    logo_spec = spec.get("logos", {})
+
+    safe_left = PX + int(PW * safe["left"])
+    safe_top  = PY + int(PH * safe["top"])
+
+    # ── Font loader (tries named Effra files in font_dir, falls back to default) ──
+    def _fnt(filename: str, size: int):
+        if font_dir:
+            from pathlib import Path as _P
+            for name in [filename, filename.replace(".ttf", ".otf")]:
+                p = _P(font_dir) / name
+                if p.exists():
+                    try:
+                        return ImageFont.truetype(str(p), size)
+                    except Exception:
+                        pass
+        try:
+            return ImageFont.load_default(size=size)
+        except Exception:
+            return ImageFont.load_default()
+
+    def bold(sz):    return _fnt("Effra_Bd.ttf", sz)
+    def regular(sz): return _fnt("Effra_Rg.ttf", sz)
+
+    draw = _ID.Draw(canvas)
+
+    # ── Headline ──────────────────────────────────────────────────────────────
+    hl_cfg      = copy_spec.get("headline", {})
+    hl_size     = _responsive_font_size(PW, hl_cfg.get("size_ratio", 0.060),
+                                        hl_cfg.get("min_size", 42), hl_cfg.get("max_size", 96))
+    hl_max_w    = int(PW * copy_spec.get("headline_width", 0.38))
+    hl_max_ln   = hl_cfg.get("max_lines", 3)
+    hl_text     = (headline or "").strip()
+    hl_font     = bold(hl_size)
+    hl_lines    = _wrap_text(draw, hl_text, hl_font, hl_max_w)
+    # Auto-shrink until ≤ max_lines
+    while len(hl_lines) > hl_max_ln and hl_size > hl_cfg.get("min_size", 42):
+        hl_size -= 2
+        hl_font  = bold(hl_size)
+        hl_lines = _wrap_text(draw, hl_text, hl_font, hl_max_w)
+    hl_lh = int(hl_size * hl_cfg.get("line_spacing", 1.10))
+
+    # ── Subline ───────────────────────────────────────────────────────────────
+    sl_cfg   = copy_spec.get("subline", {})
+    sl_size  = _responsive_font_size(PW, sl_cfg.get("size_ratio", 0.024),
+                                     sl_cfg.get("min_size", 18), sl_cfg.get("max_size", 36))
+    sl_max_w = int(PW * copy_spec.get("subline_width", 0.32))
+    sl_text  = (copy_subline.strip() if copy_subline and copy_subline.strip()
+                else "Behind every champion is support that believes.")
+    sl_font  = regular(sl_size)
+    sl_lines = _wrap_text(draw, sl_text, sl_font, sl_max_w)[:sl_cfg.get("max_lines", 3)]
+    sl_lh    = int(sl_size * sl_cfg.get("line_spacing", 1.20))
+
+    # ── CTA ───────────────────────────────────────────────────────────────────
+    cta_cfg    = copy_spec.get("cta", {})
+    cta_size   = _responsive_font_size(PW, cta_cfg.get("size_ratio", 0.020),
+                                       cta_cfg.get("min_size", 16), cta_cfg.get("max_size", 30))
+    cta_font   = bold(cta_size)
+    cta_text   = (copy_cta.strip() if copy_cta and copy_cta.strip() else "Discover more")
+    cta_bg     = _hex_to_rgb(cta_cfg.get("background_color", "#00AEEF"))
+    cta_fg     = _hex_to_rgb(cta_cfg.get("text_color", "#1A2142"))
+    cta_pad_x  = int(PW * cta_cfg.get("padding_x", 0.018))
+    cta_pad_y  = int(PH * cta_cfg.get("padding_y", 0.010))
+    cta_radius = max(4, int(PH * cta_cfg.get("radius", 0.006)))
+
+    # ── Vertical layout ───────────────────────────────────────────────────────
+    y = safe_top
+
+    # Headline — all white (never Barclays Blue on dark photo)
+    for line in hl_lines:
+        draw.text((safe_left, y), line, fill=WHITE, font=hl_font)
+        y += hl_lh
+    y += int(hl_size * 0.50)   # gap: headline → subline
+
+    # Subline — white, regular weight
+    for line in sl_lines:
+        draw.text((safe_left, y), line, fill=WHITE, font=sl_font)
+        y += sl_lh
+    y += int(sl_size * 0.80)   # gap: subline → CTA
+
+    # CTA button
+    _draw_cta_button(draw, cta_text, cta_font, safe_left, y,
+                     cta_pad_x, cta_pad_y, cta_radius, cta_bg, cta_fg)
+
+    # ── Logo lockup (bottom-right) ────────────────────────────────────────────
+    # Point 8: prefer the single approved lockup asset over separate logos.
+    bottom_m = int(PH * logo_spec.get("bottom", 0.055))
+    right_m  = int(PW * logo_spec.get("right", 0.055))
+
+    lockup_name = _assets["partnerships"]["wimbledon"]["lockup"]   # barclays-wimbledon_wb.png
+    lockup_img  = _load_logo_file(logo_uri, [lockup_name])
+
+    if lockup_img:
+        lk_w  = int(PW * logo_spec.get("lockup_width", 0.22))
+        lk_h  = int(lockup_img.height * lk_w / lockup_img.width)
+        lockup_img = lockup_img.resize((lk_w, lk_h), Image.LANCZOS)
+        lk_x  = PX + PW - lk_w - right_m
+        lk_y  = PY + PH - lk_h - bottom_m
+        canvas.alpha_composite(lockup_img, (lk_x, lk_y))
+        draw = _ID.Draw(canvas)
+    else:
+        # Fallback: Wimbledon badge + eagle + BARCLAYS text (deterministic sizing)
+        gap_logos = int(PW * 0.018)
+        lh = max(28, int(PH * logo_spec.get("bottom", 0.055) * 1.8))
+
+        # Wimbledon badge
+        shield = _load_logo_file(logo_uri, [_assets["partnerships"]["wimbledon"]["shield"]])
+        if shield:
+            sw = int(shield.width * lh / shield.height)
+            shield = shield.resize((sw, lh), Image.LANCZOS)
+
+        # Barclays eagle symbol (white silhouette)
+        sym = _load_logo_file(logo_uri, [_assets["logos"]["symbol_white"]])
+        if sym:
+            ew = int(sym.width * lh / sym.height)
+            sym = sym.resize((ew, lh), Image.LANCZOS)
+            sym = _tint_white(sym)
+
+        # BARCLAYS text
+        bk_sz  = max(12, int(lh * 0.58))
+        bk_fnt = bold(bk_sz)
+        draw_m = _ID.Draw(canvas)
+        bk_bb  = draw_m.textbbox((0, 0), "BARCLAYS", font=bk_fnt)
+        bk_w, bk_h = bk_bb[2] - bk_bb[0], bk_bb[3] - bk_bb[1]
+
+        sw_val = shield.width if shield else 0
+        ew_val = sym.width    if sym    else 0
+        total  = sw_val + (gap_logos if sw_val else 0) + ew_val + gap_logos + bk_w
+        lx     = PX + PW - total - right_m
+        ly_c   = PY + PH - lh - bottom_m
+
+        if shield:
+            canvas.alpha_composite(shield, (lx, ly_c))
+            lx += sw_val + gap_logos
+        if sym:
+            canvas.alpha_composite(sym, (lx, ly_c))
+            lx += ew_val + gap_logos
+        draw_m = _ID.Draw(canvas)
+        draw_m.text((lx, ly_c + (lh - bk_h) // 2 - bk_bb[1]), "BARCLAYS",
+                    fill=WHITE, font=bk_fnt)
+
+    return canvas
+
+
 def apply_overlay(
     img_data:     bytes,
     headline:     str,
@@ -825,11 +1013,11 @@ def apply_overlay(
     copy_cta:     str = "",
 ) -> bytes:
     """
-    Barclays official ad template overlay.
+    Barclays brand compositor.
 
-    Two-layer render rule:
-      • Image model generates the photo (no text, no logos).
-      • This function composites all brand elements deterministically.
+    Responsibility boundary:
+      Gemini  → photography only (no text, no logos, no brand marks)
+      This fn → 100% of the visual system: typography, CTA, logo lockup, safe areas
     """
     try:
         from PIL import Image, ImageDraw, ImageFont
@@ -853,36 +1041,27 @@ def apply_overlay(
         # 2. Blue border canvas
         canvas, TW, TH, border, PX, PY = _create_canvas(photo, BLUE)
 
-        # 3. Eagle sources
-        eagle_src, eagle_orig = _load_eagle(logo_uri)
-
-        # 4. Border eagle (top-right blue border cell)
+        # 3. Border eagle (top-right blue border cell)
+        eagle_src, _ = _load_eagle(logo_uri)
         canvas = _render_border_eagle(canvas, eagle_src, border, TW)
 
-        # 5. Gradient scrim — skipped for Wimbledon (real Barclays × Wimbledon ads
-        #    rely on the photograph's own contrast; scrim makes it look shadowed)
-        if not is_wimbledon:
-            canvas = _render_gradient_scrim(canvas, PX, PY, PW, PH, TW, TH)
-
-        # 6. Headline
-        margin = max(16, int(PW * 0.055))
-        text_x, text_y = PX + margin, PY + margin
-        draw = ImageDraw.Draw(canvas)
-        draw, head_bottom, head_sz = _render_headline(draw, headline, is_wimbledon, fnt, text_x, text_y, PW, PH)
-
-        # 7. Sub-copy (Wimbledon only)
-        draw = _render_subcopy(draw, copy_subline, is_wimbledon, fnt, text_x, head_bottom, head_sz, PH, PW)
-
-        # 8. Eagle watermark — removed: too visually prominent, not present in reference ads.
-
-        # 9. Dark bottom bar
-        canvas, bar_y, bar_h = _render_bottom_bar(canvas, PX, PY, PW, PH, TW, TH, is_wimbledon)
-        draw = ImageDraw.Draw(canvas)
-
-        # 10. Bottom bar content
         if is_wimbledon:
-            canvas = _render_wimbledon_lockup(canvas, draw, bar_y, bar_h, PX, PW, text_x, margin, logo_uri, fnt)
+            # Fully deterministic spec-driven compositor
+            font_dir = str(Path(font_path).parent) if font_path else None
+            canvas = _apply_wimbledon_overlay(
+                canvas, ImageDraw.Draw(canvas), PX, PY, PW, PH,
+                font_dir, logo_uri, headline, copy_subline, copy_cta,
+            )
         else:
+            # Non-Wimbledon: gradient scrim + headline + standard bottom bar
+            canvas = _render_gradient_scrim(canvas, PX, PY, PW, PH, TW, TH)
+            margin = max(16, int(PW * 0.055))
+            text_x, text_y = PX + margin, PY + margin
+            draw = ImageDraw.Draw(canvas)
+            draw, head_bottom, head_sz = _render_headline(draw, headline, False, fnt, text_x, text_y, PW, PH)
+            draw = _render_subcopy(draw, copy_subline, False, fnt, text_x, head_bottom, head_sz, PH, PW)
+            canvas, bar_y, bar_h = _render_bottom_bar(canvas, PX, PY, PW, PH, TW, TH, False)
+            draw = ImageDraw.Draw(canvas)
             canvas = _render_standard_bottom(canvas, draw, bar_y, bar_h, PX, PW, text_x, margin, logo_uri, copy_cta, fnt)
 
         # 11. Encode

@@ -24,6 +24,51 @@
     }
   },
 
+  "overlay": {
+    "safe_area": { "left": 0.07, "right": 0.07, "top": 0.07, "bottom": 0.07 },
+    "copy": {
+      "anchor": "left",
+      "max_width":      0.40,
+      "headline_width": 0.38,
+      "subline_width":  0.32,
+      "headline": {
+        "font":         "Effra_Bd.ttf",
+        "size_ratio":   0.060,
+        "min_size":     42,
+        "max_size":     96,
+        "color":        "#FFFFFF",
+        "line_spacing": 1.10,
+        "max_lines":    3
+      },
+      "subline": {
+        "font":         "Effra_Rg.ttf",
+        "size_ratio":   0.024,
+        "min_size":     18,
+        "max_size":     36,
+        "color":        "#FFFFFF",
+        "line_spacing": 1.20,
+        "max_lines":    3
+      },
+      "cta": {
+        "font":             "Effra_Bd.ttf",
+        "size_ratio":       0.020,
+        "min_size":         16,
+        "max_size":         30,
+        "text_color":       "#1A2142",
+        "background_color": "#00AEEF",
+        "padding_x":        0.018,
+        "padding_y":        0.010,
+        "radius":           0.006
+      }
+    },
+    "logos": {
+      "placement":    "bottom_right",
+      "lockup_width": 0.22,
+      "bottom":       0.055,
+      "right":        0.055
+    }
+  },
+
   "channel_logo_stem": {
     "default":   "barclays1_wb",
     "instagram": "barclays1_wb",
