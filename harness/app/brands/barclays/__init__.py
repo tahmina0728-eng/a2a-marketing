@@ -523,21 +523,27 @@ def _tint_color(src, rgb: tuple, alpha_val: int):
     return out
 
 
-def _render_border_eagle(canvas, eagle_src, border: int, TW: int):
+def _render_border_eagle(canvas, eagle_src, border: int, TW: int, PX: int = 0, PY: int = 0, PW: int = 0, PH: int = 0):
     if not eagle_src:
         return canvas
     from PIL import Image
-    eh = max(int(border * 0.72), 16)
-    ew = int(eagle_src.width * eh / eagle_src.height)
-    # Clamp width so the eagle never bleeds into the photo area.
-    if ew > border:
-        ew = border
-        eh = int(eagle_src.height * ew / eagle_src.width)
+    if PW and PH:
+        # Eagle overlaid on photo — top-right corner
+        eh = max(int(PH * 0.08), 28)
+        ew = int(eagle_src.width * eh / eagle_src.height)
+        margin = max(12, int(PW * 0.025))
+        ex = PX + PW - ew - margin
+        ey = PY + margin
+    else:
+        eh = max(int(border * 0.72), 16)
+        ew = int(eagle_src.width * eh / eagle_src.height)
+        if ew > border:
+            ew = border
+            eh = int(eagle_src.height * ew / eagle_src.width)
+        ex = TW - border + (border - ew) // 2
+        ey = max(0, (border - eh) // 2)
     small = eagle_src.resize((ew, eh), Image.LANCZOS)
     white = _tint_white(small)
-    # Centre within the right border strip.
-    ex = TW - border + (border - ew) // 2
-    ey = max(0, (border - eh) // 2)
     canvas.alpha_composite(white, (ex, ey))
     return canvas
 
@@ -963,14 +969,6 @@ def _apply_wimbledon_overlay(
         lockup_img = lockup_img.resize((lk_w, lk_h), Image.LANCZOS)
         lk_x  = PX + PW - lk_w - right_m
         lk_y  = PY + PH - lk_h - bottom_m
-        # Dark pill behind lockup so it reads on any photo background
-        pad_x, pad_y = int(PW * 0.012), int(PH * 0.010)
-        scrim_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
-        _ID.Draw(scrim_layer).rounded_rectangle(
-            [lk_x - pad_x, lk_y - pad_y, lk_x + lk_w + pad_x, lk_y + lk_h + pad_y],
-            radius=int(PH * 0.012), fill=(0, 0, 0, 110),
-        )
-        canvas.alpha_composite(scrim_layer)
         canvas.alpha_composite(lockup_img, (lk_x, lk_y))
         draw = _ID.Draw(canvas)
         _logo_meta = {"x": lk_x, "y": lk_y, "w": lk_w, "h": lk_h}
@@ -1106,9 +1104,9 @@ def apply_overlay(
         # 2. Blue border canvas
         canvas, TW, TH, border, PX, PY = _create_canvas(photo, BLUE)
 
-        # 3. Border eagle (top-right blue border cell)
+        # 3. Eagle — top-right corner of the photo
         eagle_src, _ = _load_eagle(logo_uri)
-        canvas = _render_border_eagle(canvas, eagle_src, border, TW)
+        canvas = _render_border_eagle(canvas, eagle_src, border, TW, PX, PY, PW, PH)
 
         if is_wimbledon:
             # Fully deterministic spec-driven compositor

@@ -330,7 +330,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   const [haleonCategory, setHaleonCategory] = useState("");
 
   const [formats, setFormats] = useState<Set<FormatType>>(new Set());
-  const [imgSz, setImgSz]     = useState("4:5");
+  const [imgSz, setImgSz]     = useState("16:9");
   const [tvcLen, setTvcLen]   = useState("15");
   const [vidLen, setVidLen]   = useState("30s");
 
