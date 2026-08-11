@@ -93,6 +93,27 @@ const MARKET_CURRENCY_SYMBOL: Record<string, string> = {
   "SEA": "$", "India": "₹", "Thailand": "฿", "China": "¥",
 };
 
+const BRAND_PRODUCTS: Record<string, string[]> = {
+  Barclays:    ["Wimbledon", "Premier League", "Brand Awareness", "Mortgage", "Business Banking", "Personal Loans", "Savings Account", "Credit Card"],
+  Haleon:      ["Sensodyne", "Centrum", "Voltaren", "Panadol", "Otrivin", "Theraflu", "Robitussin", "Tums", "parodontax", "Emergen-C", "Zovirax", "Fenistil"],
+  Glenfiddich: ["12 Year Old", "15 Year Old", "18 Year Old", "21 Year Old", "Gran Reserva", "Fire & Cane", "IPA Experiment"],
+  "UBS Bank":  ["Wealth Management", "Private Banking", "Investment Banking", "Personal Banking", "SME Banking"],
+  Rnorr:       ["Stock Cubes", "Soups & Broths", "Seasonings", "Recipe Mixes"],
+  Sunglow:     ["Shampoo", "Conditioner", "Hair Treatment", "Styling Products"],
+  Boozt:       ["Boozt Original", "Boozt Zero", "Boozt Sport", "Boozt Energy Shot"],
+  sunrise:     ["Lifestyle KV", "Mobile Unlimited", "Easy Internet", "5G Home Internet", "Business Connect"],
+};
+
+const KPI_PRESETS = [
+  "Reach: 500k, CTR: 2%, ROAS: 3x",
+  "Reach: 1M, Engagement: 4%, Brand Lift: +15%",
+  "Video Views: 500k, Completion Rate: 60%",
+  "Leads: 5k, CPA: £50, Conversion Rate: 3%",
+  "Brand Awareness: +20%, Ad Recall: +25%",
+  "CTR: 3%, CPC: £0.50, Conversions: 2k",
+  "Impressions: 5M, Frequency: 3x, CPM: £8",
+];
+
 const BRAND_FAN_TRUTHS: Record<string, string[]> = {
   sunrise: [
     "Young adventurers need a network that never drops at the moment that matters most — on the summit, mid-ride, or mid-call.",
@@ -136,7 +157,7 @@ const BRAND_FAN_TRUTHS: Record<string, string[]> = {
 interface FD {
   brand: string; objective: string; market: string; language: string; budget: string;
   channels: string[]; age: string[]; season: string; moment: string; campaignName: string;
-  fanTruth: string; kpiTargets: string;
+  fanTruth: string; kpiTargets: string; productService: string;
   // Sunrise-specific
   sunrisePlan: string;      // "Lifestyle KV" | plan name e.g. "Mobile Unlimited"
   sunriseAudience: string;
@@ -144,7 +165,7 @@ interface FD {
 const INIT: FD = {
   brand:"", objective:"", market:"", language:"", budget:"",
   channels:[], age:[], season:"", moment:"Day-to-Day", campaignName:"",
-  fanTruth:"", kpiTargets:"",
+  fanTruth:"", kpiTargets:"", productService:"",
   sunrisePlan:"Lifestyle KV", sunriseAudience:"",
 };
 const toggle = <T,>(arr: T[], v: T): T[] => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
@@ -227,9 +248,17 @@ function Page1({ data, onChange, onNext }: {
         <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
           <div>
             <span style={label}>Brand</span>
-            <FormSelect value={data.brand} onChange={v => onChange("brand", v)}
+            <FormSelect value={data.brand} onChange={v => { onChange("brand", v); onChange("productService", ""); }}
               placeholder="Select brand" options={brandOptions} />
           </div>
+
+          {data.brand && (BRAND_PRODUCTS[data.brand] ?? []).length > 0 && (
+            <div>
+              <span style={label}>Product or Service</span>
+              <FormSelect value={data.productService} onChange={v => onChange("productService", v)}
+                placeholder="Select product or service" options={BRAND_PRODUCTS[data.brand] ?? []} />
+            </div>
+          )}
 
           <div>
             <span style={label}>Campaign Objective</span>
@@ -253,21 +282,8 @@ function Page1({ data, onChange, onNext }: {
 
           <div>
             <span style={label}>KPI Targets <span style={{fontWeight:400,color:"var(--text-secondary,#64748b)"}}>(optional)</span></span>
-            <input
-              value={data.kpiTargets}
-              onChange={e => onChange("kpiTargets", e.target.value)}
-              placeholder="e.g. Reach: 500k, CTR: 2%, ROAS: 3x, Engagement: 4%"
-              style={{
-                width: "100%", borderRadius: 12, padding: "12px 16px",
-                border: "1px solid var(--card-border,rgba(15,23,42,0.08))",
-                background: "var(--card-bg,#ffffff)",
-                fontFamily: F, fontSize: 13,
-                color: "var(--text-primary,#0f172a)", outline: "none",
-                boxSizing: "border-box" as const, transition: "border-color 0.15s",
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = BRAND_COLOR}
-              onBlur={e => e.currentTarget.style.borderColor = "var(--card-border,rgba(15,23,42,0.08))"}
-            />
+            <FormSelect value={data.kpiTargets} onChange={v => onChange("kpiTargets", v)}
+              placeholder="Select KPI targets" options={KPI_PRESETS} />
           </div>
 
           <div style={{ display:"grid", gridTemplateColumns: langs.length > 1 ? "1fr 1fr 1fr" : "1fr 1fr", gap:16 }}>
@@ -495,13 +511,17 @@ export default function CampaignForm({ onFullCampaign }: {
     }
 
     if (isHaleon) {
-      // Extract sub-brand from objective + campaign name free text
-      const corpus = `${data.objective} ${data.campaignName}`;
+      // Prefer dropdown selection; fall back to free-text extraction from objective
+      const corpus = data.productService || `${data.objective} ${data.campaignName}`;
       const match = lookupHaleonSubBrand(corpus);
       if (match) {
         product         = match.brand;
         productCategory = match.category;
+      } else if (data.productService) {
+        product = data.productService;
       }
+    } else if (!isSunrise && data.productService) {
+      product = data.productService;
     }
 
     // Fan truth: user-selected takes priority; fall back to auto-generated
