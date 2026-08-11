@@ -32,8 +32,11 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
   const [mcResult,     setMcResult]     = useState<{status:string;campaign_id?:string} | null>(null);
   const supported = STANDALONE_SUPPORTED.includes(agentKey);
   const [availableBrands, setAvailableBrands] = useState<string[]>([]);
+  const [kvBrand,        setKvBrand]        = useState("");
+  const [kvImgSz,        setKvImgSz]        = useState("16:9");
+  const [kvCampaignType, setKvCampaignType] = useState("");
   useEffect(() => {
-    if (agentKey !== "briefing") return;
+    if (!["briefing", "kv", "reel"].includes(agentKey)) return;
     fetch(`${API_BASE_PUB}/brands`).then(r => r.json()).then(d => {
       if (Array.isArray(d?.brands)) setAvailableBrands(d.brands);
     }).catch(() => {});
@@ -80,9 +83,18 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
     setKvSaveState("idle"); setReelSaveState("idle");
     setActiveChannel(null); setChannelStatus("idle"); setChannelResult(null);
     try {
+      const body: Record<string, any> = { prompt: p, duration: tvcDuration };
+      if (agentKey === "kv") {
+        if (kvBrand) body.brand = kvBrand;
+        body.aspect_ratio = kvImgSz;
+        if (kvCampaignType) { body.campaign_type = kvCampaignType; body.campaign_id = kvCampaignType; }
+      }
+      if (agentKey === "reel" && kvBrand) {
+        body.brand = kvBrand;
+      }
       const res = await fetch(`${API_BASE_PUB}/agents/${agentKey}/run`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: p, duration: tvcDuration }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.detail || `Run failed (${res.status})`);
@@ -178,6 +190,68 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
             </span>{" "}
             {AGENT_AGENDA[agentKey] ?? `What would you like ${agentLabel} to do?`}
           </h3>
+
+          {(agentKey === "kv" || agentKey === "reel") && availableBrands.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 7 }}>
+                Brand
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                {availableBrands.map((b) => (
+                  <button key={b} onClick={() => {
+                    setKvBrand(kvBrand === b ? "" : b);
+                    if (b !== "Barclays") setKvCampaignType("");
+                  }}
+                    style={{ padding: "5px 13px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                      cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                      border: `1.5px solid ${kvBrand === b ? color : "var(--card-border)"}`,
+                      background: kvBrand === b ? `${color}18` : "var(--card-bg-soft)",
+                      color: kvBrand === b ? color : "var(--text-secondary)" }}>
+                    {b}
+                  </button>
+                ))}
+              </div>
+              {kvBrand === "Barclays" && (
+                <div style={{ marginTop: 8, display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                    letterSpacing: "0.08em", textTransform: "uppercase" as const, width: "100%", marginBottom: 3 }}>
+                    Campaign
+                  </div>
+                  {["wimbledon"].map(ct => (
+                    <button key={ct} onClick={() => setKvCampaignType(kvCampaignType === ct ? "" : ct)}
+                      style={{ padding: "5px 13px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                        cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                        border: `1.5px solid ${kvCampaignType === ct ? color : "var(--card-border)"}`,
+                        background: kvCampaignType === ct ? `${color}18` : "var(--card-bg-soft)",
+                        color: kvCampaignType === ct ? color : "var(--text-secondary)" }}>
+                      {ct.charAt(0).toUpperCase() + ct.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {agentKey === "kv" && (
+                <div style={{ marginTop: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                    letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>
+                    Image size
+                  </div>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                    {["1:1","4:5","16:9","9:16"].map(sz => (
+                      <button key={sz} onClick={() => setKvImgSz(sz)}
+                        style={{ padding: "5px 13px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                          cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                          border: `1.5px solid ${kvImgSz === sz ? color : "var(--card-border)"}`,
+                          background: kvImgSz === sz ? `${color}18` : "var(--card-bg-soft)",
+                          color: kvImgSz === sz ? color : "var(--text-secondary)" }}>
+                        {sz}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {agentKey === "briefing" && availableBrands.length > 0 && (
             <div style={{ marginBottom: 12 }}>
