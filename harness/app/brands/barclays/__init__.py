@@ -929,6 +929,21 @@ def _apply_wimbledon_overlay(
 
     draw = _ID.Draw(canvas)
 
+    # ── Left-side gradient scrim (ensures text legibility over bright photos) ──
+    # Covers ~52% of the photo width, fading left-to-right, max alpha 150.
+    # This matches the dark-to-transparent treatment used in real Barclays × Wimbledon ads.
+    _scrim_w     = int(PW * 0.52)
+    _scrim_steps = 48
+    _scrim_layer = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    _scrim_d     = _ID.Draw(_scrim_layer)
+    for _s in range(_scrim_steps):
+        _x0 = PX + _s * _scrim_w // _scrim_steps
+        _x1 = PX + (_s + 1) * _scrim_w // _scrim_steps
+        _a  = int(150 * (1.0 - _s / _scrim_steps) ** 0.55)
+        _scrim_d.rectangle([_x0, PY, _x1, PY + PH], fill=(0, 0, 0, _a))
+    canvas.alpha_composite(_scrim_layer)
+    draw = _ID.Draw(canvas)
+
     # ── Headline ──────────────────────────────────────────────────────────────
     hl_cfg      = copy_spec.get("headline", {})
     hl_size     = _responsive_font_size(PW, hl_cfg.get("size_ratio", 0.060),
