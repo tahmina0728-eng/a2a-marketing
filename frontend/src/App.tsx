@@ -1467,15 +1467,28 @@ function ReelSpotlightPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMs
     ? String(m.video_uri).replace(/^gs:\/\/([^/]+)\/(.+)$/, "https://storage.googleapis.com/$1/$2")
     : "";
   const videoSrc = videoB64 ? `data:video/mp4;base64,${videoB64}` : videoUri;
+  const reelHeadline = m?.headline ? String(m.headline) : "";
   if (videoSrc) {
     return (
       <div style={{ width: "100%" }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: "#ec4899", letterSpacing: "0.1em",
           textTransform: "uppercase" as const, marginBottom: 10 }}>🎬 Campaign Reel · 6s</div>
-        <video controls autoPlay loop muted playsInline
-          style={{ width: "100%", borderRadius: 12, display: "block",
-            boxShadow: "0 4px 24px rgba(0,0,0,0.15)" }}
-          src={videoSrc} />
+        <div style={{ position: "relative" as const, borderRadius: 12, overflow: "hidden",
+          boxShadow: "0 4px 24px rgba(0,0,0,0.15)" }}>
+          <video controls autoPlay loop muted playsInline
+            style={{ width: "100%", display: "block" }}
+            src={videoSrc} />
+          {reelHeadline && (
+            <div style={{ position: "absolute" as const, bottom: 0, left: 0, right: 0,
+              background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)",
+              padding: "32px 16px 14px", pointerEvents: "none" as const }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "#fff", lineHeight: 1.25,
+                textShadow: "0 1px 4px rgba(0,0,0,0.5)", letterSpacing: "-0.01em" }}>
+                {reelHeadline}
+              </div>
+            </div>
+          )}
+        </div>
         <a href={videoSrc} download="campaign-reel.mp4"
           style={{ display: "inline-block", marginTop: 10, fontSize: 12, fontWeight: 700,
             color: "#ec4899", textDecoration: "none" }}>
@@ -1936,8 +1949,8 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
   const toggle = (key: string) => setSelected(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
   // Pre-fill editable fields from copy agent output (no preview needed to start editing)
-  const _copyHl     = (copy as any)?.short_headline  ?? copy?.short?.headline  ?? "";
-  const _copyMedHl  = (copy as any)?.medium_headline ?? copy?.medium?.headline ?? "";
+  const _copyHl     = (copy as any)?.short_headline  ?? copy?.short?.headline  ?? (copy as any)?.headline ?? "";
+  const _copyMedHl  = (copy as any)?.medium_headline ?? copy?.medium?.headline ?? (copy as any)?.headline ?? "";
   const _copyBody   = (copy as any)?.body            ?? copy?.long?.body       ?? "";
   const _defaultSubject  = (copy as any)?.channel_copy?.email_subject ?? _copyHl ?? strategy?.hero_message ?? "";
   const _defaultHeadline = _copyHl ?? _copyMedHl ?? strategy?.hero_message ?? "";
@@ -2069,7 +2082,7 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
       </div>
 
       {/* ── Campaign content review — editable before launch ──────────── */}
-      {!published && ((copy as any)?.short_headline || copy?.short?.headline || (copy as any)?.channel_copy) && (
+      {!published && ((copy as any)?.short_headline || copy?.short?.headline || (copy as any)?.headline || (copy as any)?.channel_copy) && (
         <div style={{ padding: "24px 36px", borderBottom: "1px solid var(--card-border)",
           display: "flex", flexDirection: "column" as const, gap: 20 }}>
 
@@ -2501,7 +2514,7 @@ function ResultsView({ output, campaignId }: {
   const adaptations = cp?.channel_adaptations as Record<string, { label: string; image_b64: string; ratio: string }> | undefined;
   const perfForecast = (output as any)?.performance_forecast as Record<string, unknown> | undefined;
 
-  const resultHeadline = (copy as any)?.short_headline ?? copy?.short?.headline ?? strategy?.hero_message ?? "";
+  const resultHeadline = (copy as any)?.short_headline ?? copy?.short?.headline ?? (copy as any)?.headline ?? strategy?.hero_message ?? "";
 
   const handleSaveKV = async () => {
     setKvSaveState("saving");
@@ -2744,9 +2757,9 @@ function ResultsView({ output, campaignId }: {
         })()}
 
         {/* ── 3. Campaign Copy ───────────────────────────────────────────── */}
-        {((copy as any)?.short_headline || copy?.short?.headline) && (() => {
+        {((copy as any)?.short_headline || copy?.short?.headline || (copy as any)?.headline) && (() => {
           const n = S();
-          const _hl       = (copy as any)?.short_headline ?? copy?.short?.headline ?? "";
+          const _hl       = (copy as any)?.short_headline ?? copy?.short?.headline ?? (copy as any)?.headline ?? "";
           const _medHl    = (copy as any)?.medium_headline ?? copy?.medium?.headline ?? "";
           const _longBody = (copy as any)?.body ?? copy?.long?.body ?? "";
           const hasMedium   = !!_medHl;
@@ -2892,8 +2905,23 @@ function ResultsView({ output, campaignId }: {
           const n = S();
           return (
             <StageCard step={n} label="Campaign Reel — Veo 3" color="#d97706">
-              <div style={{ background: "#000" }}>
+              <div style={{ background: "#000", position: "relative" as const }}>
                 <video controls autoPlay loop muted playsInline style={{ width: "100%", display: "block", maxHeight: 500 }} src={videoSrc} />
+                {resultHeadline && (
+                  <div style={{ position: "absolute" as const, bottom: 0, left: 0, right: 0,
+                    background: "linear-gradient(to top, rgba(0,0,0,0.80) 0%, transparent 100%)",
+                    padding: "48px 24px 18px", pointerEvents: "none" as const }}>
+                    <div style={{ fontSize: 16, fontWeight: 900, color: "#fff", lineHeight: 1.2,
+                      letterSpacing: "-0.01em", textShadow: "0 2px 6px rgba(0,0,0,0.5)" }}>
+                      {resultHeadline}
+                    </div>
+                    {(copy as any)?.subline && (
+                      <div style={{ fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 6, lineHeight: 1.4 }}>
+                        {String((copy as any).subline)}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
               <div style={{ padding: "10px 18px", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(15,23,42,0.04)", gap: 8 }}>
                 <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>6s · 16:9 · Veo 3</span>

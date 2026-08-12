@@ -50,17 +50,18 @@
           }
         },
         {
-          "id":       "c2_centre_court",
-          "title":    "CENTRE COURT",
-          "template": "T1_brand",
+          "id":       "c2_first_serve",
+          "title":    "FIRST SERVE",
+          "template": "T3_photographic",
 
           "creative_direction": {
-            "subject":      "Wimbledon Centre Court aerial view — immaculate emerald grass, chalk-white service lines, retractable roof structure open to brilliant blue English summer sky",
-            "narrative":    "No people. The stage itself commands reverence — the most famous court in the world, perfect and ready.",
-            "setting":      "Centre Court during match hours, crowd filling the stands as a warm out-of-focus mass, natural sunlight raking across the grass",
-            "emotion":      "grandeur, anticipation, tradition",
-            "composition":  "Court geometry fills frame dramatically, upper-left quadrant sky and roof structure provides dark negative space for headline overlay",
-            "photography":  "Cinematic wide angle, f/8, award-winning sports photography quality — no people on court"
+            "subject":      "Tennis player at the baseline of an immaculate Wimbledon grass court, mid-serve — ball toss high, racket arm extended, white tennis kit, chalk-white service lines clearly visible on vivid green grass",
+            "narrative":    "The moment of commitment. One serve can change everything.",
+            "setting":      "Wimbledon grass court, English summer afternoon, packed stands blurred in warm bokeh behind the player",
+            "emotion":      "focus, determination, power",
+            "composition":  "Player positioned right two-thirds of frame, generous open space on left for headline overlay — green grass and sky in left third",
+            "lighting":     "Bright English summer afternoon light, warm golden quality, slight rim light on player silhouette",
+            "photography":  "Premium cinematic sports photography — authentic, not stock — 85mm equivalent, shallow depth of field on player against soft crowd bokeh"
           },
 
           "approval": {
@@ -72,8 +73,7 @@
           "asset_requirements": {
             "logos":              false,
             "partnership_lockup": "composition_layer",
-            "licensed_assets":    true,
-            "licensed_assets_note": "Wimbledon court imagery requires partnership clearance"
+            "licensed_assets":    false
           }
         }
       ]

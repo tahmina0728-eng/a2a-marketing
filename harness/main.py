@@ -902,9 +902,13 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         finally:
             hb_perf.cancel()
 
-        if perf_forecast:
+        # Only push real data — if _parse_agent_response fell back to {"raw_output": ...}
+        # treat it the same as a failure so the live panel doesn't render empty tiles.
+        if perf_forecast and "raw_output" not in perf_forecast:
             await push_event(campaign_id, "performance", "milestone",
                              json.dumps(perf_forecast))
+        else:
+            perf_forecast = {}   # normalise so result dict is clean
         await push_event(campaign_id, "performance", "done",
                          f"Forecast ready — {perf_forecast.get('overall_confidence','—')} confidence ✓")
         await asyncio.sleep(3)
