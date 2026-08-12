@@ -2530,10 +2530,14 @@ async def generate_campaign_reel(
             log.warning("storyboard_generation_skipped", error=str(_sb_err))
 
     # ── Build Veo prompt ──────────────────────────────────────────────────────
-    _veo_aspect_ratio = "9:16"  # vertical by default for Reels/Stories
+    # Barclays runs on TV/YouTube — always landscape; other brands default to vertical Reels/Stories
     _ch_list = [c.lower().strip() for c in (channels or []) if c]
-    if any(c in _ch_list for c in ("linkedin", "facebook", "youtube", "display")):
+    if _is_barclays_reel:
         _veo_aspect_ratio = "16:9"
+    elif any(c in _ch_list for c in ("linkedin", "facebook", "youtube", "display", "tv", "ooh")):
+        _veo_aspect_ratio = "16:9"
+    else:
+        _veo_aspect_ratio = "9:16"
 
     if _is_barclays_reel:
         _prompt_rules = _barclays.reel_veo_rules()
@@ -2979,7 +2983,10 @@ Create a Big Idea for this campaign. Output:
         if v
     )
     if _is_wimbledon:
-        _c1_dir, _c2_dir = _barclays.select_concepts(big_idea_seed, copy_headline, fan_truth)
+        # Pass campaign_type + season so the keyword matcher can see the original brief context
+        # (big_idea_seed/copy_headline are LLM-generated and may not preserve brief keywords)
+        _concept_seed = " ".join(filter(None, [big_idea_seed, copy_headline, fan_truth, campaign_type, season]))
+        _c1_dir, _c2_dir = _barclays.select_concepts(_concept_seed, copy_headline, fan_truth)
 
     # ── Channel Skill — composition directive injected into image prompt ────────
     # Tells the image model the target format so it composes for the right ratio

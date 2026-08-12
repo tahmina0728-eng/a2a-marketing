@@ -387,12 +387,12 @@ def reel_veo_rules() -> str:
     )
     return (
         "- Photorealistic premium UK financial-services advertising quality — NOT FMCG\n"
-        f"- Deep Barclays Night (#1A2142) and Barclays Blue (#00AEEF) colour palette\n"
+        "- Deep navy and sky-blue colour palette — understated, not saturated\n"
         "- Cinematic, understated, emotionally powerful — sophisticated not flashy\n"
         f"- AUDIO: {voiceover}\n"
         "- NO product packshots, NO bank app screens, NO financial data\n"
-        "- NO text or typography in the generated footage — text composited separately\n"
-        "- NO logos or brand marks — composited after generation\n"
+        "- CRITICAL: absolutely NO text, words, numbers, or typography of any kind in the generated footage — all copy is composited after generation\n"
+        "- NO logos, NO brand marks, NO eagle symbols — all composited after generation\n"
         "- Wimbledon atmosphere: immaculate grass, English summer light, authentic crowd energy"
     )
 
