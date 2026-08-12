@@ -5115,13 +5115,20 @@ export default function App() {
             )}
 
             {state.status === "running" && !rerunMode && briefApproved && activeStageId !== "brief" && (() => {
-              // Prioritise agentStatus so we get the right agent the instant it
-              // starts, even before any liveLog entries have arrived for it.
+              // Keys with dedicated intake views (excludes briefing — already shown, and compliance — hidden)
+              const INTAKE_KEYS = ["strategy","copy","culture","kv","reel","channel","performance"];
+
+              // Most recent RUNNING non-compliance agent → drives the active intake view.
+              // Falls back to the most recent DONE agent that has a dedicated intake view
+              // (keeps the last result visible while the next agent spins up).
+              // Deliberately excludes "briefing" and "compliance" from the done fallback
+              // so neither re-appears after the user has approved the brief.
               const focusKey =
-                HARNESS_STAGES.find(s => state.agentStatus[s.key] === "running")?.key
-                ?? [...state.liveLog].reverse().find(e => e.status === "running")?.agent
-                ?? [...state.liveLog].reverse().find(e => e.status === "done")?.agent
+                HARNESS_STAGES.find(s => s.key !== "compliance" && state.agentStatus[s.key] === "running")?.key
+                ?? [...state.liveLog].reverse().find(e => e.status === "running" && e.agent !== "compliance")?.agent
+                ?? [...state.liveLog].reverse().find(e => e.status === "done" && INTAKE_KEYS.includes(e.agent))?.agent
                 ?? null;
+
               const liveMsg = (key: string) =>
                 [...state.liveLog].reverse().find(e => e.agent === key && e.status === "running")?.message ?? null;
 
@@ -5169,15 +5176,19 @@ export default function App() {
                   liveMsg={liveMsg("performance")}
                 />
               );
-              // fallback (focusKey null)
+              // Between agents (compliance running, or gap before next agent starts)
               return (
-                <RunningView
-                  agentStatus={state.agentStatus}
-                  liveLog={state.liveLog}
-                  milestones={state.milestones}
-                  compact={true}
-                  brand={briefData?.brand}
-                />
+                <div style={{ flex: 1, display: "flex", flexDirection: "column" as const,
+                  alignItems: "center", justifyContent: "center", gap: 16,
+                  background: "var(--page-bg)" }}>
+                  <GradientOrb size={64} />
+                  <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)" }}>
+                    Creative pipeline running…
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+                    Next agent starting up
+                  </div>
+                </div>
               );
             })()}
 
