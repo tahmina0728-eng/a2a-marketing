@@ -3407,16 +3407,34 @@ Create a Big Idea for this campaign. Output:
     _is_service_brand = _is_barclays   # service brands have no product packshots
 
     if _is_barclays:
-        _product_ref_section = (
-            "SERVICE BRAND — ABSOLUTELY NO PRODUCT PACKAGING IN SCENE:\n"
-            "Barclays is a financial services brand. There are NO physical products to show.\n"
-            "Do NOT add any bottles, cans, card terminals, or branded merchandise.\n"
-            "A bank card may appear naturally in hand ONLY if it fits the human moment.\n"
-            "The Barclays logo is applied via overlay after generation — do NOT generate the eagle or wordmark.\n"
-            "NEVER generate the Barclays eagle, wordmark, or any text — these are composited separately.\n"
-            f"Selected campaign: {_product_ctx} — show this as a human life moment, not a product shot."
-        )
+        if _is_wimbledon:
+            _product_ref_section = (
+                "SPORTS SPONSORSHIP CAMPAIGN — ZERO PRODUCT PACKAGING IN SCENE:\n"
+                "Barclays is the Official Bank of Wimbledon — Wimbledon is a PARTNERSHIP, not a consumer product.\n"
+                "The scene must show ONLY: tennis court, players in action, champion celebrating, crowd atmosphere, "
+                "or Wimbledon architectural/heritage elements.\n"
+                "CRITICAL: Do NOT show any Wimbledon-branded water bottles, sports drinks, towels, merchandise, "
+                "trophies-as-retail-products, or any physical branded items.\n"
+                "The Barclays eagle + Wimbledon lockup are composited by code AFTER generation — never generate them."
+            )
+        else:
+            _product_ref_section = (
+                "SERVICE BRAND — ABSOLUTELY NO PRODUCT PACKAGING IN SCENE:\n"
+                "Barclays is a financial services brand. There are NO physical products to show.\n"
+                "Do NOT add any bottles, cans, card terminals, or branded merchandise.\n"
+                "A bank card may appear naturally in hand ONLY if it fits the human moment.\n"
+                "The Barclays logo is applied via overlay after generation — do NOT generate the eagle or wordmark.\n"
+                "NEVER generate the Barclays eagle, wordmark, or any text — these are composited separately.\n"
+                f"Selected campaign: {_product_ctx} — show this as a human life moment, not a product shot."
+            )
         _creative_director_intro = (
+            "You are a world-class financial services and sports sponsorship advertising creative director.\n"
+            "Reference visual styles: Barclays Wimbledon campaigns, NatWest human-moment photography, "
+            "Rolex Wimbledon heritage imagery, HSBC empathetic photography — "
+            "warm real human moments, authentic tennis atmosphere, understated British prestige.\n"
+            "NEVER reference FMCG, beauty, energy drink, or lifestyle brand aesthetics.\n"
+            "This is premium British banking: professional, human, trustworthy — not exciting, not flashy."
+        ) if _is_wimbledon else (
             "You are a world-class financial services advertising creative director.\n"
             "Reference visual styles: Barclays 'Moments of Progress', NatWest human-moment campaigns, "
             "Lloyds Bank real-life stories, HSBC world-class empathetic photography — "
@@ -3430,12 +3448,17 @@ Create a Big Idea for this campaign. Output:
             "- For T1 (partnership/brand): dark Barclays Night ground, abstract or architectural composition\n"
             "- For T3 (photographic): human moment, bottom-third available for scrim + copy"
         )
+        _wimbledon_no_merch = (
+            "- CRITICAL: NO Wimbledon-branded bottles, water bottles, sports drinks, towels, merchandise, "
+            "or any tennis retail products — these are NOT part of the visual\n"
+        ) if _is_wimbledon else ""
         _no_product_rule = (
-            "- NO product packshots, NO bank app screenshots, NO fabricated financial data\n"
-            "- NO identifiable real people's faces (rights clearance required in production)\n"
-            "- Barclays Blue #00AEEF as fill/accent ONLY — NEVER as text colour\n"
-            "- Bold saturated colours are WRONG — use muted, professional, understated tones\n"
-            "- NO sparkles, NO neon, NO studio strobes — soft directional natural light only"
+            f"- NO product packshots, NO bank app screenshots, NO fabricated financial data\n"
+            f"{_wimbledon_no_merch}"
+            f"- NO identifiable real people's faces (rights clearance required in production)\n"
+            f"- Barclays Blue as fill/accent ONLY — NEVER as text colour\n"
+            f"- Bold saturated colours are WRONG — use muted, professional, understated tones\n"
+            f"- NO sparkles, NO neon, NO studio strobes — soft directional natural light only"
         )
     elif _sr_life:
         _product_ref_section = (
@@ -3469,7 +3492,19 @@ Create a Big Idea for this campaign. Output:
         _positioning_rule = "- Model and products positioned centre-right or right, facing slightly left into the frame"
         _no_product_rule = ""
 
-    scene_concepts_raw = await _llm(f"""{_creative_director_intro}
+    # ── Wimbledon: bypass LLM — build deterministic prompts from kv.py concepts.json ──
+    # run_kv() in kv.py already has the correct concept selection, prompt building,
+    # QA, and overlay logic. Use _build_wimbledon_prompt() directly so the pipeline
+    # generates the same clean, product-free prompts as the standalone KV agent.
+    if _is_wimbledon:
+        from app.agents.kv import _build_wimbledon_prompt as _bwp
+        _c1_raw, _c2_raw = _barclays.select_concepts_raw(
+            _concept_seed, copy_headline, fan_truth
+        )
+        concept_prompts   = [_bwp(_c1_raw, "16:9"), _bwp(_c2_raw, "16:9")]
+        scene_concepts_raw = concept_prompts[0][:200]
+    else:
+        scene_concepts_raw = await _llm(f"""{_creative_director_intro}
 
 Generate 2 DISTINCT advertising key visual prompts for this campaign.
 CRITICAL: The two concepts MUST be structurally different — different number of people, different scene types, different emotional angles. NEVER produce two near-identical single-person shots.
@@ -3521,13 +3556,13 @@ Output EXACTLY this format (nothing else):
 - Season ({_season_ctx}) woven into atmosphere, lighting temperature, and mood
 {"- Leave upper-left quadrant as clean negative space for copy placement" if _is_barclays else "- Natural balanced lighting across the full frame — no artificial dark zone on the left"}""", temp=0.9)
 
-    # Parse the 2 concept prompts
-    import re as _re
-    _concept_blocks = _re.findall(r'\[CONCEPT \d+[^\]]*\]:\s*(.*?)(?=\[CONCEPT \d+|\Z)', scene_concepts_raw, _re.DOTALL)
-    concept_prompts = [c.strip() for c in _concept_blocks if c.strip()]
-    if not concept_prompts:
-        concept_prompts = [l.strip() for l in scene_concepts_raw.split('\n') if len(l.strip()) > 80]
-    concept_prompts = concept_prompts[:2] or [scene_concepts_raw[:600]]
+        # Parse the 2 concept prompts
+        import re as _re
+        _concept_blocks = _re.findall(r'\[CONCEPT \d+[^\]]*\]:\s*(.*?)(?=\[CONCEPT \d+|\Z)', scene_concepts_raw, _re.DOTALL)
+        concept_prompts = [c.strip() for c in _concept_blocks if c.strip()]
+        if not concept_prompts:
+            concept_prompts = [l.strip() for l in scene_concepts_raw.split('\n') if len(l.strip()) > 80]
+        concept_prompts = concept_prompts[:2] or [scene_concepts_raw[:600]]
 
     # ── Sunrise lifestyle override ───────────────────────────────────────────
     # Bypass LLM concepts entirely: Gemini's image model has a strong prior for
@@ -3696,7 +3731,18 @@ Output EXACTLY this format (nothing else):
             "boozt":   "NOT 'Monster', NOT 'Red Bull', NOT 'Lucozade', NOT any real energy drink brand",
         }
         _real_brand_warn = _REAL_BRAND_WARNINGS.get(brand.lower(), "NOT any real-world brand")
-        if brand in ("UBS Bank",) or brand.lower() == "sunrise":
+        if _is_barclays:
+            # Financial services / sports sponsorship brand — zero product packaging ever.
+            _no_text_rule = (
+                "CRITICAL — NO PRODUCTS IN THIS IMAGE:\n"
+                "Barclays is a financial services brand. There are NO physical products to show.\n"
+                "Do NOT generate any bottles, cans, water bottles, sports drinks, towels, merchandise, "
+                "or any packaged goods — Wimbledon branded or otherwise.\n"
+                "The image contains ONLY: people, the tennis court, stadium, or Wimbledon architecture.\n"
+                "All brand marks (Barclays eagle, Wimbledon shield) are composited in post-production.\n"
+                "TYPOGRAPHY RULE: NO text, logos, numbers, or words anywhere in the generated image.\n"
+            )
+        elif brand in ("UBS Bank",) or brand.lower() == "sunrise":
             # Service/telecom brands — no physical product packaging to show.
             # Strictly no text in the image; all prices, headlines, logos added in post-production.
             _sr_lifestyle_no_product = (

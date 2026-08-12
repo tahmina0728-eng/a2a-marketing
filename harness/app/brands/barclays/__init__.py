@@ -258,6 +258,43 @@ def select_concepts(
     return _pair(themes[0])
 
 
+def select_concepts_raw(
+    big_idea_seed: str,
+    copy_headline: str,
+    fan_truth: str,
+    creative_theme: str = "",
+) -> tuple:
+    """Return (concept_dict_1, concept_dict_2) raw dicts from the matched theme.
+
+    Used by the full pipeline to build deterministic image prompts via
+    _build_wimbledon_prompt() — bypasses LLM concept generation entirely.
+    Same matching logic as select_concepts() but returns raw dicts, not formatted strings.
+    """
+    themes = _wimb_concepts["themes"]
+
+    def _raw_pair(theme: dict) -> tuple:
+        return (theme["concepts"][0], theme["concepts"][1])
+
+    if creative_theme:
+        for theme in themes:
+            if theme["id"] == creative_theme:
+                return _raw_pair(theme)
+
+    seed = " ".join(filter(None, [big_idea_seed, copy_headline, fan_truth])).lower()
+    kw_index = [(kw, theme) for theme in themes for kw in theme.get("keywords", [])]
+    kw_index.sort(key=lambda p: -len(p[0]))
+    for kw, theme in kw_index:
+        if kw in seed:
+            return _raw_pair(theme)
+
+    default_id = _wimb_concepts.get("default_theme", "tradition")
+    for theme in themes:
+        if theme["id"] == default_id:
+            return _raw_pair(theme)
+
+    return _raw_pair(themes[0])
+
+
 def select_concept(
     big_idea_seed: str,
     copy_headline: str,

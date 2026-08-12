@@ -331,6 +331,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
 
   const [formats, setFormats] = useState<Set<FormatType>>(new Set());
   const [imgSz, setImgSz]     = useState("16:9");
+  const [reelSz, setReelSz]   = useState("9:16");
   const [tvcLen, setTvcLen]   = useState("15");
   const [vidLen, setVidLen]   = useState("30s");
 
@@ -518,6 +519,9 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         }
         if (market) body.market = market;
         if (audience) body.audience = audience;
+        if (fmt === "reel") {
+          body.aspect_ratio = reelSz;
+        }
         if (fmt === "image") {
           body.aspect_ratio = imgSz;
           if (copyRes?.headline) {
@@ -543,7 +547,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
       sizes:["1:1","4:5","16:9","9:16"], selSize:imgSz, onSize:setImgSz,
       icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> },
     { type:"reel" as FormatType, label:"Reel", desc:"6-second Veo reels for social platforms.",
-      sizes:["9:16","16:9"], selSize:"9:16", onSize:()=>{},
+      sizes:["9:16","16:9"], selSize:reelSz, onSize:setReelSz,
       icon:<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg> },
     { type:"tvc" as FormatType, label:"TVC", desc:"TV commercials via Veo — 15s or 30s.",
       sizes:["15s","30s"], selSize:tvcLen+"s", onSize:(s:string)=>setTvcLen(s.replace("s","")),

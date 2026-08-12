@@ -59,7 +59,7 @@ from app.config import get_settings
 from app.models import BriefRequest
 from app.pipeline import briefing_pipeline, root_agent
 from app.creative_pipeline import experiment_pipeline
-from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq, run_copy_agent, run_creative_pipeline_direct, run_performance_forecast, run_brand_compliance_check, run_image_adaptation
+from app.runner import run_agent, run_strategy_with_groq, run_copy_with_groq, run_creative_pipeline_direct, run_performance_forecast, run_brand_compliance_check, run_image_adaptation
 
 logger   = structlog.get_logger()
 settings = get_settings()
@@ -573,41 +573,77 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "Generating CTA and long-form body copy…",
         ], interval=18))
         _channels_list = [str(c).lower() for c in brief.channels] if brief.channels else []
+        _copy_lang = brief.language or "" if hasattr(brief, "language") else ""
+        _ft_obj    = machine_brief.get("fan_truth_score") or machine_brief.get("fan_truth") or {}
+        _ft_stmt   = _ft_obj.get("statement", "") if isinstance(_ft_obj, dict) else str(_ft_obj)
+        _aud_obj   = machine_brief.get("audience") or {}
+        _aud_str   = _aud_obj.get("segment", "") if isinstance(_aud_obj, dict) else str(_aud_obj)
+
+        # ── Build full agent-chained prompt: Logos brief → Helia strategy → Ideon copy ──
+        _pillars     = strategy.get("messaging_pillars", [])
+        _pillars_str = " / ".join(_pillars) if isinstance(_pillars, list) else str(_pillars)
+
+        _brief_block = "\n".join(filter(None, [
+            f"Brand: {brief.brand}",
+            f"Campaign: {machine_brief.get('campaign_name', '')}",
+            f"Product / Occasion: {getattr(brief, 'product', '')}",
+            f"Market: {machine_brief.get('market', '')}",
+            f"Season: {machine_brief.get('season', '')}",
+            f"Audience: {_aud_str}",
+            f"Fan Truth: \"{_ft_stmt}\"",
+            f"Channels: {', '.join(_channels_list)}" if _channels_list else "",
+            f"Campaign Type: {getattr(brief, 'campaign_type', '')}",
+            f"Notes: {getattr(brief, 'notes', '')}" if getattr(brief, 'notes', '') else "",
+            f"Language: {_copy_lang}" if _copy_lang else "",
+        ]))
+
+        _strategy_block = "\n".join(filter(None, [
+            f"Big Idea: {strategy.get('big_idea', '')}",
+            f"Hero Message: {strategy.get('hero_message', '')}",
+            f"Tagline: {strategy.get('tagline', '')}",
+            f"Strategic Framework: {strategy.get('strategic_framework', '')}",
+            f"Tone of Voice: {strategy.get('tone_of_voice', '')}",
+            f"Culture Context: {strategy.get('culture_context', '')}",
+            f"Messaging Pillars: {_pillars_str}" if _pillars_str else "",
+            f"Handoff Message: {strategy.get('handoff_message', '')}",
+        ]))
+
+        _brand_copy_rules = (
+            _barclays.copy_prompt_block(machine_brief)
+            if brief.brand.lower() == "barclays" else ""
+        )
+
+        _copy_prompt = "\n\n".join(filter(None, [
+            "BRIEF (Logos):\n" + _brief_block,
+            "STRATEGY (Helia):\n" + _strategy_block,
+            _brand_copy_rules.strip() if _brand_copy_rules else "",
+        ]))
+        from app.agents.copy import run_copy as _ideon
         try:
-            copy = await run_copy_agent(machine_brief, strategy, brand_locks,
-                                        channels=_channels_list,
-                                        language=brief.language or "" if hasattr(brief, "language") else "")
+            copy = await asyncio.get_event_loop().run_in_executor(
+                None, lambda: _ideon(brief.brand, _copy_prompt)
+            )
         finally:
             hb3.cancel()
-        short_hl   = (copy.get("short")  or {}).get("headline", "")
-        short_sub  = (copy.get("short")  or {}).get("subline",  "") or ""
-        medium_hl  = (copy.get("medium") or {}).get("headline", "")
-        medium_sub = (copy.get("medium") or {}).get("subline",  "") or ""
-        # Prefer the short subline if populated; fall back to medium subline.
-        # This becomes the supporting line rendered on the campaign banner.
-        copy_subline = (short_sub or medium_sub).strip()
+        _headline    = copy.get("headline", "")
+        copy_subline = copy.get("subline", "").strip()
+        short_hl     = _headline
+        medium_hl    = _headline
 
-        if not short_hl and not medium_hl:
+        if not _headline:
             logger.warning("copy_agent_headline_missing",
                            has_raw_output="raw_output" in copy,
                            copy_keys=list(copy.keys()))
 
-        # Build channel-specific copy fields dynamically from whatever was generated
-        _channel_copy: dict = {}
-        for key in copy.get("_channel_keys", []):
-            val = copy.get(key, "")
-            if val:
-                _channel_copy[key] = str(val)[:200]
-
         await push_event(campaign_id, "copy", "done", json.dumps({
-            "_text":           f'Copy ready — "{short_hl}"' if short_hl else "Copy variants ready ✓",
-            "short_headline":  short_hl,
+            "_text":           f'Copy ready — "{_headline}"' if _headline else "Copy ready ✓",
+            "short_headline":  _headline,
             "subline":         copy_subline,
-            "medium_headline": medium_hl,
-            "long_headline":   (copy.get("long") or {}).get("headline", ""),
-            "body":            (copy.get("long") or {}).get("body", "")[:160] if copy.get("long") else "",
+            "medium_headline": _headline,
+            "long_headline":   _headline,
+            "body":            copy.get("body", "")[:160],
             "cta":             copy.get("cta", ""),
-            "channel_copy":    _channel_copy,
+            "channel_copy":    {},
         }))
         await asyncio.sleep(8)  # Let user read copy deck
 
@@ -618,9 +654,9 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         _copy_compliance_passed = True
         if _brand_profile_json and _brand_profile_json != "{}":
             _copy_text = " ".join(filter(None, [
-                short_hl, medium_hl,
-                (copy.get("long") or {}).get("headline", ""),
-                (copy.get("long") or {}).get("body", ""),
+                _headline,
+                copy.get("subline", ""),
+                copy.get("body", ""),
                 copy.get("cta", ""),
             ]))
             _MAX_COPY_RETRIES = 2
@@ -648,19 +684,22 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
                     f"Copy compliance issues found — regenerating copy (attempt {_retry + 2})…")
 
                 _issue_guidance = "; ".join(i.get("detail", "") for i in _cc_errors)
-                machine_brief["compliance_issues"] = _issue_guidance
+                _copy_prompt_retry = (
+                    _copy_prompt +
+                    f"\n\nCRITICAL COMPLIANCE — Avoid these issues: {_issue_guidance}"
+                )
                 try:
-                    copy = await run_copy_agent(
-                        machine_brief, strategy, brand_locks,
-                        channels=_channels_list,
-                        language=brief.language or "" if hasattr(brief, "language") else "",
+                    copy = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda p=_copy_prompt_retry: _ideon(brief.brand, p)
                     )
-                    short_hl  = (copy.get("short")  or {}).get("headline", "") or short_hl
-                    medium_hl = (copy.get("medium") or {}).get("headline", "") or medium_hl
-                    _copy_text = " ".join(filter(None, [
-                        short_hl, medium_hl,
-                        (copy.get("long") or {}).get("headline", ""),
-                        (copy.get("long") or {}).get("body", ""),
+                    _headline    = copy.get("headline", "") or _headline
+                    short_hl     = _headline
+                    medium_hl    = _headline
+                    copy_subline = copy.get("subline", "").strip() or copy_subline
+                    _copy_text   = " ".join(filter(None, [
+                        _headline,
+                        copy.get("subline", ""),
+                        copy.get("body", ""),
                         copy.get("cta", ""),
                     ]))
                 except Exception as _cr_err:

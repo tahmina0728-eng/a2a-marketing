@@ -12,7 +12,7 @@
     "profile": "wimbledon-partnership-v1"
   },
 
-  "default_theme": "partnership",
+  "default_theme": "tradition",
 
   "themes": [
     {
@@ -50,18 +50,17 @@
           }
         },
         {
-          "id":       "c2_mentor",
-          "title":    "MENTOR",
-          "template": "T3_intimate",
+          "id":       "c2_centre_court",
+          "title":    "CENTRE COURT",
+          "template": "T1_brand",
 
           "creative_direction": {
-            "subject":      "Experienced professional and younger aspiring player in genuine conversation courtside at Wimbledon",
-            "relationship": "Mentor leaning in, young player listening with focused attention — someone believed in me, someone made this possible",
-            "setting":      "Wimbledon green court visible behind, English afternoon light",
-            "emotion":      "belonging, mentorship",
-            "composition":  "Both figures right-of-frame, left side open, dark and clean for copy overlay",
-            "lighting":     "Soft English afternoon light, warm and human",
-            "photography":  "Authentic, intimate — not corporate stock"
+            "subject":      "Wimbledon Centre Court aerial view — immaculate emerald grass, chalk-white service lines, retractable roof structure open to brilliant blue English summer sky",
+            "narrative":    "No people. The stage itself commands reverence — the most famous court in the world, perfect and ready.",
+            "setting":      "Centre Court during match hours, crowd filling the stands as a warm out-of-focus mass, natural sunlight raking across the grass",
+            "emotion":      "grandeur, anticipation, tradition",
+            "composition":  "Court geometry fills frame dramatically, upper-left quadrant sky and roof structure provides dark negative space for headline overlay",
+            "photography":  "Cinematic wide angle, f/8, award-winning sports photography quality — no people on court"
           },
 
           "approval": {
@@ -73,7 +72,8 @@
           "asset_requirements": {
             "logos":              false,
             "partnership_lockup": "composition_layer",
-            "licensed_assets":    false
+            "licensed_assets":    true,
+            "licensed_assets_note": "Wimbledon court imagery requires partnership clearance"
           }
         }
       ]
@@ -114,18 +114,17 @@
           }
         },
         {
-          "id":       "c2_preparation",
-          "title":    "PREPARATION",
-          "template": "T3_intimate",
+          "id":       "c2_grass_at_dawn",
+          "title":    "DAWN COURTS",
+          "template": "T1_brand",
 
           "creative_direction": {
-            "subject":   "Young diverse tennis player sitting quietly in a Wimbledon corridor, racket resting beside them",
-            "narrative": "Looking ahead with quiet determination — the moment before stepping out",
-            "setting":   "Wimbledon corridor, narrow and atmospheric",
-            "emotion":   "focus, readiness",
-            "composition": "Subject right of frame, left side in soft dark shadow for copy overlay",
-            "lighting":  "Warm tungsten corridor light, deep shadows, narrow depth of field",
-            "photography": "Authentic, human, cinematic — premium UK advertising quality"
+            "subject":      "Wimbledon grass court at dawn — extreme close-up of dew-covered grass blades and chalk service line converging toward the horizon, dawn light painting the scene golden",
+            "narrative":    "No people. Every blade of grass holds a century of history. The court breathes before the players arrive.",
+            "setting":      "Wimbledon outer courts, pre-dawn groundskeeping hour, mist rising gently, stadium structure visible in soft background",
+            "emotion":      "possibility, heritage, quiet anticipation",
+            "composition":  "Grass and service line fill bottom two-thirds, upper third gives clean sky for headline overlay",
+            "photography":  "Macro lens, shallow depth of field, golden hour, cinematic — no people"
           },
 
           "approval": {
@@ -156,12 +155,12 @@
           "template": "T3_photographic",
 
           "creative_direction": {
-            "subject":      "Tennis player caught at the exact peak moment before a powerful serve — intense concentration, tennis ball held up, racket drawn back",
-            "setting":      "Wimbledon, crowd softly bokeh-blurred behind, English summer sky",
+            "subject":      "Tennis player caught at the exact peak moment before a powerful serve — intense concentration, tennis ball held high, racket drawn back at full extension",
+            "setting":      "Wimbledon Centre Court, crowd softly bokeh-blurred behind, brilliant English summer sky above",
             "emotion":      "focus, pressure, possibility, belief",
             "composition":  "Player positioned right, large atmospheric dark negative space on left — natural shadow from stadium structure — for headline typography",
-            "lighting":     "Natural sunlight catching the ball, English summer",
-            "photography":  "Canon 400mm f/2.8 DSLR sports photography quality, cinematic"
+            "lighting":     "Natural sunlight catching the ball mid-air, English summer, high contrast",
+            "photography":  "Canon 400mm f/2.8 DSLR sports photography quality, frozen motion, cinematic"
           },
 
           "approval": {
@@ -177,17 +176,17 @@
           }
         },
         {
-          "id":       "c2_grassroots",
-          "title":    "GRASSROOTS",
-          "template": "T3_intimate",
+          "id":       "c2_match_moment",
+          "title":    "THE RALLY",
+          "template": "T3_photographic",
 
           "creative_direction": {
-            "subject":   "Young girl (age 9–12, diverse) on a local community tennis court",
-            "action":    "Racket raised mid-swing, face alive with pure joy and effort — she is at the beginning, not yet Wimbledon",
-            "setting":   "Dappled afternoon sunlight, blurred park trees behind — bridges grassroots ambition with a future at Wimbledon",
-            "emotion":   "joy, aspiration",
-            "composition": "Subject right-of-centre, left side naturally bright sky and bokeh for copy overlay",
-            "photography": "Authentic, warm, emotionally powerful — not stock photography"
+            "subject":      "Dramatic tennis rally frozen at peak action — player stretched full extension for a backhand volley at the net, racket making contact, Wimbledon grass visible below",
+            "setting":      "Wimbledon court during match, crowd packed stands visible as blurred energy, mid-afternoon light",
+            "emotion":      "intensity, athleticism, belief, the instant before victory",
+            "composition":  "Player dynamic diagonal across right of frame, blurred crowd and sky fill left for headline — motion blur on non-critical frame areas",
+            "lighting":     "Sharp mid-day stadium light on player, crowd falls into warm ambient",
+            "photography":  "1/2000s freeze, 400mm telephoto, pro sports photography — raw athletic power"
           },
 
           "approval": {
@@ -213,44 +212,18 @@
 
       "concepts": [
         {
-          "id":       "c1_after_session",
-          "title":    "AFTER THE SESSION",
+          "id":       "c1_the_crowd",
+          "title":    "THE CROWD",
           "template": "T3_photographic",
 
           "creative_direction": {
-            "subject":      "Young grassroots tennis player and coach on a UK community tennis court after a practice session",
-            "relationship": "Coach gives encouragement and specific feedback; player listens with focus and gratitude. The relationship communicates: someone is invested in this person's progress.",
-            "setting":      "UK community tennis court, natural daylight, relaxed post-session atmosphere",
-            "emotion":      "mentorship, shared progress, belonging",
-            "composition":  "Both figures right-of-frame, generous open left space — court and sky create natural negative space for headline",
-            "lighting":     "Natural daylight, relaxed — not studio lit",
-            "photography":  "Authentic, warm — not corporate stock, not exaggerated posing"
-          },
-
-          "approval": {
-            "status":                      "concept",
-            "brand_review_required":       true,
-            "partnership_review_required": false
-          },
-
-          "asset_requirements": {
-            "logos":              false,
-            "partnership_lockup": "composition_layer",
-            "licensed_assets":    false
-          }
-        },
-        {
-          "id":       "c2_conversation",
-          "title":    "THE CONVERSATION",
-          "template": "T3_intimate",
-
-          "creative_direction": {
-            "subject":      "Tennis coach and a young professional in animated conversation on a Wimbledon terrace balcony",
-            "relationship": "Open body language — encouraging, genuine two-way exchange. Communicates: mentorship, opportunity, progress made off the court.",
-            "setting":      "Wimbledon terrace balcony, court sunlit in background",
-            "emotion":      "opportunity, mentorship",
-            "composition":  "Figures right-of-frame, open terrace and court on left for copy overlay",
-            "lighting":     "Golden afternoon light, authentic and warm"
+            "subject":      "Wimbledon crowd in full voice — thousands of spectators rising to their feet at a match-point moment, a sea of white and summer colour, a collective expression of shared belief",
+            "narrative":    "The community that makes Wimbledon Wimbledon. The fans who travel, queue, cheer and return year after year.",
+            "setting":      "Centre Court or Court 1, peak match atmosphere, English summer afternoon light flooding the stands",
+            "emotion":      "belonging, collective joy, community",
+            "composition":  "Crowd fills frame corner to corner, natural sky above provides clean space for headline — no individual face dominant",
+            "lighting":     "Afternoon sun creating warm contrasting patches across the stands",
+            "photography":  "Wide angle, f/8, editorial quality — crowd as protagonist, not background"
           },
 
           "approval": {
@@ -262,7 +235,35 @@
           "asset_requirements": {
             "logos":              false,
             "partnership_lockup": "composition_layer",
-            "licensed_assets":    false
+            "licensed_assets":    true,
+            "licensed_assets_note": "Wimbledon crowd imagery requires partnership clearance"
+          }
+        },
+        {
+          "id":       "c2_the_queue",
+          "title":    "THE QUEUE",
+          "template": "T3_photographic",
+
+          "creative_direction": {
+            "subject":      "The iconic Wimbledon queue stretching along the All England Club grounds — tents, folding chairs, Union flags, Wimbledon-branded bags — a British summer ritual",
+            "narrative":    "Community built around a shared love. The queue is not inconvenience — it is devotion. A tradition as old as Wimbledon itself.",
+            "setting":      "Wimbledon Park, early morning, long queue visible in perspective to the horizon, ivy and brick walls of the grounds flanking the scene",
+            "emotion":      "tradition, community, devotion, quintessentially British",
+            "composition":  "Queue in perspective from left to right, receding into distance — sky above for headline overlay",
+            "photography":  "Documentary, warm, cinematic — authentic British summer atmosphere"
+          },
+
+          "approval": {
+            "status":                      "concept",
+            "brand_review_required":       true,
+            "partnership_review_required": true
+          },
+
+          "asset_requirements": {
+            "logos":              false,
+            "partnership_lockup": "composition_layer",
+            "licensed_assets":    true,
+            "licensed_assets_note": "Wimbledon grounds imagery requires partnership clearance"
           }
         }
       ]
@@ -272,21 +273,21 @@
       "id":             "tradition",
       "label":          "Honouring tradition. Backing champions.",
       "creative_theme": "achievement",
-      "keywords":       ["honouring tradition", "heritage and tradition", "tradition", "heritage", "celebrating heritage", "champion", "trophy", "achievement", "history", "celebrating"],
+      "keywords":       ["honouring tradition", "heritage and tradition", "tradition", "heritage", "celebrating heritage", "champion", "trophy", "achievement", "history", "celebrating", "anniversary", "legacy", "iconic"],
 
       "concepts": [
         {
-          "id":       "c1_moment",
-          "title":    "THE MOMENT",
+          "id":       "c1_victory",
+          "title":    "VICTORY",
           "template": "T3_photographic",
 
           "creative_direction": {
-            "subject":   "Tennis champion's hands lifting a prestigious trophy — fingers wrapped around the base, trophy raised",
-            "setting":   "Stadium lights creating a radiant halo behind the trophy, crowd out of focus and celebrating",
-            "emotion":   "triumph, reverence, achievement",
-            "composition": "Trophy and hands left-of-centre, stadium glow fills right, dark atmospheric shadows in upper frame for headline copy",
-            "lighting":  "Dramatic stadium light, athlete partially silhouetted",
-            "photography": "Cinematic, emotionally powerful, reverential — shallow depth of field"
+            "subject":      "Tennis champion in the raw instant of victory — arms raised wide, head thrown back, racket fist-pumped skyward, face consumed by pure triumph",
+            "setting":      "Wimbledon Centre Court, grass below, stands erupting behind — confetti optional",
+            "emotion":      "triumph, release, joy, the culmination of everything",
+            "composition":  "Champion silhouetted or against brilliant sky in upper right, stadium atmosphere fills frame — dark shadow area lower-left for headline copy",
+            "lighting":     "Dramatic afternoon backlight creating rim-light on champion, crowd falls warm behind",
+            "photography":  "400mm telephoto frozen at 1/2000s, arms fully extended — the definitive victory moment"
           },
 
           "approval": {
@@ -299,7 +300,7 @@
             "logos":              false,
             "partnership_lockup": "composition_layer",
             "licensed_assets":    true,
-            "licensed_assets_note": "Specific trophy imagery requires partnership licensing confirmation"
+            "licensed_assets_note": "Player victory imagery requires individual licensing"
           }
         },
         {
@@ -308,12 +309,12 @@
           "template": "T1_brand",
 
           "creative_direction": {
-            "subject":      "Abstract architectural photography of Wimbledon — iconic awning, geometry of Centre Court at dusk, or pristine grass surface at twilight",
-            "narrative":    "No people. Reverential of tradition.",
-            "setting":      "Wimbledon, evening or twilight, stadium light raking across a structural element",
-            "emotion":      "reverence, tradition",
-            "composition":  "Clean minimal — upper-left quadrant pure dark space for headline overlay",
-            "photography":  "Award-winning art direction, cinematic"
+            "subject":      "Abstract architectural photography of Wimbledon — the iconic ivy-clad brick walls of the All England Club, geometry of Centre Court seen from below at twilight, or the pristine grass surface from a worm's-eye angle at dusk",
+            "narrative":    "No people. Every stone, every blade of grass, every line of the court carries 148 years of history. Reverence without words.",
+            "setting":      "Wimbledon grounds at golden hour or twilight, stadium light beginning to warm the scene, deep shadows in architectural details",
+            "emotion":      "reverence, tradition, permanence, heritage",
+            "composition":  "Architectural geometry or grass surface fills lower three-quarters — pure dark upper zone for large headline overlay",
+            "photography":  "Award-winning art direction, cinematic wide aperture, no people present"
           },
 
           "approval": {
@@ -326,7 +327,7 @@
             "logos":              false,
             "partnership_lockup": "composition_layer",
             "licensed_assets":    true,
-            "licensed_assets_note": "Wimbledon architectural elements may require partnership clearance"
+            "licensed_assets_note": "Wimbledon architectural elements require partnership clearance"
           }
         }
       ]
