@@ -608,10 +608,11 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             f"Handoff Message: {strategy.get('handoff_message', '')}",
         ]))
 
-        _brand_copy_rules = (
-            _barclays.copy_prompt_block(machine_brief)
-            if brief.brand.lower() == "barclays" else ""
-        )
+        if brief.brand.lower() == "barclays":
+            from app.brands import barclays as _barclays
+            _brand_copy_rules = _barclays.copy_prompt_block(machine_brief)
+        else:
+            _brand_copy_rules = ""
 
         _copy_prompt = "\n\n".join(filter(None, [
             "BRIEF (Logos):\n" + _brief_block,
