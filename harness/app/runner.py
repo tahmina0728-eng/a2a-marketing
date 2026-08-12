@@ -83,19 +83,29 @@ def _needs_groq_fallback(agent: Agent | Workflow) -> bool:
 
 
 def _parse_agent_response(raw: str) -> dict:
+    import re as _re
+    # 1. Try direct parse
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        cleaned = raw.strip()
-        if cleaned.startswith("```"):
-            lines = cleaned.split("\n")
-            cleaned = "\n".join(lines[1:]) if len(lines) > 1 else cleaned[3:]
-        if cleaned.endswith("```"):
-            cleaned = cleaned.rsplit("```", 1)[0]
+        pass
+    # 2. Strip markdown fences
+    cleaned = raw.strip()
+    cleaned = _re.sub(r"```(?:json)?\s*", "", cleaned).strip()
+    if cleaned.endswith("```"):
+        cleaned = cleaned.rsplit("```", 1)[0].strip()
+    try:
+        return json.loads(cleaned)
+    except Exception:
+        pass
+    # 3. Regex-extract the first JSON object (handles preamble prose)
+    m = _re.search(r"\{.*\}", cleaned, _re.DOTALL)
+    if m:
         try:
-            return json.loads(cleaned.strip())
+            return json.loads(m.group(0))
         except Exception:
-            return {"raw_output": raw}
+            pass
+    return {"raw_output": raw}
 
 
 async def _run_briefing_with_groq(state: dict, brief: dict, cid: str) -> dict:

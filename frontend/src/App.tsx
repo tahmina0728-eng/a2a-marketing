@@ -1079,6 +1079,7 @@ function CopyPanel({ m }: { m?: Record<string,unknown> }) {
         <div style={{ background: "linear-gradient(135deg, #0055A4, #0369a1)", padding: "18px 20px", textAlign: "center" as const, position: "relative" as const }}>
           <div style={{ fontSize: 9, fontWeight: 700, color: "rgba(255,255,255,0.6)", letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 6 }}>Billboard · Short</div>
           <div style={{ fontSize: 22, fontWeight: 900, color: "white", lineHeight: 1.2 }}>"{m.short_headline as string}"</div>
+          {!!m.subline && <div style={{ fontSize: 13, color: "rgba(255,255,255,0.75)", marginTop: 6, lineHeight: 1.4 }}>{String(m.subline)}</div>}
         </div>
         {!!m.cta && <div style={{ background: "#0055A4", padding: "8px", textAlign: "center" as const }}>
           <span style={{ display: "inline-block", padding: "5px 18px", borderRadius: 99, background: "white", color: "#0055A4", fontSize: 11, fontWeight: 800 }}>{String(m.cta)}</span>
@@ -1935,9 +1936,12 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
   const toggle = (key: string) => setSelected(s => { const n = new Set(s); n.has(key) ? n.delete(key) : n.add(key); return n; });
 
   // Pre-fill editable fields from copy agent output (no preview needed to start editing)
-  const _defaultSubject  = (copy as any)?.channel_copy?.email_subject ?? copy?.short?.headline ?? strategy?.hero_message ?? "";
-  const _defaultHeadline = copy?.short?.headline ?? copy?.medium?.headline ?? strategy?.hero_message ?? "";
-  const _defaultBody     = copy?.long?.body ?? copy?.medium?.headline ?? "";
+  const _copyHl     = (copy as any)?.short_headline  ?? copy?.short?.headline  ?? "";
+  const _copyMedHl  = (copy as any)?.medium_headline ?? copy?.medium?.headline ?? "";
+  const _copyBody   = (copy as any)?.body            ?? copy?.long?.body       ?? "";
+  const _defaultSubject  = (copy as any)?.channel_copy?.email_subject ?? _copyHl ?? strategy?.hero_message ?? "";
+  const _defaultHeadline = _copyHl ?? _copyMedHl ?? strategy?.hero_message ?? "";
+  const _defaultBody     = _copyBody ?? _copyMedHl ?? "";
   if (!previewSubject  && _defaultSubject)  setTimeout(() => setPreviewSubject(_defaultSubject), 0);
   if (!previewHeadline && _defaultHeadline) setTimeout(() => setPreviewHeadline(_defaultHeadline), 0);
   if (!previewBody     && _defaultBody)     setTimeout(() => setPreviewBody(_defaultBody), 0);
@@ -1963,12 +1967,12 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
           hero_message:    strategy?.hero_message ?? "",
           // Use preview-edited values when email channel is selected so the
           // user's edits from the preview modal are included in the send
-          short_headline:  (selected.has("email") && previewHeadline) ? previewHeadline : (copy?.short?.headline  ?? ""),
-          medium_headline: copy?.medium?.headline ?? "",
-          body:            (selected.has("email") && previewBody)     ? previewBody     : (copy?.long?.body       ?? ""),
+          short_headline:  (selected.has("email") && previewHeadline) ? previewHeadline : _copyHl,
+          medium_headline: _copyMedHl,
+          body:            (selected.has("email") && previewBody)     ? previewBody     : _copyBody,
           cta:             copy?.cta              ?? "",
           tagline:         strategy?.tagline      ?? "",
-          email_subject:   (selected.has("email") && previewSubject)  ? previewSubject  : ((copy as any)?.channel_copy?.email_subject ?? copy?.short?.headline ?? ""),
+          email_subject:   (selected.has("email") && previewSubject)  ? previewSubject  : ((copy as any)?.channel_copy?.email_subject ?? _copyHl ?? ""),
           // Product name for email footer / product spotlight
           product_name:    String((output as any)?.product_name ?? brief?.structured_brief?.product ?? ""),
           // KV image — use explicitly selected variation first
@@ -2065,7 +2069,7 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
       </div>
 
       {/* ── Campaign content review — editable before launch ──────────── */}
-      {!published && (copy?.short?.headline || (copy as any)?.channel_copy) && (
+      {!published && ((copy as any)?.short_headline || copy?.short?.headline || (copy as any)?.channel_copy) && (
         <div style={{ padding: "24px 36px", borderBottom: "1px solid var(--card-border)",
           display: "flex", flexDirection: "column" as const, gap: 20 }}>
 
@@ -2085,7 +2089,7 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
                 <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em",
                   textTransform: "uppercase" as const, color: "var(--text-secondary)",
                   display: "block", marginBottom: 5 }}>Headline</label>
-                <textarea value={previewHeadline || copy?.short?.headline || ""}
+                <textarea value={previewHeadline || _copyHl || ""}
                   onChange={e => setPreviewHeadline(e.target.value)}
                   rows={2}
                   placeholder="Campaign headline…"
@@ -2497,7 +2501,7 @@ function ResultsView({ output, campaignId }: {
   const adaptations = cp?.channel_adaptations as Record<string, { label: string; image_b64: string; ratio: string }> | undefined;
   const perfForecast = (output as any)?.performance_forecast as Record<string, unknown> | undefined;
 
-  const resultHeadline = copy?.short?.headline ?? strategy?.hero_message ?? "";
+  const resultHeadline = (copy as any)?.short_headline ?? copy?.short?.headline ?? strategy?.hero_message ?? "";
 
   const handleSaveKV = async () => {
     setKvSaveState("saving");
@@ -2740,10 +2744,13 @@ function ResultsView({ output, campaignId }: {
         })()}
 
         {/* ── 3. Campaign Copy ───────────────────────────────────────────── */}
-        {copy?.short?.headline && (() => {
+        {((copy as any)?.short_headline || copy?.short?.headline) && (() => {
           const n = S();
-          const hasMedium   = !!copy.medium?.headline;
-          const hasLong     = !!copy.long?.body;
+          const _hl       = (copy as any)?.short_headline ?? copy?.short?.headline ?? "";
+          const _medHl    = (copy as any)?.medium_headline ?? copy?.medium?.headline ?? "";
+          const _longBody = (copy as any)?.body ?? copy?.long?.body ?? "";
+          const hasMedium   = !!_medHl;
+          const hasLong     = !!_longBody;
           const hasChannels = copy.channel_copy && Object.keys(copy.channel_copy as object).length > 0;
           return (
             <StageCard step={n} label="Campaign Copy" color="#a855f7">
@@ -2769,7 +2776,8 @@ function ResultsView({ output, campaignId }: {
                   <div>
                     <div style={{ padding: "28px 24px", borderRadius: 14, textAlign: "center" as const, marginBottom: 14, background: "linear-gradient(135deg, rgba(168,85,247,0.14), rgba(168,85,247,0.05))", border: "1px solid rgba(168,85,247,0.22)" }}>
                       <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Short Headline</div>
-                      <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.2 }}>"{copy.short.headline}"</div>
+                      <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.2 }}>"{_hl}"</div>
+                      {!!(copy as any)?.subline && <div style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 8, lineHeight: 1.5 }}>{String((copy as any).subline)}</div>}
                     </div>
                     {copy.cta && (
                       <div style={{ textAlign: "center" as const }}>
@@ -2781,15 +2789,15 @@ function ResultsView({ output, campaignId }: {
                 {copyTab === "medium" && (
                   <div style={{ padding: "22px 24px", borderRadius: 14, background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.18)" }}>
                     <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Medium Headline</div>
-                    {copy.medium?.headline && <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.3, marginBottom: 10 }}>"{copy.medium.headline}"</div>}
+                    {_medHl && <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.3, marginBottom: 10 }}>"{_medHl}"</div>}
                     {copy.medium?.body && <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>{copy.medium.body.slice(0, 220)}{copy.medium.body.length > 220 ? "…" : ""}</div>}
                   </div>
                 )}
                 {copyTab === "long" && (
                   <div style={{ padding: "22px 24px", borderRadius: 14, background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.18)" }}>
                     <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Long Copy</div>
-                    {copy.long?.headline && <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", marginBottom: 10 }}>"{copy.long.headline}"</div>}
-                    {copy.long?.body && <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.75 }}>{copy.long.body.slice(0, 320)}{copy.long.body.length > 320 ? "…" : ""}</div>}
+                    {_hl && <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", marginBottom: 10 }}>"{_hl}"</div>}
+                    {_longBody && <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.75 }}>{_longBody.slice(0, 320)}{_longBody.length > 320 ? "…" : ""}</div>}
                   </div>
                 )}
                 {copyTab === "channels" && hasChannels && (
@@ -2926,7 +2934,7 @@ function ResultsView({ output, campaignId }: {
         })()}
 
         {/* ── 8. Performance Forecast ───────────────────────────────────── */}
-        {perfForecast && (() => {
+        {perfForecast && (perfForecast.predicted_total_reach || perfForecast.overall_confidence) && (() => {
           const n  = S();
           const pf = perfForecast as any;
           const ROSE        = "#fb7185";
@@ -4975,8 +4983,8 @@ export default function App() {
                   return cp?.images_b64?.[0] ?? cp?.image_b64 ?? "";
                 })()}
                 campaignSubject={String((state.pipeline_output as any)?.campaign_copy?.channel_copy?.email_subject ?? "")}
-                campaignHeadline={campaignPublishData?.headline ?? String((state.pipeline_output as any)?.campaign_copy?.short?.headline ?? "")}
-                campaignBody={campaignPublishData?.brief ?? String((state.pipeline_output as any)?.campaign_copy?.long?.body ?? "")}
+                campaignHeadline={campaignPublishData?.headline ?? String((state.pipeline_output as any)?.campaign_copy?.short_headline ?? (state.pipeline_output as any)?.campaign_copy?.short?.headline ?? "")}
+                campaignBody={campaignPublishData?.brief ?? String((state.pipeline_output as any)?.campaign_copy?.body ?? (state.pipeline_output as any)?.campaign_copy?.long?.body ?? "")}
                 campaignBrand={campaignPublishData?.brand ?? String((state.pipeline_output as any)?.brand ?? "")}
               />
             </div>
