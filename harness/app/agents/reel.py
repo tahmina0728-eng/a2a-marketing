@@ -705,6 +705,9 @@ def run_reel(brand: str, prompt: str, campaign_type: str = "", copy_headline: st
         f"- AUDIO: upbeat brand-appropriate background music + {_voiceover_line}\n"
         f"- The voiceover should be delivered confidently and warmly over the music\n"
         f"- No text or typography visible in the image\n"
+        f"- CRITICAL: absolutely NO film strip borders, NO film perforations, NO sprocket holes, "
+        f"NO timecodes, NO frame counters, NO film slates, NO clapperboards, NO camera overlays — "
+        f"this is a pure premium advertising spot, NOT a film/cinema aesthetic\n"
         f"- CRITICAL PRODUCT RULE: Show ONLY {product or brand} product packaging. "
         f"Do NOT show any other product, competing brand, or unrelated packaging in the scene.\n"
         f"- CRITICAL: Do NOT use any financial or wealth terms: no 'wealth', 'investment', "
@@ -763,7 +766,10 @@ def run_reel(brand: str, prompt: str, campaign_type: str = "", copy_headline: st
             "text, words, subtitles, financial charts, graphs, stock prices, "
             "news tickers, legal disclaimers, violence, explicit content, "
             "competing products, multiple product brands, other packaging, "
-            "fictional brands, unrelated products, second product"
+            "fictional brands, unrelated products, second product, "
+            "film strip, film perforations, sprocket holes, filmstrip border, "
+            "timecode, frame counter, film slate, camera slate, clapperboard, "
+            "film leader, film reel overlay, cinema frame, movie frame border"
         )
 
         # Pure text-to-video — no last_frame/image params.

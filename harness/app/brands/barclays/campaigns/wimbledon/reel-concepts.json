@@ -28,7 +28,10 @@
       "duplicate tennis ball", "warped tennis court",
       "unrealistic crowd density", "floating objects",
       "camera jitter", "motion blur artefacts", "compression artefacts",
-      "violence", "explicit content"
+      "violence", "explicit content",
+      "film strip", "film perforations", "sprocket holes", "filmstrip border",
+      "timecode", "frame counter", "film slate", "camera slate", "clapperboard",
+      "film leader", "film reel overlay", "cinema frame", "movie frame border"
     ]
   },
 

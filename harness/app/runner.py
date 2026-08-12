@@ -2555,6 +2555,7 @@ async def generate_campaign_reel(
             f"- The {season} atmosphere must be unmistakably present — lighting, props, colour grading\n"
             f"- AUDIO: upbeat brand-appropriate background music + {_voiceover_line}\n"
             f"- No text or typography in the image\n"
+            f"- CRITICAL: NO film strip borders, NO sprocket holes, NO timecodes, NO film slates — pure premium ad footage only\n"
             f"- CRITICAL PRODUCT RULE: Show ONLY {product_name or brand} product packaging. "
             f"Do NOT show any other product, competing brand, or unrelated packaging in the scene."
             + (f"\nLanguage: {_lang_label}" if _lang_label and _lang_label.lower() != "english" else "")
@@ -2596,7 +2597,9 @@ Output the prompt only.""",
                     if _is_barclays_reel else
                     "text, words, subtitles, competing products, multiple brands, "
                     "other product packaging, fictional brands, unrelated products, "
-                    "second product, financial charts, graphs, violence, explicit content"
+                    "second product, financial charts, graphs, violence, explicit content, "
+                    "film strip, film perforations, sprocket holes, filmstrip border, "
+                    "timecode, frame counter, film slate, clapperboard, film leader"
                 )
                 return await loop.run_in_executor(None, lambda: _gc.models.generate_videos(
                     model=veo_model,
