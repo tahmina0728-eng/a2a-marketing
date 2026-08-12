@@ -124,7 +124,7 @@ def _build_branded_end_frame(brand: str):
         return None
 
 
-def run_reel(brand: str, prompt: str) -> dict:
+def run_reel(brand: str, prompt: str, campaign_type: str = "") -> dict:
     """
     Standalone Kinetik — now matches the full pipeline's approach exactly:
     1. One Gemini text call to extract campaign context (big_idea, product, season,
@@ -152,6 +152,12 @@ def run_reel(brand: str, prompt: str) -> dict:
     audience  = ctx.get("audience", "general audience")
     voiceover = ctx.get("voiceover", "") or big_idea
     _prod     = product or f"{brand} product"
+
+    # ── Barclays / Wimbledon detection ───────────────────────────────────────
+    _is_barclays  = brand.lower() == "barclays"
+    _is_wimbledon = _is_barclays and "wimbledon" in (campaign_type + " " + prompt + " " + big_idea).lower()
+    if _is_barclays:
+        from app.brands import barclays as _barclays_brand  # noqa: PLC0415
 
     # ── Step 2: Brand + occasion-aware visual scene ──────────────────────────
     import random as _rnd
@@ -670,14 +676,18 @@ def run_reel(brand: str, prompt: str) -> dict:
         "Sunrise":     _sunrise_scene,
         "Haleon":      _haleon_scene,
     }
-    brand_scene = (
-        _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN
-        else f"A premium cinematic advertising scene for {brand}, photorealistic, elegant and aspirational."
-    )
+    if _is_barclays:
+        brand_scene = _barclays_brand.reel_scene(big_idea, "", voiceover)
+    else:
+        brand_scene = (
+            _BRAND_SCENE_FN[brand](_prod) if brand in _BRAND_SCENE_FN
+            else f"A premium cinematic advertising scene for {brand}, photorealistic, elegant and aspirational."
+        )
 
     # ── Step 3: Generate the rich 80-100 word cinematic prompt (same as full pipeline) ──
     _voiceover_line = f'A warm confident voiceover says: "{voiceover}"' if voiceover \
         else "A warm confident voiceover narrates the campaign tagline."
+    _barclays_veo_rules = _barclays_brand.reel_veo_rules() if _is_barclays else ""
     prompt_req = (
         f"Write a single cinematic video+audio generation prompt (80-100 words) "
         f"for a 6-second {brand} campaign reel with voiceover.\n\n"
@@ -698,7 +708,8 @@ def run_reel(brand: str, prompt: str) -> dict:
         f"- CRITICAL: Do NOT use any financial or wealth terms: no 'wealth', 'investment', "
         f"'high-net-worth', 'banking', 'financial', 'portfolio', 'returns', 'assets', 'affluent', "
         f"'prosperity'. Describe only pure visual/lifestyle/emotional content.\n"
-        f"Output the prompt only — no labels, no markdown, no explanation."
+        + (f"- BARCLAYS BRAND RULES: {_barclays_veo_rules}\n" if _barclays_veo_rules else "")
+        + "Output the prompt only — no labels, no markdown, no explanation."
     )
     try:
         resp = _genai_client().models.generate_content(
@@ -746,6 +757,7 @@ def run_reel(brand: str, prompt: str) -> dict:
         out_uri   = f"gs://{settings.gcs_bucket}/outputs/standalone-{page_id}/reel.mp4"
 
         _neg_prompt = (
+            _barclays_brand.reel_negative_prompt() if _is_barclays else
             "text, words, subtitles, financial charts, graphs, stock prices, "
             "news tickers, legal disclaimers, violence, explicit content, "
             "competing products, multiple product brands, other packaging, "
@@ -967,4 +979,10 @@ def run_reel(brand: str, prompt: str) -> dict:
     except Exception as e:
         logger.warning("standalone_reel_failed", brand=brand, error=str(e))
 
-    return {"agent": "reel", "brand": brand, "headline": voiceover, "video_b64": video_b64}
+    _result = {"agent": "reel", "brand": brand, "headline": voiceover, "video_b64": video_b64}
+    if _is_wimbledon:
+        try:
+            _result["storyboard"] = _barclays_brand.reel_storyboard(big_idea, "", voiceover)
+        except Exception as _sb_err:
+            logger.warning("standalone_reel_storyboard_failed", error=str(_sb_err))
+    return _result
