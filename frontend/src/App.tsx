@@ -3696,15 +3696,10 @@ function CopyIntakeView({ milestone, liveMsg }: {
           {/* CTA — standalone card */}
           {m.cta && (
             <CCard title="CTA">
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div style={{ padding: "9px 22px", borderRadius: 99,
-                  background: `linear-gradient(135deg, ${g1}, ${g2})`,
-                  color: "white", fontSize: 14, fontWeight: 800, whiteSpace: "nowrap" as const }}>
-                  {m.cta}
-                </div>
-                <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-                  Call-to-action — verb-led, max 3 words
-                </div>
+              <div style={{ padding: "9px 22px", borderRadius: 99,
+                background: `linear-gradient(135deg, ${g1}, ${g2})`,
+                color: "white", fontSize: 14, fontWeight: 800, display: "inline-block" }}>
+                {m.cta}
               </div>
             </CCard>
           )}

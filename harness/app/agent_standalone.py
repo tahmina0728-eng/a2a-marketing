@@ -138,5 +138,5 @@ def run_agent_standalone(
             concept_id=concept_id, aspect_ratio=aspect_ratio,
         )
     if agent_key == "reel":
-        return runner(brand, text, campaign_type=campaign_type)
+        return runner(brand, text, campaign_type=campaign_type, copy_headline=copy_headline)
     return runner(brand, text)

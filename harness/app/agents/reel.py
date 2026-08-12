@@ -124,7 +124,7 @@ def _build_branded_end_frame(brand: str):
         return None
 
 
-def run_reel(brand: str, prompt: str, campaign_type: str = "") -> dict:
+def run_reel(brand: str, prompt: str, campaign_type: str = "", copy_headline: str = "") -> dict:
     """
     Standalone Kinetik — now matches the full pipeline's approach exactly:
     1. One Gemini text call to extract campaign context (big_idea, product, season,
@@ -150,7 +150,9 @@ def run_reel(brand: str, prompt: str, campaign_type: str = "") -> dict:
     product   = ctx.get("product", "")
     season    = ctx.get("season", "")
     audience  = ctx.get("audience", "general audience")
-    voiceover = ctx.get("voiceover", "") or big_idea
+    # If the copy agent already produced a headline, use it as the voiceover/text overlay
+    # so reel and KV share the same copy output (same as the pipeline path does).
+    voiceover = copy_headline.strip() if copy_headline.strip() else (ctx.get("voiceover", "") or big_idea)
     _prod     = product or f"{brand} product"
 
     # ── Barclays / Wimbledon detection ───────────────────────────────────────

@@ -521,6 +521,11 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         if (audience) body.audience = audience;
         if (fmt === "reel") {
           body.aspect_ratio = reelSz;
+          if (copyRes?.headline) {
+            body.copy_headline = copyRes.headline;
+            body.copy_subline  = copyRes.subline || "";
+            body.copy_cta      = copyRes.cta     || "";
+          }
         }
         if (fmt === "image") {
           body.aspect_ratio = imgSz;
