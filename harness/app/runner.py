@@ -521,13 +521,12 @@ async def run_copy_with_groq(machine_brief: dict, strategy: dict, brand_locks: s
 
     _lang = (language or "").strip()
     _lang_block = (
-        f"
-
-CRITICAL LANGUAGE OVERRIDE: The user has explicitly selected '{'_lang'}' as the output language. "
-        f"ALL copy MUST be written entirely in {_lang}. "
+        "\n\nCRITICAL LANGUAGE OVERRIDE: The user has explicitly selected '"
+        + _lang +
+        "' as the output language. "
+        "ALL copy MUST be written entirely in this language. "
         "This overrides any localisation requirements in the brand guidelines."
-        if _lang else ""
-    )
+    ) if _lang else ""
 
     prompt = f"""{COPY_AGENT_INSTRUCTIONS}
 
