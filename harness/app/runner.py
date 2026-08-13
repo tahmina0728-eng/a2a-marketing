@@ -4631,7 +4631,7 @@ async def run_performance_standalone(prompt: str, campaign_id: str = "") -> dict
         _channels_raw = [c.strip() for c in _channels_raw.replace("/", ",").split(",")]
     _channels: list = [c for c in _channels_raw if c]
 
-    _ft_score = int(_fields.get("fan_truth_score", 72))
+    _ft_score = int(_fields.get("fan_truth_score") or 72)
     _ft_verdict = "PASS" if _ft_score >= 70 else "FAIL"
 
     machine_brief = {
