@@ -3910,194 +3910,304 @@ function PerformanceIntakeView({ milestone, liveMsg }: {
 
   const m = milestone as any;
   const channelForecasts: any[] = Array.isArray(m.channel_forecasts) ? m.channel_forecasts : [];
+  const kpiValidation: any[]    = Array.isArray(m.kpi_validation)    ? m.kpi_validation    : [];
+  const watchlist: string[]     = Array.isArray(m.first_48h_watchlist) ? m.first_48h_watchlist : [];
+  const budgetSplit: Record<string,number> = (m.recommended_budget_split && typeof m.recommended_budget_split === "object")
+    ? m.recommended_budget_split as Record<string,number> : {};
+  const budgetEntries = Object.entries(budgetSplit);
 
-  const ROSE = "#fb7185";
-  const ROSE_LIGHT = "rgba(251,113,133,0.08)";
-  const ROSE_BORDER = "rgba(251,113,133,0.25)";
+  const R   = "#f43f5e";
+  const RBo = "rgba(244,63,94,0.28)";
+  const RL  = "rgba(244,63,94,0.07)";
 
-  const confColor = (c: string) =>
-    c === "HIGH" ? "#34d399" : c === "MEDIUM" ? "#fbbf24" : "#f87171";
-  const confBg    = (c: string) =>
-    c === "HIGH" ? "rgba(52,211,153,0.12)" : c === "MEDIUM" ? "rgba(251,191,36,0.12)" : "rgba(248,113,113,0.12)";
-  const confBorder = (c: string) =>
-    c === "HIGH" ? "rgba(52,211,153,0.30)" : c === "MEDIUM" ? "rgba(251,191,36,0.30)" : "rgba(248,113,113,0.30)";
+  const confColor  = (c: string) => c === "HIGH" ? "#34d399" : c === "MEDIUM" ? "#fbbf24" : "#f87171";
+  const confBg     = (c: string) => c === "HIGH" ? "rgba(52,211,153,0.13)" : c === "MEDIUM" ? "rgba(251,191,36,0.13)" : "rgba(248,113,113,0.13)";
+  const confBorder = (c: string) => c === "HIGH" ? "rgba(52,211,153,0.32)" : c === "MEDIUM" ? "rgba(251,191,36,0.32)" : "rgba(248,113,113,0.32)";
+  const verdictColor  = (v: string) => v === "ACHIEVABLE" ? "#34d399" : v === "AMBITIOUS" ? "#fbbf24" : "#f87171";
+  const verdictBg     = (v: string) => v === "ACHIEVABLE" ? "rgba(52,211,153,0.13)" : v === "AMBITIOUS" ? "rgba(251,191,36,0.13)" : "rgba(248,113,113,0.13)";
+  const verdictIcon   = (v: string) => v === "ACHIEVABLE" ? "🟢" : v === "AMBITIOUS" ? "🟡" : "🔴";
 
-  const FCard = ({ title, children, full }: { title: string; children: React.ReactNode; full?: boolean }) => (
+  const Card = ({ title, children, full, accent }: { title: string; children: React.ReactNode; full?: boolean; accent?: string }) => (
     <div style={{
-      background: "var(--card-bg)", border: `1px solid ${ROSE_BORDER}`, borderRadius: 14,
-      padding: "22px 24px", gridColumn: full ? "1 / -1" : undefined,
-      boxShadow: "0 4px 16px rgba(0,0,0,0.08)", backdropFilter: "blur(8px)",
+      background: "var(--card-bg)", borderRadius: 14,
+      border: `1px solid ${accent ? accent : RBo}`,
+      padding: "20px 22px", gridColumn: full ? "1 / -1" : undefined,
+      boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
     }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: ROSE, letterSpacing: "0.1em",
-        textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
+      <div style={{ fontSize: 10, fontWeight: 800, color: accent ?? R, letterSpacing: "0.12em",
+        textTransform: "uppercase" as const, marginBottom: 12 }}>{title}</div>
       {children}
     </div>
   );
 
-  return (
-    <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
-      background: "var(--page-bg)" }}>
-      <div style={{ maxWidth: 920, margin: "0 auto" }}>
+  // Budget split — simple horizontal bar chart
+  const BudgetBar = () => {
+    if (budgetEntries.length === 0) return null;
+    const PALETTE = ["#f43f5e","#fb923c","#facc15","#4ade80","#38bdf8","#818cf8","#e879f9","#94a3b8"];
+    return (
+      <div>
+        <div style={{ display: "flex", height: 20, borderRadius: 10, overflow: "hidden", marginBottom: 12 }}>
+          {budgetEntries.map(([, pct], i) => (
+            <div key={i} style={{ width: `${(pct * 100).toFixed(1)}%`, background: PALETTE[i % PALETTE.length] }} />
+          ))}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+          {budgetEntries.map(([ch, pct], i) => (
+            <div key={ch} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 10, height: 10, borderRadius: 3, background: PALETTE[i % PALETTE.length], flexShrink: 0 }} />
+              <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 600 }}>{ch}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: "var(--text-primary)" }}>{(pct * 100).toFixed(0)}%</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 28 }}>
+  // Mini reach bar for channel table
+  const ReachBar = ({ pct }: { pct: number }) => (
+    <div style={{ height: 4, borderRadius: 2, background: "var(--border-color)", width: "100%", marginTop: 4 }}>
+      <div style={{ height: 4, borderRadius: 2, width: `${Math.min(100, pct)}%`,
+        background: `linear-gradient(90deg, ${R}, #fb923c)` }} />
+    </div>
+  );
+
+  const overallConf = (m.overall_confidence as string) ?? "";
+
+  return (
+    <div style={{ flex: 1, overflowY: "auto" as const, padding: "28px 32px", background: "var(--page-bg)" }}>
+      <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", flexDirection: "column" as const, gap: 18 }}>
+
+        {/* ── Header ─────────────────────────────────────────── */}
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
           <div style={{
-            width: 52, height: 52, borderRadius: "50%", flexShrink: 0,
-            background: `linear-gradient(135deg, ${ROSE} 0%, #be123c 100%)`,
-            boxShadow: "0 4px 20px rgba(251,113,133,0.32)",
+            width: 48, height: 48, borderRadius: "50%", flexShrink: 0,
+            background: `linear-gradient(135deg, ${R} 0%, #9f1239 100%)`,
+            boxShadow: `0 4px 18px rgba(244,63,94,0.38)`,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            <span style={{ fontSize: 22 }}>📊</span>
+            <span style={{ fontSize: 20 }}>📊</span>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.12em",
-              color: ROSE, textTransform: "uppercase" as const, marginBottom: 3 }}>
-              NEXUS · COMPLETE ✓
+            <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.14em", color: R,
+              textTransform: "uppercase" as const, marginBottom: 2 }}>NEXUS · COMPLETE ✓</div>
+            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)" }}>
+              Pre-Launch Performance Forecast
             </div>
-            <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text-primary)" }}>Pre-Launch Performance Forecast</div>
           </div>
+          {overallConf && (
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8,
+              background: confBg(overallConf), border: `1px solid ${confBorder(overallConf)}`,
+              borderRadius: 99, padding: "6px 16px" }}>
+              <span style={{ fontSize: 13 }}>{overallConf === "HIGH" ? "🎯" : overallConf === "MEDIUM" ? "📈" : "⚠️"}</span>
+              <span style={{ fontSize: 12, fontWeight: 800, color: confColor(overallConf),
+                letterSpacing: "0.08em" }}>{overallConf} CONFIDENCE</span>
+            </div>
+          )}
         </div>
 
-        {/* Top KPI strip */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 20 }}>
+        {/* ── KPI strip ───────────────────────────────────────── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }}>
           {[
-            { label: "Predicted Reach",  value: m.predicted_total_reach,  icon: "👥" },
-            { label: "Blended ROAS",     value: m.predicted_blended_roas, icon: "💰" },
-            { label: "Confidence",        value: m.overall_confidence,     icon: "🎯" },
-          ].map(({ label, value, icon }) => (
+            { label: "Total Predicted Reach", value: m.predicted_total_reach, icon: "👥", sub: "across all channels" },
+            { label: "Blended ROAS",          value: m.predicted_blended_roas, icon: "💰", sub: "return on ad spend" },
+            { label: "Top Channel Reach",     value: channelForecasts[0]?.predicted_reach, icon: "📡",
+              sub: channelForecasts[0]?.channel ?? "" },
+          ].map(({ label, value, icon, sub }) => (
             <div key={label} style={{
-              background: "var(--card-bg)", border: `1px solid ${ROSE_BORDER}`, borderRadius: 12,
-              padding: "16px 20px", textAlign: "center" as const,
-              boxShadow: "0 4px 16px rgba(0,0,0,0.08)", backdropFilter: "blur(8px)",
+              background: "var(--card-bg)", border: `1px solid ${RBo}`, borderRadius: 14,
+              padding: "18px 20px", boxShadow: "0 2px 12px rgba(0,0,0,0.07)",
             }}>
-              <div style={{ fontSize: 20, marginBottom: 6 }}>{icon}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)" }}>{value ?? "—"}</div>
-              <div style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600, marginTop: 3,
+              <div style={{ fontSize: 22, marginBottom: 8 }}>{icon}</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1 }}>
+                {value ?? "—"}
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", marginTop: 5,
                 textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</div>
+              {sub && <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>{sub}</div>}
             </div>
           ))}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        {/* ── Forecast headline ───────────────────────────────── */}
+        {m.headline_prediction && (
+          <div style={{
+            background: `linear-gradient(135deg, ${RL}, rgba(244,63,94,0.03))`,
+            border: `1px solid ${RBo}`, borderRadius: 14, padding: "18px 22px",
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: R, letterSpacing: "0.12em",
+              textTransform: "uppercase" as const, marginBottom: 8 }}>Nexus Forecast Summary</div>
+            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.55,
+              fontStyle: "italic" }}>"{m.headline_prediction}"</div>
+          </div>
+        )}
 
-          {/* Headline prediction */}
-          {m.headline_prediction && (
-            <FCard title="Forecast Headline" full>
-              <div style={{ fontSize: 17, fontWeight: 700, color: "var(--text-primary)", lineHeight: 1.45,
-                fontStyle: "italic" }}>
-                "{m.headline_prediction}"
+        {/* ── Channel forecasts table ─────────────────────────── */}
+        {channelForecasts.length > 0 && (
+          <Card title="Channel-by-Channel Forecast" full>
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 10 }}>
+              {/* Column headers */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 90px 80px 100px 90px",
+                gap: 10, padding: "0 14px", marginBottom: 2 }}>
+                {["Channel","Predicted Reach","CTR","ROAS","Engagement","Confidence"].map(h => (
+                  <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "var(--text-tertiary)",
+                    textTransform: "uppercase" as const, letterSpacing: "0.07em",
+                    textAlign: h === "Channel" ? "left" as const : "center" as const }}>{h}</div>
+                ))}
               </div>
-            </FCard>
-          )}
-
-          {/* Fan Truth impact */}
-          {m.fan_truth_impact && (
-            <FCard title="Fan Truth Impact">
-              <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>{m.fan_truth_impact}</div>
-            </FCard>
-          )}
-
-          {/* Benchmark comparison */}
-          {m.benchmark_comparison && (
-            <FCard title="vs. Benchmarks">
-              <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>{m.benchmark_comparison}</div>
-            </FCard>
-          )}
-
-          {/* Channel-by-channel forecasts */}
-          {channelForecasts.length > 0 && (
-            <FCard title="Channel Forecasts" full>
-              <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
-                {channelForecasts.map((cf: any, i: number) => (
+              {channelForecasts.map((cf: any, i: number) => {
+                const budgetPct = typeof cf.budget_pct === "number" ? cf.budget_pct * 100 : 0;
+                return (
                   <div key={i} style={{
-                    display: "grid", gridTemplateColumns: "160px 1fr 1fr 1fr 1fr auto",
-                    alignItems: "center", gap: 12,
-                    background: ROSE_LIGHT, borderRadius: 10, padding: "14px 16px",
-                    border: `1px solid ${ROSE_BORDER}`,
+                    display: "grid", gridTemplateColumns: "1fr 140px 90px 80px 100px 90px",
+                    alignItems: "center", gap: 10,
+                    background: i % 2 === 0 ? RL : "transparent",
+                    borderRadius: 10, padding: "12px 14px",
+                    border: `1px solid ${i % 2 === 0 ? RBo : "transparent"}`,
                   }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)" }}>
-                      {cf.channel}
-                    </div>
-                    <div style={{ textAlign: "center" as const }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{cf.predicted_reach}</div>
-                      <div style={{ fontSize: 10, color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase" as const }}>Reach</div>
-                    </div>
-                    <div style={{ textAlign: "center" as const }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{cf.predicted_ctr}</div>
-                      <div style={{ fontSize: 10, color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase" as const }}>CTR</div>
-                    </div>
-                    <div style={{ textAlign: "center" as const }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{cf.predicted_roas}</div>
-                      <div style={{ fontSize: 10, color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase" as const }}>ROAS</div>
-                    </div>
-                    <div style={{ textAlign: "center" as const }}>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{cf.predicted_engagement}</div>
-                      <div style={{ fontSize: 10, color: "var(--text-secondary)", fontWeight: 600, textTransform: "uppercase" as const }}>Eng.</div>
-                    </div>
                     <div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{cf.channel}</div>
+                      {budgetPct > 0 && (
+                        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 4 }}>
+                          <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
+                            Budget: <strong style={{ color: R }}>{budgetPct.toFixed(0)}%</strong>
+                          </div>
+                          <ReachBar pct={budgetPct} />
+                        </div>
+                      )}
+                    </div>
+                    {[cf.predicted_reach, cf.predicted_ctr, cf.predicted_roas, cf.predicted_engagement].map((val, vi) => (
+                      <div key={vi} style={{ textAlign: "center" as const }}>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>{val ?? "—"}</div>
+                      </div>
+                    ))}
+                    <div style={{ textAlign: "center" as const }}>
                       <span style={{
                         fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 99,
                         background: confBg(cf.confidence), color: confColor(cf.confidence),
                         border: `1px solid ${confBorder(cf.confidence)}`,
                         textTransform: "uppercase" as const, letterSpacing: "0.06em",
+                        whiteSpace: "nowrap" as const,
                       }}>{cf.confidence}</span>
                     </div>
                   </div>
-                ))}
-              </div>
-            </FCard>
-          )}
-
-          {/* Risk / Opportunity */}
-          {(m.top_risk || m.top_opportunity) && (
-            <>
-              {m.top_risk && (
-                <FCard title="Top Risk">
-                  <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>{m.top_risk}</div>
-                </FCard>
-              )}
-              {m.top_opportunity && (
-                <FCard title="Top Opportunity">
-                  <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>{m.top_opportunity}</div>
-                </FCard>
-              )}
-            </>
-          )}
-
-          {/* First 48h watchlist */}
-          {Array.isArray(m.first_48h_watchlist) && m.first_48h_watchlist.length > 0 && (
-            <FCard title="First 48h Watchlist" full>
-              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
-                {(m.first_48h_watchlist as string[]).map((item: string, i: number) => (
-                  <span key={i} style={{
-                    fontSize: 12, padding: "5px 12px", borderRadius: 99,
-                    background: ROSE_LIGHT, border: `1px solid ${ROSE_BORDER}`,
-                    color: ROSE, fontWeight: 600,
-                  }}>⏱ {item}</span>
-                ))}
-              </div>
-            </FCard>
-          )}
-
-          {/* Budget split */}
-          {m.recommended_budget_split && Object.keys(m.recommended_budget_split).length > 0 && (
-            <FCard title="Recommended Budget Split" full>
-              <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
-                {Object.entries(m.recommended_budget_split as Record<string,number>).map(([ch, pct]) => (
-                  <div key={ch} style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    background: ROSE_LIGHT, border: `1px solid ${ROSE_BORDER}`,
-                    borderRadius: 10, padding: "8px 14px",
-                  }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>{ch}</span>
-                    <span style={{ fontSize: 15, fontWeight: 800, color: ROSE }}>{(pct * 100).toFixed(0)}%</span>
+                );
+              })}
+            </div>
+            {/* Risk/opportunity per channel */}
+            {channelForecasts.some(cf => cf.risk_flag || cf.opportunity) && (
+              <div style={{ marginTop: 16, display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-tertiary)",
+                  textTransform: "uppercase" as const, letterSpacing: "0.08em", marginBottom: 4 }}>
+                  Channel Notes
+                </div>
+                {channelForecasts.filter(cf => cf.risk_flag || cf.opportunity).map((cf: any, i: number) => (
+                  <div key={i} style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.55 }}>
+                    <strong style={{ color: "var(--text-secondary)" }}>{cf.channel}:</strong>{" "}
+                    {cf.risk_flag && <span>⚠️ {cf.risk_flag}</span>}
+                    {cf.risk_flag && cf.opportunity && " · "}
+                    {cf.opportunity && <span>✅ {cf.opportunity}</span>}
                   </div>
                 ))}
               </div>
-            </FCard>
+            )}
+          </Card>
+        )}
+
+        {/* ── Two-column section ───────────────────────────────── */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+
+          {/* Fan Truth */}
+          {m.fan_truth_impact && (
+            <Card title="Fan Truth Impact" accent="rgba(99,102,241,0.35)">
+              <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>{m.fan_truth_impact}</div>
+            </Card>
           )}
 
+          {/* Benchmark */}
+          {m.benchmark_comparison && (
+            <Card title="vs. Category Benchmarks" accent="rgba(16,185,129,0.35)">
+              <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>{m.benchmark_comparison}</div>
+            </Card>
+          )}
+
+          {/* Risk */}
+          {m.top_risk && (
+            <Card title="⚠️ Top Risk" accent="rgba(248,113,113,0.35)">
+              <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>{m.top_risk}</div>
+            </Card>
+          )}
+
+          {/* Opportunity */}
+          {m.top_opportunity && (
+            <Card title="✅ Top Opportunity" accent="rgba(52,211,153,0.35)">
+              <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>{m.top_opportunity}</div>
+            </Card>
+          )}
         </div>
+
+        {/* ── KPI Validation ──────────────────────────────────── */}
+        {kpiValidation.length > 0 && (
+          <Card title="KPI Target Validation" full>
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 120px 120px 130px",
+                gap: 10, padding: "0 12px", marginBottom: 2 }}>
+                {["KPI Metric","Client Target","Forecast","Verdict"].map(h => (
+                  <div key={h} style={{ fontSize: 10, fontWeight: 700, color: "var(--text-tertiary)",
+                    textTransform: "uppercase" as const, letterSpacing: "0.07em" }}>{h}</div>
+                ))}
+              </div>
+              {kpiValidation.map((kpi: any, i: number) => (
+                <div key={i} style={{
+                  display: "grid", gridTemplateColumns: "1fr 120px 120px 130px",
+                  alignItems: "start", gap: 10,
+                  background: i % 2 === 0 ? "var(--hover-bg)" : "transparent",
+                  borderRadius: 8, padding: "10px 12px",
+                }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>{kpi.metric}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{kpi.client_target}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{kpi.forecast}</div>
+                  <div>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 99,
+                      background: verdictBg(kpi.verdict ?? ""), color: verdictColor(kpi.verdict ?? ""),
+                      whiteSpace: "nowrap" as const,
+                    }}>{verdictIcon(kpi.verdict ?? "")} {kpi.verdict}</span>
+                    {kpi.note && <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4, lineHeight: 1.5 }}>{kpi.note}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* ── Budget split & Watchlist ─────────────────────────── */}
+        <div style={{ display: "grid", gridTemplateColumns: budgetEntries.length > 0 ? "1.2fr 1fr" : "1fr", gap: 14 }}>
+          {budgetEntries.length > 0 && (
+            <Card title="Recommended Budget Allocation">
+              <BudgetBar />
+            </Card>
+          )}
+          {watchlist.length > 0 && (
+            <Card title="⏱ First 48h Watchlist">
+              <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                {watchlist.map((item: string, i: number) => (
+                  <div key={i} style={{
+                    display: "flex", alignItems: "flex-start", gap: 10,
+                    padding: "8px 10px", borderRadius: 8,
+                    background: RL, border: `1px solid ${RBo}`,
+                  }}>
+                    <span style={{ fontSize: 13, flexShrink: 0, marginTop: 1 }}>
+                      {i === 0 ? "🔴" : i === 1 ? "🟡" : "🟢"}
+                    </span>
+                    <span style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.55 }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
+        </div>
+
       </div>
     </div>
   );
