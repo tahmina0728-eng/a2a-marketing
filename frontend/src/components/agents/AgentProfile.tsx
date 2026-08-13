@@ -18,7 +18,8 @@ export default function AgentProfile({ agentKey, prompt, onPromptChange }: {
   const avatar   = avatarUrl(stage?.label ?? "", idx);
   const workflowStage = WORKFLOW_STAGES.find((w) => w.agents.includes(agentKey))?.label ?? "";
 
-  const [briefingDone, setBriefingDone] = useState(false);
+  const [briefingDone,     setBriefingDone]     = useState(false);
+  const [performanceDone, setPerformanceDone] = useState(false);
 
   const [speaking, setSpeaking] = useState(false);
   useEffect(() => {
@@ -30,7 +31,7 @@ export default function AgentProfile({ agentKey, prompt, onPromptChange }: {
 
   if (!stage) return null;
 
-  const showHeader = !(agentKey === "briefing" && briefingDone);
+  const showHeader = !(agentKey === "briefing" && briefingDone) && !(agentKey === "performance" && performanceDone);
 
   return (
     <div style={{
@@ -119,7 +120,8 @@ export default function AgentProfile({ agentKey, prompt, onPromptChange }: {
 
         <AgentRunPanel agentKey={agentKey} agentLabel={stage.label} color={color}
           prompt={prompt} onPromptChange={onPromptChange}
-          onBriefingDone={() => setBriefingDone(true)} />
+          onBriefingDone={() => setBriefingDone(true)}
+          onPerformanceDone={() => setPerformanceDone(true)} />
       </div>
     </div>
   );

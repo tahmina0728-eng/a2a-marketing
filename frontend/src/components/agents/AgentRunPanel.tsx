@@ -4,10 +4,11 @@ import { STANDALONE_SUPPORTED, POLY_CHANNEL_CFG } from "../../constants/agents";
 import { saveToContentHub } from "../../hooks/useContentHub";
 import BriefingAgentDashboard from "../briefing/BriefingAgentDashboard";
 
-export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange, onBriefingDone }: {
+export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange, onBriefingDone, onPerformanceDone }: {
   agentKey: string; agentLabel: string; color: string;
   prompt: string; onPromptChange: (v: string) => void;
   onBriefingDone?: () => void;
+  onPerformanceDone?: () => void;
 }) {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [result, setResult] = useState<Record<string, any> | null>(null);
@@ -101,6 +102,7 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
       setResult(data);
       setStatus("done");
       if (agentKey === "briefing") onBriefingDone?.();
+      if (agentKey === "performance") onPerformanceDone?.();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : String(e));
       setStatus("error");
@@ -183,7 +185,7 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
             ))}
           </div>
         </div>
-      ) : status === "done" && agentKey === "briefing" ? null : (
+      ) : status === "done" && (agentKey === "briefing" || agentKey === "performance") ? null : (
         <>
           <h3 style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 10px", lineHeight: 1.3 }}>
             <span style={{ background: `linear-gradient(135deg, ${color}, #6366f1)`,
