@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "campaign_id":    "barclays-wimbledon-2026",
 
-  "format":           "9:16",
+  "format":           "16:9",
   "duration_seconds": 6,
   "beats":            4,
   "default_concept":  "backing_the_dream",

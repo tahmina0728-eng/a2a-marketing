@@ -312,7 +312,8 @@ async def run_brief_full(brief: BriefRequest):
                                                  language=brief.language or "" if hasattr(brief, "language") else "")
 
         # Stage 3: Campaign copy
-        copy = await run_copy_with_groq(machine_brief, strategy, brand_locks)
+        copy = await run_copy_with_groq(machine_brief, strategy, brand_locks,
+                                        language=brief.language or "" if hasattr(brief, "language") else "")
 
         return {
             "status":            "ok",

@@ -511,12 +511,23 @@ Only include the channel fields listed below.
     result["_channel_keys"] = [k for k, _ in channel_fields]
     return result
 
-async def run_copy_with_groq(machine_brief: dict, strategy: dict, brand_locks: str) -> dict:
+async def run_copy_with_groq(machine_brief: dict, strategy: dict, brand_locks: str,
+                             language: str = "") -> dict:
     """Generate campaign copy from brief and strategy."""
     import litellm
     from app.instructions import COPY_AGENT_INSTRUCTIONS
 
     _g_kpi_lines, _g_kpi_orient, _g_kpi_impl = _kpi_orientation_block(machine_brief.get("kpis"))
+
+    _lang = (language or "").strip()
+    _lang_block = (
+        f"
+
+CRITICAL LANGUAGE OVERRIDE: The user has explicitly selected '{'_lang'}' as the output language. "
+        f"ALL copy MUST be written entirely in {_lang}. "
+        "This overrides any localisation requirements in the brand guidelines."
+        if _lang else ""
+    )
 
     prompt = f"""{COPY_AGENT_INSTRUCTIONS}
 
@@ -555,7 +566,7 @@ Produce campaign copy as valid JSON only â€" no markdown, no explanation:
   "cta": "<â‰¤3 words, verb-led>",
   "instagram_caption": "<platform caption with relevant hashtags>",
   "tiktok_hook": "<first 3 seconds â€" what makes someone stop scrolling>"
-}}"""
+}}{_lang_block}"""
 
     import google.genai as _g2
     from app.config import get_settings as _gs2
@@ -2547,10 +2558,10 @@ async def generate_campaign_reel(
     elif any(c in _ch_list for c in ("linkedin", "facebook", "youtube", "display", "tv", "ooh")):
         _veo_aspect_ratio = "16:9"
     else:
-        _veo_aspect_ratio = "9:16"
+        _veo_aspect_ratio = "16:9"
 
     if _is_barclays_reel:
-        _prompt_rules = _barclays.reel_veo_rules()
+        _prompt_rules = _barclays.reel_veo_rules(copy_headline)
     else:
         _language_rule = (
             f"\nLanguage: {_lang_label} — the voiceover MUST be delivered entirely in {_lang_label}."
