@@ -16,7 +16,7 @@ export const HARNESS_STAGES = [
 // "channel" (Poly) removed from AI Agent — it lives under Publishing
 export const SIDEBAR_AGENT_KEYS = ["briefing", "strategy", "copy", "culture", "kv", "reel", "tvc"];
 
-export const STANDALONE_SUPPORTED = ["briefing", "strategy", "copy", "culture", "channel", "kv", "reel", "tvc", "email_templates"];
+export const STANDALONE_SUPPORTED = ["briefing", "strategy", "copy", "culture", "channel", "kv", "reel", "tvc", "email_templates", "performance"];
 
 // Card styling for Poly's per-channel results — distinct accent colors so each
 // channel reads like its own platform, not a generic key/value list.
@@ -35,8 +35,9 @@ export const AGENT_INTROS: Record<string, string> = {
   kv:       "Hi, I'm Morphis. I generate on-brand key visuals and hero images using Gemini's image model — campaign-ready visuals in seconds, with your logo and headline applied automatically.",
   reel:     "I'm Kinetik, your reel director. Describe your campaign and I'll generate a cinematic 6-second reel using Veo — complete with voiceover, brand overlay and logo.",
   tvc:      "I'm Director. Give me a brief and I'll produce a full TV commercial — I write the script, generate each scene with Veo, and stitch everything into a 15 or 30 second film.",
-  channel:  "I'm Poly, the channel adaptation agent. Tell me your campaign and I'll adapt it for every platform — Instagram, TikTok, LinkedIn, email and landing pages.",
+  channel:         "I'm Poly, the channel adaptation agent. Tell me your campaign and I'll adapt it for every platform — Instagram, TikTok, LinkedIn, email and landing pages.",
   email_templates: "Hi, I'm Mailer! Give me your campaign brief and I'll generate three beautiful email layout variations — Hero, Text-first and Product showcase — ready to send via Mailchimp.",
+  performance:     "I'm Nexus, the performance intelligence agent. Give me your brand, market, channels and budget and I'll forecast reach, ROAS and channel-by-channel performance before you spend a single pound — grounded in real category benchmarks and your Fan Truth score.",
 };
 
 // Gender map based on avatar images:

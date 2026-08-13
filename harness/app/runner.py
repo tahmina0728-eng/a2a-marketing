@@ -4589,6 +4589,94 @@ kpi_validation must include one entry per validated KPI target listed above."""
     return result
 
 
+# ── PERFORMANCE STANDALONE (Analytics view) ──────────────────────────────────
+
+async def run_performance_standalone(prompt: str, campaign_id: str = "") -> dict:
+    """
+    Analytics standalone entry point for Nexus.
+    Accepts a free-text prompt ("Barclays UK, Wimbledon, £500k, Instagram + OOH"),
+    uses a quick LLM extraction pass to parse brief fields, then calls
+    run_performance_forecast with a synthetic machine_brief.
+    """
+    import uuid as _uuid
+    from app.agents._utils import _extract_brand as _eb
+
+    if not campaign_id:
+        campaign_id = "sa-" + str(_uuid.uuid4())[:8]
+
+    brand = _eb(prompt) or ""
+
+    # ── Extract brief fields from free text ──────────────────────────────────
+    import google.genai as _gx
+    from app.config import get_settings as _gsx
+    _ssx = _gsx()
+    _gcx = _gx.Client(vertexai=True, project=_ssx.gcp_project, location=_ssx.gcp_region)
+
+    _extract_prompt = (
+        "Extract these campaign brief fields from the text below and return ONLY valid JSON "
+        "(no markdown, no explanation):\n"
+        '{"market":"e.g. UK","budget":"e.g. £500k","goal":"e.g. brand awareness",'
+        '"channels":["Instagram","TikTok"],"audience_segment":"brief description",'
+        '"season":"e.g. Summer 2025 or empty","moment_type":"e.g. seasonal or empty",'
+        '"fan_truth_score":72}\n\n'
+        "Text:\n" + prompt
+    )
+    _raw_fields = await _vertex_generate(_gcx, _ssx.creative_model, _extract_prompt)
+    _fields = _parse_agent_response(_raw_fields)
+    if "raw_output" in _fields:
+        _fields = {}
+
+    _channels_raw = _fields.get("channels", ["Instagram", "TikTok", "Google Ads"])
+    if isinstance(_channels_raw, str):
+        _channels_raw = [c.strip() for c in _channels_raw.replace("/", ",").split(",")]
+    _channels: list = [c for c in _channels_raw if c]
+
+    _ft_score = int(_fields.get("fan_truth_score", 72))
+    _ft_verdict = "PASS" if _ft_score >= 70 else "FAIL"
+
+    machine_brief = {
+        "campaign_id":     campaign_id,
+        "brand":           brand or "Brand",
+        "product":         brand or "Brand",
+        "market":          _fields.get("market", "UK"),
+        "budget":          _fields.get("budget", ""),
+        "goal":            _fields.get("goal", "brand awareness"),
+        "season":          _fields.get("season", ""),
+        "moment_type":     _fields.get("moment_type", ""),
+        "status":          "APPROVED",
+        "fan_truth_score": {
+            "overall":   _ft_score,
+            "specific":  max(50, _ft_score - 4),
+            "shared":    max(50, _ft_score + 2),
+            "special":   max(50, _ft_score - 7),
+            "verdict":   _ft_verdict,
+            "statement": f"Standalone forecast for {brand or 'Brand'} — {_fields.get('goal', 'brand awareness')}.",
+        },
+        "audience": {
+            "segment":   _fields.get("audience_segment", "General audience"),
+            "age_range": "",
+            "gender":    "All",
+            "location":  _fields.get("market", "UK"),
+        },
+        "kpis":                [],
+        "brand_locks_applied": [],
+    }
+    strategy = {
+        "big_idea":     f"{brand or 'Brand'} — standalone performance forecast",
+        "hero_message": "",
+        "tagline":      "",
+    }
+    _copy: dict = {"short": {"headline": "", "subline": None}, "cta": ""}
+
+    return await run_performance_forecast(
+        machine_brief=machine_brief,
+        strategy=strategy,
+        copy=_copy,
+        channels=_channels,
+        campaign_id=campaign_id,
+    )
+
+
 # ── BRAND COMPLIANCE CHECK ────────────────────────────────────────────────────
 
 async def run_brand_compliance_check(

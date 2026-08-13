@@ -2354,6 +2354,17 @@ async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
     given one free-text prompt that names the brand + creative direction.
     See app/agent_standalone.py.
     """
+    # Performance / Nexus — async path (uses Vertex AI directly, can't go through to_thread)
+    if agent_key == "performance":
+        try:
+            from app.runner import run_performance_standalone
+            result = await run_performance_standalone(req.prompt)
+            return result
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Nexus forecast failed: {e}")
+
     from app import agent_standalone
     try:
         result = await asyncio.to_thread(

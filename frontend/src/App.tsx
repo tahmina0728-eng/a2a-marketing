@@ -4375,7 +4375,7 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, savedCampaigns, activeAgentKey, onSelectAgent,
   brandHubSection, onBrandHubSection, activeBrand, onBrandChange, publishingChannel, onPublishingChannel, publishingContentType }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
-  view: "app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list" | "email-converter"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing" | "campaigns" | "campaign-list" | "email-converter") => void;
+  view: "app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list" | "email-converter" | "analytics"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing" | "campaigns" | "campaign-list" | "email-converter" | "analytics") => void;
   onSelectCampaign: (c: {id:string;name:string;brand:string}|null) => void;
   savedCampaigns: {id:string;name:string;brand:string}[];
   activeAgentKey: string | null; onSelectAgent: (key: string) => void;
@@ -4479,7 +4479,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
               icon: <Icon d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" /> },
           ];
           const lowerItems = [
-            { label: "Analytics",     active: false, onClick: () => {},
+            { label: "Analytics",     active: view === "analytics", onClick: () => onNavigate("analytics"),
               icon: <Icon d="M18 20V10M12 20V4M6 20v-6" extra={<line x1="2" y1="20" x2="22" y2="20"/>} /> },
             { label: "Report",        active: false, onClick: () => {},
               icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
@@ -4893,7 +4893,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list" | "email-converter">("app");
+  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list" | "email-converter" | "analytics">("app");
   const [selectedCampaign, setSelectedCampaign] = useState<{id:string;name:string;brand:string}|null>(null);
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
   const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("overview");
@@ -5146,6 +5146,9 @@ export default function App() {
           <EmailConverter />
         ) : view === "hub" ? (
           <ContentHub onStartCampaign={() => setView("app")} />
+        ) : view === "analytics" ? (
+          <AgentProfile key="performance" agentKey="performance"
+            prompt={campaignPrompt} onPromptChange={setCampaignPrompt} />
         ) : view === "agent" && activeAgentKey ? (
           <AgentProfile key={activeAgentKey} agentKey={activeAgentKey}
             prompt={campaignPrompt} onPromptChange={setCampaignPrompt} />

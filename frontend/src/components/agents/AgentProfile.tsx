@@ -46,7 +46,7 @@ export default function AgentProfile({ agentKey, prompt, onPromptChange }: {
       )}
 
       <div style={{
-        maxWidth: showHeader ? 720 : 860,
+        maxWidth: agentKey === "performance" ? 900 : (showHeader ? 720 : 860),
         width: "100%",
         margin: "auto",
         position: "relative" as const, zIndex: 1,
@@ -117,11 +117,9 @@ export default function AgentProfile({ agentKey, prompt, onPromptChange }: {
 
         {agentKey === "briefing" && showHeader && !prompt.trim() && <BrandUploadPanel />}
 
-        {agentKey !== "performance" && (
-          <AgentRunPanel agentKey={agentKey} agentLabel={stage.label} color={color}
-            prompt={prompt} onPromptChange={onPromptChange}
-            onBriefingDone={() => setBriefingDone(true)} />
-        )}
+        <AgentRunPanel agentKey={agentKey} agentLabel={stage.label} color={color}
+          prompt={prompt} onPromptChange={onPromptChange}
+          onBriefingDone={() => setBriefingDone(true)} />
       </div>
     </div>
   );

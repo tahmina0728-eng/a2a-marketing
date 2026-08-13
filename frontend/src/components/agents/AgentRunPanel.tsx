@@ -137,26 +137,28 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
   };
 
   const AGENT_AGENDA: Record<string, string> = {
-    briefing: "What campaign should I brief and validate?",
-    strategy: "What campaign strategy should I build?",
-    copy:     "What headlines and copy should I write?",
-    culture:  "What cultural insights should I research?",
-    kv:       "What key visual should I create?",
-    reel:     "What campaign reel should I generate?",
-    channel:  "How should I adapt this campaign for channels?",
-    tvc:      "What TV commercial should I direct and produce?",
+    briefing:    "What campaign should I brief and validate?",
+    strategy:    "What campaign strategy should I build?",
+    copy:        "What headlines and copy should I write?",
+    culture:     "What cultural insights should I research?",
+    kv:          "What key visual should I create?",
+    reel:        "What campaign reel should I generate?",
+    channel:     "How should I adapt this campaign for channels?",
+    tvc:         "What TV commercial should I direct and produce?",
+    performance: "What campaign should I forecast performance for?",
   };
 
   const AGENT_RUNNING_MSG: Record<string, string> = {
-    briefing: "Logos is validating your brief and scoring the Fan Truth…",
-    strategy: "Helia is building your campaign strategy and big idea…",
-    copy:     "Ideon is writing headlines and copy for your campaign…",
-    culture:  "Aether is researching cultural trends and audience insights…",
-    kv:       "Morphis is generating your key visual with Gemini 3 Pro Image…",
-    reel:     "Kinetik is generating your 6-second reel with Veo — this can take 2-5 minutes…",
-    channel:  "Poly is adapting your campaign across channels and building the landing page…",
+    briefing:        "Logos is validating your brief and scoring the Fan Truth…",
+    strategy:        "Helia is building your campaign strategy and big idea…",
+    copy:            "Ideon is writing headlines and copy for your campaign…",
+    culture:         "Aether is researching cultural trends and audience insights…",
+    kv:              "Morphis is generating your key visual with Gemini 3 Pro Image…",
+    reel:            "Kinetik is generating your 6-second reel with Veo — this can take 2-5 minutes…",
+    channel:         "Poly is adapting your campaign across channels and building the landing page…",
     tvc:             "Director is writing the script and generating each scene with Veo — this takes 8–15 minutes…",
     email_templates: "Mailer is generating 3 email template variations with brand-matched copy and layouts…",
+    performance:     "Nexus is querying category benchmarks and modelling reach, ROAS and channel forecasts…",
   };
 
   const [tvcDuration, setTvcDuration] = useState<15|30>(30);
@@ -968,7 +970,207 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
           originalPrompt={prompt} onRegenerate={handleRegenerate} />
       )}
 
-      {status === "done" && result && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && agentKey !== "briefing" && (
+      {/* ── Nexus / Performance result dashboard ── */}
+      {status === "done" && result && agentKey === "performance" && (() => {
+        const m = result as any;
+        const cfs: any[]      = Array.isArray(m.channel_forecasts)    ? m.channel_forecasts    : [];
+        const kpis: any[]     = Array.isArray(m.kpi_validation)       ? m.kpi_validation       : [];
+        const watch: string[] = Array.isArray(m.first_48h_watchlist)   ? m.first_48h_watchlist  : [];
+        const bsplit: Record<string, number> = (m.recommended_budget_split && typeof m.recommended_budget_split === "object")
+          ? m.recommended_budget_split : {};
+        const bEntries = Object.entries(bsplit);
+
+        const R   = "#f43f5e";
+        const RBo = "rgba(244,63,94,0.26)";
+        const RL  = "rgba(244,63,94,0.07)";
+        const cc  = (c: string) => c === "HIGH" ? "#34d399" : c === "MEDIUM" ? "#fbbf24" : "#f87171";
+        const cbg = (c: string) => c === "HIGH" ? "rgba(52,211,153,0.13)" : c === "MEDIUM" ? "rgba(251,191,36,0.13)" : "rgba(248,113,113,0.13)";
+        const cbo = (c: string) => c === "HIGH" ? "rgba(52,211,153,0.32)" : c === "MEDIUM" ? "rgba(251,191,36,0.32)" : "rgba(248,113,113,0.32)";
+        const vc  = (v: string) => v === "ACHIEVABLE" ? "#34d399" : v === "AMBITIOUS" ? "#fbbf24" : "#f87171";
+        const vbg = (v: string) => v === "ACHIEVABLE" ? "rgba(52,211,153,0.13)" : v === "AMBITIOUS" ? "rgba(251,191,36,0.13)" : "rgba(248,113,113,0.13)";
+        const vi  = (v: string) => v === "ACHIEVABLE" ? "🟢" : v === "AMBITIOUS" ? "🟡" : "🔴";
+
+        const Card = ({ title, children, accent }: { title: string; children: React.ReactNode; accent?: string }) => (
+          <div style={{ background: "var(--card-bg)", borderRadius: 12, border: `1px solid ${accent ?? RBo}`,
+            padding: "16px 18px", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+            <div style={{ fontSize: 10, fontWeight: 800, color: accent ?? R, letterSpacing: "0.12em",
+              textTransform: "uppercase" as const, marginBottom: 10 }}>{title}</div>
+            {children}
+          </div>
+        );
+
+        const PALETTE = ["#f43f5e","#fb923c","#facc15","#4ade80","#38bdf8","#818cf8","#e879f9","#94a3b8"];
+
+        return (
+          <div style={{ marginTop: 20, display: "flex", flexDirection: "column" as const, gap: 14 }}>
+
+            {/* Header badge */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.12em", color: R,
+                textTransform: "uppercase" as const }}>NEXUS · FORECAST COMPLETE ✓</div>
+              {m.overall_confidence && (
+                <span style={{ fontSize: 11, fontWeight: 800, padding: "4px 12px", borderRadius: 99,
+                  background: cbg(m.overall_confidence), color: cc(m.overall_confidence),
+                  border: `1px solid ${cbo(m.overall_confidence)}`,
+                  letterSpacing: "0.06em", textTransform: "uppercase" as const }}>
+                  {m.overall_confidence} CONFIDENCE
+                </span>
+              )}
+            </div>
+
+            {/* KPI strip */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+              {[
+                { label: "Total Reach",  value: m.predicted_total_reach,  icon: "👥" },
+                { label: "Blended ROAS", value: m.predicted_blended_roas, icon: "💰" },
+                { label: "Top Channel",  value: cfs[0]?.channel,          icon: "📡" },
+              ].map(({ label, value, icon }) => (
+                <div key={label} style={{ background: "var(--card-bg)", border: `1px solid ${RBo}`,
+                  borderRadius: 12, padding: "14px 16px", textAlign: "center" as const }}>
+                  <div style={{ fontSize: 18, marginBottom: 6 }}>{icon}</div>
+                  <div style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2 }}>{value ?? "—"}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)", marginTop: 4,
+                    textTransform: "uppercase" as const, letterSpacing: "0.06em" }}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Forecast headline */}
+            {m.headline_prediction && (
+              <div style={{ background: RL, border: `1px solid ${RBo}`, borderRadius: 12, padding: "14px 16px" }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: R, letterSpacing: "0.1em",
+                  textTransform: "uppercase" as const, marginBottom: 6 }}>Nexus Forecast</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)", lineHeight: 1.55,
+                  fontStyle: "italic" }}>"{m.headline_prediction}"</div>
+              </div>
+            )}
+
+            {/* Channel forecasts table */}
+            {cfs.length > 0 && (
+              <Card title="Channel-by-Channel Forecast">
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                  {cfs.map((cf: any, i: number) => (
+                    <div key={i} style={{
+                      display: "grid", gridTemplateColumns: "1fr 80px 70px 70px 70px",
+                      alignItems: "center", gap: 8,
+                      background: i % 2 === 0 ? RL : "transparent",
+                      borderRadius: 8, padding: "10px 12px",
+                      border: `1px solid ${i % 2 === 0 ? RBo : "transparent"}`,
+                    }}>
+                      <div>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{cf.channel}</div>
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 99,
+                          background: cbg(cf.confidence), color: cc(cf.confidence),
+                          border: `1px solid ${cbo(cf.confidence)}`, textTransform: "uppercase" as const,
+                          letterSpacing: "0.05em" }}>{cf.confidence}</span>
+                      </div>
+                      {[
+                        { label: "Reach", val: cf.predicted_reach },
+                        { label: "CTR",   val: cf.predicted_ctr },
+                        { label: "ROAS",  val: cf.predicted_roas },
+                        { label: "Eng.",  val: cf.predicted_engagement },
+                      ].map(({ label, val }) => (
+                        <div key={label} style={{ textAlign: "center" as const }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{val ?? "—"}</div>
+                          <div style={{ fontSize: 9, color: "var(--text-tertiary)", fontWeight: 600,
+                            textTransform: "uppercase" as const }}>{label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Fan truth + benchmark */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              {m.fan_truth_impact && (
+                <Card title="Fan Truth Impact" accent="rgba(99,102,241,0.4)">
+                  <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.65 }}>{m.fan_truth_impact}</div>
+                </Card>
+              )}
+              {m.benchmark_comparison && (
+                <Card title="vs. Benchmarks" accent="rgba(16,185,129,0.4)">
+                  <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.65 }}>{m.benchmark_comparison}</div>
+                </Card>
+              )}
+              {m.top_risk && (
+                <Card title="⚠️ Top Risk" accent="rgba(248,113,113,0.4)">
+                  <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.65 }}>{m.top_risk}</div>
+                </Card>
+              )}
+              {m.top_opportunity && (
+                <Card title="✅ Top Opportunity" accent="rgba(52,211,153,0.4)">
+                  <div style={{ fontSize: 12, color: "var(--text-tertiary)", lineHeight: 1.65 }}>{m.top_opportunity}</div>
+                </Card>
+              )}
+            </div>
+
+            {/* KPI validation */}
+            {kpis.length > 0 && (
+              <Card title="KPI Target Validation">
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                  {kpis.map((kpi: any, i: number) => (
+                    <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10,
+                      padding: "8px 10px", borderRadius: 8,
+                      background: i % 2 === 0 ? "var(--hover-bg)" : "transparent" }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{kpi.metric}</span>
+                        <span style={{ fontSize: 11, color: "var(--text-tertiary)", marginLeft: 8 }}>
+                          Target: {kpi.client_target} → Forecast: {kpi.forecast}
+                        </span>
+                        {kpi.note && <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 2 }}>{kpi.note}</div>}
+                      </div>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 99, whiteSpace: "nowrap" as const,
+                        background: vbg(kpi.verdict ?? ""), color: vc(kpi.verdict ?? "") }}>
+                        {vi(kpi.verdict ?? "")} {kpi.verdict}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Budget split + watchlist */}
+            <div style={{ display: "grid", gridTemplateColumns: bEntries.length > 0 ? "1.2fr 1fr" : "1fr", gap: 12 }}>
+              {bEntries.length > 0 && (
+                <Card title="Budget Allocation">
+                  <div style={{ height: 16, borderRadius: 8, overflow: "hidden", display: "flex", marginBottom: 10 }}>
+                    {bEntries.map(([, pct], i) => (
+                      <div key={i} style={{ width: `${(pct * 100).toFixed(1)}%`, background: PALETTE[i % PALETTE.length] }} />
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 6 }}>
+                    {bEntries.map(([ch, pct], i) => (
+                      <div key={ch} style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        <div style={{ width: 8, height: 8, borderRadius: 2, background: PALETTE[i % PALETTE.length] }} />
+                        <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>{ch}</span>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: "var(--text-primary)" }}>{(pct * 100).toFixed(0)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+              {watch.length > 0 && (
+                <Card title="⏱ First 48h Watchlist">
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 6 }}>
+                    {watch.map((item: string, i: number) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8,
+                        padding: "6px 8px", borderRadius: 7, background: RL, border: `1px solid ${RBo}` }}>
+                        <span style={{ fontSize: 11, flexShrink: 0 }}>{i === 0 ? "🔴" : i === 1 ? "🟡" : "🟢"}</span>
+                        <span style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5 }}>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+            </div>
+
+          </div>
+        );
+      })()}
+
+      {status === "done" && result && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && agentKey !== "briefing" && agentKey !== "performance" && (
         <div style={{ marginTop: 14, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
           {Object.entries(result).filter(([k]) => k !== "agent").map(([key, val]) => (
             <div key={key} style={{ marginBottom: 8 }}>
