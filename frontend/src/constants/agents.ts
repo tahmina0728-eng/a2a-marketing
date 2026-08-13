@@ -135,6 +135,7 @@ export const AGENT_AVATARS: Record<number, string> = {
   5: "/agent-logo/Morphis.png",     // Morphis    (kv)
   6: "/agent-logo/Kinetic.png",     // Kinetik    (reel)
   7: "/agent-logo/Poly.png",        // Poly       (channel)
+  8: "/agent-logo/Nexus.png",       // Nexus      (performance)
   9: "/agent-logo/Morphis 1.png",   // Director   (tvc)
 };
 export const avatarUrl = (_label: string, idx: number): string =>
