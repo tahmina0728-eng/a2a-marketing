@@ -2456,6 +2456,29 @@ async def figma_status():
     }
 
 
+@app.post("/convert-email")
+async def convert_email(
+    file: UploadFile = File(...),
+    brand_name: str  = Form(""),
+    brand_color: str = Form("#0055A4"),
+):
+    """
+    Convert an uploaded document (docx / pdf / xlsx / csv) to a
+    standalone HTML email.  Returns { html, slots, image_count, filename }.
+    """
+    content  = await file.read()
+    filename = file.filename or "document"
+    try:
+        from app.agents.converter import convert_document
+        result = convert_document(content, filename, brand_name.strip(), brand_color.strip())
+        return JSONResponse(result)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.error("convert_email_error", filename=filename, error=str(exc))
+        raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
+
+
 @app.post("/refresh")
 async def refresh():
     """

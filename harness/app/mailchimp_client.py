@@ -170,8 +170,24 @@ def set_campaign_content(campaign_id: str, html: str, plain_text: str = "") -> d
 
 def schedule_campaign(campaign_id: str, schedule_time: str) -> dict:
     """Schedule a campaign for future send (ISO 8601 UTC, e.g. '2026-07-10T09:00:00+00:00')."""
-    result = _post(f"/campaigns/{campaign_id}/actions/schedule", {"schedule_time": schedule_time})
-    return result
+    import requests as _req
+    r = _req.post(
+        f"{_base()}/campaigns/{campaign_id}/actions/schedule",
+        headers=_headers(), json={"schedule_time": schedule_time}, timeout=15,
+    )
+    if r.status_code == 403:
+        detail = ""
+        try:
+            detail = r.json().get("detail", "")
+        except Exception:
+            pass
+        raise ValueError(
+            "Scheduling requires a paid Mailchimp plan (Standard or higher). "
+            "Clear the schedule date to send immediately instead."
+            + (f" Mailchimp detail: {detail}" if detail else "")
+        )
+    r.raise_for_status()
+    return r.json()
 
 
 def send_campaign(campaign_id: str) -> dict:
@@ -266,7 +282,16 @@ def create_and_send(
     cid = campaign["id"]
     set_campaign_content(cid, html)
     if schedule_time:
-        schedule_campaign(cid, schedule_time)
-        return {"campaign_id": cid, "status": "scheduled", "schedule_time": schedule_time}
+        try:
+            schedule_campaign(cid, schedule_time)
+            return {"campaign_id": cid, "status": "scheduled", "schedule_time": schedule_time}
+        except ValueError:
+            # Delete the orphaned draft so it doesn't clutter the account
+            try:
+                import requests as _req
+                _req.delete(f"{_base()}/campaigns/{cid}", headers=_headers(), timeout=10)
+            except Exception:
+                pass
+            raise
     send_campaign(cid)
     return {"campaign_id": cid, "status": "sent"}

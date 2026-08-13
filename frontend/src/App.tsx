@@ -38,6 +38,7 @@ import {
 import { API_BASE_PUB } from "./services/briefingApi";
 import AgentProfile from "./components/agents/AgentProfile";
 import BriefingAgentDashboard from "./components/briefing/BriefingAgentDashboard";
+import EmailConverter from "./components/EmailConverter";
 
 // ── Infosys Aster logo — top-left header (small, with "Powered by") ──
 function AsterLogo({ size = 1 }: { size?: number }) {
@@ -4264,7 +4265,7 @@ function HomeScreen({ onStart }: { onStart: () => void }) {
 function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, savedCampaigns, activeAgentKey, onSelectAgent,
   brandHubSection, onBrandHubSection, activeBrand, onBrandChange, publishingChannel, onPublishingChannel, publishingContentType }: {
   theme: "light" | "dark"; onToggleTheme: () => void;
-  view: "app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing" | "campaigns" | "campaign-list") => void;
+  view: "app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list" | "email-converter"; onNavigate: (v: "app" | "hub" | "brand-hub" | "publishing" | "campaigns" | "campaign-list" | "email-converter") => void;
   onSelectCampaign: (c: {id:string;name:string;brand:string}|null) => void;
   savedCampaigns: {id:string;name:string;brand:string}[];
   activeAgentKey: string | null; onSelectAgent: (key: string) => void;
@@ -4360,6 +4361,9 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
           const midItems = [
             { label: "Content Studio",active: view === "hub",  onClick: () => onNavigate("hub"),
               icon: <Icon d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" /> },
+            { label: "Email Converter", active: view === "email-converter", onClick: () => onNavigate("email-converter"),
+              icon: <Icon d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+                extra={<><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></>} /> },
             { label: "Publishing",    active: view === "publishing",
               onClick: () => { onNavigate("publishing"); setPublishingOpen(o => !o); },
               icon: <Icon d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13" /> },
@@ -4454,13 +4458,24 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
                 );
               })}
 
-              {/* Content Studio */}
+              {/* Content Studio + Tools section */}
               {midItems.filter(i => i.label !== "Publishing").map(item => (
-                <button key={item.label} onClick={item.onClick} style={nb(item.active)}>
-                  <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    {item.icon}{item.label}
-                  </span>
-                </button>
+                <Fragment key={item.label}>
+                  {item.label === "Email Converter" && (
+                    <div style={{ margin: "10px 0 2px", padding: "0 12px",
+                      display: "flex", alignItems: "center" }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: ".06em",
+                        textTransform: "uppercase" as const, color: "var(--text-tertiary)" }}>
+                        Tools
+                      </span>
+                    </div>
+                  )}
+                  <button onClick={item.onClick} style={nb(item.active)}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      {item.icon}{item.label}
+                    </span>
+                  </button>
+                </Fragment>
               ))}
 
               {/* ── Campaigns section ── */}
@@ -4768,7 +4783,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 export default function App() {
   const { state, startFullCampaign, reset } = usePipeline();
   const { theme, toggleTheme } = useTheme();
-  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list">("app");
+  const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list" | "email-converter">("app");
   const [selectedCampaign, setSelectedCampaign] = useState<{id:string;name:string;brand:string}|null>(null);
   const [activeAgentKey, setActiveAgentKey] = useState<string | null>(null);
   const [brandHubSection, setBrandHubSection] = useState<BrandHubSection>("overview");
@@ -5017,6 +5032,8 @@ export default function App() {
               />
             </div>
           </>
+        ) : view === "email-converter" ? (
+          <EmailConverter />
         ) : view === "hub" ? (
           <ContentHub onStartCampaign={() => setView("app")} />
         ) : view === "agent" && activeAgentKey ? (
