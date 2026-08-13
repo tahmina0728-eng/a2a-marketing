@@ -5,7 +5,7 @@
   "format":           "9:16",
   "duration_seconds": 6,
   "beats":            4,
-  "default_concept":  "wimbledon_hero",
+  "default_concept":  "backing_the_dream",
 
   "brand": {
     "id":      "barclays",
@@ -224,7 +224,7 @@
     "wimbledon_hero": {
       "title":          "Wimbledon Hero",
       "creative_theme": "achievement",
-      "keywords":       [],
+      "keywords":       ["champion", "wimbledon court", "centre court", "grand slam", "title"],
 
       "copy_slots": [
         { "id": "end_frame", "purpose": "campaign_closing_message",  "max_words": 8, "scene_id": 4 }
@@ -261,6 +261,186 @@
           "visual":   "Wide stadium atmosphere, crowd, golden hour, pulling to clean dark brand end frame for logo and copy overlay.",
           "emotion":  "triumph",
           "audio":    "musical resolve",
+          "transition": "fade_to_brand"
+        }
+      ]
+    },
+
+    "backing_the_dream": {
+      "title":          "We Back You",
+      "creative_theme": "backing",
+      "keywords":       ["back you", "backing", "we back", "believe in you", "support", "ambition", "dream", "your side", "behind you"],
+
+      "copy_slots": [
+        { "id": "end_frame", "purpose": "campaign_closing_message", "max_words": 8, "scene_id": 4 }
+      ],
+
+      "scenes": [
+        {
+          "scene_id": 1, "start": 0, "end": 1.5,
+          "camera":   "Close-up",
+          "visual":   "Hands writing in a notebook or lacing up shoes — an ordinary person preparing for something that matters to them. Warm morning light, focused and quiet.",
+          "emotion":  "quiet determination",
+          "audio":    "ambient silence, distant birdsong",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 2, "start": 1.5, "end": 3,
+          "camera":   "Medium shot",
+          "visual":   "The person steps out the front door into an English summer morning — head up, shoulders back. Behind them, someone (partner, parent, friend) watches with quiet pride.",
+          "emotion":  "hope",
+          "audio":    "gentle ambient swell",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 3, "start": 3, "end": 4.5,
+          "camera":   "Tracking from behind",
+          "visual":   "They walk toward something — a community building, a sports facility, an open field — the Wimbledon towers visible distantly on the London skyline as aspiration, not destination.",
+          "emotion":  "aspiration",
+          "audio":    "crowd ambience rising softly from afar",
+          "transition": "dissolve"
+        },
+        {
+          "scene_id": 4, "start": 4.5, "end": 6,
+          "camera":   "Wide → brand cut",
+          "visual":   "Wide golden-hour English landscape — quiet, resolved, purposeful. Fades to clean dark brand end frame.",
+          "emotion":  "resolution",
+          "audio":    "warm musical resolve",
+          "transition": "fade_to_brand"
+        }
+      ]
+    },
+
+    "local_courts": {
+      "title":          "Greatness Starts on Local Courts",
+      "creative_theme": "community",
+      "keywords":       ["local court", "grassroots", "community", "every player", "local", "park", "neighbourhood", "accessible", "starts here", "beginnings"],
+
+      "copy_slots": [
+        { "id": "end_frame", "purpose": "campaign_closing_message", "max_words": 8, "scene_id": 4 }
+      ],
+
+      "scenes": [
+        {
+          "scene_id": 1, "start": 0, "end": 1.5,
+          "camera":   "Wide establishing",
+          "visual":   "A public park tennis court on a bright English summer morning — chipped tarmac, faded lines, a child bouncing a ball. Real and unpolished.",
+          "emotion":  "innocence",
+          "audio":    "birdsong, distant traffic, court sounds",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 2, "start": 1.5, "end": 3,
+          "camera":   "Medium two-shot",
+          "visual":   "A volunteer coach (diverse, warm) gives a young player a small correction — patient, encouraging, specific. The child tries again and it clicks.",
+          "emotion":  "learning",
+          "audio":    "ambient court, soft crowd from a nearby radio",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 3, "start": 3, "end": 4.5,
+          "camera":   "Close-up to wide",
+          "visual":   "The child hits the ball cleanly — their face lit up, coach arms raised quietly. The camera pulls back to reveal parents watching from the fence, beaming.",
+          "emotion":  "shared_joy",
+          "audio":    "crowd ambience rising, celebratory",
+          "transition": "dissolve"
+        },
+        {
+          "scene_id": 4, "start": 4.5, "end": 6,
+          "camera":   "Wide → brand cut",
+          "visual":   "Wide shot of the community court — sunlight cutting across it, the child still playing. Fades to clean dark brand end frame.",
+          "emotion":  "warmth",
+          "audio":    "uplifting musical resolve",
+          "transition": "fade_to_brand"
+        }
+      ]
+    },
+
+    "the_crowd": {
+      "title":          "Felt by Everyone",
+      "creative_theme": "shared_moment",
+      "keywords":       ["fans", "crowd", "watching", "together", "shared", "feel it", "everyone", "in the stands", "families", "spectators", "atmosphere"],
+
+      "copy_slots": [
+        { "id": "end_frame", "purpose": "campaign_closing_message", "max_words": 8, "scene_id": 4 }
+      ],
+
+      "scenes": [
+        {
+          "scene_id": 1, "start": 0, "end": 1.5,
+          "camera":   "Close-up detail",
+          "visual":   "Hands gripping together — a family in the stands, strawberries on a lap, a programme folded tight. The texture of a Wimbledon day, not the court.",
+          "emotion":  "anticipation",
+          "audio":    "crowd murmur, rustling programme",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 2, "start": 1.5, "end": 3,
+          "camera":   "Crowd portrait",
+          "visual":   "Faces in the crowd — a child leaning forward, a grandparent watching with decades of this memory, a couple side by side. Diverse, real, English summer.",
+          "emotion":  "connection",
+          "audio":    "crowd rising",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 3, "start": 3, "end": 4.5,
+          "camera":   "Slow-motion crowd reaction",
+          "visual":   "Slow-motion crowd eruption — faces mid-cheer, arms up, strawberries forgotten, pure collective joy. Not a single face on court — only the watchers.",
+          "emotion":  "shared_triumph",
+          "audio":    "crowd eruption, orchestral swell",
+          "transition": "dissolve"
+        },
+        {
+          "scene_id": 4, "start": 4.5, "end": 6,
+          "camera":   "Wide → brand cut",
+          "visual":   "Wide stadium from the crowd's perspective — sky, sun, the whole beautiful English summer scene. Fades to clean dark brand end frame.",
+          "emotion":  "awe",
+          "audio":    "musical resolve",
+          "transition": "fade_to_brand"
+        }
+      ]
+    },
+
+    "behind_the_win": {
+      "title":          "Behind Every Win",
+      "creative_theme": "partnership",
+      "keywords":       ["behind", "unseen", "enables", "makes possible", "foundation", "what it takes", "the real work", "preparation", "dedication"],
+
+      "copy_slots": [
+        { "id": "end_frame", "purpose": "campaign_closing_message", "max_words": 8, "scene_id": 4 }
+      ],
+
+      "scenes": [
+        {
+          "scene_id": 1, "start": 0, "end": 1.5,
+          "camera":   "Intimate close-up",
+          "visual":   "Pre-dawn: groundskeeper's hands rolling the Wimbledon grass, dew catching first light. The court being prepared before a single spectator arrives.",
+          "emotion":  "quiet dedication",
+          "audio":    "near silence, dawn birdsong, roller on grass",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 2, "start": 1.5, "end": 3,
+          "camera":   "Documentary-style medium",
+          "visual":   "Behind the scenes — ball kids in formation, stewards opening gates, the tournament machinery waking up. Ordinary people making extraordinary happen.",
+          "emotion":  "collective purpose",
+          "audio":    "ambient activity building",
+          "transition": "cut"
+        },
+        {
+          "scene_id": 3, "start": 3, "end": 4.5,
+          "camera":   "Contrast cut",
+          "visual":   "The crowd floods in — the transformation complete. What was quiet preparation becomes a living, breathing occasion. The person who rolled the grass watches from the side, quietly proud.",
+          "emotion":  "pride",
+          "audio":    "crowd swell, uplifting music",
+          "transition": "dissolve"
+        },
+        {
+          "scene_id": 4, "start": 4.5, "end": 6,
+          "camera":   "Wide → brand cut",
+          "visual":   "Wide overhead: the full stadium, courts, gardens, the whole Wimbledon world. Fades to clean dark brand end frame.",
+          "emotion":  "grandeur",
+          "audio":    "orchestral resolve",
           "transition": "fade_to_brand"
         }
       ]

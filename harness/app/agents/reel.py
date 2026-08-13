@@ -689,7 +689,13 @@ def run_reel(brand: str, prompt: str, campaign_type: str = "", copy_headline: st
     # ── Step 3: Generate the rich 80-100 word cinematic prompt (same as full pipeline) ──
     _voiceover_line = f'A warm confident voiceover says: "{voiceover}"' if voiceover \
         else "A warm confident voiceover narrates the campaign tagline."
-    _barclays_veo_rules = _barclays_brand.reel_veo_rules() if _is_barclays else ""
+    # For Barclays, reel_veo_rules() now embeds the voiceover in the AUDIO directive
+    # so we skip the generic AUDIO lines that would otherwise conflict with it.
+    _barclays_veo_rules = _barclays_brand.reel_veo_rules(voiceover) if _is_barclays else ""
+    _generic_audio = (
+        f"- AUDIO: upbeat brand-appropriate background music + {_voiceover_line}\n"
+        f"- The voiceover should be delivered confidently and warmly over the music\n"
+    ) if not _is_barclays else ""
     prompt_req = (
         f"Write a single cinematic video+audio generation prompt (80-100 words) "
         f"for a 6-second {brand} campaign reel with voiceover.\n\n"
@@ -702,8 +708,7 @@ def run_reel(brand: str, prompt: str, campaign_type: str = "", copy_headline: st
         f"Base visual direction: {brand_scene}\n\n"
         f"Rules:\n"
         f"- Photorealistic, premium advertising quality, dynamic motion, brand colours prominent\n"
-        f"- AUDIO: upbeat brand-appropriate background music + {_voiceover_line}\n"
-        f"- The voiceover should be delivered confidently and warmly over the music\n"
+        f"{_generic_audio}"
         f"- No text or typography visible in the image\n"
         f"- CRITICAL: absolutely NO film strip borders, NO film perforations, NO sprocket holes, "
         f"NO timecodes, NO frame counters, NO film slates, NO clapperboards, NO camera overlays — "

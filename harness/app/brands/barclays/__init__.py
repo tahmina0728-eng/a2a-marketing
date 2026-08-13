@@ -343,7 +343,14 @@ def select_concept(
 # ── Reel — scene direction ────────────────────────────────────────────────────
 
 def _pick_reel_concept(big_idea: str, fan_truth: str, copy_headline: str, concept_key: str = "") -> tuple:
-    """Return (concept_key, concept_dict) from reel-concepts.json."""
+    """Return (concept_key, concept_dict) from reel-concepts.json.
+
+    Priority:
+      1. Explicit concept_key override
+      2. Keyword match across big_idea + fan_truth + copy_headline (longest match first)
+      3. Semantic fallback — infer territory from copy tone when no keyword matches
+      4. JSON default_concept
+    """
     concepts = _wimb_reels["concepts"]
 
     if concept_key and concept_key in concepts:
@@ -360,6 +367,22 @@ def _pick_reel_concept(big_idea: str, fan_truth: str, copy_headline: str, concep
     for kw, ckey, cdata in kw_index:
         if kw in seed:
             return ckey, cdata
+
+    # Semantic fallback — map common copy patterns to the right visual territory
+    # so the story matches what the copy says, not always tennis action.
+    _community_terms = ["local", "grassroots", "community", "park", "accessible", "every"]
+    _crowd_terms     = ["fans", "crowd", "watching", "together", "shared", "feel"]
+    _backing_terms   = ["back", "support", "behind you", "believe", "ambition", "dream"]
+    _behind_terms    = ["behind", "unseen", "enables", "foundation", "dedication", "preparation"]
+
+    if any(t in seed for t in _community_terms):
+        return "local_courts", concepts["local_courts"]
+    if any(t in seed for t in _crowd_terms):
+        return "the_crowd", concepts["the_crowd"]
+    if any(t in seed for t in _behind_terms):
+        return "behind_the_win", concepts["behind_the_win"]
+    if any(t in seed for t in _backing_terms):
+        return "backing_the_dream", concepts["backing_the_dream"]
 
     default = _wimb_reels["default_concept"]
     return default, concepts[default]
@@ -416,17 +439,29 @@ def reel_storyboard(
 
 # ── Reel — Veo config ─────────────────────────────────────────────────────────
 
-def reel_veo_rules() -> str:
-    """Return Barclays-specific Veo prompt rules."""
-    voiceover = (
-        "Subtle ambient sound design — crowd ambience, heartbeat, musical resolve — "
-        "no dialogue voiceover unless brand-approved."
-    )
+def reel_veo_rules(voiceover: str = "") -> str:
+    """Return Barclays-specific Veo prompt rules.
+
+    When voiceover text is supplied it is embedded in the AUDIO directive so
+    the generated audio narrates exactly the same line that appears as the
+    on-screen text overlay — preventing the audio/text mismatch that occurs
+    when two conflicting AUDIO instructions are present in the Veo prompt.
+    """
+    if voiceover.strip():
+        audio = (
+            f"Subtle ambient sound design — Wimbledon crowd ambience, heartbeat, musical resolve — "
+            f"with a single clear warm voiceover line spoken at the end: \"{voiceover.strip()}\""
+        )
+    else:
+        audio = (
+            "Subtle ambient sound design — Wimbledon crowd ambience, heartbeat, musical resolve — "
+            "no additional dialogue voiceover."
+        )
     return (
         "- Photorealistic premium UK financial-services advertising quality — NOT FMCG\n"
         "- Deep navy and sky-blue colour palette — understated, not saturated\n"
         "- Cinematic, understated, emotionally powerful — sophisticated not flashy\n"
-        f"- AUDIO: {voiceover}\n"
+        f"- AUDIO: {audio}\n"
         "- NO product packshots, NO bank app screens, NO financial data\n"
         "- CRITICAL: absolutely NO text, words, numbers, or typography of any kind in the generated footage — all copy is composited after generation\n"
         "- NO logos, NO brand marks, NO eagle symbols — all composited after generation\n"
