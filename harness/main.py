@@ -2470,24 +2470,29 @@ async def figma_status():
 
 @app.post("/convert-email")
 async def convert_email(
-    file: UploadFile = File(...),
-    brand_name: str  = Form(""),
+    files: list[UploadFile] = File(...),
+    brand_name:  str = Form(""),
     brand_color: str = Form("#0055A4"),
 ):
     """
-    Convert an uploaded document (docx / pdf / xlsx / csv) to a
-    standalone HTML email.  Returns { html, slots, image_count, filename }.
+    Convert one or more uploaded documents to a single HTML email.
+    Supports: docx, pdf, xlsx, xls, csv, txt, pptx, jpg, jpeg, png, gif, webp.
+    Returns { html, slots, image_count, filename, file_count }.
     """
-    content  = await file.read()
-    filename = file.filename or "document"
+    from app.agents.converter import convert_documents
+    pairs: list[tuple[bytes, str]] = []
+    for uf in files:
+        content  = await uf.read()
+        filename = uf.filename or "document"
+        pairs.append((content, filename))
     try:
-        from app.agents.converter import convert_document
-        result = convert_document(content, filename, brand_name.strip(), brand_color.strip())
+        result = convert_documents(pairs, brand_name.strip(), brand_color.strip())
         return JSONResponse(result)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception as exc:
-        logger.error("convert_email_error", filename=filename, error=str(exc))
+        names = ", ".join(p[1] for p in pairs)
+        logger.error("convert_email_error", filenames=names, error=str(exc))
         raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
 
 
