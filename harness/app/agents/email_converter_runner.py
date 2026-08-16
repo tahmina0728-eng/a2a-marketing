@@ -158,17 +158,18 @@ _TEMPLATE_LABELS = {
     "product":    "Product — feature showcase with CTA",
 }
 
-_BRAND_COLORS: dict[str, str] = {
-    "haleon":      "#0055A4",
-    "ubs":         "#E30613",
-    "glenfiddich": "#0A6B65",
-    "boozt":       "#0D1B4A",
-    "sunglow":     "#C0007C",
-    "rnorr":       "#006B35",
-}
-
-
 def _detect_brand_color(brand: str) -> str:
-    """Best-effort brand primary colour from known brands; falls back to CampaignOS blue."""
-    key = brand.lower().split()[0]
-    return _BRAND_COLORS.get(key, "#0055A4")
+    """
+    Read the primary brand colour from brand.json in the GCS bucket / local bucket.
+    Falls back to CampaignOS blue if brand.json is missing or has no colours.
+    """
+    try:
+        from app.brand_assets import get_asset_loader
+        profile = get_asset_loader().load_brand_profile(brand)
+        if profile:
+            colors = profile.get("visual_identity", {}).get("primary_colors", [])
+            if colors:
+                return colors[0]
+    except Exception:
+        pass
+    return "#0055A4"
