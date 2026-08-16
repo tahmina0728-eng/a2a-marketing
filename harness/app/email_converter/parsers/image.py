@@ -24,12 +24,14 @@ _EXT_MIME: dict[str, str] = {
 
 
 def parse_image(content: bytes, filename: str, mime: str) -> dict:
-    """Base mode — embed image as-is, derive headline from filename."""
-    b64  = base64.b64encode(content).decode()
-    name = re.sub(r"[-_]+", " ", filename.rsplit(".", 1)[0]).strip().title()
+    """Base mode — embed image as a visual asset. No text blocks generated.
+    The filename is metadata, not copy — the LLM composer derives the headline
+    from campaign documents, not from the image filename.
+    """
+    b64 = base64.b64encode(content).decode()
     return {
-        "blocks": [{"type": "heading", "level": 1, "text": name}],
-        "images": [{"b64": b64, "mime": mime}],
+        "blocks": [],
+        "images": [{"b64": b64, "mime": mime, "filename": filename}],
         "vision": None,
     }
 

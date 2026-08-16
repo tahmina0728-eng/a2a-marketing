@@ -119,11 +119,33 @@ class EmailConverterAgent:
             colors = brand_ctx.get("brand_colors", [])
             brand_color = colors[0] if colors else "#0055A4"
 
-        # ── 4. Select template ────────────────────────────────────────────
+        # ── 4. LLM composer — classify content and write marketing copy ───
+        # This is the critical step that prevents raw brand guidelines /
+        # internal document text from appearing in the email body.
+        # The LLM reads ALL extracted text, classifies it (brand rules vs
+        # campaign facts vs internal), and writes fresh customer-facing copy.
+        try:
+            from app.email_converter.composer.llm import compose_with_llm
+            from app.config import get_settings
+            project = self.gcp_project or get_settings().gcp_project or ""
+            if project:
+                merged = compose_with_llm(
+                    merged,
+                    brand_name       = brand_name,
+                    brand_context    = brand_ctx,
+                    project          = project,
+                )
+                logger.info("email_converter_llm_compose_ok", brand=brand_name)
+            else:
+                logger.warning("email_converter_llm_skipped", reason="no GCP project configured")
+        except Exception as exc:
+            logger.warning("email_converter_llm_compose_failed", error=str(exc))
+
+        # ── 5. Select template ────────────────────────────────────────────
         template = TemplateLibrary().select(merged)
         merged["_template"] = template
 
-        # ── 5. Build HTML ─────────────────────────────────────────────────
+        # ── 6. Build HTML ─────────────────────────────────────────────────
         multi_file = len(slots_list) > 1
         html = build_html(
             merged,
@@ -132,7 +154,7 @@ class EmailConverterAgent:
             multi_file  = multi_file,
         )
 
-        # ── 6. Validate ───────────────────────────────────────────────────
+        # ── 7. Validate ───────────────────────────────────────────────────
         validation_summary = "Not validated"
         validation_passed  = True
         try:
