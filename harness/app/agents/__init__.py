@@ -7,7 +7,8 @@ from app.agents.channel         import run_channel, get_standalone_page
 from app.agents.kv              import run_kv
 from app.agents.tvc             import run_tvc
 from app.agents.reel            import run_reel
-from app.agents.email_templates import run_email_templates
+from app.agents.email_templates        import run_email_templates
+from app.agents.email_converter_runner import run_email_converter
 
 # ADK pipeline agent instances (used by pipeline.py)
 # Re-exported here because the agents/ package shadows the old agents.py module.
@@ -32,10 +33,13 @@ from app._pipeline_agents import (
     performance_agent,
 )
 
+from app.email_converter.agent import email_converter_agent
+
 __all__ = [
     # Standalone runners
     "run_briefing", "run_strategy", "run_copy", "run_culture",
-    "run_channel", "run_kv", "run_tvc", "run_reel", "run_email_templates",
+    "run_channel", "run_kv", "run_tvc", "run_reel",
+    "run_email_templates", "run_email_converter",
     "get_standalone_page",
     # ADK pipeline agents
     "briefing_agent", "fan_truth_gate", "hitl_brief_approval",
@@ -43,4 +47,5 @@ __all__ = [
     "kv_generator_1", "kv_generator_2", "kv_image_agent_1", "kv_image_agent_2",
     "kv_ranker", "hitl_kv_selection", "channel_router",
     "content_agent", "execution_agent", "aggregation_agent", "performance_agent",
+    "email_converter_agent",
 ]

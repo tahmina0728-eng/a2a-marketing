@@ -10,7 +10,8 @@ import structlog
 
 from app.agents import (
     run_briefing, run_strategy, run_copy, run_culture,
-    run_channel, run_kv, run_tvc, run_reel, run_email_templates,
+    run_channel, run_kv, run_tvc, run_reel,
+    run_email_templates, run_email_converter,
     get_standalone_page,
 )
 from app.agents._utils import _extract_brand
@@ -92,6 +93,7 @@ _RUNNERS = {
     "reel":            run_reel,
     "tvc":             run_tvc,
     "email_templates": run_email_templates,
+    "email_converter": run_email_converter,
 }
 
 

@@ -1,11 +1,9 @@
 """
-converter.py — Document-to-HTML-email converter
+converter.py — LEGACY shim. The email converter has been refactored
+into app/email_converter/. This file is kept for backward compatibility.
 
-Supports: .docx, .doc (try), .pdf, .xlsx/.xls, .csv, .txt,
-          .jpg/.jpeg/.png/.gif/.webp (images), .pptx (PowerPoint)
-
-Multiple files are merged into one combined email, with visual
-section breaks between each source document.
+New code should import from app.email_converter directly:
+    from app.email_converter import EmailConverterAgent
 """
 from __future__ import annotations
 

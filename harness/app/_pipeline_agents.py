@@ -245,3 +245,7 @@ performance_agent = Agent(
     output_key  = "performance_forecast",
     mode        = "single_turn",
 )
+
+# ── EMAIL CONVERTER ───────────────────────────────────────────────────────
+
+from app.email_converter.agent import email_converter_agent  # noqa: E402

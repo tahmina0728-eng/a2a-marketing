@@ -2479,14 +2479,15 @@ async def convert_email(
     Supports: docx, pdf, xlsx, xls, csv, txt, pptx, jpg, jpeg, png, gif, webp.
     Returns { html, slots, image_count, filename, file_count }.
     """
-    from app.agents.converter import convert_documents
+    from app.email_converter import EmailConverterAgent
+    agent = EmailConverterAgent()
     pairs: list[tuple[bytes, str]] = []
     for uf in files:
         content  = await uf.read()
         filename = uf.filename or "document"
         pairs.append((content, filename))
     try:
-        result = convert_documents(pairs, brand_name.strip(), brand_color.strip())
+        result = agent.run(pairs, brand_name=brand_name.strip(), brand_color=brand_color.strip())
         return JSONResponse(result)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
