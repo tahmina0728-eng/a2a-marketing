@@ -148,6 +148,130 @@ def cta_button(label: str, brand_color: str) -> str:
         <tr><td style="height:16px;font-size:0;">&nbsp;</td></tr>"""
 
 
+def dual_brand_header(brand_name: str, partner_name: str, brand_color: str) -> str:
+    """Header bar: BRAND LEFT — PARTNER RIGHT on brand-colour background."""
+    on_brand = text_on(brand_color)
+    left  = escape(brand_name.upper())  if brand_name  else "BRAND"
+    right = escape(partner_name.upper()) if partner_name else ""
+    right_cell = (
+        f'<td align="right" style="white-space:nowrap;">'
+        f'<p style="margin:0;font-size:14px;font-weight:900;letter-spacing:.14em;'
+        f'text-transform:uppercase;color:{on_brand};opacity:.9;'
+        f"font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">{right}</p></td>"
+    ) if right else "<td></td>"
+    return f"""
+        <tr>
+          <td style="background:{brand_color};padding:20px 40px;" class="pad">
+            <table width="100%" cellpadding="0" cellspacing="0"><tr>
+              <td>
+                <p style="margin:0;font-size:14px;font-weight:900;letter-spacing:.14em;
+                   text-transform:uppercase;color:{on_brand};
+                   font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">{left}</p>
+              </td>
+              {right_cell}
+            </tr></table>
+          </td>
+        </tr>"""
+
+
+def hero_text_band(headline: str, subline: str, brand_color: str) -> str:
+    """Dark gradient panel with centered headline + tagline, displayed ABOVE the hero image."""
+    on_brand = text_on(brand_color)
+    dark_col = darken(brand_color, 0.78)
+    hl = (
+        f'<h2 style="margin:0 0 14px;font-size:26px;font-weight:900;line-height:1.2;'
+        f'letter-spacing:.04em;text-transform:uppercase;text-align:center;'
+        f"color:{on_brand};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">"
+        f"{headline}</h2>"
+    ) if headline else ""
+    sl = (
+        f'<p style="margin:0;font-size:16px;line-height:1.55;text-align:center;'
+        f"color:{on_brand};opacity:.85;"
+        f"font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">"
+        f"{subline}</p>"
+    ) if subline else ""
+    return f"""
+        <tr>
+          <td style="background:linear-gradient(180deg,{brand_color} 0%,{dark_col} 100%);
+                     padding:44px 40px 36px;" class="pad">
+            {hl}{sl}
+          </td>
+        </tr>"""
+
+
+def body_headline(text: str) -> str:
+    """Large dark headline in the white body section."""
+    return (
+        f'<tr><td style="padding:8px 40px 18px;" class="pad">'
+        f'<h1 style="margin:0;font-size:28px;font-weight:900;line-height:1.25;'
+        f"color:#0d0d0d;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">"
+        f"{escape(text)}</h1></td></tr>"
+    )
+
+
+def cta_button_wide(label: str, brand_color: str) -> str:
+    """Full-width-feeling centered CTA button — uppercase, prominent."""
+    on_brand = text_on(brand_color)
+    return f"""
+        <tr>
+          <td align="center" style="padding:36px 40px 20px;" class="pad">
+            <!--[if mso]>
+            <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml"
+              href="#" style="height:56px;v-text-anchor:middle;width:300px;"
+              arcsize="6%" stroke="f" fillcolor="{brand_color}">
+            <w:anchorlock/><center><![endif]-->
+            <a href="#"
+               style="display:inline-block;background:{brand_color};color:{on_brand};
+                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
+                      font-size:14px;font-weight:900;text-decoration:none;
+                      padding:18px 70px;border-radius:4px;letter-spacing:.1em;
+                      text-transform:uppercase;min-width:200px;text-align:center;">
+              {escape(label)}
+            </a>
+            <!--[if mso]></center></v:roundrect><![endif]-->
+          </td>
+        </tr>
+        <tr><td style="height:12px;font-size:0;">&nbsp;</td></tr>"""
+
+
+def sub_footer_strip(text: str, brand_color: str) -> str:
+    """Dark brand-coloured strip above the legal footer — for taglines / partnership lines."""
+    dark_col = darken(brand_color, 0.76)
+    on_dark  = text_on(dark_col)
+    return f"""
+        <tr>
+          <td style="background:{dark_col};padding:22px 40px;" class="pad">
+            <p style="margin:0;font-size:13px;line-height:1.65;color:{on_dark};opacity:.88;
+               font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+              {escape(text)}
+            </p>
+          </td>
+        </tr>"""
+
+
+def footer_simple(brand_name: str) -> str:
+    """Minimal footer: Privacy | Terms | Unsubscribe."""
+    label = escape(brand_name) if brand_name else "CampaignOS"
+    return f"""
+        <tr>
+          <td style="padding:20px 40px 28px;background:#f8f8f8;
+                     border-top:1px solid #e0e0e0;">
+            <p style="margin:0 0 8px;font-size:12px;color:#aaaaaa;text-align:center;
+               font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+              <a href="#" style="color:#aaaaaa;text-decoration:none;">Privacy</a>
+              &nbsp;&nbsp;|&nbsp;&nbsp;
+              <a href="#" style="color:#aaaaaa;text-decoration:none;">Terms</a>
+              &nbsp;&nbsp;|&nbsp;&nbsp;
+              <a href="#" style="color:#aaaaaa;text-decoration:underline;">Unsubscribe</a>
+            </p>
+            <p style="margin:0;font-size:11px;color:#cccccc;text-align:center;
+               font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
+              &copy; 2026 {label}. All rights reserved.
+            </p>
+          </td>
+        </tr>"""
+
+
 def brand_header(brand_name: str, brand_color: str) -> str:
     on_brand = text_on(brand_color)
     dark_col = darken(brand_color, 0.82)
