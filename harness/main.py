@@ -465,6 +465,16 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
                 "income":   _extract(aud_lines, "income"),
                 "channels": _extract(aud_lines, "channels"),
             },
+            # Real data-source counts + Google Trends signals (omitted when 0/empty)
+            **{k: v for k, v in {
+                "_chunks":              machine_brief.get("_chunks", 0),
+                "_market_signals":      machine_brief.get("_market_signals", 0),
+                "_campaign_records":    machine_brief.get("_campaign_records", 0),
+                "_product_skus":        machine_brief.get("_product_skus", 0),
+                "_market_top_keyword":  machine_brief.get("_market_top_keyword", ""),
+                "_market_avg_interest": machine_brief.get("_market_avg_interest", 0),
+                "_market_summary":      machine_brief.get("_market_summary", ""),
+            }.items() if v},
         }))
         # Log machine_brief to BigQuery (fire-and-forget — don't block pipeline)
         asyncio.create_task(_bq_log_machine_brief(campaign_id, machine_brief, brief))

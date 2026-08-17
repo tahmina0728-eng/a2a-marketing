@@ -140,13 +140,18 @@ export function usePipeline() {
         if (ev.status === "milestone") {
           try {
             const payload = JSON.parse(ev.message);
-            setState((s) => ({
-              ...s,
-              milestones: {
+            setState((s) => {
+              const next: typeof s.milestones = {
                 ...s.milestones,
                 [ev.agent]: { ...(s.milestones[ev.agent] ?? {}), ...payload },
-              },
-            }));
+              };
+              // Option 2: propagate culture brief into briefing milestone so
+              // BriefingAgentDashboard can surface cultural signals live
+              if (ev.agent === "culture" && payload.brief) {
+                next["briefing"] = { ...(next["briefing"] ?? {}), culture_brief: payload.brief };
+              }
+              return { ...s, milestones: next };
+            });
           } catch {}
           return;
         }
@@ -176,10 +181,17 @@ export function usePipeline() {
               // Extract milestone data from the done event (minus _text)
               const { _text, ...milestoneData } = parsed;
               if (Object.keys(milestoneData).length > 0) {
-                setState((s) => ({
-                  ...s,
-                  milestones: { ...s.milestones, [ev.agent]: milestoneData },
-                }));
+                setState((s) => {
+                  const next: typeof s.milestones = {
+                    ...s.milestones,
+                    [ev.agent]: milestoneData,
+                  };
+                  // Option 2: propagate culture brief from done event into briefing milestone
+                  if (ev.agent === "culture" && milestoneData.brief) {
+                    next["briefing"] = { ...(next["briefing"] ?? {}), culture_brief: milestoneData.brief };
+                  }
+                  return { ...s, milestones: next };
+                });
               }
             }
           } catch {}

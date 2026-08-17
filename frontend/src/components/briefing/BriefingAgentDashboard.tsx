@@ -140,13 +140,21 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
     { id: "metrics",   label: "Metrics"       },
   ];
 
+  const marketTopKw  = result._market_top_keyword  as string | undefined;
+  const marketInterest = result._market_avg_interest as number | undefined;
+  const marketStat   = result._market_signals
+    ? `${result._market_signals} wks${marketTopKw ? ` · ${marketTopKw}: ${marketInterest ?? "—"}/100` : ""}`
+    : "156 signals";
+
   const dataSources = [
-    { label: "Brand Guidelines",    source: "Vertex AI Search", stat: `${result._chunks ?? 47} chunks`    },
-    { label: "Historical Campaigns",source: "BigQuery",         stat: "1,247 records"                     },
-    { label: "Customer CDP",        source: "BigQuery",         stat: "50K profiles"                      },
-    { label: "Product Catalogue",   source: "BigQuery",         stat: "2,847 SKUs"                        },
-    { label: "Market Trends",       source: "Vertex AI Search", stat: "156 signals"                       },
+    { label: "Brand Guidelines",    source: "Vertex AI Search", stat: `${result._chunks           ?? 47}      chunks`  },
+    { label: "Historical Campaigns",source: "BigQuery",         stat: `${result._campaign_records  ?? "1,247"} records` },
+    { label: "Customer CDP",        source: "BigQuery",         stat: "50K profiles"                                    },
+    { label: "Product Catalogue",   source: "BigQuery",         stat: `${result._product_skus      ?? "2,847"} SKUs`   },
+    { label: "Market Trends",       source: "Google Trends",    stat: marketStat                                        },
   ];
+
+  const cultureBrief = result.culture_brief as string | undefined;
 
   return (
     <div style={{ marginTop: 16 }}>
@@ -239,6 +247,26 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
           </span>
         ))}
       </div>
+
+      {/* ── Cultural signals (Option 2: appears once culture_analyst finishes) ── */}
+      {cultureBrief && (
+        <div style={{
+          margin: "6px 0 10px", padding: "10px 14px",
+          borderRadius: 8, border: "1px solid rgba(13,148,136,0.25)",
+          background: "rgba(13,148,136,0.06)", display: "flex", gap: 10, alignItems: "flex-start",
+        }}>
+          <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>🌍</span>
+          <div>
+            <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+              textTransform: "uppercase", color: "#0d9488", display: "block", marginBottom: 3 }}>
+              Cultural Intelligence
+            </span>
+            <span style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.55 }}>
+              {cultureBrief.length > 220 ? cultureBrief.slice(0, 220) + "…" : cultureBrief}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* ── 3 Insight cards ────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 8 }}>

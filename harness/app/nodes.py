@@ -156,14 +156,26 @@ def load_brand_context(
     # Parse brand locks from guidelines YAML blocks ───────────────────────
     brand_locks_dict = _parse_brand_locks(brand, brand_guidelines)
 
+    # Live Google Trends market signals ──────────────────────────────────
+    from app.market_trends import get_trends as _get_trends
+    _trends = _get_trends(
+        keywords  = [kw for kw in [brand, product, moment_type] if kw],
+        market    = market,
+        timeframe = "today 3-m",
+    )
+
     # Load search / benchmark data ────────────────────────────────────────
+    _stat_chunks           = 0
+    _stat_market_signals   = _trends["signals"]
+    _stat_campaign_records = 0
+
     if settings.search_mode == "live" and brand:
         sc = get_search_client()
 
         try:
-            brand_rules_summary = sc.get_brand_rules(
-                product_category=product_category, channels=channels
-            ).summary or brand_guidelines
+            _r = sc.get_brand_rules(product_category=product_category, channels=channels)
+            brand_rules_summary = _r.summary or brand_guidelines
+            _stat_chunks = len(_r.results)
         except Exception:
             brand_rules_summary = brand_guidelines
 
@@ -177,9 +189,11 @@ def load_brand_context(
             fan_truth_summary = _stub_fan_truth()
 
         try:
-            campaign_benchmarks_summary = sc.get_campaign_benchmarks(
+            _r = sc.get_campaign_benchmarks(
                 product_category=product_category, market=market, season=season
-            ).summary or _stub_benchmarks()
+            )
+            campaign_benchmarks_summary = _r.summary or _stub_benchmarks()
+            _stat_campaign_records = len(_r.results)
         except Exception:
             campaign_benchmarks_summary = _stub_benchmarks()
 
@@ -191,9 +205,9 @@ def load_brand_context(
             channel_benchmarks_summary = _stub_channel_benchmarks()
 
         try:
-            moment_type_rules_summary = sc.get_moment_type_rules(
-                moment_type=moment_type
-            ).summary or _stub_moment_type(moment_type)
+            _r = sc.get_moment_type_rules(moment_type=moment_type)
+            moment_type_rules_summary = _r.summary or _stub_moment_type(moment_type)
+            _stat_market_signals = len(_r.results)
         except Exception:
             moment_type_rules_summary = _stub_moment_type(moment_type)
 
@@ -316,6 +330,18 @@ def load_brand_context(
         "channel_benchmarks_summary":  channel_benchmarks_summary,
         "audience_insights":           audience_insights,
         "moment_type_rules_summary":   moment_type_rules_summary,
+        "market_trends_summary":       _trends["summary"],
+        "_source_stats": json.dumps({
+            k: v for k, v in {
+                "_chunks":              _stat_chunks,
+                "_market_signals":      _stat_market_signals,
+                "_campaign_records":    _stat_campaign_records,
+                "_product_skus":        len(product_paths),
+                "_market_top_keyword":  _trends["top_keyword"],
+                "_market_avg_interest": _trends["avg_interest"],
+                "_market_summary":      _trends["summary"],
+            }.items() if v  # omit zeros/empty — lets frontend ?? fallbacks stay active
+        }),
     }
     if brand_rules_summary:
         state_dict["brand_rules_summary"] = brand_rules_summary
@@ -483,7 +509,18 @@ async def persist_brief(ctx: InvocationContext) -> Event:
         return Event(state={})
 
     # Normalise to canonical JSON (re-serialise from the validated model)
-    brief_json = json.dumps(node_input.model_dump(mode="json"))
+    brief_data = node_input.model_dump(mode="json")
+
+    # Merge real data-source counts captured by load_brand_context
+    _source_stats_raw = ctx.state.get("_source_stats", "")
+    if _source_stats_raw:
+        try:
+            _stats = json.loads(_source_stats_raw) if isinstance(_source_stats_raw, str) else _source_stats_raw
+            brief_data.update(_stats)
+        except Exception:
+            pass
+
+    brief_json = json.dumps(brief_data)
 
     # State write
     ctx.state["machine_brief"] = brief_json
