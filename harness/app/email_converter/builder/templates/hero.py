@@ -1,187 +1,418 @@
-"""
-Hero template — campaign-style image-led layout.
-
-Structure:
-  ┌──────────────────────────────────────┐
-  │ BRAND NAME            PARTNER NAME   │  ← dual-brand header (brand color)
-  ├──────────────────────────────────────┤
-  │                                      │
-  │     HEADLINE (ALL CAPS)              │  ← hero text band (gradient, above image)
-  │     Tagline / subline                │
-  │                                      │
-  │         [CAMPAIGN IMAGE]             │  ← full-width image (no padding)
-  │                                      │
-  ├──────────────────────────────────────┤
-  │                                      │
-  │ BRAND × PARTNER             (eyebrow)│  ← white body section
-  │                                      │
-  │ Tagline as headline.                 │  ← body headline (large, dark)
-  │                                      │
-  │ Paragraph one of body copy...        │  ← body paragraphs
-  │ Paragraph two of body copy...        │
-  │                                      │
-  │        [ DISCOVER MORE ]             │  ← CTA (wide, uppercase)
-  │                                      │
-  ├──────────────────────────────────────┤
-  │ Supporting tagline / brand line      │  ← sub-footer strip (darker brand color)
-  ├──────────────────────────────────────┤
-  │ Privacy  |  Terms  |  Unsubscribe    │  ← legal footer
-  └──────────────────────────────────────┘
-"""
 from __future__ import annotations
-import re
+
 from typing import Any
 
-from ..helpers import escape, darken, text_on
+from ..helpers import escape
+
 from ..base import (
-    dual_brand_header, hero_text_band, body_headline,
-    cta_button_wide, sub_footer_strip, footer_simple,
-    eyebrow, para_block, table_block, section_divider,
+    dual_brand_header,
+    eyebrow,
+    body_headline,
+    para_block,
+    bullet_list,
+    cta_button_wide,
+    sub_footer_strip,
+    footer_simple,
     html_shell,
 )
 
 
 def render(
-    slots:       dict[str, Any],
-    brand_name:  str  = "",
-    brand_color: str  = "#0055A4",
-    multi_file:  bool = False,
+    slots: dict[str, Any],
+    brand_name: str = "",
+    brand_color: str = "#0055A4",
+    multi_file: bool = False,
 ) -> str:
-    subject   = slots.get("subject",   "")
+
+    # ============================================================
+    # SAFE CUSTOMER-FACING CONTENT ONLY
+    # ============================================================
+
+    subject = slots.get("subject", "")
     preheader = slots.get("preheader", "")
-    headline  = slots.get("headline",  "")
-    subline   = slots.get("subline",   "")
-    cta_text  = slots.get("cta",       "")
-    images    = slots.get("images",    [])
-    sections  = slots.get("_sections", [])
-    body_raw  = slots.get("body",      [])
 
-    if not preheader:
-        preheader = subline or (body_raw[0][:120] if body_raw else headline)
+    partner = slots.get("partner_name", "")
+    headline = slots.get("headline", "")
+    subline = slots.get("subline", "")
 
-    # Detect co-brand / partner name from headline (e.g. "Barclays & Wimbledon")
-    partner = _extract_partner(headline, brand_name)
+    body = slots.get("body", [])
+    highlights = slots.get("highlights", [])
 
-    # ── 1. Dual-brand header ─────────────────────────────────────────────────
-    rows = dual_brand_header(brand_name, partner, brand_color)
+    cta = slots.get("cta", "")
+    legal_copy = slots.get("legal_copy", "")
 
-    # ── 2. Hero text band (above image) — headline + tagline ─────────────────
-    # The hero section gives the visual statement; body section expands on it.
-    if headline or subline:
-        rows += hero_text_band(escape(headline), escape(subline), brand_color)
+    images = list(slots.get("images", []))
 
-    # ── 3. Campaign image (full-width, no border-radius — bleeds edge to edge) ─
-    remaining_images = list(images)
-    if remaining_images:
-        hero_img = remaining_images.pop(0)
+    hero_contains_text = bool(
+        slots.get(
+            "hero_contains_text",
+            False,
+        )
+    )
+
+    rows = ""
+
+    # ============================================================
+    # 1. SMALL BRAND HEADER
+    #
+    # Keep this compact.
+    # Do not create a large campaign banner here.
+    # ============================================================
+
+    rows += dual_brand_header(
+        brand_name=brand_name,
+        partner_name=partner,
+        brand_color=brand_color,
+    )
+
+    # ============================================================
+    # 2. HERO IMAGE
+    #
+    # Image comes immediately after the header.
+    #
+    # This prevents:
+    #
+    # HEADER
+    # LARGE BLUE TEXT PANEL
+    # LARGE BLUE IMAGE AREA
+    #
+    # from visually merging into one oversized header.
+    # ============================================================
+
+    if images:
+
+        hero = images.pop(0)
+
+        hero_alt = (
+            f"{brand_name} campaign"
+            if brand_name
+            else "Campaign image"
+        )
+
         rows += f"""
         <tr>
-          <td style="padding:0;line-height:0;font-size:0;">
-            <img src="data:{hero_img['mime']};base64,{hero_img['b64']}"
-                 width="600" alt="{escape(brand_name)} campaign image"
-                 style="display:block;width:100%;max-width:600px;height:auto;border:0;" />
+          <td
+            style="
+              padding:0;
+              margin:0;
+              line-height:0;
+              font-size:0;
+              background:#ffffff;
+            "
+          >
+            <img
+              src="data:{hero['mime']};base64,{hero['b64']}"
+              width="600"
+              alt="{escape(hero_alt)}"
+              style="
+                display:block;
+                width:100%;
+                max-width:600px;
+                height:auto;
+                margin:0;
+                padding:0;
+                border:0;
+              "
+            />
           </td>
-        </tr>"""
+        </tr>
+        """
 
-    # ── 4. White body section ─────────────────────────────────────────────────
-    # Eyebrow: BRAND × PARTNER (or just BRAND)
-    eyebrow_text = f"{brand_name} × {partner}" if partner else brand_name
-    rows += eyebrow(eyebrow_text, brand_color)
+    # ============================================================
+    # 3. BODY EYEBROW
+    #
+    # Example:
+    # BARCLAYS × THE CHAMPIONSHIPS, WIMBLEDON
+    # ============================================================
 
-    # Body headline — use subline (the tagline) as the section headline;
-    # fall back to the main headline if subline is empty.
-    body_hl = subline or headline
-    if body_hl:
-        rows += body_headline(body_hl)
+    if brand_name or partner:
 
-    # Body paragraphs — rendered as prose (not bullets) for the hero template.
-    if multi_file and sections:
-        for i, sec in enumerate(sections):
-            if i > 0 and sec.get("label"):
-                rows += section_divider(sec["label"], brand_color)
-            for j, item in enumerate(_clean_body(sec.get("body", []))):
-                rows += para_block(item, lead=(i == 0 and j == 0))
-            for tbl in sec.get("tables", []):
-                rows += table_block(tbl, brand_color)
-            # Additional images from subsequent files
-            skip = 1 if (i == 0 and images) else 0
-            for img in sec.get("images", [])[skip:]:
-                rows += _inline_image_full(img)
-    else:
-        for i, item in enumerate(_clean_body(body_raw)):
-            rows += para_block(item, lead=(i == 0))
-        for tbl in slots.get("tables", []):
-            rows += table_block(tbl, brand_color)
-        # Additional images (gallery)
-        for img in remaining_images:
-            rows += _inline_image_full(img)
+        if brand_name and partner:
+            eyebrow_text = (
+                f"{brand_name} × {partner}"
+            )
 
-    # ── 5. CTA button ─────────────────────────────────────────────────────────
-    if cta_text:
-        rows += cta_button_wide(cta_text, brand_color)
-    else:
-        rows += '<tr><td style="height:36px;font-size:0;">&nbsp;</td></tr>'
+        elif brand_name:
+            eyebrow_text = brand_name
 
-    # ── 6. Sub-footer strip — supporting / partnership line ───────────────────
-    sub_line = _sub_footer_text(slots, brand_name, partner)
-    if sub_line:
-        rows += sub_footer_strip(sub_line, brand_color)
+        else:
+            eyebrow_text = partner
 
-    # ── 7. Legal footer ───────────────────────────────────────────────────────
-    rows += footer_simple(brand_name)
+        rows += eyebrow(
+            eyebrow_text,
+            brand_color,
+        )
 
-    return html_shell(subject, brand_color, rows, preheader)
+    # ============================================================
+    # 4. EMAIL HEADLINE
+    #
+    # The generated campaign/email headline now sits BELOW
+    # the hero image instead of above it.
+    #
+    # This avoids competing with text already inside the artwork.
+    # ============================================================
 
+    if headline:
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+        rows += body_headline(
+            headline
+        )
 
-def _extract_partner(headline: str, brand_name: str) -> str:
-    """
-    Pull the partner / co-brand name from headlines like:
-      "Barclays & Wimbledon", "BARCLAYS × WIMBLEDON", "Barclays and Wimbledon"
-    Returns the part that is NOT the brand name, or "" if no pattern found.
-    """
-    for sep in [" × ", " & ", " and ", " x ", " X ", " + "]:
-        if sep.lower() in headline.lower():
-            idx = headline.lower().find(sep.lower())
-            left  = headline[:idx].strip()
-            right = headline[idx + len(sep):].strip()
-            # Return the part that doesn't match the brand name
-            if brand_name and brand_name.lower() in left.lower():
-                return right
-            if brand_name and brand_name.lower() in right.lower():
-                return left
-            # Neither matches cleanly — return the shorter one (likely the event)
-            return right if len(right) <= len(left) else left
-    return ""
+    # ============================================================
+    # 5. SUBLINE
+    #
+    # Render as lead paragraph rather than another huge heading.
+    # ============================================================
 
+    if subline:
 
-def _clean_body(items: list[str]) -> list[str]:
-    """Filter out very short or empty items; strip leading/trailing whitespace."""
-    return [s.strip() for s in items if len(s.strip()) > 8]
+        rows += para_block(
+            subline,
+            lead=True,
+        )
 
+    # ============================================================
+    # 6. BODY CONTENT
+    #
+    # Keep hero email concise.
+    # Max 2 paragraphs.
+    # ============================================================
 
-def _inline_image_full(img: dict) -> str:
-    """Render an additional image full-width with slight padding."""
-    return (
-        f'<tr><td style="padding:16px 0 0;line-height:0;font-size:0;">'
-        f'<img src="data:{img["mime"]};base64,{img["b64"]}" alt="" width="600"'
-        f' style="display:block;width:100%;max-width:600px;height:auto;border:0;" />'
-        f'</td></tr>'
+    clean_body = _clean_body(
+        body,
+        max_items=2,
+    )
+
+    for item in clean_body:
+
+        rows += para_block(
+            item,
+            lead=False,
+        )
+
+    # ============================================================
+    # 7. HIGHLIGHTS
+    #
+    # Up to 3 concise customer-facing bullets.
+    # ============================================================
+
+    clean_highlights = (
+        _clean_highlights(
+            highlights
+        )
+    )
+
+    if clean_highlights:
+
+        rows += bullet_list(
+            clean_highlights,
+            brand_color,
+        )
+
+    # ============================================================
+    # 8. CTA
+    # ============================================================
+
+    if cta:
+
+        rows += cta_button_wide(
+            cta,
+            brand_color,
+        )
+
+    # ============================================================
+    # 9. ADDITIONAL IMAGES
+    #
+    # Normally hero template should have only one hero image.
+    # But if extra safe campaign assets exist, render them below.
+    # ============================================================
+
+    for image in images:
+
+        rows += _additional_image(
+            image,
+            brand_name,
+        )
+
+    # ============================================================
+    # 10. SUPPORTING BRAND STRIP
+    # ============================================================
+
+    if partner:
+
+        rows += sub_footer_strip(
+            f"Supporting {partner}",
+            brand_color,
+        )
+
+    # ============================================================
+    # 11. LEGAL COPY
+    # ============================================================
+
+    if legal_copy:
+
+        rows += _legal_block(
+            legal_copy
+        )
+
+    # ============================================================
+    # 12. STANDARD FOOTER
+    # ============================================================
+
+    rows += footer_simple(
+        brand_name
+    )
+
+    # ============================================================
+    # COMPLETE EMAIL
+    # ============================================================
+
+    return html_shell(
+        subject=subject,
+        brand_color=brand_color,
+        inner_rows=rows,
+        preheader=preheader,
     )
 
 
-def _sub_footer_text(slots: dict, brand_name: str, partner: str) -> str:
+# =================================================================
+# HELPERS
+# =================================================================
+
+
+def _clean_body(
+    items: list[str],
+    max_items: int = 2,
+) -> list[str]:
+
     """
-    Build the sub-footer strip text.
-    Priority: last body item (if it reads like a tagline) → partnership line → empty.
+    Return only concise customer-facing paragraphs.
+
+    Raw guideline/source material should already have been removed
+    by the composer, but this keeps the hero renderer conservative.
     """
-    body = _clean_body(slots.get("body", []))
-    if body:
-        last = body[-1]
-        # Use as sub-footer only if it's short and punchy (tagline-style)
-        if len(last) < 120:
-            return last
-    if partner:
-        return f"Supporting {partner}"
-    return ""
+
+    cleaned = []
+
+    for item in items:
+
+        text = str(item).strip()
+
+        if not text:
+            continue
+
+        # Ignore tiny fragments
+        if len(text) < 15:
+            continue
+
+        # Prevent document-length paragraphs
+        if len(text) > 500:
+            text = (
+                text[:497].rstrip()
+                + "..."
+            )
+
+        cleaned.append(text)
+
+        if len(cleaned) >= max_items:
+            break
+
+    return cleaned
+
+
+def _clean_highlights(
+    items: list[str],
+) -> list[str]:
+
+    """
+    Max 3 short marketing highlights.
+    """
+
+    cleaned = []
+
+    for item in items:
+
+        text = str(item).strip()
+
+        if not text:
+            continue
+
+        if len(text) > 120:
+
+            text = (
+                text[:117].rstrip()
+                + "..."
+            )
+
+        cleaned.append(text)
+
+        if len(cleaned) >= 3:
+            break
+
+    return cleaned
+
+
+def _additional_image(
+    image: dict,
+    brand_name: str,
+) -> str:
+
+    alt = (
+        f"{brand_name} campaign image"
+        if brand_name
+        else "Campaign image"
+    )
+
+    return f"""
+    <tr>
+      <td
+        class="pad"
+        style="
+          padding:10px 40px 20px;
+          line-height:0;
+          font-size:0;
+        "
+      >
+        <img
+          src="data:{image['mime']};base64,{image['b64']}"
+          width="520"
+          alt="{escape(alt)}"
+          style="
+            display:block;
+            width:100%;
+            max-width:520px;
+            height:auto;
+            margin:0 auto;
+            border:0;
+          "
+        />
+      </td>
+    </tr>
+    """
+
+
+def _legal_block(text: str) -> str:
+    return f"""
+    <tr>
+      <td
+        class="pad"
+        style="
+          padding:24px 40px;
+          background:#f5f5f5;
+          border-bottom:1px solid #e3e3e3;
+        "
+      >
+        <p
+          style="
+            margin:0;
+            color:#5f6368;
+            font-family:Arial,Helvetica,sans-serif;
+            font-size:12px;
+            line-height:1.65;
+          "
+        >
+          {escape(text)}
+        </p>
+      </td>
+    </tr>
+    """

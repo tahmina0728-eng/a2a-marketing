@@ -2497,6 +2497,24 @@ async def convert_email(
         raise HTTPException(status_code=500, detail=f"Conversion failed: {exc}")
 
 
+@app.post("/render-email")
+async def render_email(body: dict):
+    """
+    Re-render an email from edited slots without re-running the full pipeline.
+    Body: { slots, brand_name, brand_color }
+    """
+    from app.email_converter.builder import build_html
+    slots       = body.get("slots", {})
+    brand_name  = str(body.get("brand_name",  ""))
+    brand_color = str(body.get("brand_color", "#0055A4"))
+    try:
+        html = build_html(slots, brand_name=brand_name, brand_color=brand_color, multi_file=False)
+        return JSONResponse({"html": html})
+    except Exception as exc:
+        logger.error("render_email_error", error=str(exc))
+        raise HTTPException(status_code=500, detail=f"Render failed: {exc}")
+
+
 @app.post("/refresh")
 async def refresh():
     """

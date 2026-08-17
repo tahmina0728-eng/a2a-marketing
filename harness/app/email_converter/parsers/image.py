@@ -1,111 +1,165 @@
-"""Parser: image files (.jpg, .png, .gif, .webp)
-
-Two modes:
-  parse_image(content, filename, mime)
-      → basic mode: base64-encodes the image, uses filename as headline.
-        Always works, no API needed.
-
-  parse_image_with_vision(content, filename, mime, project, location)
-      → enriched mode: calls Gemini Vision to extract visible text,
-        describe the image, and detect brand colours.
-        Requires google-cloud-aiplatform and a GCP project.
-        Falls back to parse_image on any error.
-"""
 from __future__ import annotations
+
 import base64
-import re
+import mimetypes
 
 
-_EXT_MIME: dict[str, str] = {
-    "jpg": "image/jpeg", "jpeg": "image/jpeg",
-    "png": "image/png",  "gif": "image/gif",
-    "webp": "image/webp",
-}
+def parse(
+    raw: bytes,
+    filename: str,
+    use_vision: bool = True,
+    gcp_project: str = "",
+    **kwargs,
+) -> dict:
 
+    mime = (
+        mimetypes.guess_type(
+            filename
+        )[0]
+        or "image/jpeg"
+    )
 
-def parse_image(content: bytes, filename: str, mime: str) -> dict:
-    """Base mode — embed image as a visual asset. No text blocks generated.
-    The filename is metadata, not copy — the LLM composer derives the headline
-    from campaign documents, not from the image filename.
-    """
-    b64 = base64.b64encode(content).decode()
-    return {
-        "blocks": [],
-        "images": [{"b64": b64, "mime": mime, "filename": filename}],
-        "vision": None,
+    image = {
+
+        "filename":
+            filename,
+
+        "mime":
+            mime,
+
+        "b64":
+            base64.b64encode(
+                raw
+            ).decode("ascii"),
     }
 
+    context = {}
 
-def parse_image_with_vision(
-    content: bytes,
-    filename: str,
-    mime: str,
-    project: str  = "",
-    location: str = "us-central1",
-) -> dict:
-    """
-    Enriched mode — sends the image to Gemini Vision (gemini-2.0-flash)
-    and extracts:
-      - visible_text : text readable in the image (taglines, prices, dates)
-      - description  : one-sentence description of what the image shows
-      - brand_colours: up to 3 dominant hex colours detected
+    if (
+        use_vision
+        and gcp_project
+    ):
 
-    The enriched data is stored in slots["vision"] and also injected into
-    blocks so the normaliser can use them for subject/headline/body.
-
-    Falls back gracefully to parse_image() on any API or import error.
-    """
-    try:
-        import vertexai
-        from vertexai.generative_models import GenerativeModel, Part, Image as VImage
-
-        if not project:
-            raise ValueError("GCP project required for Vision mode.")
-
-        from app.config import get_settings
-        _model_id = get_settings().reasoning_model or "gemini-2.0-flash"
-
-        vertexai.init(project=project, location=location)
-        gemini = GenerativeModel(_model_id)
-
-        image_part = Part.from_data(data=content, mime_type=mime)
-        prompt = (
-            "Analyse this image and respond with ONLY a JSON object with these keys:\n"
-            '  "visible_text": string — all text readable in the image, or "" if none\n'
-            '  "description":  string — one sentence describing the image content\n'
-            '  "brand_colours": list of up to 3 dominant hex colour strings (e.g. ["#FF0000"])\n'
-            "No markdown fences, no extra keys."
+        context = _analyse_image(
+            raw,
+            mime,
+            filename,
+            gcp_project,
         )
 
-        response = gemini.generate_content([image_part, prompt])
-        import json as _json
-        vision_data = _json.loads(response.text.strip())
+    return {
+
+        "blocks":
+            [],
+
+        "images":
+            [image],
+
+        "image_context":
+            (
+                [context]
+                if context
+                else []
+            ),
+    }
+
+
+def _analyse_image(
+    raw: bytes,
+    mime: str,
+    filename: str,
+    project: str,
+) -> dict:
+
+    try:
+
+        import json
+        import re
+
+        from google import genai
+
+        from app.config import (
+            get_settings,
+        )
+
+        settings = (
+            get_settings()
+        )
+
+        location = (
+            settings.gcp_region
+            or "global"
+        )
+
+        model = (
+            settings.gemini_model_reasoning
+            or "gemini-2.0-flash"
+        )
+
+        client = genai.Client(
+            vertexai=True,
+            project=project,
+            location=location,
+        )
+
+        prompt = """
+Analyse this marketing image.
+
+Return only JSON:
+
+{
+  "semantic_title": "",
+  "semantic_tagline": "",
+  "description": "",
+  "contains_prominent_text": false
+}
+
+semantic_title:
+The visible campaign/product/event title.
+
+semantic_tagline:
+The visible marketing tagline if one exists.
+
+description:
+A short semantic description of the visual.
+
+contains_prominent_text:
+true when the artwork already contains a major
+headline/title/tagline that would make adding another
+large headline above it visually repetitive.
+
+Do not infer unsupported campaign claims.
+"""
+
+        response = (
+            client.models.generate_content(
+                model=model,
+                contents=[
+                    prompt,
+                    genai.types.Part.from_bytes(
+                        data=raw,
+                        mime_type=mime,
+                    ),
+                ],
+            )
+        )
+
+        text = (
+            response.text
+            or ""
+        ).strip()
+
+        text = re.sub(
+            r"^```(?:json)?\s*|\s*```$",
+            "",
+            text,
+            flags=re.MULTILINE,
+        ).strip()
+
+        return json.loads(
+            text
+        )
 
     except Exception:
-        return parse_image(content, filename, mime)
 
-    b64  = base64.b64encode(content).decode()
-    name = re.sub(r"[-_]+", " ", filename.rsplit(".", 1)[0]).strip().title()
-
-    blocks: list[dict] = []
-
-    description = vision_data.get("description", "").strip()
-    visible_text = vision_data.get("visible_text", "").strip()
-
-    # Use visible tagline/text as headline if short enough, else filename
-    if visible_text and len(visible_text) < 120:
-        blocks.append({"type": "heading", "level": 1, "text": visible_text})
-    else:
-        blocks.append({"type": "heading", "level": 1, "text": name})
-
-    if description:
-        blocks.append({"type": "paragraph", "text": description})
-
-    if visible_text and len(visible_text) >= 120:
-        blocks.append({"type": "paragraph", "text": visible_text})
-
-    return {
-        "blocks": blocks,
-        "images": [{"b64": b64, "mime": mime}],
-        "vision": vision_data,
-    }
+        return {}

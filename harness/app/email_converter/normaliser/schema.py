@@ -1,34 +1,56 @@
-"""Typed schema for the structured content slots used throughout the pipeline."""
 from __future__ import annotations
-from typing import Any, TypedDict
+
+from pydantic import BaseModel, Field
 
 
-class TableSlot(TypedDict):
-    headers: list[str]
-    rows:    list[list[str]]
+class ExtractedImage(BaseModel):
+
+    mime: str
+    b64: str
+
+    filename: str = ""
+
+    semantic_title: str = ""
+
+    semantic_tagline: str = ""
+
+    description: str = ""
+
+    contains_prominent_text: bool = False
 
 
-class ImageSlot(TypedDict):
-    b64:  str   # base64-encoded image bytes
-    mime: str   # e.g. "image/jpeg"
+class ContentSlots(BaseModel):
 
+    subject: str = ""
 
-class SectionSlot(TypedDict):
-    label:  str
-    body:   list[str]
-    tables: list[TableSlot]
-    images: list[ImageSlot]
+    preheader: str = ""
 
+    partner_name: str = ""
 
-class ContentSlots(TypedDict, total=False):
-    subject:   str
-    preheader: str
-    headline:  str
-    subline:   str
-    body:      list[str]
-    cta:       str
-    tables:    list[TableSlot]
-    images:    list[ImageSlot]
-    _sections: list[SectionSlot]   # multi-file mode only
-    _template: str                  # set by LayoutPlanner: "hero" | "text_first" | "product"
-    _vision:   dict[str, Any]       # raw Gemini Vision response, if available
+    headline: str = ""
+
+    subline: str = ""
+
+    intro: str = ""
+
+    body: list[str] = Field(
+        default_factory=list
+    )
+
+    highlights: list[str] = Field(
+        default_factory=list
+    )
+
+    cta: str = ""
+
+    legal_copy: str = ""
+
+    hero_contains_text: bool = False
+
+    images: list[dict] = Field(
+        default_factory=list
+    )
+
+    tables: list[dict] = Field(
+        default_factory=list
+    )

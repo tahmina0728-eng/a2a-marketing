@@ -1,338 +1,466 @@
-"""
-Shared HTML email rendering primitives used by all template renderers.
-
-All functions return inline <tr>…</tr> strings ready to drop into a
-containing <table role="presentation"> wrapper.
-"""
 from __future__ import annotations
-from .helpers import escape, darken, text_on
+
+from .helpers import (
+    escape,
+    darken,
+    text_on,
+)
 
 
-# ── Content blocks ─────────────────────────────────────────────────────────────
+def eyebrow(
+    label: str,
+    brand_color: str,
+) -> str:
 
-def eyebrow(label: str, brand_color: str) -> str:
-    return (
-        f'<tr><td style="padding:28px 40px 10px;" class="pad">'
-        f'<p style="margin:0;font-size:11px;font-weight:800;letter-spacing:.11em;'
-        f'text-transform:uppercase;color:{brand_color};'
-        f'font-family:Helvetica,Arial,sans-serif;">{escape(label)}</p>'
-        f'</td></tr>'
+    return f"""
+<tr>
+<td
+    class="pad"
+    style="
+        padding:28px 40px 10px;
+    "
+>
+    <p
+        style="
+            margin:0;
+            font-size:11px;
+            font-weight:800;
+            letter-spacing:.11em;
+            text-transform:uppercase;
+            color:{brand_color};
+            font-family:Arial,sans-serif;
+        "
+    >
+        {escape(label)}
+    </p>
+</td>
+</tr>
+"""
+
+
+def para_block(
+    text: str,
+    lead: bool = False,
+) -> str:
+
+    size = (
+        "17px"
+        if lead
+        else "15.5px"
     )
 
-
-def para_block(text: str, lead: bool = False) -> str:
-    sz  = "17px" if lead else "15.5px"
-    fw  = "500"  if lead else "400"
-    col = "#333333" if lead else "#454545"
-    return (
-        f'<tr><td style="padding:0 40px 16px;" class="pad">'
-        f'<p style="margin:0;font-size:{sz};line-height:1.8;color:{col};font-weight:{fw};'
-        f"font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">"
-        f'{escape(text)}</p></td></tr>'
+    weight = (
+        "500"
+        if lead
+        else "400"
     )
 
+    return f"""
+<tr>
+<td
+    class="pad"
+    style="
+        padding:0 40px 16px;
+    "
+>
+    <p
+        style="
+            margin:0;
+            font-size:{size};
+            line-height:1.7;
+            color:#333;
+            font-weight:{weight};
+            font-family:Arial,sans-serif;
+        "
+    >
+        {escape(text)}
+    </p>
+</td>
+</tr>
+"""
 
-def subhead_block(text: str, brand_color: str) -> str:
-    return (
-        f'<tr><td style="padding:20px 40px 6px;" class="pad">'
-        f'<p style="margin:0;font-size:13px;font-weight:800;letter-spacing:.05em;'
-        f'text-transform:uppercase;color:{brand_color};'
-        f"font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">"
-        f'{escape(text)}</p></td></tr>'
-    )
 
+def bullet_list(
+    items: list[str],
+    brand_color: str,
+) -> str:
 
-def bullet_list(items: list[str], brand_color: str) -> str:
     rows = ""
+
     for item in items:
-        rows += (
-            f'<tr>'
-            f'<td width="28" valign="top" style="padding-bottom:13px;padding-top:2px;">'
-            f'<table cellpadding="0" cellspacing="0"><tr>'
-            f'<td style="width:8px;height:8px;background:{brand_color};'
-            f'border-radius:50%;font-size:0;line-height:0;">&nbsp;</td>'
-            f'</tr></table></td>'
-            f'<td style="padding-bottom:13px;font-size:15px;line-height:1.7;'
-            f"color:#333333;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">"
-            f'{escape(item)}</td></tr>'
+
+        rows += f"""
+<tr>
+
+<td
+    width="24"
+    valign="top"
+    style="
+        padding:2px 0 12px;
+    "
+>
+    <span
+        style="
+            color:{brand_color};
+            font-size:18px;
+        "
+    >
+        •
+    </span>
+</td>
+
+<td
+    style="
+        padding:0 0 12px;
+        font:15px/1.6 Arial,sans-serif;
+        color:#333;
+    "
+>
+    {escape(item)}
+</td>
+
+</tr>
+"""
+
+    return f"""
+<tr>
+
+<td
+    class="pad"
+    style="
+        padding:4px 40px 10px;
+    "
+>
+
+<table
+    width="100%"
+    role="presentation"
+>
+
+{rows}
+
+</table>
+
+</td>
+
+</tr>
+"""
+
+
+def body_headline(
+    text: str,
+) -> str:
+
+    return f"""
+<tr>
+
+<td
+    class="pad"
+    style="
+        padding:8px 40px 18px;
+    "
+>
+
+<h1
+    style="
+        margin:0;
+        font-size:28px;
+        line-height:1.25;
+        color:#111;
+        font-family:Arial,sans-serif;
+    "
+>
+    {escape(text)}
+</h1>
+
+</td>
+
+</tr>
+"""
+
+
+def dual_brand_header(
+    brand_name: str,
+    partner_name: str,
+    brand_color: str,
+) -> str:
+
+    on_brand = (
+        text_on(
+            brand_color
         )
-    return (
-        f'<tr><td style="padding:4px 40px 4px;" class="pad">'
-        f'<table width="100%" cellpadding="0" cellspacing="0">{rows}</table>'
-        f'</td></tr>'
     )
 
+    partner_cell = ""
 
-def table_block(tbl: dict, brand_color: str) -> str:
-    headers   = tbl.get("headers", [])
-    rows      = tbl.get("rows", [])
-    on_brand  = text_on(brand_color)
-    if not headers and not rows:
-        return ""
-    th_cells = "".join(
-        f'<th style="background:{brand_color};color:{on_brand};padding:11px 14px;'
-        f'text-align:left;font-size:12px;font-weight:700;white-space:nowrap;'
-        f'font-family:Helvetica,Arial,sans-serif;">{escape(str(h))}</th>'
-        for h in headers
-    )
-    tbody_rows = ""
-    for i, row in enumerate(rows[:50]):
-        bg  = "#f7f8fc" if i % 2 == 0 else "#ffffff"
-        tds = "".join(
-            f'<td style="padding:10px 14px;font-size:13px;color:#444444;'
-            f'border-bottom:1px solid #eeeeee;'
-            f'font-family:Helvetica,Arial,sans-serif;">{escape(str(c))}</td>'
-            for c in row
+    if partner_name:
+
+        partner_cell = f"""
+<td
+    align="right"
+    style="
+        font:700 13px Arial,sans-serif;
+        color:{on_brand};
+    "
+>
+    {escape(partner_name.upper())}
+</td>
+"""
+
+    else:
+
+        partner_cell = (
+            "<td></td>"
         )
-        tbody_rows += f'<tr style="background:{bg};">{tds}</tr>'
-    note = (
-        f'<p style="margin:6px 0 0;font-size:11px;color:#999;'
-        f'font-family:Helvetica,Arial,sans-serif;">Showing 50 of {len(rows)} rows.</p>'
-        if len(rows) > 50 else ""
-    )
-    return (
-        f'<tr><td style="padding:12px 40px 4px;" class="pad">'
-        f'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">'
-        f'<table width="100%" cellpadding="0" cellspacing="0" '
-        f'style="border-collapse:collapse;border:1px solid #e8e8e8;min-width:300px;">'
-        f'<thead><tr>{th_cells}</tr></thead><tbody>{tbody_rows}</tbody></table>'
-        f'</div>{note}</td></tr>'
-    )
 
-
-def section_divider(label: str, brand_color: str) -> str:
-    return (
-        f'<tr><td style="padding:28px 40px 0;" class="pad">'
-        f'<table width="100%" cellpadding="0" cellspacing="0"><tr>'
-        f'<td style="border-top:1px solid #e8e8e8;font-size:0;">&nbsp;</td>'
-        f'</tr></table></td></tr>'
-        f'<tr><td style="padding:16px 40px 4px;" class="pad">'
-        f'<table cellpadding="0" cellspacing="0"><tr>'
-        f'<td style="background:{brand_color};width:3px;border-radius:3px;">&nbsp;</td>'
-        f'<td style="padding-left:12px;font-size:12px;font-weight:800;'
-        f'letter-spacing:.08em;text-transform:uppercase;color:#777777;'
-        f'font-family:Helvetica,Arial,sans-serif;">{escape(label)}</td>'
-        f'</tr></table></td></tr>'
-    )
-
-
-def inline_image(img: dict, width: int = 520) -> str:
-    return (
-        f'<tr><td style="padding:16px 40px 0;" class="pad">'
-        f'<img src="data:{img["mime"]};base64,{img["b64"]}" alt="" width="{width}"'
-        f' style="display:block;width:100%;max-width:{width}px;height:auto;'
-        f'border-radius:6px;border:1px solid #eeeeee;" /></td></tr>'
-    )
-
-
-def cta_button(label: str, brand_color: str) -> str:
-    on_brand = text_on(brand_color)
     return f"""
-        <tr>
-          <td align="center" style="padding:36px 40px 12px;">
-            <!--[if mso]>
-            <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml"
-              href="#" style="height:52px;v-text-anchor:middle;width:240px;"
-              arcsize="10%" stroke="f" fillcolor="{brand_color}">
-            <w:anchorlock/><center><![endif]-->
-            <a href="#"
-               style="display:inline-block;background:{brand_color};color:{on_brand};
-                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                      font-size:16px;font-weight:800;text-decoration:none;
-                      padding:16px 50px;border-radius:8px;letter-spacing:.03em;">
-              {escape(label)}&nbsp;&rarr;
-            </a>
-            <!--[if mso]></center></v:roundrect><![endif]-->
-          </td>
-        </tr>
-        <tr><td style="height:16px;font-size:0;">&nbsp;</td></tr>"""
+<tr>
+
+<td
+    class="pad"
+    style="
+        background:{brand_color};
+        padding:18px 40px;
+    "
+>
+
+<table
+    width="100%"
+    role="presentation"
+>
+
+<tr>
+
+<td
+    style="
+        font:800 14px Arial,sans-serif;
+        color:{on_brand};
+        letter-spacing:.08em;
+    "
+>
+    {escape((brand_name or "BRAND").upper())}
+</td>
+
+{partner_cell}
+
+</tr>
+
+</table>
+
+</td>
+
+</tr>
+"""
 
 
-def dual_brand_header(brand_name: str, partner_name: str, brand_color: str) -> str:
-    """Header bar: BRAND LEFT — PARTNER RIGHT on brand-colour background."""
-    on_brand = text_on(brand_color)
-    left  = escape(brand_name.upper())  if brand_name  else "BRAND"
-    right = escape(partner_name.upper()) if partner_name else ""
-    right_cell = (
-        f'<td align="right" style="white-space:nowrap;">'
-        f'<p style="margin:0;font-size:14px;font-weight:900;letter-spacing:.14em;'
-        f'text-transform:uppercase;color:{on_brand};opacity:.9;'
-        f"font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">{right}</p></td>"
-    ) if right else "<td></td>"
-    return f"""
-        <tr>
-          <td style="background:{brand_color};padding:20px 40px;" class="pad">
-            <table width="100%" cellpadding="0" cellspacing="0"><tr>
-              <td>
-                <p style="margin:0;font-size:14px;font-weight:900;letter-spacing:.14em;
-                   text-transform:uppercase;color:{on_brand};
-                   font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">{left}</p>
-              </td>
-              {right_cell}
-            </tr></table>
-          </td>
-        </tr>"""
+def hero_text_band(
+    headline: str,
+    subline: str,
+    brand_color: str,
+) -> str:
 
-
-def hero_text_band(headline: str, subline: str, brand_color: str) -> str:
-    """Dark gradient panel with centered headline + tagline, displayed ABOVE the hero image."""
-    on_brand = text_on(brand_color)
-    dark_col = darken(brand_color, 0.78)
-    hl = (
-        f'<h2 style="margin:0 0 14px;font-size:26px;font-weight:900;line-height:1.2;'
-        f'letter-spacing:.04em;text-transform:uppercase;text-align:center;'
-        f"color:{on_brand};font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">"
-        f"{headline}</h2>"
-    ) if headline else ""
-    sl = (
-        f'<p style="margin:0;font-size:16px;line-height:1.55;text-align:center;'
-        f"color:{on_brand};opacity:.85;"
-        f"font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">"
-        f"{subline}</p>"
-    ) if subline else ""
-    return f"""
-        <tr>
-          <td style="background:linear-gradient(180deg,{brand_color} 0%,{dark_col} 100%);
-                     padding:44px 40px 36px;" class="pad">
-            {hl}{sl}
-          </td>
-        </tr>"""
-
-
-def body_headline(text: str) -> str:
-    """Large dark headline in the white body section."""
-    return (
-        f'<tr><td style="padding:8px 40px 18px;" class="pad">'
-        f'<h1 style="margin:0;font-size:28px;font-weight:900;line-height:1.25;'
-        f"color:#0d0d0d;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;\">"
-        f"{escape(text)}</h1></td></tr>"
+    on_brand = (
+        text_on(
+            brand_color
+        )
     )
 
+    dark = darken(
+        brand_color,
+        0.78,
+    )
 
-def cta_button_wide(label: str, brand_color: str) -> str:
-    """Full-width-feeling centered CTA button — uppercase, prominent."""
-    on_brand = text_on(brand_color)
     return f"""
-        <tr>
-          <td align="center" style="padding:36px 40px 20px;" class="pad">
-            <!--[if mso]>
-            <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml"
-              href="#" style="height:56px;v-text-anchor:middle;width:300px;"
-              arcsize="6%" stroke="f" fillcolor="{brand_color}">
-            <w:anchorlock/><center><![endif]-->
-            <a href="#"
-               style="display:inline-block;background:{brand_color};color:{on_brand};
-                      font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                      font-size:14px;font-weight:900;text-decoration:none;
-                      padding:18px 70px;border-radius:4px;letter-spacing:.1em;
-                      text-transform:uppercase;min-width:200px;text-align:center;">
-              {escape(label)}
-            </a>
-            <!--[if mso]></center></v:roundrect><![endif]-->
-          </td>
-        </tr>
-        <tr><td style="height:12px;font-size:0;">&nbsp;</td></tr>"""
+<tr>
+
+<td
+    class="pad"
+    style="
+        background:{dark};
+        padding:36px 40px;
+        text-align:center;
+    "
+>
+
+<h2
+    style="
+        margin:0 0 10px;
+        font:800 28px/1.2 Arial,sans-serif;
+        color:{on_brand};
+    "
+>
+    {escape(headline)}
+</h2>
+
+<p
+    style="
+        margin:0;
+        font:16px/1.5 Arial,sans-serif;
+        color:{on_brand};
+    "
+>
+    {escape(subline)}
+</p>
+
+</td>
+
+</tr>
+"""
 
 
-def sub_footer_strip(text: str, brand_color: str) -> str:
-    """Dark brand-coloured strip above the legal footer — for taglines / partnership lines."""
-    dark_col = darken(brand_color, 0.76)
-    on_dark  = text_on(dark_col)
+def cta_button_wide(
+    label: str,
+    brand_color: str,
+) -> str:
+
+    on_brand = (
+        text_on(
+            brand_color
+        )
+    )
+
     return f"""
-        <tr>
-          <td style="background:{dark_col};padding:22px 40px;" class="pad">
-            <p style="margin:0;font-size:13px;line-height:1.65;color:{on_dark};opacity:.88;
-               font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-              {escape(text)}
-            </p>
-          </td>
-        </tr>"""
+<tr>
+
+<td
+    align="center"
+    class="pad"
+    style="
+        padding:30px 40px;
+    "
+>
+
+<a
+    href="#"
+    style="
+        display:inline-block;
+        background:{brand_color};
+        color:{on_brand};
+        text-decoration:none;
+        font:800 14px Arial,sans-serif;
+        padding:16px 44px;
+        border-radius:4px;
+    "
+>
+    {escape(label)}
+</a>
+
+</td>
+
+</tr>
+"""
 
 
-def footer_simple(brand_name: str) -> str:
-    """Minimal footer: Privacy | Terms | Unsubscribe."""
-    label = escape(brand_name) if brand_name else "CampaignOS"
+def sub_footer_strip(
+    text: str,
+    brand_color: str,
+) -> str:
+
+    dark = darken(
+        brand_color,
+        0.76,
+    )
+
+    on_dark = text_on(
+        dark
+    )
+
     return f"""
-        <tr>
-          <td style="padding:20px 40px 28px;background:#f8f8f8;
-                     border-top:1px solid #e0e0e0;">
-            <p style="margin:0 0 8px;font-size:12px;color:#aaaaaa;text-align:center;
-               font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-              <a href="#" style="color:#aaaaaa;text-decoration:none;">Privacy</a>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href="#" style="color:#aaaaaa;text-decoration:none;">Terms</a>
-              &nbsp;&nbsp;|&nbsp;&nbsp;
-              <a href="#" style="color:#aaaaaa;text-decoration:underline;">Unsubscribe</a>
-            </p>
-            <p style="margin:0;font-size:11px;color:#cccccc;text-align:center;
-               font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-              &copy; 2026 {label}. All rights reserved.
-            </p>
-          </td>
-        </tr>"""
+<tr>
+
+<td
+    class="pad"
+    style="
+        background:{dark};
+        padding:20px 40px;
+        color:{on_dark};
+        font:13px/1.5 Arial,sans-serif;
+    "
+>
+    {escape(text)}
+</td>
+
+</tr>
+"""
 
 
-def brand_header(brand_name: str, brand_color: str) -> str:
-    on_brand = text_on(brand_color)
-    dark_col = darken(brand_color, 0.82)
-    label    = escape(brand_name) if brand_name else "CampaignOS"
+def footer_simple(
+    brand_name: str,
+) -> str:
+
+    label = escape(
+        brand_name or "Campaign"
+    )
+
     return f"""
-        <tr>
-          <td style="background:{brand_color};">
-            <table width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="padding:18px 40px;">
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td>
-                        <p style="margin:0;font-size:17px;font-weight:900;
-                           letter-spacing:.09em;text-transform:uppercase;color:{on_brand};
-                           font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-                          {label}
-                        </p>
-                      </td>
-                      <td align="right">
-                        <p style="margin:0;font-size:10px;color:{on_brand};opacity:.65;
-                           font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;
-                           letter-spacing:.07em;text-transform:uppercase;">
-                          Campaign&nbsp;Update
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style="height:3px;background:{dark_col};font-size:0;">&nbsp;</td>
-              </tr>
-            </table>
-          </td>
-        </tr>"""
+    <tr>
+      <td
+        align="center"
+        style="
+          padding:22px 40px 26px;
+          background:#f7f7f7;
+          border-top:1px solid #e5e5e5;
+          font-family:Arial,Helvetica,sans-serif;
+          color:#666666;
+        "
+      >
 
+        <p
+          style="
+            margin:0 0 8px;
+            font-size:12px;
+            line-height:1.5;
+          "
+        >
+          <a
+            href="#"
+            style="
+              color:#666666;
+              text-decoration:underline;
+            "
+          >
+            Privacy
+          </a>
 
-def footer(brand_name: str) -> str:
-    label = escape(brand_name) if brand_name else "CampaignOS"
-    return f"""
-        <tr>
-          <td style="border-top:1px solid #e8e8e8;padding:28px 40px 36px;">
-            <p style="margin:0 0 10px;font-size:12px;color:#aaaaaa;text-align:center;
-               font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;line-height:1.7;">
-              You are receiving this because you subscribed to {label} updates.
-            </p>
-            <p style="margin:0 0 12px;font-size:12px;color:#aaaaaa;text-align:center;
-               font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-              <a href="#" style="color:#aaaaaa;text-decoration:underline;">Unsubscribe</a>
-              &nbsp;&middot;&nbsp;
-              <a href="#" style="color:#aaaaaa;text-decoration:underline;">Privacy&nbsp;Policy</a>
-              &nbsp;&middot;&nbsp;
-              <a href="#" style="color:#aaaaaa;text-decoration:underline;">View&nbsp;in&nbsp;browser</a>
-            </p>
-            <p style="margin:0;font-size:11px;color:#cccccc;text-align:center;
-               font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;">
-              &copy; 2026 {label}. Powered by CampaignOS.
-            </p>
-          </td>
-        </tr>"""
+          &nbsp;&nbsp;|&nbsp;&nbsp;
+
+          <a
+            href="#"
+            style="
+              color:#666666;
+              text-decoration:underline;
+            "
+          >
+            Terms
+          </a>
+
+          &nbsp;&nbsp;|&nbsp;&nbsp;
+
+          <a
+            href="#"
+            style="
+              color:#666666;
+              text-decoration:underline;
+            "
+          >
+            Unsubscribe
+          </a>
+        </p>
+
+        <p
+          style="
+            margin:0;
+            font-size:12px;
+            line-height:1.5;
+            color:#777777;
+          "
+        >
+          &copy; 2026 {label}. All rights reserved.
+        </p>
+
+      </td>
+    </tr>
+    """
 
 
 def html_shell(
@@ -341,52 +469,118 @@ def html_shell(
     inner_rows: str,
     preheader: str = "",
 ) -> str:
-    """Wrap inner table rows in a complete, email-client-safe HTML document."""
-    ph = (
-        f'<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;'
-        f'font-size:1px;color:#f5f5f5;line-height:1px;">'
-        f'{escape(preheader)}&nbsp;' + '&#847;&nbsp;' * 80 + '</div>'
-        if preheader else ""
-    )
+
+    preheader_html = ""
+
+    if preheader:
+
+        preheader_html = f"""
+<div
+    style="
+        display:none;
+        max-height:0;
+        overflow:hidden;
+        mso-hide:all;
+    "
+>
+    {escape(preheader)}
+</div>
+"""
+
     return f"""<!DOCTYPE html>
-<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+
+<html lang="en">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-  <meta name="x-apple-disable-message-reformatting">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>{escape(subject)}</title>
-  <!--[if mso]>
-  <noscript><xml><o:OfficeDocumentSettings>
-    <o:PixelsPerInch>96</o:PixelsPerInch>
-  </o:OfficeDocumentSettings></xml></noscript>
-  <![endif]-->
-  <style>
-    body{{margin:0;padding:0;background:#ebebeb;-webkit-text-size-adjust:100%;}}
-    img{{border:0;outline:none;text-decoration:none;display:block;}}
-    table{{border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;}}
-    a{{color:{brand_color};}}
-    @media only screen and (max-width:640px){{
-      .wrap{{width:100%!important;max-width:100%!important;}}
-      .pad{{padding-left:24px!important;padding-right:24px!important;}}
-      h1{{font-size:26px!important;line-height:1.25!important;}}
-      .col2{{display:block!important;width:100%!important;max-width:100%!important;margin-bottom:12px!important;}}
+
+<meta charset="UTF-8">
+
+<meta
+    name="viewport"
+    content="width=device-width,initial-scale=1.0"
+>
+
+<title>
+    {escape(subject)}
+</title>
+
+<style>
+
+body {{
+    margin:0;
+    padding:0;
+    background:#ebebeb;
+    -webkit-text-size-adjust:100%;
+}}
+
+table {{
+    border-collapse:collapse;
+}}
+
+img {{
+    border:0;
+    display:block;
+}}
+
+@media(max-width:640px) {{
+
+    .wrap {{
+        width:100%!important;
     }}
-  </style>
+
+    .pad {{
+        padding-left:24px!important;
+        padding-right:24px!important;
+    }}
+}}
+
+</style>
+
 </head>
-<body style="margin:0;padding:0;background:#ebebeb;">
-{ph}
-<table width="100%" cellpadding="0" cellspacing="0"
-  style="background:#ebebeb;min-width:280px;" role="presentation">
-  <tr>
-    <td align="center" style="padding:28px 16px 48px;">
-      <table class="wrap" width="600" cellpadding="0" cellspacing="0"
-        style="background:#ffffff;border-radius:10px;overflow:hidden;
-               box-shadow:0 4px 32px rgba(0,0,0,.14);" role="presentation">
-        {inner_rows}
-      </table>
-    </td>
-  </tr>
+
+<body>
+
+{preheader_html}
+
+<table
+    width="100%"
+    role="presentation"
+    style="
+        background:#ebebeb;
+    "
+>
+
+<tr>
+
+<td
+    align="center"
+    style="
+        padding:28px 16px 48px;
+    "
+>
+
+<table
+    class="wrap"
+    width="600"
+    role="presentation"
+    style="
+        width:600px;
+        max-width:600px;
+        background:#fff;
+    "
+>
+
+{inner_rows}
+
 </table>
+
+</td>
+
+</tr>
+
+</table>
+
 </body>
-</html>"""
+
+</html>
+"""

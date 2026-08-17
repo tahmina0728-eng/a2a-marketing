@@ -1,29 +1,49 @@
-"""Template dispatcher — routes slots to the correct layout renderer."""
-from __future__ import annotations
-from typing import Any
+from .hero import (
+    render as render_hero,
+)
 
-from . import hero, text_first, product
+from .text_first import (
+    render as render_text_first,
+)
 
-_RENDERERS = {
-    "hero":       hero.render,
-    "text_first": text_first.render,
-    "product":    product.render,
-}
+from .product import (
+    render as render_product,
+)
 
 
 def render(
-    slots: dict[str, Any],
-    brand_name:  str = "",
-    brand_color: str = "#0055A4",
-    multi_file:  bool = False,
-) -> str:
-    """
-    Render slots to a complete HTML email string using the template
-    stored in slots["_template"] (default: "hero").
-    """
-    template = slots.get("_template", "hero")
-    renderer = _RENDERERS.get(template, hero.render)
-    return renderer(slots, brand_name=brand_name, brand_color=brand_color, multi_file=multi_file)
+    slots,
+    brand_name="",
+    brand_color="#0055A4",
+    multi_file=False,
+):
 
+    template = slots.get(
+        "_template",
+        "hero",
+    )
 
-__all__ = ["render"]
+    if template == "text_first":
+
+        return render_text_first(
+            slots,
+            brand_name,
+            brand_color,
+            multi_file,
+        )
+
+    if template == "product":
+
+        return render_product(
+            slots,
+            brand_name,
+            brand_color,
+            multi_file,
+        )
+
+    return render_hero(
+        slots,
+        brand_name,
+        brand_color,
+        multi_file,
+    )

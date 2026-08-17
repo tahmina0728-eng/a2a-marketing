@@ -1,146 +1,295 @@
-"""
-Content normaliser — maps raw parsed blocks into structured ContentSlots,
-and merges multiple per-file slot dicts into one combined set.
-"""
 from __future__ import annotations
-import re
+
 from typing import Any
 
 
-def _detect_slot(text: str) -> str | None:
+def _detect_slot(
+    text: str,
+) -> str | None:
+
     lower = text.lower().strip()
-    for kw in ("subject:", "email subject:", "subject line:"):
-        if lower.startswith(kw): return "subject"
-    for kw in ("preheader:", "preview text:", "preview:"):
-        if lower.startswith(kw): return "preheader"
-    for kw in ("headline:", "header:", "title:", "h1:"):
-        if lower.startswith(kw): return "headline"
-    for kw in ("subline:", "subtitle:", "subheading:", "sub-headline:", "tagline:"):
-        if lower.startswith(kw): return "subline"
-    for kw in ("cta:", "call to action:", "button:", "action:"):
-        if lower.startswith(kw): return "cta"
+
+    mapping = {
+
+        "subject": (
+            "subject:",
+            "email subject:",
+            "subject line:",
+        ),
+
+        "preheader": (
+            "preheader:",
+            "preview text:",
+            "preview:",
+        ),
+
+        "headline": (
+            "headline:",
+        ),
+
+        "subline": (
+            "subline:",
+            "subtitle:",
+            "tagline:",
+        ),
+
+        "cta": (
+            "cta:",
+            "call to action:",
+            "button:",
+            "action:",
+        ),
+    }
+
+    for slot, prefixes in mapping.items():
+
+        if any(
+            lower.startswith(prefix)
+            for prefix in prefixes
+        ):
+            return slot
+
     return None
 
 
-def _strip_label(text: str) -> str:
+def _strip_label(
+    text: str,
+) -> str:
+
     idx = text.find(":")
-    return text[idx + 1:].strip() if idx != -1 else text.strip()
+
+    return (
+        text[idx + 1:].strip()
+        if idx != -1
+        else text.strip()
+    )
 
 
-def map_slots(parsed: dict) -> dict[str, Any]:
+def map_slots(
+    parsed: dict,
+    filename: str = "",
+) -> dict[str, Any]:
+
     """
-    Convert raw { blocks, images } from a parser into a ContentSlots dict.
+    Convert parsed content into SOURCE slots.
 
-    Slot detection rules:
-      • Lines starting with "Subject:", "Headline:", "CTA:", etc. are extracted
-        directly into their named slot.
-      • Heading level-1 → headline (first one), body thereafter.
-      • Heading level-2/3 → subline (first after headline), body thereafter.
-      • Plain paragraphs → body list.
-      • Tables → tables list.
+    Generic document headings are NOT promoted
+    automatically to email headline/subline.
     """
-    slots: dict[str, Any] = {
-        "subject":   "",
+
+    slots = {
+
+        "subject": "",
+
         "preheader": "",
-        "headline":  "",
-        "subline":   "",
-        "body":      [],
-        "cta":       "",
-        "tables":    [],
-        "images":    parsed.get("images", []),
+
+        "headline": "",
+
+        "subline": "",
+
+        "body": [],
+
+        "cta": "",
+
+        "tables": [],
+
+        "images": parsed.get(
+            "images",
+            [],
+        ),
+
+        "_source_filename":
+            filename,
+
+        "_image_context":
+            parsed.get(
+                "image_context",
+                [],
+            ),
     }
 
-    for block in parsed.get("blocks", []):
-        btype = block.get("type")
+    for block in parsed.get(
+        "blocks",
+        [],
+    ):
+
+        btype = block.get(
+            "type"
+        )
+
+        # ----------------------------------
+        # Tables
+        # ----------------------------------
 
         if btype == "table":
+
             slots["tables"].append({
-                "headers": block.get("headers", []),
-                "rows":    block.get("rows", []),
+
+                "headers":
+                    block.get(
+                        "headers",
+                        [],
+                    ),
+
+                "rows":
+                    block.get(
+                        "rows",
+                        [],
+                    ),
             })
+
             continue
 
-        text = block.get("text", "").strip()
+        # ----------------------------------
+        # Text
+        # ----------------------------------
+
+        text = str(
+            block.get(
+                "text",
+                "",
+            )
+        ).strip()
+
         if not text:
             continue
 
-        slot = _detect_slot(text)
-        if slot:
-            slots[slot] = _strip_label(text)
-            continue
+        explicit_slot = (
+            _detect_slot(text)
+        )
 
-        level = block.get("level", 0)
-        if btype == "heading" and level == 1:
-            if not slots["headline"]:
-                slots["headline"] = text
-            else:
-                slots["body"].append(text)
-        elif btype == "heading":
-            if slots["headline"] and not slots["subline"] and len(text) < 160:
-                slots["subline"] = text
-            else:
-                slots["body"].append(text)
+        if explicit_slot:
+
+            slots[
+                explicit_slot
+            ] = _strip_label(
+                text
+            )
+
         else:
-            slots["body"].append(text)
 
-    if not slots["subject"] and slots["headline"]:
-        slots["subject"] = slots["headline"]
+            # Generic document text remains
+            # SOURCE MATERIAL.
+
+            slots["body"].append(
+                text
+            )
 
     return slots
 
 
-def merge_slots_list(slots_list: list[dict], filenames: list[str]) -> dict[str, Any]:
-    """
-    Merge multiple per-file slot dicts into one combined ContentSlots dict.
+def merge_slots_list(
+    slots_list: list[dict],
+    filenames: list[str],
+) -> dict[str, Any]:
 
-    The first file provides the primary subject / headline / brand signals.
-    Subsequent files are appended as `_sections` with their filename as label,
-    so the builder can render them with visual dividers.
     """
+    Merge multiple files into ONE source context.
+
+    Important:
+
+    3 uploaded files != 3 email sections.
+
+    They are simply three sources from which the
+    composer creates one coherent email.
+    """
+
     if not slots_list:
-        return map_slots({"blocks": [], "images": []})
-    if len(slots_list) == 1:
-        return slots_list[0]
 
-    first  = slots_list[0]
-    merged: dict[str, Any] = {
-        "subject":   first.get("subject", ""),
-        "preheader": first.get("preheader", ""),
-        "headline":  first.get("headline", ""),
-        "subline":   first.get("subline", ""),
-        "cta":       first.get("cta", ""),
-        "body":      list(first.get("body", [])),
-        "tables":    list(first.get("tables", [])),
-        "images":    list(first.get("images", [])),
-        "_sections": [],
+        return map_slots({
+            "blocks": [],
+            "images": [],
+        })
+
+    merged = {
+
+        "subject": "",
+
+        "preheader": "",
+
+        "headline": "",
+
+        "subline": "",
+
+        "cta": "",
+
+        "body": [],
+
+        "tables": [],
+
+        "images": [],
+
+        "_source_files": [],
+
+        "_image_context": [],
     }
 
-    merged["_sections"].append({
-        "label":  filenames[0] if filenames else "",
-        "body":   list(first.get("body", [])),
-        "tables": list(first.get("tables", [])),
-        "images": list(first.get("images", [])),
-    })
+    for slots, fname in zip(
+        slots_list,
+        filenames,
+    ):
 
-    for slots, fname in zip(slots_list[1:], filenames[1:]):
-        merged["_sections"].append({
-            "label":  fname,
-            "body":   list(slots.get("body", [])),
-            "tables": list(slots.get("tables", [])),
-            "images": list(slots.get("images", [])),
+        # Metadata only.
+        # Never rendered by templates.
+
+        merged[
+            "_source_files"
+        ].append({
+            "filename": fname
         })
-        merged["body"].extend(slots.get("body", []))
-        merged["tables"].extend(slots.get("tables", []))
-        merged["images"].extend(slots.get("images", []))
-        if not merged["cta"] and slots.get("cta"):
-            merged["cta"] = slots["cta"]
-        if not merged["subject"] and slots.get("subject"):
-            merged["subject"] = slots["subject"]
-        if not merged["headline"] and slots.get("headline"):
-            merged["headline"] = slots["headline"]
 
-    if not merged["subject"] and merged["headline"]:
-        merged["subject"] = merged["headline"]
+        merged["body"].extend(
+            slots.get(
+                "body",
+                [],
+            )
+        )
 
-    merged["images"] = merged["images"][:10]
+        merged["tables"].extend(
+            slots.get(
+                "tables",
+                [],
+            )
+        )
+
+        merged["images"].extend(
+            slots.get(
+                "images",
+                [],
+            )
+        )
+
+        merged[
+            "_image_context"
+        ].extend(
+            slots.get(
+                "_image_context",
+                [],
+            )
+        )
+
+        # Only explicit email fields
+        # are carried forward.
+
+        for key in (
+            "subject",
+            "preheader",
+            "headline",
+            "subline",
+            "cta",
+        ):
+
+            if (
+                not merged.get(key)
+                and slots.get(key)
+            ):
+
+                merged[key] = (
+                    slots[key]
+                )
+
+    merged["images"] = (
+        merged["images"][:10]
+    )
+
     return merged
