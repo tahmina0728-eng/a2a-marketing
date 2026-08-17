@@ -71,11 +71,9 @@ def get_trends(
         from pytrends.request import TrendReq
 
         pt = TrendReq(
-            hl             = "en-GB",
-            geo            = geo,
-            timeout        = (10, 30),
-            retries        = 1,
-            backoff_factor = 0.5,
+            hl      = "en-GB",
+            geo     = geo,
+            timeout = (10, 30),
         )
         pt.build_payload(keywords, timeframe=timeframe, geo=geo)
         df = pt.interest_over_time()
