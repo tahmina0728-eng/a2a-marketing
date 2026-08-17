@@ -40,8 +40,8 @@ import AgentProfile from "./components/agents/AgentProfile";
 import BriefingAgentDashboard from "./components/briefing/BriefingAgentDashboard";
 import EmailConverter from "./components/EmailConverter";
 
-// ── Infosys Aster logo — top-left header (small, with "Powered by") ──
-function AsterLogo({ size = 1 }: { size?: number }) {
+// ── Infosys Aster logo — top-left header (small, with "Powered by") — hidden for now ──
+/* function AsterLogo({ size = 1 }: { size?: number }) {
   const w = 90 * size, h = 53 * size;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, userSelect: "none" as const }}>
@@ -70,7 +70,7 @@ function AsterLogo({ size = 1 }: { size?: number }) {
       </svg>
     </div>
   );
-}
+} */
 
 
 // ── Wizard constants ─────────────────────────────────────────
@@ -4402,9 +4402,8 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
         backgroundImage: "linear-gradient(rgba(124,58,237,1) 1px, transparent 1px), linear-gradient(90deg, rgba(124,58,237,1) 1px, transparent 1px)",
         backgroundSize: "36px 36px", pointerEvents: "none" as const }} />
 
-      {/* Logo — orb inline with A2A, tagline stacked below */}
-      <div style={{ padding: "28px 20px 24px", position: "relative" as const, zIndex: 2 }}>
-        {/* Row: orb + A2A on the same line */}
+      {/* Logo — orb inline with A2A, tagline stacked below (hidden for now) */}
+      {/* <div style={{ padding: "28px 20px 24px", position: "relative" as const, zIndex: 2 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
           <GradientOrb size={46} />
           <span style={{
@@ -4414,7 +4413,6 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
             filter: "drop-shadow(0 0 6px rgba(124,58,237,0.25))",
           }}>A2A</span>
         </div>
-        {/* Tagline — each word on its own line */}
         <div style={{ display: "flex", flexDirection: "column" as const, gap: 4, paddingLeft: 4 }}>
           {["Marketing", "Advertising", "Media"].map(word => (
             <span key={word} style={{
@@ -4423,6 +4421,15 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
             }}>{word}</span>
           ))}
         </div>
+      </div> */}
+
+      {/* Logo — Telia */}
+      <div style={{ padding: "20px 20px 16px", position: "relative" as const, zIndex: 2 }}>
+        <img
+          src="/agent-logo/Telia_logo_2022.svg.webp"
+          alt="Telia"
+          style={{ width: 100, height: "auto", display: "block" }}
+        />
       </div>
 
       {/* Divider */}
@@ -4682,10 +4689,25 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
         </button>
       </div>
 
-      {/* Powered by Infosys Aster */}
-      <div style={{ padding: "14px 20px", borderTop: "1px solid var(--card-border)",
+      {/* Powered by Infosys Aster (hidden for now) */}
+      {/* <div style={{ padding: "14px 20px", borderTop: "1px solid var(--card-border)",
         position: "relative" as const, zIndex: 2 }}>
         <AsterLogo size={0.62} />
+      </div> */}
+
+      {/* Powered by Infosys */}
+      <div style={{ padding: "14px 20px", borderTop: "1px solid var(--card-border)",
+        position: "relative" as const, zIndex: 2, display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ fontSize: 10 * 0.62, color: "var(--text-tertiary)", fontWeight: 400,
+          fontFamily: "'Inter',sans-serif", letterSpacing: "0.05em",
+          textTransform: "uppercase" as const, whiteSpace: "nowrap" as const }}>
+          Powered by
+        </span>
+        <img
+          src="/agent-logo/brands_Infosys_Logos_Infosys_WB.jpg"
+          alt="Infosys"
+          style={{ width: 60, height: "auto", display: "block" }}
+        />
       </div>
     </div>
   );
