@@ -291,6 +291,19 @@ async def run_agent(
     state = dict(refreshed.state) if refreshed else {}
     log.info("session_state_keys", keys=list(state.keys()))
 
+    # Read source stats written by load_brand_context — shared across all return paths
+    _source_stats: dict = {}
+    _source_stats_raw = state.get("_source_stats", "")
+    if _source_stats_raw:
+        try:
+            _source_stats = (
+                json.loads(_source_stats_raw)
+                if isinstance(_source_stats_raw, str)
+                else _source_stats_raw
+            )
+        except Exception:
+            pass
+
     # If Groq/LiteLlm and no LLM output yet, call Groq directly
     if not final_response and _needs_groq_fallback(agent):
         log.info("groq_direct_fallback", reason="ADK LiteLlm workflow returned no output")
@@ -298,6 +311,7 @@ async def run_agent(
         result.setdefault("campaign_id", cid)
         if state.get("audience_insights"):
             result["audience_insights"] = state["audience_insights"]
+        result.update(_source_stats)
         return result, int((time.time() - start) * 1000)
 
     if not final_response:
@@ -305,6 +319,7 @@ async def run_agent(
                   if k not in ("brief_json",) and not k.startswith("_")}
         if useful:
             useful.setdefault("campaign_id", cid)
+            useful.update(_source_stats)
             return useful, int((time.time() - start) * 1000)
         raise RuntimeError(f"Agent '{agent.name}' produced no output.")
 
@@ -313,6 +328,8 @@ async def run_agent(
     # Include audience intelligence in result for UI display
     if state.get("audience_insights"):
         result["audience_insights"] = state["audience_insights"]
+    # Merge source stats (written by load_brand_context, stripped by the _* key filter above)
+    result.update(_source_stats)
     ms = int((time.time() - start) * 1000)
     log.info("adk_run_complete", processing_ms=ms)
     return result, ms
