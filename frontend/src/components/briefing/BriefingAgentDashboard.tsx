@@ -143,7 +143,7 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
   const marketTopKw  = result._market_top_keyword  as string | undefined;
   const marketInterest = result._market_avg_interest as number | undefined;
   const marketStat   = result._market_signals
-    ? `${result._market_signals} wks${marketTopKw ? ` · ${marketTopKw}: ${marketInterest ?? "—"}/100` : ""}`
+    ? `${result._market_signals} signals${marketTopKw ? ` · ${marketTopKw}: ${marketInterest ?? "—"}/100` : ""}`
     : "156 signals";
 
   const dataSources = [
