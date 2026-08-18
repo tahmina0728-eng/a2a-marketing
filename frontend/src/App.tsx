@@ -1596,8 +1596,7 @@ function RunningView({
       <div style={{ width: 320, flexShrink: 0, background: "var(--card-bg)", borderRight: "1px solid var(--card-border)",
         display: compact ? "none" : "flex", flexDirection: "column", padding: "24px 16px", overflowY: "auto" as const }}>
 
-        {/* Logo */}
-        <div style={{ marginBottom: 28 }}><AsterLogo /></div>
+        {/* Logo — hidden (AsterLogo removed) */}
 
         {/* Progress bar */}
         <div style={{ marginBottom: 24 }}>
