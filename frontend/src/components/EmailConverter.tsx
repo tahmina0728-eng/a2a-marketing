@@ -454,6 +454,7 @@ export default function EmailConverter() {
   const [useRag,       setUseRag]       = useState(true);
   const [fullscreen,   setFullscreen]   = useState(false);
   const [editOpen,     setEditOpen]     = useState(false);
+  const [showHtml,     setShowHtml]     = useState(false);
 
   const fileRef      = useRef<HTMLInputElement>(null);
   const colorInputRef = useRef<HTMLInputElement>(null);
@@ -1074,13 +1075,25 @@ export default function EmailConverter() {
               )}
 
               {/* Iframe preview */}
-              <div style={{ flex: 1, minHeight: 0, overflow: "hidden", background: "#e8e8e8" }}>
-                <iframe
-                  srcDoc={result.html}
-                  title="Email preview"
-                  sandbox="allow-same-origin"
-                  style={{ width: "100%", height: "100%", border: "none", display: "block" }}
-                />
+              <div style={{ flex: 1, minHeight: 0, overflow: "hidden", background: showHtml ? "var(--page-bg)" : "#e8e8e8", position: "relative" as const }}>
+                {showHtml ? (
+                  <pre style={{
+                    margin: 0, padding: "20px 24px", height: "100%", boxSizing: "border-box" as const,
+                    overflowY: "auto" as const, overflowX: "auto" as const,
+                    fontSize: 11.5, lineHeight: 1.6, fontFamily: "monospace",
+                    color: "var(--text-secondary)", whiteSpace: "pre-wrap" as const,
+                    wordBreak: "break-all" as const,
+                  }}>
+                    {result.html}
+                  </pre>
+                ) : (
+                  <iframe
+                    srcDoc={result.html}
+                    title="Email preview"
+                    sandbox="allow-same-origin"
+                    style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+                  />
+                )}
               </div>
 
               {/* Action bar */}
@@ -1097,6 +1110,20 @@ export default function EmailConverter() {
                     color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 7,
                   }}>
                   <DownloadIcon /> Download HTML
+                </button>
+                <button onClick={() => setShowHtml(v => !v)}
+                  style={{
+                    padding: "9px 18px", borderRadius: 9, cursor: "pointer",
+                    fontFamily: "inherit", fontSize: 13, fontWeight: 600,
+                    border: `1px solid ${showHtml ? "#7c3aed" : "var(--card-border)"}`,
+                    background: showHtml ? "rgba(124,58,237,0.08)" : "var(--card-bg)",
+                    color: showHtml ? "#7c3aed" : "var(--text-primary)",
+                    display: "flex", alignItems: "center", gap: 7,
+                  }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                  </svg>
+                  {showHtml ? "Show Preview" : "Show HTML"}
                 </button>
                 <button onClick={handlePreviewNewTab}
                   style={{
