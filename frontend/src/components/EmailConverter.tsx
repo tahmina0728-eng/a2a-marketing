@@ -549,7 +549,9 @@ export default function EmailConverter() {
     const a    = document.createElement("a");
     a.href = url;
     a.download = (result.file_count > 1 ? "combined-email" : result.filename.replace(/\.[^.]+$/, "")) + ".html";
+    document.body.appendChild(a);
     a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
