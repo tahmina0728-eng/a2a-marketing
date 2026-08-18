@@ -157,9 +157,9 @@ def load_brand_context(
     brand_locks_dict = _parse_brand_locks(brand, brand_guidelines)
 
     # Live Google Trends market signals ──────────────────────────────────
-    from app.market_trends import get_trends as _get_trends
+    from app.market_trends import get_trends as _get_trends, clean_keyword as _clean_kw
     _trends = _get_trends(
-        keywords  = [kw for kw in [brand, product, moment_type] if kw],
+        keywords  = [kw for kw in [brand, _clean_kw(product), _clean_kw(moment_type)] if kw],
         market    = market,
         timeframe = "today 3-m",
     )
@@ -207,7 +207,7 @@ def load_brand_context(
         try:
             _r = sc.get_moment_type_rules(moment_type=moment_type)
             moment_type_rules_summary = _r.summary or _stub_moment_type(moment_type)
-            _stat_market_signals = len(_r.results)
+            _stat_moment_rules = len(_r.results)  # separate from trends signals
         except Exception:
             moment_type_rules_summary = _stub_moment_type(moment_type)
 
@@ -340,6 +340,7 @@ def load_brand_context(
                 "_market_top_keyword":  _trends["top_keyword"],
                 "_market_avg_interest": _trends["avg_interest"],
                 "_market_summary":      _trends["summary"],
+                "_market_data":         json.dumps(_trends["data"]) if _trends["data"] else "",
             }.items() if v  # omit zeros/empty — lets frontend ?? fallbacks stay active
         }),
     }

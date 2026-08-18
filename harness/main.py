@@ -474,6 +474,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
                 "_market_top_keyword":  machine_brief.get("_market_top_keyword", ""),
                 "_market_avg_interest": machine_brief.get("_market_avg_interest", 0),
                 "_market_summary":      machine_brief.get("_market_summary", ""),
+                "_market_data":         machine_brief.get("_market_data", {}),
             }.items() if v},
         }))
         # Log machine_brief to BigQuery (fire-and-forget — don't block pipeline)

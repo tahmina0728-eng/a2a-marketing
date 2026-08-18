@@ -29,8 +29,14 @@ def _get_source_stats(brand: str, data: dict) -> dict:
     try:
         from app.market_trends import get_trends
         market = data.get("market", "UK") or "UK"
+        from app.market_trends import clean_keyword
+        raw_keywords = [
+            brand,
+            clean_keyword(data.get("product", "") or ""),
+            clean_keyword(data.get("season", "") or ""),
+        ]
         trends = get_trends(
-            keywords  = [kw for kw in [brand, data.get("product", ""), data.get("season", "")] if kw],
+            keywords  = [kw for kw in raw_keywords if kw],
             market    = market,
             timeframe = "today 3-m",
         )
@@ -39,6 +45,7 @@ def _get_source_stats(brand: str, data: dict) -> dict:
             stats["_market_top_keyword"]  = trends["top_keyword"]
             stats["_market_avg_interest"] = trends["avg_interest"]
             stats["_market_summary"]      = trends["summary"]
+            stats["_market_data"]         = trends["data"]  # {keyword: avg_score}
     except Exception:
         pass
 

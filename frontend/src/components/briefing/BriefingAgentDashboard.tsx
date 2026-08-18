@@ -154,7 +154,14 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
     { label: "Market Trends",       source: "Google Trends",    stat: marketStat                                        },
   ];
 
-  const cultureBrief = result.culture_brief as string | undefined;
+  const cultureBrief  = result.culture_brief  as string | undefined;
+  const marketData    = (result._market_data && typeof result._market_data === "object"
+    ? result._market_data
+    : (typeof result._market_data === "string" && result._market_data)
+      ? (() => { try { return JSON.parse(result._market_data as string); } catch { return {}; } })()
+      : {}
+  ) as Record<string, number>;
+  const marketEntries = Object.entries(marketData).sort(([, a], [, b]) => b - a);
 
   return (
     <div style={{ marginTop: 16 }}>
@@ -247,6 +254,62 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
           </span>
         ))}
       </div>
+
+      {/* ── Market Trends card ─────────────────────────────────── */}
+      {marketEntries.length > 0 && (
+        <div style={{
+          margin: "8px 0 10px", padding: "14px 16px",
+          borderRadius: 10, border: "1px solid rgba(59,130,246,0.18)",
+          background: "var(--card-bg)",
+        }}>
+          {/* Header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{ fontSize: 15 }}>📈</span>
+              <span style={{ fontSize: 13, fontWeight: 800, color: "var(--text-primary)" }}>Market Trends</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{
+                fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 99,
+                background: "rgba(59,130,246,0.12)", color: "#3b82f6", letterSpacing: "0.04em",
+              }}>Google Trends</span>
+              <span style={{ fontSize: 10, color: "var(--text-muted)" }}>Last 3 months · GB</span>
+            </div>
+          </div>
+
+          {/* Keyword bars */}
+          <div style={{ display: "flex", flexDirection: "column" as const, gap: 9 }}>
+            {marketEntries.map(([kw, score]) => (
+              <div key={kw}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                  <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 500 }}>{kw}</span>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "#3b82f6" }}>
+                    {Math.round(score)}<span style={{ fontWeight: 400, color: "var(--text-muted)" }}>/100</span>
+                  </span>
+                </div>
+                <div style={{ height: 6, borderRadius: 4, background: "var(--card-border)", overflow: "hidden" }}>
+                  <div style={{
+                    height: "100%", borderRadius: 4,
+                    width: `${Math.min(score, 100)}%`,
+                    background: score >= 60
+                      ? "linear-gradient(90deg,#3b82f6,#06b6d4)"
+                      : score >= 30
+                        ? "linear-gradient(90deg,#6366f1,#8b5cf6)"
+                        : "linear-gradient(90deg,#94a3b8,#64748b)",
+                    transition: "width 0.6s ease",
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer */}
+          <div style={{ marginTop: 10, fontSize: 10, color: "var(--text-muted)", display: "flex", gap: 16 }}>
+            <span>📊 {result._market_signals as number} daily signals</span>
+            <span>🏆 Peak: <strong style={{ color: "var(--text-secondary)" }}>{result._market_top_keyword as string}</strong> · {Math.round(result._market_avg_interest as number)}/100</span>
+          </div>
+        </div>
+      )}
 
       {/* ── Cultural signals (Option 2: appears once culture_analyst finishes) ── */}
       {cultureBrief && (
