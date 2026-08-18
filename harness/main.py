@@ -208,6 +208,17 @@ def health():
     }
 
 
+@app.get("/debug/trends")
+def debug_trends(brand: str = "Barclays", market: str = "UK"):
+    """Smoke-test Google Trends reachability from this Cloud Run instance."""
+    try:
+        from app.market_trends import get_trends
+        result = get_trends(keywords=[brand], market=market, timeframe="today 1-m")
+        return {"ok": result["signals"] > 0, "result": result}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
 @app.get("/readiness")
 def readiness():
     """Readiness probe — checks pipeline and search client are available."""
