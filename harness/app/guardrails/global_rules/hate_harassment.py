@@ -18,11 +18,20 @@ _PROTECTED = [
 ]
 
 _ATTACK_PREFIXES = [
-    r"all\s+(?:{})\s+(?:are|should|must|deserve|need to)",
-    r"(?:{})\s+(?:people\s+)?(?:are inferior|are subhuman|are stupid|are criminals|are terrorists)",
-    r"(?:kill|eliminate|remove|deport|ban)\s+(?:all\s+)?(?:{})",
-    r"(?:hate|despise)\s+(?:all\s+)?(?:{})\s+people",
-    r"(?:{})\s+(?:don't|do not)\s+belong",
+    # Direct hate statements
+    r"all\s+\b(?:{})\b\s+(?:are|should|must|deserve|need to)",
+    r"\b(?:{})\b\s+(?:people\s+)?(?:are inferior|are subhuman|are stupid|are criminals|are terrorists)",
+    r"(?:kill|eliminate|remove|deport|ban)\s+(?:all\s+)?\b(?:{})\b",
+    r"(?:hate|despise)\s+(?:all\s+)?\b(?:{})\b\s+people",
+    r"\b(?:{})\b\s+(?:don't|do not)\s+belong",
+
+    # Requests to mock / demean protected groups (common copywriting attack vector)
+    # Verb stems handle conjugations: mock/mocks/mocked/mocking, ridicule/ridicules, etc.
+    # {{0,4}} — double-braces so .format() treats this as a literal {0,4} quantifier
+    r"(?:mock\w*|ridicul\w*|belittl\w*|demean\w*|degrad\w*|disparag\w*|dehumaniz\w*|make fun of|laugh at|stereotyp\w*)\s+(?:\w+\s+)?\b(?:{})\b",
+    r"\b(?:{})\b\s+(?:\w+\s+)?(?:are|is)\s+(?:mocked|ridiculed|belittled|demeaned|degraded|inferior)",
+    r"(?:write|create|generate|produce)\s+(?:\w+\s+){{0,4}}(?:that\s+)?(?:mock\w*|ridicul\w*|belittl\w*|demean\w*|degrad\w*|disparag\w*|stereotyp\w*|make fun of)\s+(?:\w+\s+)?\b(?:{})\b",
+    r"(?:targeting|aimed at|against)\s+\b(?:{})\b\s+(?:people|community|group)",
 ]
 
 _SLURS = [
