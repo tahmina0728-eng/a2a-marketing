@@ -27,6 +27,7 @@ from google.adk import Agent
 from google.adk.tools import google_search
 
 from app.config import get_settings
+from app.guardrails.callbacks import make_guardrail_callbacks
 from app.models import BriefingContext, CultureAnalysis, CampaignCopy, MachineBrief, CreativeStrategy
 from app.instructions import (
     BRIEFING_AGENT_INSTRUCTIONS,
@@ -50,15 +51,29 @@ from app.tools import generate_and_save_kv_image
 
 settings = get_settings()
 
+# ── GUARDRAIL CALLBACKS (created once at module load, brand resolved at runtime)
+_briefing_before,   _briefing_after   = make_guardrail_callbacks("briefing")
+_culture_before,    _culture_after    = make_guardrail_callbacks("culture_analyst")
+_formatter_before,  _formatter_after  = make_guardrail_callbacks("culture_formatter")
+_director_before,   _director_after   = make_guardrail_callbacks("creative_director")
+_copy_before,       _copy_after       = make_guardrail_callbacks("copy")
+_kv_gen_before,     _kv_gen_after     = make_guardrail_callbacks("kv_generator")
+_content_before,    _content_after    = make_guardrail_callbacks("content")
+_channel_before,    _channel_after    = make_guardrail_callbacks("channel_router")
+_perf_before,       _perf_after       = make_guardrail_callbacks("performance")
+_agg_before,        _agg_after        = make_guardrail_callbacks("aggregation")
+
 # ── BRIEFING STAGE ────────────────────────────────────────────────────────
 
 briefing_agent = Agent(
-    name          = "briefing_agent",
-    model         = settings.reasoning_model,
-    description   = "Validates and enriches the incoming campaign brief, scores the Fan Truth, flags KPIs, and produces a MachineBrief.",
-    instruction   = BRIEFING_AGENT_INSTRUCTIONS,
-    output_key    = "machine_brief",
-    mode          = "single_turn",
+    name                  = "briefing_agent",
+    model                 = settings.reasoning_model,
+    description           = "Validates and enriches the incoming campaign brief, scores the Fan Truth, flags KPIs, and produces a MachineBrief.",
+    instruction           = BRIEFING_AGENT_INSTRUCTIONS,
+    output_key            = "machine_brief",
+    mode                  = "single_turn",
+    before_model_callback = _briefing_before,
+    after_model_callback  = _briefing_after,
 )
 
 fan_truth_gate = FanTruthGateAgent(
@@ -77,39 +92,47 @@ hitl_brief_approval = Agent(
 # ── CULTURAL INTELLIGENCE STAGE ───────────────────────────────────────────
 
 culture_analyst = Agent(
-    name        = "culture_analyst",
-    model       = settings.reasoning_model,
-    description = "Researches the cultural landscape surrounding the campaign using live Google Search.",
-    instruction = CULTURE_ANALYST_INSTRUCTIONS,
-    tools       = [google_search],
+    name                  = "culture_analyst",
+    model                 = settings.reasoning_model,
+    description           = "Researches the cultural landscape surrounding the campaign using live Google Search.",
+    instruction           = CULTURE_ANALYST_INSTRUCTIONS,
+    tools                 = [google_search],
+    before_model_callback = _culture_before,
+    after_model_callback  = _culture_after,
     # NOT single_turn — needs multiple tool calls across several searches
 )
 
 culture_formatter = Agent(
-    name          = "culture_formatter",
-    model         = settings.reasoning_model,
-    description   = "Structures raw cultural research into a CultureAnalysis object.",
-    instruction   = CULTURE_FORMATTER_INSTRUCTIONS,
-    output_schema = CultureAnalysis,
-    mode          = "single_turn",
+    name                  = "culture_formatter",
+    model                 = settings.reasoning_model,
+    description           = "Structures raw cultural research into a CultureAnalysis object.",
+    instruction           = CULTURE_FORMATTER_INSTRUCTIONS,
+    output_schema         = CultureAnalysis,
+    mode                  = "single_turn",
+    before_model_callback = _formatter_before,
+    after_model_callback  = _formatter_after,
 )
 
 creative_director = Agent(
-    name          = "creative_director",
-    model         = settings.reasoning_model,
-    description   = "Synthesises brief, cultural intelligence, and brand guidelines into a Big Idea and CreativeStrategy.",
-    instruction   = CREATIVE_DIRECTOR_INSTRUCTIONS,
-    output_schema = CreativeStrategy,
-    mode          = "single_turn",
+    name                  = "creative_director",
+    model                 = settings.reasoning_model,
+    description           = "Synthesises brief, cultural intelligence, and brand guidelines into a Big Idea and CreativeStrategy.",
+    instruction           = CREATIVE_DIRECTOR_INSTRUCTIONS,
+    output_schema         = CreativeStrategy,
+    mode                  = "single_turn",
+    before_model_callback = _director_before,
+    after_model_callback  = _director_after,
 )
 
 copy_agent = Agent(
-    name          = "copy_agent",
-    model         = settings.reasoning_model,
-    description   = "Distills the creative strategy into short, medium, and long copy variants.",
-    instruction   = COPY_AGENT_INSTRUCTIONS,
-    output_schema = CampaignCopy,
-    mode          = "single_turn",
+    name                  = "copy_agent",
+    model                 = settings.reasoning_model,
+    description           = "Distills the creative strategy into short, medium, and long copy variants.",
+    instruction           = COPY_AGENT_INSTRUCTIONS,
+    output_schema         = CampaignCopy,
+    mode                  = "single_turn",
+    before_model_callback = _copy_before,
+    after_model_callback  = _copy_after,
 )
 
 # ── KV GENERATION STAGE (fan-out) ─────────────────────────────────────────
@@ -136,29 +159,33 @@ _KV_DESIGN_APPROACHES = [
 ]
 
 kv_generator_1 = Agent(
-    name        = "kv_generator_1",
-    model       = settings.reasoning_model,
-    description = "KV Art Director 1: graphic-led design approach.",
-    instruction = KV_GENERATOR_INSTRUCTIONS(
+    name                  = "kv_generator_1",
+    model                 = settings.reasoning_model,
+    description           = "KV Art Director 1: graphic-led design approach.",
+    instruction           = KV_GENERATOR_INSTRUCTIONS(
         1,
         _KV_DESIGN_APPROACHES[0][0],
         _KV_DESIGN_APPROACHES[0][1],
     ),
-    output_key  = "kv_concept_1",
-    mode        = "single_turn",
+    output_key            = "kv_concept_1",
+    mode                  = "single_turn",
+    before_model_callback = _kv_gen_before,
+    after_model_callback  = _kv_gen_after,
 )
 
 kv_generator_2 = Agent(
-    name        = "kv_generator_2",
-    model       = settings.reasoning_model,
-    description = "KV Art Director 2: image-led design approach.",
-    instruction = KV_GENERATOR_INSTRUCTIONS(
+    name                  = "kv_generator_2",
+    model                 = settings.reasoning_model,
+    description           = "KV Art Director 2: image-led design approach.",
+    instruction           = KV_GENERATOR_INSTRUCTIONS(
         2,
         _KV_DESIGN_APPROACHES[1][0],
         _KV_DESIGN_APPROACHES[1][1],
     ),
-    output_key  = "kv_concept_2",
-    mode        = "single_turn",
+    output_key            = "kv_concept_2",
+    mode                  = "single_turn",
+    before_model_callback = _kv_gen_before,
+    after_model_callback  = _kv_gen_after,
 )
 
 # ── KV IMAGE GENERATION STAGE (parallel, one per generator) ─────────────
@@ -204,19 +231,23 @@ hitl_kv_selection = Agent(
 # ── CONTENT PRODUCTION STAGE ──────────────────────────────────────────────
 
 channel_router = Agent(
-    name        = "channel_router",
-    model       = settings.reasoning_model,
-    description = "Maps the approved KV concept and channel list to a ChannelPlan with per-channel format specs.",
-    instruction = CHANNEL_ROUTER_INSTRUCTIONS,
-    mode        = "single_turn",
+    name                  = "channel_router",
+    model                 = settings.reasoning_model,
+    description           = "Maps the approved KV concept and channel list to a ChannelPlan with per-channel format specs.",
+    instruction           = CHANNEL_ROUTER_INSTRUCTIONS,
+    mode                  = "single_turn",
+    before_model_callback = _channel_before,
+    after_model_callback  = _channel_after,
 )
 
 content_agent = Agent(
-    name        = "content_agent",
-    model       = settings.reasoning_model,
-    description = "Generates production-ready copy and image prompts for every channel in the ChannelPlan.",
-    instruction = CONTENT_AGENT_INSTRUCTIONS,
-    mode        = "single_turn",
+    name                  = "content_agent",
+    model                 = settings.reasoning_model,
+    description           = "Generates production-ready copy and image prompts for every channel in the ChannelPlan.",
+    instruction           = CONTENT_AGENT_INSTRUCTIONS,
+    mode                  = "single_turn",
+    before_model_callback = _content_before,
+    after_model_callback  = _content_after,
 )
 
 # ── EXECUTION & REPORTING STAGE ───────────────────────────────────────────
@@ -230,20 +261,24 @@ execution_agent = Agent(
 )
 
 aggregation_agent = Agent(
-    name        = "aggregation_agent",
-    model       = settings.reasoning_model,
-    description = "Consolidates all pipeline outputs into a single CampaignAggregation record.",
-    instruction = AGGREGATION_AGENT_INSTRUCTIONS,
-    mode        = "single_turn",
+    name                  = "aggregation_agent",
+    model                 = settings.reasoning_model,
+    description           = "Consolidates all pipeline outputs into a single CampaignAggregation record.",
+    instruction           = AGGREGATION_AGENT_INSTRUCTIONS,
+    mode                  = "single_turn",
+    before_model_callback = _agg_before,
+    after_model_callback  = _agg_after,
 )
 
 performance_agent = Agent(
-    name        = "performance_agent",
-    model       = settings.reasoning_model,
-    description = "Pre-launch performance forecaster — predicts reach, CTR, ROAS per channel using historical benchmarks and Fan Truth score.",
-    instruction = PERFORMANCE_AGENT_INSTRUCTIONS,
-    output_key  = "performance_forecast",
-    mode        = "single_turn",
+    name                  = "performance_agent",
+    model                 = settings.reasoning_model,
+    description           = "Pre-launch performance forecaster — predicts reach, CTR, ROAS per channel using historical benchmarks and Fan Truth score.",
+    instruction           = PERFORMANCE_AGENT_INSTRUCTIONS,
+    output_key            = "performance_forecast",
+    mode                  = "single_turn",
+    before_model_callback = _perf_before,
+    after_model_callback  = _perf_after,
 )
 
 # ── EMAIL CONVERTER ───────────────────────────────────────────────────────

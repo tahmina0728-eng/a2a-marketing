@@ -1,12 +1,18 @@
 """Shared utilities for all standalone agent modules."""
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import time
+import uuid
 
 import structlog
 from google import genai
+from google.adk.agents.base_agent import BaseAgent
+from google.adk.runners import Runner
+from google.adk.sessions import InMemorySessionService
+from google.genai import types as genai_types
 
 from app.config import get_settings
 from app.brand_assets import get_asset_loader
@@ -57,21 +63,86 @@ def _extract_language(text: str) -> str:
     return m.group(1).strip() if m else ""
 
 
-def _generate(persona: str, brand: str, prompt: str, output_instructions: str) -> dict:
-    guidelines   = _brand_guidelines(brand)
+# ── ADK Runner helpers ────────────────────────────────────────────────────────
+
+async def _run_with_adk(agent: BaseAgent, brand: str, prompt: str) -> dict:
+    """
+    Invoke an ADK Agent through the Runner so that before_model_callback /
+    after_model_callback fire natively.  Each call gets its own in-memory
+    session (ephemeral, standalone — no persistence needed).
+    brand_name is written to session state so callbacks can load brand policy.
+    """
+    svc     = InMemorySessionService()
+    session = await svc.create_session(
+        app_name   = "campaignos_standalone",
+        user_id    = "standalone",
+        session_id = str(uuid.uuid4()),
+        state      = {"brand_name": brand},
+    )
+    runner = Runner(
+        agent           = agent,
+        app_name        = "campaignos_standalone",
+        session_service = svc,
+    )
+    final_text = ""
+    async for event in runner.run_async(
+        user_id     = "standalone",
+        session_id  = session.id,
+        new_message = genai_types.Content(
+            role  = "user",
+            parts = [genai_types.Part(text=prompt)],
+        ),
+    ):
+        if event.content:
+            for part in (event.content.parts or []):
+                if part.text:
+                    final_text = part.text  # keep last text chunk
+
+    return _parse_json_loose(final_text) or {"raw": final_text}
+
+
+def _run_adk_sync(agent: BaseAgent, brand: str, prompt: str) -> dict:
+    """
+    Sync wrapper around _run_with_adk — safe to call from asyncio.to_thread()
+    context (FastAPI runs sync routes in a thread pool without an event loop).
+    """
+    return asyncio.run(_run_with_adk(agent, brand, prompt))
+
+
+def _generate(
+    persona: str,
+    brand: str,
+    prompt: str,
+    output_instructions: str,
+    agent_name: str = "standalone",
+) -> dict:
+    # ── Input guardrails (runs before the model call) ──────────────────────
+    try:
+        from app.guardrails import GuardrailService
+        gs = GuardrailService(brand=brand, agent=agent_name)
+        input_check = gs.check_input({"prompt": prompt, "brand": brand})
+        if input_check.blocked:
+            msg = input_check.flags[0].message if input_check.flags else "Input blocked by guardrails"
+            return {"verdict": "BLOCKED", "summary": msg}
+    except Exception as _ge:
+        logger.warning("guardrail_input_error", agent=agent_name, error=str(_ge))
+
+    guidelines  = _brand_guidelines(brand)
     full_prompt = (
         f"{persona}\n\n"
         f"BRAND GUIDELINES for {brand}:\n{guidelines}\n\n"
         f"CREATIVE DIRECTION from the user: \"{prompt}\"\n\n"
         f"{output_instructions}"
     )
+    result: dict = {}
     for attempt in range(3):
         try:
             resp = _genai_client().models.generate_content(
                 model=settings.gemini_model_reasoning, contents=full_prompt,
             )
-            raw = (resp.text or "").strip()
-            return _parse_json_loose(raw) or {"raw": raw}
+            raw    = (resp.text or "").strip()
+            result = _parse_json_loose(raw) or {"raw": raw}
+            break
         except Exception as _e:
             err = str(_e)
             if "429" in err and attempt < 2:
@@ -81,4 +152,18 @@ def _generate(persona: str, brand: str, prompt: str, output_instructions: str) -
             else:
                 logger.warning("standalone_generate_failed", brand=brand, error=err)
                 return {"error": err}
-    return {"error": "quota exhausted after retries"}
+    else:
+        return {"error": "quota exhausted after retries"}
+
+    # ── Output guardrails (runs after the model responds) ──────────────────
+    try:
+        from app.guardrails import GuardrailService
+        gs = GuardrailService(brand=brand, agent=agent_name)
+        output_check = gs.check_output(result)
+        if output_check.blocked:
+            msg = output_check.flags[0].message if output_check.flags else "Output blocked by guardrails"
+            return {"verdict": "BLOCKED", "summary": msg}
+    except Exception as _ge:
+        logger.warning("guardrail_output_error", agent=agent_name, error=str(_ge))
+
+    return result

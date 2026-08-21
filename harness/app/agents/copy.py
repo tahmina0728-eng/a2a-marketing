@@ -1,26 +1,21 @@
 from __future__ import annotations
-from app.agents._utils import _generate, _extract_language
+from app._standalone_agents import standalone_copy
+from app.agents._utils import _run_adk_sync, _extract_language
 
 
 def run_copy(brand: str, prompt: str) -> dict:
     lang = _extract_language(prompt)
-    # Always emit a language rule when the user explicitly selected one — including English.
-    # Without this, brand guidelines that mention regional localisation (e.g. Sunrise's
-    # "German / French / Italian for Swiss market") override the user's language choice.
+    # Language override is appended to the user message so the ADK instruction
+    # callable (which only reads brand context) doesn't need to know about it.
     if lang:
-        lang_rule = (
-            f" CRITICAL LANGUAGE OVERRIDE: The user has explicitly selected '{lang}' as the output language. "
+        user_prompt = (
+            f"{prompt}\n\n"
+            f"CRITICAL LANGUAGE OVERRIDE: The user has explicitly selected '{lang}' as the output language. "
             f"ALL copy (headline, subline, body, cta) MUST be written entirely in {lang}. "
-            f"This instruction overrides any localisation requirements mentioned in the brand guidelines. "
-            f"Output only the JSON — no preamble, no explanation."
+            f"This overrides any localisation requirements mentioned in the brand guidelines."
         )
     else:
-        lang_rule = " Output only the JSON — no preamble, no explanation."
-    data = _generate(
-        "You are Ideon, the copywriter for an AI marketing campaign system. "
-        "You write campaign headlines and copy that sound like a human wrote them, not corporate marketing-speak.",
-        brand, prompt,
-        'Respond ONLY with valid JSON, no markdown fences, no commentary:' + lang_rule + ' '
-        '{"headline": "...", "subline": "...", "body": "1-2 sentences", "cta": "2-3 words"}',
-    )
+        user_prompt = prompt
+
+    data = _run_adk_sync(standalone_copy, brand, user_prompt)
     return {"agent": "copy", **data}

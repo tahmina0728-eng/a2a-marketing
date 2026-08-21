@@ -1,51 +1,16 @@
 from __future__ import annotations
-from app.agents._utils import _generate
+from app._standalone_agents import standalone_briefing
+from app.agents._utils import _run_adk_sync
 
 
 def run_briefing(brand: str, prompt: str) -> dict:
-    from app.guardrails import GuardrailService, Action
+    data = _run_adk_sync(standalone_briefing, brand, prompt)
 
-    gs = GuardrailService(brand=brand, agent="briefing")
+    if data.get("verdict") == "BLOCKED":
+        return {"agent": "briefing", **data}
 
-    # ── Input guardrails (prompt injection, PII, safety) ──────────────────
-    input_check = gs.check_input({"prompt": prompt, "brand": brand})
-    if input_check.blocked:
-        return {
-            "agent":           "briefing",
-            "verdict":         "BLOCKED",
-            "summary":         input_check.flags[0].message if input_check.flags else "Input blocked by guardrails",
-            "guardrail_flags": input_check.to_dict()["flags"],
-        }
-
-    data = _generate(
-        "You are Logos, the briefing agent for an AI marketing campaign system. "
-        "You validate a campaign idea against brand guidelines and give a quick quality read.",
-        brand, prompt,
-        'Respond ONLY with JSON, no markdown fences: '
-        '{"goal": "...", "product": "...", "fan_truth": "the human insight behind this, one sentence", '
-        '"audience": "who this is for, one phrase", "market": "...", "season": "...", '
-        '"score": <integer 0-100>, "verdict": "PASS or NEEDS WORK", '
-        '"summary": "1-2 sentence rationale for the score"}',
-    )
-
-    # ── Output guardrails (competitors, claims, tone, schema) ─────────────
-    output_check = gs.check_output(data)
-    guardrail_meta: dict = {
-        "guardrail_passed": output_check.passed,
-        "guardrail_action": output_check.action.value,
-        "guardrail_flags":  output_check.to_dict()["flags"],
-    }
-    if output_check.blocked:
-        return {
-            "agent":   "briefing",
-            "verdict": "BLOCKED",
-            "summary": output_check.flags[0].message if output_check.flags else "Output blocked by guardrails",
-            **guardrail_meta,
-        }
-
-    # Enrich with real data-source stats for the briefing dashboard
     source_stats = _get_source_stats(brand, data)
-    return {"agent": "briefing", **data, **source_stats, **guardrail_meta}
+    return {"agent": "briefing", **data, **source_stats}
 
 
 def _get_source_stats(brand: str, data: dict) -> dict:
@@ -54,11 +19,9 @@ def _get_source_stats(brand: str, data: dict) -> dict:
     settings = get_settings()
     stats: dict = {}
 
-    # Google Trends — market signals
     try:
-        from app.market_trends import get_trends
+        from app.market_trends import get_trends, clean_keyword
         market = data.get("market", "UK") or "UK"
-        from app.market_trends import clean_keyword
         raw_keywords = [
             brand,
             clean_keyword(data.get("product", "") or ""),
@@ -74,11 +37,10 @@ def _get_source_stats(brand: str, data: dict) -> dict:
             stats["_market_top_keyword"]  = trends["top_keyword"]
             stats["_market_avg_interest"] = trends["avg_interest"]
             stats["_market_summary"]      = trends["summary"]
-            stats["_market_data"]         = trends["data"]  # {keyword: avg_score}
+            stats["_market_data"]         = trends["data"]
     except Exception:
         pass
 
-    # Vertex AI Search — brand guidelines chunks
     try:
         if settings.search_mode == "live":
             from app.search_client import get_search_client
@@ -89,7 +51,6 @@ def _get_source_stats(brand: str, data: dict) -> dict:
     except Exception:
         pass
 
-    # GCS product catalogue — actual file count
     try:
         from app.brand_assets import get_asset_loader
         product_paths = get_asset_loader().list_products(brand)

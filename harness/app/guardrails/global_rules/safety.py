@@ -11,8 +11,10 @@ from ..registry import register
 _PATTERNS = [
     (r"\b(how to (?:make|build|create) (?:bomb|weapon|explosive))\b", "violence/weapons"),
     (r"\b(self.harm|suicide method|kill (?:myself|yourself))\b",       "self-harm"),
-    (r"\b(child (?:abuse|exploitation|pornography))\b",                "child safety"),
+    (r"\b(child (?:abuse|exploitation|pornography|sexual abuse material|grooming))\b", "child safety"),
     (r"\b(illegal drug (?:synthesis|manufacture))\b",                  "illegal activity"),
+    (r"\b(explicit sex|porn(?:ography)?|nude(?:s)?|naked (?:photo|image|video)|onlyfans|sex tape|adult content)\b", "explicit sexual content"),
+    (r"\b(rape|sexual assault|non.?consensual)\b",                     "sexual violence"),
 ]
 
 

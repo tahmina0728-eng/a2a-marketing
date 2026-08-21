@@ -1,6 +1,6 @@
 """
-global_rules/profanity.py — Detects profanity in campaign outputs.
-Action is REDACT for mild terms, BLOCK for severe ones.
+global_rules/profanity.py — Detects profanity in user input and agent outputs.
+Action is WARN for mild terms, BLOCK for severe ones.
 """
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ _MILD   = ["damn", "crap", "bastard", "ass", "bitch"]
 
 class _ProfanityRule:
     name  = "global.profanity"
-    stage = "output"
+    stage = "both"
     scope = "global"
 
     def run(self, payload: dict, context: dict) -> GuardrailResult:
