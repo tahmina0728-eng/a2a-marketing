@@ -1,0 +1,20 @@
+{
+  "brand": "Barclays",
+  "industry": "finance",
+  "markets": ["uk", "united kingdom", "gb"],
+  "competitors": ["HSBC", "Lloyds", "NatWest", "Santander", "Halifax", "Nationwide", "TSB", "Monzo", "Starling"],
+  "banned_phrases": ["risk-free", "guaranteed returns", "no fees ever", "best rates guaranteed"],
+  "avoid_terms": {
+    "customer": "client",
+    "product": "service",
+    "cheap": "competitive"
+  },
+  "approved_claims": [
+    "Official Banking Partner of The Championships, Wimbledon",
+    "Proud partner of the Premier League",
+    "Award-winning mobile banking"
+  ],
+  "approved_partners": ["Wimbledon", "Premier League", "British Tennis"],
+  "required_disclaimers": ["Subject to eligibility", "Terms and conditions apply"],
+  "hitl_required": true
+}

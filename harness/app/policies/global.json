@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "description": "Global guardrail policy — applies to all brands and agents",
+  "rules": {
+    "global.safety":          { "enabled": true,  "action": "block" },
+    "global.profanity":       { "enabled": true,  "action": "warn"  },
+    "global.pii":             { "enabled": true,  "action": "redact"},
+    "global.secrets":         { "enabled": true,  "action": "block" },
+    "global.prompt_injection":{ "enabled": true,  "action": "block" },
+    "brand.competitors":      { "enabled": true,  "action": "block" },
+    "brand.tone":             { "enabled": true,  "action": "warn"  },
+    "brand.claims":           { "enabled": true,  "action": "warn"  },
+    "brand.terminology":      { "enabled": true,  "action": "warn"  },
+    "brand.scope":            { "enabled": true,  "action": "warn"  },
+    "campaign.audience":      { "enabled": true,  "action": "block" },
+    "campaign.approved_claims":{ "enabled": true, "action": "warn"  },
+    "campaign.partnership":   { "enabled": true,  "action": "warn"  },
+    "validator.schema":       { "enabled": true,  "action": "block" },
+    "validator.handoff":      { "enabled": true,  "action": "block" }
+  },
+  "hitl_required_for_industries": ["pharma", "healthcare", "finance", "banking", "alcohol", "gambling"],
+  "auto_redact_pii": true
+}

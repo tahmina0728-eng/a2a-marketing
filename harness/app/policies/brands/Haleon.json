@@ -1,0 +1,21 @@
+{
+  "brand": "Haleon",
+  "industry": "healthcare",
+  "markets": ["uk", "us", "global", "worldwide"],
+  "competitors": ["Reckitt", "Johnson & Johnson", "Bayer Consumer", "Procter & Gamble"],
+  "banned_phrases": ["cures", "eliminates permanently", "100% effective", "miracle"],
+  "avoid_terms": {
+    "patient": "consumer",
+    "disease": "condition",
+    "treatment": "relief",
+    "drug": "product"
+  },
+  "approved_claims": [
+    "Clinically proven to relieve sensitivity",
+    "Recommended by dentists",
+    "Trusted by millions"
+  ],
+  "approved_partners": ["British Dental Association"],
+  "required_disclaimers": ["Always read the label", "Consult your dentist"],
+  "hitl_required": true
+}

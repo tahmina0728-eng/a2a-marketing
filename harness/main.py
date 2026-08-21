@@ -166,6 +166,10 @@ app = FastAPI(
     lifespan    = lifespan,
 )
 
+# ── Guardrails HITL review routes ──────────────────────────────────────────
+from app.hitl.approvals import approvals_router
+app.include_router(approvals_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
