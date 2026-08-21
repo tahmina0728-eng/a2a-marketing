@@ -5,19 +5,22 @@ Factory that produces before_model_callback / after_model_callback pairs
 wired directly into ADK's LlmAgent lifecycle. The brand is read from
 session state at runtime (set by load_brand_context before any agent runs).
 
-Callback signatures confirmed against google-adk==2.0.0b1:
-  before_model_callback(ctx: Context, llm_request: LlmRequest) -> LlmResponse | None
-  after_model_callback(ctx: Context, llm_response: LlmResponse)  -> LlmResponse | None
+Callback signatures confirmed against google-adk==2.0.0b1 source:
+  BeforeModelCallback(callback_context: CallbackContext, llm_request: LlmRequest) -> LlmResponse | None
+  AfterModelCallback(callback_context: CallbackContext, llm_response: LlmResponse) -> LlmResponse | None
 
-Returning None  → ADK proceeds normally (model is called / response is passed through).
-Returning an LlmResponse → ADK short-circuits (model is skipped / response is replaced).
+ADK invokes these by keyword, so the first parameter MUST be named
+'callback_context' — any other name causes an unexpected keyword argument error.
+
+Returning None  → ADK proceeds normally.
+Returning an LlmResponse → ADK short-circuits (model skipped / response replaced).
 """
 from __future__ import annotations
 
 import json
 
 import structlog
-from google.adk.agents.context import Context
+from google.adk.agents.callback_context import CallbackContext
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
@@ -28,7 +31,6 @@ logger = structlog.get_logger()
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _text_from_request(llm_request: LlmRequest) -> str:
-    """Extract the last user-role message text from the request contents."""
     for content in reversed(llm_request.contents or []):
         if content.role == "user":
             return " ".join(
@@ -38,7 +40,6 @@ def _text_from_request(llm_request: LlmRequest) -> str:
 
 
 def _text_from_response(llm_response: LlmResponse) -> str:
-    """Extract text from the model response."""
     if not llm_response.content:
         return ""
     return " ".join(
@@ -47,7 +48,6 @@ def _text_from_response(llm_response: LlmResponse) -> str:
 
 
 def _blocked_response(message: str) -> LlmResponse:
-    """Build an LlmResponse that short-circuits the pipeline with a BLOCKED verdict."""
     payload = json.dumps({"verdict": "BLOCKED", "summary": message})
     return LlmResponse(
         content=types.Content(
@@ -60,18 +60,12 @@ def _blocked_response(message: str) -> LlmResponse:
 # ── factory ───────────────────────────────────────────────────────────────────
 
 def make_guardrail_callbacks(agent_name: str):
-    """
-    Return (before_model_callback, after_model_callback) for the named agent.
+    """Return (before_model_callback, after_model_callback) for the named agent."""
 
-    Usage in _pipeline_agents.py:
-        _b, _a = make_guardrail_callbacks("briefing")
-        briefing_agent = Agent(..., before_model_callback=_b, after_model_callback=_a)
-    """
-
-    def before_model(ctx: Context, llm_request: LlmRequest) -> LlmResponse | None:
+    def before_model(callback_context: CallbackContext, llm_request: LlmRequest) -> LlmResponse | None:
         from app.guardrails import GuardrailService
 
-        brand = ctx.state.get("brand_name", "")
+        brand = callback_context.state.get("brand_name", "")
         text  = _text_from_request(llm_request)
         if not text:
             return None
@@ -94,10 +88,10 @@ def make_guardrail_callbacks(agent_name: str):
                         rule=f.rule, severity=str(f.severity), message=f.message)
         return None
 
-    def after_model(ctx: Context, llm_response: LlmResponse) -> LlmResponse | None:
+    def after_model(callback_context: CallbackContext, llm_response: LlmResponse) -> LlmResponse | None:
         from app.guardrails import GuardrailService
 
-        brand = ctx.state.get("brand_name", "")
+        brand = callback_context.state.get("brand_name", "")
         text  = _text_from_response(llm_response)
         if not text:
             return None
