@@ -9,8 +9,12 @@ from ..models import GuardrailResult, Flag, Severity, Action
 from ..registry import register
 
 # Extend as needed — keep lists in policy/global.json for easy updates
-_SEVERE = ["fuck", "shit", "cunt", "nigger", "faggot"]
-_MILD   = ["damn", "crap", "bastard", "ass", "bitch"]
+# Stems — matched with \bSTEM\w*\b so derivatives are also caught:
+#   fuck → fucking, fucker, fucked  |  shit → shitty  |  etc.
+# "ass" kept as exact match to avoid false positives on assign/assert/etc.
+_SEVERE_STEMS = ["fuck", "shit", "cunt", "nigger", "faggot"]
+_MILD_STEMS   = ["damn", "crap", "bastard", "bitch"]
+_MILD_EXACT   = ["ass"]
 
 
 class _ProfanityRule:
@@ -20,16 +24,20 @@ class _ProfanityRule:
 
     def run(self, payload: dict, context: dict) -> GuardrailResult:
         text = _all_text(payload)
-        for word in _SEVERE:
-            if re.search(rf"\b{re.escape(word)}\b", text, re.I):
+        for stem in _SEVERE_STEMS:
+            if re.search(rf"\b{re.escape(stem)}\w*\b", text, re.I):
                 return GuardrailResult(
                     passed = False,
                     action = Action.BLOCK,
                     flags  = [Flag(self.name, Severity.BLOCK,
-                                   f"Severe profanity: '{word}'", span=word)],
+                                   f"Severe profanity: '{stem}'", span=stem)],
                 )
         flags = []
-        for word in _MILD:
+        for stem in _MILD_STEMS:
+            if re.search(rf"\b{re.escape(stem)}\w*\b", text, re.I):
+                flags.append(Flag(self.name, Severity.WARNING,
+                                  f"Mild profanity detected: '{stem}'", span=stem))
+        for word in _MILD_EXACT:
             if re.search(rf"\b{re.escape(word)}\b", text, re.I):
                 flags.append(Flag(self.name, Severity.WARNING,
                                   f"Mild profanity detected: '{word}'", span=word))
