@@ -349,6 +349,24 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
         <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.5, color: "#ef4444" }}>⚠ {errorMsg}</div>
       )}
 
+      {status === "done" && result?.verdict === "BLOCKED" && (
+        <div style={{
+          marginTop: 16, padding: "14px 16px",
+          background: "rgba(239,68,68,0.08)", border: "1.5px solid rgba(239,68,68,0.35)",
+          borderRadius: 10, display: "flex", gap: 12, alignItems: "flex-start",
+        }}>
+          <span style={{ fontSize: 20, lineHeight: 1, marginTop: 1 }}>⛔</span>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 13, color: "#ef4444", letterSpacing: "0.04em", marginBottom: 4 }}>
+              REQUEST BLOCKED BY GUARDRAILS
+            </div>
+            <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.5 }}>
+              {result.summary ?? "This prompt was blocked by the content safety policy."}
+            </div>
+          </div>
+        </div>
+      )}
+
       {agentKey === "channel" && status === "done" && result?.landing_page_id && (
         <div style={{ marginTop: 16, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.06em",
@@ -967,13 +985,13 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
         </div>
       )}
 
-      {status === "done" && result && agentKey === "briefing" && (
+      {status === "done" && result && result.verdict !== "BLOCKED" && agentKey === "briefing" && (
         <BriefingAgentDashboard result={result} color={color}
           originalPrompt={prompt} onRegenerate={handleRegenerate} />
       )}
 
       {/* ── Nexus / Performance result dashboard ── */}
-      {status === "done" && result && agentKey === "performance" && (() => {
+      {status === "done" && result && result.verdict !== "BLOCKED" && agentKey === "performance" && (() => {
         const m = result as any;
         const cfs: any[]      = Array.isArray(m.channel_forecasts)    ? m.channel_forecasts    : [];
         const kpis: any[]     = Array.isArray(m.kpi_validation)       ? m.kpi_validation       : [];
@@ -1172,7 +1190,7 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
         );
       })()}
 
-      {status === "done" && result && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && agentKey !== "briefing" && agentKey !== "performance" && (
+      {status === "done" && result && result.verdict !== "BLOCKED" && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && agentKey !== "briefing" && agentKey !== "performance" && (
         <div style={{ marginTop: 14, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
           {Object.entries(result).filter(([k]) => k !== "agent").map(([key, val]) => (
             <div key={key} style={{ marginBottom: 8 }}>
