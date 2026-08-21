@@ -1,0 +1,32 @@
+{
+  "brand": "Glenfiddich",
+  "industry": "alcohol",
+  "markets": ["uk", "us", "global", "worldwide", "europe", "asia", "travel-retail"],
+  "competitors": ["Macallan", "Balvenie", "Highland Park", "Glenlivet", "Johnnie Walker", "Chivas", "Laphroaig"],
+  "banned_phrases": [
+    "best whisky in the world", "cheapest", "budget",
+    "drink more", "get drunk", "party drink", "shots",
+    "for everyone", "everyday drink"
+  ],
+  "avoid_terms": {
+    "cheap":       "accessible",
+    "old":         "aged",
+    "strong":      "full-bodied",
+    "customers":   "connoisseurs"
+  },
+  "approved_claims": [
+    "World's most awarded single malt Scotch whisky",
+    "Crafted in Dufftown since 1887",
+    "Blending craftsmanship with innovation"
+  ],
+  "approved_partners": ["Aston Martin F1 Team", "Aston Martin Aramco"],
+  "required_disclaimers": [
+    "Please drink responsibly",
+    "Must be 18+ to purchase",
+    "Not for sale to persons under the age of 18"
+  ],
+  "hitl_required": true,
+  "age_gate_required": true,
+  "dual_approval_required": true,
+  "notes": "Co-brand with Aston Martin F1 requires dual sign-off from both brand teams and both legal teams per partnership guidelines."
+}

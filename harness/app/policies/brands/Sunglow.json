@@ -1,0 +1,27 @@
+{
+  "brand": "Sunglow",
+  "industry": "beauty",
+  "markets": ["uk", "us", "global", "worldwide", "africa", "caribbean"],
+  "competitors": ["SheaMoisture", "Cantu", "Dark and Lovely", "Softsheen-Carson", "Carol's Daughter", "ORS", "African Pride"],
+  "banned_phrases": [
+    "tame", "control", "manage", "fix", "tame your hair",
+    "exotic", "ethnic hair", "difficult hair", "problem hair",
+    "100% effective", "miracle", "transforms overnight"
+  ],
+  "avoid_terms": {
+    "tame":     "style",
+    "control":  "define",
+    "manage":   "nourish",
+    "ethnic":   "Black",
+    "exotic":   "radiant",
+    "unruly":   "textured"
+  },
+  "approved_claims": [
+    "Formulated for Black hair",
+    "Nourishes, repairs, and protects",
+    "Real care for real hair"
+  ],
+  "approved_partners": [],
+  "required_disclaimers": [],
+  "hitl_required": false
+}

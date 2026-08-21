@@ -1,0 +1,24 @@
+{
+  "brand": "Rnorr",
+  "industry": "food",
+  "markets": ["uk", "us", "global", "worldwide", "europe"],
+  "competitors": ["Knorr", "Maggi", "Oxo", "Bisto", "Kallo", "Marigold", "Schwartz"],
+  "banned_phrases": [
+    "chef-quality", "restaurant-grade", "gourmet", "luxury",
+    "miracle ingredient", "secret formula", "authentic recipe"
+  ],
+  "avoid_terms": {
+    "chef": "home cook",
+    "gourmet": "flavorful",
+    "premium": "real",
+    "customers": "home cooks"
+  },
+  "approved_claims": [
+    "Made with real ingredients",
+    "Real flavor made easy",
+    "For every home cook"
+  ],
+  "approved_partners": [],
+  "required_disclaimers": [],
+  "hitl_required": false
+}

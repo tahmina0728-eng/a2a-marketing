@@ -1,0 +1,29 @@
+{
+  "brand": "Boozt",
+  "industry": "energy_drinks",
+  "markets": ["uk", "us", "europe", "global"],
+  "competitors": ["Red Bull", "Monster", "Lucozade", "Rockstar", "Celsius", "Ghost", "Prime"],
+  "banned_phrases": [
+    "boost", "boosts your energy",
+    "cures fatigue", "eliminates tiredness", "medical grade",
+    "safe for everyone", "healthy energy", "no side effects"
+  ],
+  "avoid_terms": {
+    "boost": "Boozt",
+    "customers": "fans",
+    "users":     "fans"
+  },
+  "approved_claims": [
+    "Pure energy. Zero limits.",
+    "Instant energy, sustained performance",
+    "Zero Sugar. Full Boozt."
+  ],
+  "approved_partners": [],
+  "required_disclaimers": [
+    "Not suitable for children, pregnant women, or people sensitive to caffeine",
+    "High caffeine content — consume responsibly",
+    "Not recommended for persons under 16"
+  ],
+  "hitl_required": false,
+  "age_warning_required": true
+}

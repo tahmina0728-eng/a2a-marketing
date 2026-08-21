@@ -1,0 +1,27 @@
+{
+  "brand": "Sunrise",
+  "industry": "telecom",
+  "markets": ["switzerland", "ch", "de-ch", "global"],
+  "competitors": ["Swisscom", "Salt", "Drei", "UPC", "Yallo", "Wingo"],
+  "banned_phrases": [
+    "100% coverage", "zero downtime", "fastest in Switzerland",
+    "best network guaranteed", "unlimited forever", "no hidden fees ever"
+  ],
+  "avoid_terms": {
+    "customers": "people",
+    "users":     "customers",
+    "cheap":     "affordable",
+    "contract":  "plan"
+  },
+  "approved_claims": [
+    "Switzerland's leading telecommunications provider",
+    "High-performance networks",
+    "Connecting people, businesses, and possibilities"
+  ],
+  "approved_partners": [],
+  "required_disclaimers": [
+    "Coverage may vary by location",
+    "Terms and conditions apply"
+  ],
+  "hitl_required": false
+}

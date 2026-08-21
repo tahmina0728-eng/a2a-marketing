@@ -1,0 +1,31 @@
+{
+  "brand": "UBS Bank",
+  "industry": "finance",
+  "markets": ["uk", "us", "switzerland", "global", "worldwide", "europe", "asia"],
+  "competitors": ["Credit Suisse", "Deutsche Bank", "Goldman Sachs", "JP Morgan", "Morgan Stanley", "HSBC", "Barclays", "Citi"],
+  "banned_phrases": [
+    "guaranteed returns", "risk-free investment", "certain profit",
+    "best in the world", "highest returns", "no risk",
+    "beat the market", "guaranteed income"
+  ],
+  "avoid_terms": {
+    "customers": "clients",
+    "product":   "solution",
+    "cheap":     "competitive",
+    "buy":       "invest",
+    "sell":      "divest"
+  },
+  "approved_claims": [
+    "A global financial partner",
+    "Helping you discover a clearer financial future",
+    "Integrated wealth and investment solutions"
+  ],
+  "approved_partners": [],
+  "required_disclaimers": [
+    "Capital at risk",
+    "Past performance is not indicative of future results",
+    "This is not financial advice",
+    "Subject to eligibility and regulatory approval"
+  ],
+  "hitl_required": true
+}
