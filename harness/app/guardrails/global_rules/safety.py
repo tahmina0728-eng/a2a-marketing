@@ -9,12 +9,37 @@ from ..models import GuardrailResult, Flag, Severity, Action
 from ..registry import register
 
 _PATTERNS = [
-    (r"\b(how to (?:make|build|create) (?:bomb|weapon|explosive))\b", "violence/weapons"),
-    (r"\b(self.harm|suicide method|kill (?:myself|yourself))\b",       "self-harm"),
-    (r"\b(child (?:abuse|exploitation|pornography|sexual abuse material|grooming))\b", "child safety"),
-    (r"\b(illegal drug (?:synthesis|manufacture))\b",                  "illegal activity"),
-    (r"\b(explicit sex|porn(?:ography)?|nude(?:s)?|naked (?:photo|image|video)|onlyfans|sex tape|adult content)\b", "explicit sexual content"),
-    (r"\b(rape|sexual assault|non.?consensual)\b",                     "sexual violence"),
+    # Weapons / explosives
+    (r"\bhow to (?:make|build|create|synthesize)\s+(?:a\s+)?(?:bomb|weapon|explosive|grenade|landmine)\b",
+     "violence/weapons"),
+    (r"\b(?:chemical|biological|radiological|nuclear)\s+(?:weapon|attack|warfare|agent|bomb)\b",
+     "WMD content"),
+
+    # Physical harm to others
+    (r"\bhow to (?:poison|harm|hurt|injure|kill|murder|attack|assault|stab|shoot)\s+(?:someone|a person|people|an?\s+(?:individual|human))\b",
+     "physical harm instructions"),
+    (r"\b(?:poison|poisoning)\s+(?:someone|a person|people|(?:the\s+)?(?:food|drink|water supply))\b",
+     "poisoning content"),
+    (r"\bwrite\s+(?:copy|content|ad|ads|post)\s+about\s+(?:how to\s+)?(?:poison|kill|harm|hurt|murder|attack)\b",
+     "harmful content request"),
+
+    # Self-harm
+    (r"\b(?:self.harm|suicide method|how to (?:kill|hang|overdose on)\s+(?:myself|yourself))\b",
+     "self-harm"),
+
+    # Child safety
+    (r"\b(?:child\s+(?:abuse|exploitation|pornography|sexual abuse material|grooming)|CSAM)\b",
+     "child safety"),
+
+    # Illegal drug production
+    (r"\billegal drug\s+(?:synthesis|manufacture|production|lab)\b",
+     "illegal activity"),
+
+    # Explicit sexual content
+    (r"\b(?:explicit sex|porn(?:ography)?|nude(?:s)?|naked\s+(?:photo|image|video)|onlyfans|sex tape|adult content)\b",
+     "explicit sexual content"),
+    (r"\b(?:rape|sexual assault|non.?consensual)\b",
+     "sexual violence"),
 ]
 
 
