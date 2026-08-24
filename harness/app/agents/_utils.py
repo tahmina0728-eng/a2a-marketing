@@ -119,9 +119,10 @@ def _generate(
     # ── Input guardrails (runs before the model call) ──────────────────────
     try:
         from app.guardrails import GuardrailService
+        from app.guardrails.models import Action as _Action
         gs = GuardrailService(brand=brand, agent=agent_name)
         input_check = gs.check_input({"prompt": prompt, "brand": brand})
-        if input_check.blocked:
+        if input_check.action == _Action.BLOCK:  # HITL submits for review but passes through
             msg = input_check.flags[0].message if input_check.flags else "Input blocked by guardrails"
             return {"verdict": "BLOCKED", "summary": msg}
     except Exception as _ge:
@@ -158,9 +159,10 @@ def _generate(
     # ── Output guardrails (runs after the model responds) ──────────────────
     try:
         from app.guardrails import GuardrailService
+        from app.guardrails.models import Action as _Action
         gs = GuardrailService(brand=brand, agent=agent_name)
-        output_check = gs.check_output(result)
-        if output_check.blocked:
+        output_check = gs.check_output(result)  # HITL is submitted for review inside check_output
+        if output_check.action == _Action.BLOCK:  # HITL passes through; only BLOCK is a hard stop
             msg = output_check.flags[0].message if output_check.flags else "Output blocked by guardrails"
             return {"verdict": "BLOCKED", "summary": msg}
     except Exception as _ge:

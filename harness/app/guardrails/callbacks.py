@@ -24,6 +24,7 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.llm_response import LlmResponse
 from google.genai import types
+from app.guardrails.models import Action
 
 logger = structlog.get_logger()
 
@@ -73,7 +74,9 @@ def make_guardrail_callbacks(agent_name: str):
         gs     = GuardrailService(brand=brand, agent=agent_name)
         result = gs.check_input({"prompt": text, "brand": brand})
 
-        if result.blocked:
+        # Only hard-block on Action.BLOCK. HITL submits for human review via
+        # check_output/_submit_hitl and then passes through — it is not a hard stop.
+        if result.action == Action.BLOCK:
             msg = result.flags[0].message if result.flags else "Input blocked by guardrails"
             logger.warning(
                 "guardrail_input_blocked",
@@ -97,9 +100,11 @@ def make_guardrail_callbacks(agent_name: str):
             return None
 
         gs     = GuardrailService(brand=brand, agent=agent_name)
-        result = gs.check_output({"output": text})
+        result = gs.check_output({"output": text})  # check_output also calls _submit_hitl if HITL
 
-        if result.blocked:
+        # Only hard-block on Action.BLOCK. HITL is already submitted for review above;
+        # the response passes through so the user sees the output but it is queued for approval.
+        if result.action == Action.BLOCK:
             msg = result.flags[0].message if result.flags else "Output blocked by guardrails"
             logger.warning(
                 "guardrail_output_blocked",
