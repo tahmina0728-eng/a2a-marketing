@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     search_max_results:          int = 10
     search_summary_result_count: int = 5
     # search_mode: "live"      → Vertex AI Search (requires datastore setup)
+    #              "pgvector"  → PostgreSQL + pgvector (run setup_pgvector.py first)
+    #              "bigquery"  → BigQuery VECTOR_SEARCH (run setup_bq_vectors.py first)
     #              "gcs_files" → read guidelines from bucket; stub benchmark data
     search_mode:                 str = "live"
 

@@ -12,6 +12,7 @@ dependencies = [
     "litellm>=1.86.2",
     "openpyxl>=3.1.5",
     "pillow>=12.2.0",
+    "google-cloud-bigquery>=3.41.0",
     "psycopg2-binary>=2.9.12",
     "pymupdf>=1.24.0",
     "python-docx>=1.1.2",

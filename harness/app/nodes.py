@@ -242,6 +242,26 @@ def load_brand_context(
         audience_insights           = search_audience_insights(brand, audience_segment, age_range, channels)
         moment_type_rules_summary   = _stub_moment_type(moment_type)
 
+    elif settings.search_mode == "bigquery" and brand:
+        # bigquery mode — semantic search via BigQuery VECTOR_SEARCH
+        # Run: uv run python scripts/setup_bq_vectors.py to seed the tables first
+        from app.bq_vector_client import (
+            search_brand_guidelines,
+            search_fan_truths,
+            search_campaign_benchmarks,
+            search_channel_benchmarks,
+            search_audience_insights,
+        )
+        fan_truth_text = brief_dict.get("fan_truth", "")
+        age_range      = audience_raw.get("age_range", "") if isinstance(audience_raw, dict) else ""
+        rag_guidelines  = search_brand_guidelines(brand, f"{product_category} {' '.join(channels)}")
+        brand_rules_summary         = rag_guidelines or ""
+        fan_truth_summary           = search_fan_truths(brand, product_category, fan_truth_text)
+        campaign_benchmarks_summary = search_campaign_benchmarks(brand, product_category, market, season)
+        channel_benchmarks_summary  = search_channel_benchmarks(channels, market, audience_segment)
+        audience_insights           = search_audience_insights(brand, audience_segment, age_range, channels)
+        moment_type_rules_summary   = _stub_moment_type(moment_type)
+
     else:
         # gcs_files / local mode — brand_guidelines is the source of truth;
         # brand_rules_summary is left empty to avoid duplicating it in state.
