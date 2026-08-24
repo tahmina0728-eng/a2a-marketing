@@ -1388,7 +1388,221 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
         );
       })()}
 
-      {status === "done" && result && result.verdict !== "BLOCKED" && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && agentKey !== "briefing" && agentKey !== "performance" && agentKey !== "strategy" && (
+      {/* ── Copy dashboard ── */}
+      {status === "done" && result && result.verdict !== "BLOCKED" && agentKey === "copy" && (() => {
+        const c = result as any;
+        const variants: any[] = Array.isArray(c.variants) ? c.variants : [];
+        const rec = c.recommended_variant ?? 0;
+
+        const SCORE_LABELS: Record<string, string> = {
+          brand_voice: "Brand Voice", strategy_alignment: "Strategy", message_clarity: "Clarity",
+          audience_relevance: "Audience", originality: "Originality",
+          channel_suitability: "Channel", grammar_readability: "Grammar",
+        };
+
+        const scoreBar = (v: number, accent: string) => (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ flex: 1, height: 5, borderRadius: 99, background: "rgba(128,128,128,0.15)" }}>
+              <div style={{ width: `${Math.round((v ?? 0) * 100)}%`, height: "100%", borderRadius: 99, background: accent, transition: "width 0.6s" }} />
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: accent, minWidth: 32, textAlign: "right" as const }}>
+              {Math.round((v ?? 0) * 100)}%
+            </span>
+          </div>
+        );
+
+        const validIcon = (v: string) => v?.startsWith("passed") ? "✓" : v?.startsWith("warning") ? "⚠" : "✗";
+        const validColor = (v: string) => v?.startsWith("passed") ? "#22c55e" : v?.startsWith("warning") ? "#f59e0b" : "#ef4444";
+
+        return (
+          <div style={{ marginTop: 14 }}>
+            {/* Header row */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+              <div>
+                {c.content_type && (
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                    textTransform: "uppercase" as const, color: color,
+                    background: `${color}14`, padding: "3px 10px", borderRadius: 99, marginRight: 8 }}>
+                    {c.content_type.replace(/_/g, " ")}
+                  </span>
+                )}
+                {c.channel && (
+                  <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-secondary)",
+                    background: "var(--card-bg-soft)", border: "1px solid var(--card-border)",
+                    padding: "3px 10px", borderRadius: 99 }}>
+                    {c.channel}
+                  </span>
+                )}
+              </div>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{variants.length} variant{variants.length !== 1 ? "s" : ""}</span>
+            </div>
+
+            {/* Audience + strategic context row */}
+            {(c.audience || c.strategic_context) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+                {c.audience?.insight && (
+                  <div style={{ padding: "10px 14px", borderRadius: 10, background: `${color}08`,
+                    border: `1px solid ${color}20` }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                      textTransform: "uppercase" as const, color, marginBottom: 5 }}>Audience Insight</div>
+                    <div style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.5 }}>
+                      {c.audience.insight}
+                    </div>
+                  </div>
+                )}
+                {c.strategic_context?.key_message && (
+                  <div style={{ padding: "10px 14px", borderRadius: 10, background: "rgba(99,102,241,0.06)",
+                    border: "1px solid rgba(99,102,241,0.18)" }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                      textTransform: "uppercase" as const, color: "#6366f1", marginBottom: 5 }}>Key Message</div>
+                    <div style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.5 }}>
+                      {c.strategic_context.key_message}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Variant cards */}
+            <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+              {variants.map((v: any, i: number) => {
+                const isRec = i === rec;
+                const vc = isRec ? color : i === 1 ? "#8b5cf6" : "#06b6d4";
+                const qs = v.quality_score ?? 0;
+                return (
+                  <div key={i} style={{ borderRadius: 10, border: `1.5px solid ${vc}${isRec ? "60" : "30"}`, overflow: "hidden" }}>
+                    {/* Card header */}
+                    <div style={{ padding: "10px 14px", background: `${vc}${isRec ? "14" : "08"}`,
+                      display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <span style={{ fontSize: 10, fontWeight: 700, color: vc,
+                          letterSpacing: "0.06em", textTransform: "uppercase" as const, marginRight: 8 }}>
+                          {isRec ? "★ Recommended" : `Variant ${i + 1}`}
+                        </span>
+                        {v.tone && (
+                          <span style={{ fontSize: 10, color: "var(--text-muted)", fontStyle: "italic" }}>{v.tone}</span>
+                        )}
+                      </div>
+                      <div style={{ textAlign: "center" as const }}>
+                        <div style={{ fontSize: 16, fontWeight: 800, color: vc }}>{Math.round(qs * 100)}</div>
+                        <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: "0.06em" }}>SCORE</div>
+                      </div>
+                    </div>
+
+                    {/* Card body */}
+                    <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                      {v.approach && (
+                        <div style={{ fontSize: 11, color: "var(--text-muted)", fontStyle: "italic" }}>{v.approach}</div>
+                      )}
+                      {v.headline && (
+                        <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2 }}>
+                          {v.headline}
+                        </div>
+                      )}
+                      {v.subheadline && (
+                        <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", lineHeight: 1.4 }}>
+                          {v.subheadline}
+                        </div>
+                      )}
+                      {v.body && (
+                        <div style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.6,
+                          padding: "8px 10px", borderRadius: 6, background: `${vc}08`,
+                          borderLeft: `3px solid ${vc}40` }}>
+                          {v.body}
+                        </div>
+                      )}
+                      {v.cta && (
+                        <div style={{ display: "inline-flex", alignItems: "center" }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, padding: "5px 14px",
+                            borderRadius: 99, background: `${vc}18`, color: vc,
+                            border: `1.5px solid ${vc}40` }}>
+                            {v.cta} →
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Score breakdown */}
+                      {v.scores && (
+                        <div style={{ borderTop: `1px solid ${vc}18`, paddingTop: 10, marginTop: 2 }}>
+                          <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)",
+                            letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 8 }}>
+                            Scoring Breakdown
+                          </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 20px" }}>
+                            {Object.entries(v.scores).map(([k, sv]) => (
+                              <div key={k}>
+                                <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 3 }}>
+                                  {SCORE_LABELS[k] ?? k}
+                                </div>
+                                {scoreBar(sv as number, vc)}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Validation + mandatory elements */}
+            {c.validation && (
+              <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10,
+                background: "var(--card-bg-soft)", border: "1px solid var(--card-border)" }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                  textTransform: "uppercase" as const, color: "var(--text-muted)", marginBottom: 8 }}>
+                  Validation
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px" }}>
+                  {Object.entries(c.validation).map(([k, val]) => (
+                    <div key={k} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ fontSize: 12, color: validColor(val as string), fontWeight: 700 }}>
+                        {validIcon(val as string)}
+                      </span>
+                      <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>
+                        {k.replace(/_/g, " ")}
+                      </span>
+                      {(val as string)?.includes(":") && (
+                        <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+                          — {(val as string).split(":")[1]?.trim()}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                {Array.isArray(c.mandatory_elements_applied) && c.mandatory_elements_applied.length > 0 && (
+                  <div style={{ marginTop: 8, paddingTop: 8, borderTop: "1px solid var(--card-border)" }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.07em",
+                      textTransform: "uppercase" as const, color: "var(--text-muted)", marginBottom: 4 }}>
+                      Mandatory Elements Applied
+                    </div>
+                    {c.mandatory_elements_applied.map((m: string, i: number) => (
+                      <div key={i} style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5 }}>✓ {m}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Evidence */}
+            {Array.isArray(c.evidence) && c.evidence.length > 0 && (
+              <div style={{ marginTop: 10, padding: "10px 14px", borderRadius: 10,
+                background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                  textTransform: "uppercase" as const, color: "#f59e0b", marginBottom: 6 }}>Evidence</div>
+                {c.evidence.map((e: any, i: number) => (
+                  <div key={i} style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 3 }}>
+                    ▲ {typeof e === "string" ? e : `${e.source}${e.reference ? ` — ${e.reference}` : ""}`}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {status === "done" && result && result.verdict !== "BLOCKED" && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && agentKey !== "briefing" && agentKey !== "performance" && agentKey !== "strategy" && agentKey !== "copy" && (
         <div style={{ marginTop: 14, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
           {Object.entries(result).filter(([k]) => k !== "agent").map(([key, val]) => (
             <div key={key} style={{ marginBottom: 8 }}>
