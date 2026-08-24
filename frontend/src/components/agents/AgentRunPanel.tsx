@@ -1391,6 +1391,128 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
       {/* ── Copy dashboard ── */}
       {status === "done" && result && result.verdict !== "BLOCKED" && agentKey === "copy" && (() => {
         const c = result as any;
+
+        // ── Long-form article renderer ──────────────────────────────────────
+        if (c.mode === "long_form") {
+          const validIcon = (v: string) => v?.startsWith("passed") ? "✓" : v?.startsWith("warning") ? "⚠" : "✗";
+          const validColor = (v: string) => v?.startsWith("passed") ? "#22c55e" : v?.startsWith("warning") ? "#f59e0b" : "#ef4444";
+          return (
+            <div style={{ marginTop: 14 }}>
+              {/* Title block */}
+              <div style={{ padding: "16px 18px", borderRadius: 10, background: `${color}08`,
+                border: `1.5px solid ${color}30`, marginBottom: 14 }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" as const }}>
+                  {c.content_type && (
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em",
+                      textTransform: "uppercase" as const, color, background: `${color}18`,
+                      padding: "3px 10px", borderRadius: 99 }}>{c.content_type.replace(/_/g, " ")}</span>
+                  )}
+                  {c.estimated_word_count && (
+                    <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600 }}>
+                      ~{c.estimated_word_count} words
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.25, marginBottom: 6 }}>
+                  {c.title}
+                </div>
+                {c.subtitle && (
+                  <div style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.5, fontStyle: "italic" }}>
+                    {c.subtitle}
+                  </div>
+                )}
+                <div style={{ display: "flex", gap: 12, marginTop: 10, flexWrap: "wrap" as const }}>
+                  {c.audience && (
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Audience: <strong>{c.audience}</strong></span>
+                  )}
+                  {c.tone && (
+                    <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Tone: <strong>{c.tone}</strong></span>
+                  )}
+                </div>
+              </div>
+
+              {/* Article sections */}
+              {Array.isArray(c.sections) && c.sections.length > 0 && (
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 0 }}>
+                  {(c.sections as any[]).map((sec: any, i: number) => (
+                    <div key={i} style={{ padding: "14px 0", borderBottom: i < c.sections.length - 1 ? "1px solid var(--card-border)" : "none" }}>
+                      {sec.heading && (
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "var(--text-primary)", marginBottom: 8 }}>
+                          {sec.heading}
+                        </div>
+                      )}
+                      <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.8, whiteSpace: "pre-wrap" as const }}>
+                        {sec.body}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* SEO meta */}
+              {c.seo_meta && (
+                <div style={{ marginTop: 14, padding: "10px 14px", borderRadius: 10,
+                  background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.2)" }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                    textTransform: "uppercase" as const, color: "#6366f1", marginBottom: 8 }}>SEO Meta</div>
+                  {c.seo_meta.title && (
+                    <div style={{ marginBottom: 5 }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)" }}>Title — </span>
+                      <span style={{ fontSize: 12, color: "var(--text-primary)" }}>{c.seo_meta.title}</span>
+                    </div>
+                  )}
+                  {c.seo_meta.description && (
+                    <div style={{ marginBottom: 8 }}>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: "var(--text-muted)" }}>Description — </span>
+                      <span style={{ fontSize: 12, color: "var(--text-secondary)" }}>{c.seo_meta.description}</span>
+                    </div>
+                  )}
+                  {Array.isArray(c.seo_meta.keywords) && (
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" as const }}>
+                      {(c.seo_meta.keywords as string[]).map((kw: string) => (
+                        <span key={kw} style={{ fontSize: 10, padding: "2px 8px", borderRadius: 99,
+                          background: "rgba(99,102,241,0.12)", color: "#6366f1", fontWeight: 600 }}>{kw}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Validation */}
+              {c.validation && (
+                <div style={{ marginTop: 10, padding: "10px 14px", borderRadius: 10,
+                  background: "var(--card-bg-soft)", border: "1px solid var(--card-border)" }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                    textTransform: "uppercase" as const, color: "var(--text-muted)", marginBottom: 8 }}>Validation</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px" }}>
+                    {Object.entries(c.validation).map(([k, val]) => (
+                      <div key={k} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={{ fontSize: 12, color: validColor(val as string), fontWeight: 700 }}>{validIcon(val as string)}</span>
+                        <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 600 }}>{k.replace(/_/g, " ")}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Evidence */}
+              {Array.isArray(c.evidence) && c.evidence.length > 0 && (
+                <div style={{ marginTop: 10, padding: "10px 14px", borderRadius: 10,
+                  background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.08em",
+                    textTransform: "uppercase" as const, color: "#f59e0b", marginBottom: 6 }}>Evidence</div>
+                  {(c.evidence as any[]).map((e: any, i: number) => (
+                    <div key={i} style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 3 }}>
+                      ▲ {typeof e === "string" ? e : `${e.source}${e.reference ? ` — ${e.reference}` : ""}`}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        // ── Short-form variant renderer ─────────────────────────────────────
         const variants: any[] = Array.isArray(c.variants) ? c.variants : [];
         const rec = c.recommended_variant ?? 0;
 
