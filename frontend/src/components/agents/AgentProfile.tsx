@@ -18,20 +18,20 @@ export default function AgentProfile({ agentKey, prompt, onPromptChange }: {
   const avatar   = avatarUrl(stage?.label ?? "", idx);
   const workflowStage = WORKFLOW_STAGES.find((w) => w.agents.includes(agentKey))?.label ?? "";
 
-  const [briefingDone,     setBriefingDone]     = useState(false);
-  const [performanceDone, setPerformanceDone] = useState(false);
+  const [agentDone, setAgentDone] = useState(false);
 
   const [speaking, setSpeaking] = useState(false);
   useEffect(() => {
     setSpeaking(true);
     speakAgentIntro(agentKey, () => setSpeaking(false));
+    setAgentDone(false); // reset when switching agents
     return () => { window.speechSynthesis?.cancel(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [agentKey]);
 
   if (!stage) return null;
 
-  const showHeader = !(agentKey === "briefing" && briefingDone) && !(agentKey === "performance" && performanceDone);
+  const showHeader = !agentDone;
 
   return (
     <div style={{
@@ -123,8 +123,8 @@ export default function AgentProfile({ agentKey, prompt, onPromptChange }: {
 
         <AgentRunPanel agentKey={agentKey} agentLabel={stage.label} color={color}
           prompt={prompt} onPromptChange={onPromptChange}
-          onBriefingDone={() => setBriefingDone(true)}
-          onPerformanceDone={() => setPerformanceDone(true)} />
+          onDone={() => setAgentDone(true)}
+          onReset={() => setAgentDone(false)} />
       </div>
     </div>
   );

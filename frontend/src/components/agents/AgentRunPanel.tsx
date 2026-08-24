@@ -4,11 +4,11 @@ import { STANDALONE_SUPPORTED, POLY_CHANNEL_CFG } from "../../constants/agents";
 import { saveToContentHub } from "../../hooks/useContentHub";
 import BriefingAgentDashboard from "../briefing/BriefingAgentDashboard";
 
-export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange, onBriefingDone, onPerformanceDone }: {
+export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onPromptChange, onDone, onReset }: {
   agentKey: string; agentLabel: string; color: string;
   prompt: string; onPromptChange: (v: string) => void;
-  onBriefingDone?: () => void;
-  onPerformanceDone?: () => void;
+  onDone?: () => void;
+  onReset?: () => void;
 }) {
   const [status, setStatus] = useState<"idle" | "running" | "done" | "error">("idle");
   const [result, setResult] = useState<Record<string, any> | null>(null);
@@ -101,8 +101,7 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
       if (!res.ok) throw new Error(data?.detail || `Run failed (${res.status})`);
       setResult(data);
       setStatus("done");
-      if (agentKey === "briefing") onBriefingDone?.();
-      if (agentKey === "performance") onPerformanceDone?.();
+      onDone?.();
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : String(e));
       setStatus("error");
@@ -185,7 +184,7 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
             ))}
           </div>
         </div>
-      ) : status === "done" && (agentKey === "briefing" || agentKey === "performance") ? null : (
+      ) : status === "done" ? null : (
         <>
           <h3 style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", margin: "0 0 10px", lineHeight: 1.3 }}>
             <span style={{ background: `linear-gradient(135deg, ${color}, #6366f1)`,
@@ -347,6 +346,16 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
 
       {status === "error" && (
         <div style={{ marginTop: 12, fontSize: 12, lineHeight: 1.5, color: "#ef4444" }}>⚠ {errorMsg}</div>
+      )}
+
+      {status === "done" && (
+        <button onClick={() => { setStatus("idle"); setResult(null); setErrorMsg(""); onReset?.(); }}
+          style={{ marginBottom: 14, display: "inline-flex", alignItems: "center", gap: 5,
+            fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", background: "none",
+            border: "1px solid var(--card-border)", borderRadius: 99, padding: "4px 12px",
+            cursor: "pointer", fontFamily: "inherit", letterSpacing: "0.03em" }}>
+          ← New prompt
+        </button>
       )}
 
       {status === "done" && result?.verdict === "BLOCKED" && (
