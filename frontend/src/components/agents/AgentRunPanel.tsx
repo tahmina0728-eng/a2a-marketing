@@ -1190,7 +1190,191 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
         );
       })()}
 
-      {status === "done" && result && result.verdict !== "BLOCKED" && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && agentKey !== "briefing" && agentKey !== "performance" && (
+      {/* ── Creative Strategy dashboard ── */}
+      {status === "done" && result && result.verdict !== "BLOCKED" && agentKey === "strategy" && (() => {
+        const s = result as any;
+        const territories: any[] = Array.isArray(s.creative_territories) ? s.creative_territories : [];
+        const scoreBar = (v: number, accent: string) => (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ flex: 1, height: 5, borderRadius: 99, background: "var(--border-subtle, rgba(128,128,128,0.15))" }}>
+              <div style={{ width: `${Math.round((v ?? 0) * 100)}%`, height: "100%", borderRadius: 99, background: accent, transition: "width 0.6s" }} />
+            </div>
+            <span style={{ fontSize: 11, fontWeight: 700, color: accent, minWidth: 32, textAlign: "right" as const }}>
+              {Math.round((v ?? 0) * 100)}%
+            </span>
+          </div>
+        );
+        const SCORE_LABELS: Record<string, string> = {
+          brand_fit: "Brand Fit", audience_relevance: "Audience", originality: "Originality",
+          business_alignment: "Business", channel_suitability: "Channel", historical_evidence: "Evidence",
+        };
+        const scoreColor = (v: number) => v >= 0.75 ? "#10b981" : v >= 0.55 ? "#f59e0b" : "#ef4444";
+        const confidenceColor = scoreColor(s.confidence_score ?? 0);
+        return (
+          <div style={{ marginTop: 16, display: "flex", flexDirection: "column" as const, gap: 18 }}>
+
+            {/* Header row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", alignItems: "start", gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 4 }}>Big Idea</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.3 }}>{s.big_idea ?? "—"}</div>
+                {s.single_minded_proposition && (
+                  <div style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 4, lineHeight: 1.5 }}>{s.single_minded_proposition}</div>
+                )}
+              </div>
+              <div style={{ textAlign: "center" as const, padding: "8px 14px", borderRadius: 10, background: `${confidenceColor}14`, border: `1.5px solid ${confidenceColor}40` }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: confidenceColor }}>{Math.round((s.confidence_score ?? 0) * 100)}%</div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.07em", textTransform: "uppercase" as const }}>Confidence</div>
+              </div>
+            </div>
+
+            {/* Strategic insight + audience */}
+            {(s.strategic_insight || s.audience) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {s.strategic_insight && (
+                  <div style={{ padding: "10px 12px", borderRadius: 8, background: `${color}0e`, border: `1px solid ${color}30` }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color, letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 4 }}>Strategic Insight</div>
+                    <div style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.5 }}>{s.strategic_insight}</div>
+                  </div>
+                )}
+                {s.audience && (
+                  <div style={{ padding: "10px 12px", borderRadius: 8, background: "var(--surface-raised, rgba(128,128,128,0.05))", border: "1px solid var(--border-subtle, rgba(128,128,128,0.12))" }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Audience</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 2 }}>{s.audience.primary}</div>
+                    {s.audience.insight && <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.4 }}>"{s.audience.insight}"</div>}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Creative territories */}
+            {territories.length > 0 && (
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 10 }}>
+                  Creative Territories ({territories.length})
+                </div>
+                <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+                  {territories.map((t: any, i: number) => {
+                    const tc = i === 0 ? color : i === 1 ? "#8b5cf6" : "#06b6d4";
+                    const sc = t.score ?? 0;
+                    return (
+                      <div key={i} style={{ borderRadius: 10, border: `1.5px solid ${tc}${i === 0 ? "60" : "30"}`, overflow: "hidden" }}>
+                        <div style={{ padding: "10px 14px", background: `${tc}${i === 0 ? "14" : "08"}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: tc, letterSpacing: "0.06em", textTransform: "uppercase" as const, marginRight: 8 }}>
+                              {i === 0 ? "★ Recommended" : `Territory ${i + 1}`}
+                            </span>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: "var(--text-primary)" }}>{t.name}</span>
+                          </div>
+                          <div style={{ textAlign: "center" as const }}>
+                            <div style={{ fontSize: 16, fontWeight: 800, color: tc }}>{Math.round(sc * 100)}</div>
+                            <div style={{ fontSize: 8, color: "var(--text-muted)", letterSpacing: "0.06em" }}>SCORE</div>
+                          </div>
+                        </div>
+                        <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column" as const, gap: 10 }}>
+                          {t.concept && <div style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.6 }}>{t.concept}</div>}
+                          {t.key_message && (
+                            <div style={{ padding: "6px 10px", borderRadius: 6, background: `${tc}10`, fontSize: 12, fontWeight: 600, color: tc, fontStyle: "italic" }}>
+                              "{t.key_message}"
+                            </div>
+                          )}
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px" }}>
+                            {t.scores && Object.entries(t.scores).map(([k, v]) => (
+                              <div key={k}>
+                                <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 2 }}>{SCORE_LABELS[k] ?? k}</div>
+                                {scoreBar(v as number, tc)}
+                              </div>
+                            ))}
+                          </div>
+                          {t.channels && t.channels.length > 0 && (
+                            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" as const }}>
+                              {(t.channels as string[]).map((ch: string) => (
+                                <span key={ch} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 99, background: `${tc}12`, color: tc, fontWeight: 600 }}>{ch}</span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Do / Don't */}
+            {(s.do?.length || s.dont?.length) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {s.do?.length > 0 && (
+                  <div style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(16,185,129,0.06)", border: "1px solid rgba(16,185,129,0.2)" }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "#10b981", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Do</div>
+                    {(s.do as string[]).map((d: string, i: number) => (
+                      <div key={i} style={{ fontSize: 11, color: "var(--text-primary)", lineHeight: 1.5, marginBottom: 3 }}>✓ {d}</div>
+                    ))}
+                  </div>
+                )}
+                {s.dont?.length > 0 && (
+                  <div style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)" }}>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "#ef4444", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Don't</div>
+                    {(s.dont as string[]).map((d: string, i: number) => (
+                      <div key={i} style={{ fontSize: 11, color: "var(--text-primary)", lineHeight: 1.5, marginBottom: 3 }}>✕ {d}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Content pillars + formats */}
+            {(s.content_pillars?.length || s.recommended_formats?.length) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {s.content_pillars?.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Content Pillars</div>
+                    {(s.content_pillars as string[]).map((p: string, i: number) => (
+                      <div key={i} style={{ fontSize: 11, color: "var(--text-primary)", lineHeight: 1.5, marginBottom: 3, display: "flex", gap: 6 }}>
+                        <span style={{ color, fontWeight: 700 }}>·</span>{p}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {s.recommended_formats?.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Recommended Formats</div>
+                    {(s.recommended_formats as string[]).map((f: string, i: number) => (
+                      <div key={i} style={{ fontSize: 11, color: "var(--text-primary)", lineHeight: 1.5, marginBottom: 3, display: "flex", gap: 6 }}>
+                        <span style={{ color: "#8b5cf6", fontWeight: 700 }}>·</span>{f}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Evidence + risks */}
+            {(s.evidence?.length || s.risks?.length) && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                {s.evidence?.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Evidence</div>
+                    {(s.evidence as string[]).map((e: string, i: number) => (
+                      <div key={i} style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: 3 }}>📎 {e}</div>
+                    ))}
+                  </div>
+                )}
+                {s.risks?.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: "#f59e0b", letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>Risks & Flags</div>
+                    {(s.risks as string[]).map((r: string, i: number) => (
+                      <div key={i} style={{ fontSize: 11, color: "var(--text-primary)", lineHeight: 1.5, marginBottom: 3 }}>⚠ {r}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {status === "done" && result && result.verdict !== "BLOCKED" && agentKey !== "channel" && agentKey !== "kv" && agentKey !== "reel" && agentKey !== "tvc" && agentKey !== "email_templates" && agentKey !== "briefing" && agentKey !== "performance" && agentKey !== "strategy" && (
         <div style={{ marginTop: 14, paddingLeft: 14, borderLeft: `2px solid ${color}40` }}>
           {Object.entries(result).filter(([k]) => k !== "agent").map(([key, val]) => (
             <div key={key} style={{ marginBottom: 8 }}>
