@@ -38,7 +38,10 @@ export default function AgentProfile({ agentKey, prompt, onPromptChange }: {
       flex: 1, overflowY: "auto" as const,
       padding: showHeader ? "40px 48px" : "40px 48px",
       display: "flex", flexDirection: "column" as const,
-      alignItems: "center", justifyContent: "center",
+      alignItems: "center",
+      // justifyContent: center is intentionally omitted — combining it with
+      // overflowY: auto clips the top of long content (flex centering overflow bug).
+      // The inner div uses margin: auto for vertical centering when content is short.
       position: "relative" as const, background: "transparent",
     }}>
       {showHeader && (

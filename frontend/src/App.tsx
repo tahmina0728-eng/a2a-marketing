@@ -4695,7 +4695,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
       </div> */}
 
       {/* Powered by Infosys */}
-      <div style={{ padding: "14px 20px", borderTop: "1px solid var(--card-border)",
+      {/* <div style={{ padding: "14px 20px", borderTop: "1px solid var(--card-border)",
         position: "relative" as const, zIndex: 2, display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ fontSize: 10 * 0.62, color: "var(--text-tertiary)", fontWeight: 400,
           fontFamily: "'Inter',sans-serif", letterSpacing: "0.05em",
@@ -4707,7 +4707,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
           alt="Infosys"
           style={{ width: 60, height: "auto", display: "block" }}
         />
-      </div>
+      </div> */}
     </div>
   );
 }

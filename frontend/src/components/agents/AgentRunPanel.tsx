@@ -1278,14 +1278,19 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
                               "{t.key_message}"
                             </div>
                           )}
-                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 16px" }}>
-                            {t.scores && Object.entries(t.scores).map(([k, v]) => (
+                          {t.scores && (
+                            <div style={{ borderTop: `1px solid ${tc}18`, paddingTop: 10 }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-muted)", letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 8 }}>Scoring Breakdown</div>
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 20px" }}>
+                            {Object.entries(t.scores).map(([k, v]) => (
                               <div key={k}>
-                                <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 2 }}>{SCORE_LABELS[k] ?? k}</div>
+                                <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 3 }}>{SCORE_LABELS[k] ?? k}</div>
                                 {scoreBar(v as number, tc)}
                               </div>
                             ))}
-                          </div>
+                              </div>
+                            </div>
+                          )}
                           {t.channels && t.channels.length > 0 && (
                             <div style={{ display: "flex", gap: 5, flexWrap: "wrap" as const }}>
                               {(t.channels as string[]).map((ch: string) => (
