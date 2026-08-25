@@ -177,6 +177,13 @@ FAN_TRUTHS = [
     {"brand": "Barclays", "statement": "The quiet confidence of knowing your bank understands your business, not just your balance", "category": "Business Banking","verdict": "PASS", "specific": 80, "shared": 74, "special": 86, "overall": 80},
     {"brand": "Barclays", "statement": "Money anxiety doesn't disappear when you earn more — it just changes shape",            "category": "Personal Finance",    "verdict": "PASS", "specific": 84, "shared": 82, "special": 78, "overall": 81},
     {"brand": "Barclays", "statement": "We offer banking services",                                                             "category": "Generic",             "verdict": "FAIL", "specific":  7, "shared": 88, "special":  9, "overall": 35},
+
+    # Infosys — Global IT Services & Consulting (Navigate your next.)
+    {"brand": "Infosys", "statement": "The moment a client realises the transformation they feared is the one that saves them", "category": "Digital Transformation","verdict": "PASS", "specific": 84, "shared": 76, "special": 86, "overall": 82},
+    {"brand": "Infosys", "statement": "The organisations that navigate uncertainty fastest aren't lucky — they're better wired", "category": "Technology Consulting", "verdict": "PASS", "specific": 80, "shared": 78, "special": 84, "overall": 81},
+    {"brand": "Infosys", "statement": "AI doesn't replace strategy — it amplifies the quality of the people who set it",        "category": "AI & Automation",      "verdict": "PASS", "specific": 82, "shared": 74, "special": 88, "overall": 81},
+    {"brand": "Infosys", "statement": "The CIO who chose the right partner five years ago is still ahead of the one who chose the cheapest", "category": "Enterprise IT",  "verdict": "PASS", "specific": 86, "shared": 70, "special": 90, "overall": 82},
+    {"brand": "Infosys", "statement": "We provide IT services",                                                                "category": "Generic",               "verdict": "FAIL", "specific":  6, "shared": 85, "special":  8, "overall": 33},
 ]
 
 
@@ -239,6 +246,11 @@ CAMPAIGN_BENCHMARKS = [
     {"brand": "Barclays", "product_category": "Mortgages",                "market": "UK", "season": "Spring",   "channels": ["TV","Google Ads","Meta Ads"],         "reach": 6800000, "ctr_pct": 1.8, "roas": 5.4, "engagement_pct": 2.6, "budget_gbp": 720000, "notes": "Spring homebuying season — emotional 'home as a dream' creative outperformed rate-comparison ads 3:1. Google search drove 62% of qualified applications"},
     {"brand": "Barclays", "product_category": "Business Banking",         "market": "UK", "season": "All Year", "channels": ["LinkedIn","Google Ads","Email"],      "reach": 1200000, "ctr_pct": 2.8, "roas": 6.2, "engagement_pct": 3.4, "budget_gbp": 380000, "notes": "SME business banking — outcome-first messaging (grow faster, bank smarter) outperformed product feature ads. LinkedIn drove 74% of qualified SME leads"},
     {"brand": "Barclays", "product_category": "Personal Current Account", "market": "UK", "season": "All Year", "channels": ["TV","Instagram","OOH"],               "reach":11400000, "ctr_pct": 1.1, "roas": 2.8, "engagement_pct": 2.2, "budget_gbp":1100000, "notes": "Brand awareness — 'This is Barclays' campaign. OOH and TV drive brand salience; digital retargeting closes. Younger audience (18-30) responds to digital-first, app-led messaging"},
+
+    # Infosys — Global IT Services & Consulting
+    {"brand": "Infosys", "product_category": "Digital Transformation Services", "market": "Global", "season": "All Year", "channels": ["LinkedIn","YouTube","Google Ads"],   "reach": 3200000, "ctr_pct": 1.4, "roas": 8.2, "engagement_pct": 2.8, "budget_gbp": 2400000, "notes": "Thought leadership campaign — 'Navigate your next.' Long-form YouTube content and LinkedIn articles drove highest qualified C-suite engagement. ROI measured in pipeline, not click-through"},
+    {"brand": "Infosys", "product_category": "AI & Automation (Infosys Topaz)", "market": "Global", "season": "All Year", "channels": ["LinkedIn","Programmatic","Events"],  "reach": 1800000, "ctr_pct": 1.8, "roas": 9.4, "engagement_pct": 3.6, "budget_gbp": 1800000, "notes": "Infosys Topaz AI launch — decision-maker targeting on LinkedIn drove 74% of pipeline. Executive roundtable events + digital amplification outperformed pure digital by 3x on qualified leads"},
+    {"brand": "Infosys", "product_category": "Cloud Services",                  "market": "US",     "season": "Spring",   "channels": ["LinkedIn","Google Ads","Webinars"],   "reach":  980000, "ctr_pct": 2.1, "roas": 7.6, "engagement_pct": 3.2, "budget_gbp": 1200000, "notes": "US enterprise cloud migration campaign — outcome-first messaging (reduce cost, accelerate time-to-value) outperformed feature-led by 2.4x. Webinar leads converted at 4x the rate of programmatic leads"},
 ]
 
 
@@ -434,6 +446,29 @@ CUSTOMER_SEGMENTS = [
         "fan_truth_benchmark": "Fan Truth must score Overall > 79. 'Watching your savings grow month by month — proof that small decisions compound' scores 79/100. Tangible, incremental progress framing beats aspirational wealth messaging.",
     },
 
+    # Infosys segments
+    {
+        "brand": "Infosys", "segment_name": "C-Suite Digital Transformation Leaders", "size_estimate": 42000,
+        "age_range": "42-58", "income_band": "USD200k+",
+        "top_channels": ["LinkedIn", "YouTube", "Events"], "avg_weekly_spend_gbp": 0,
+        "behavioural_notes": "CIOs, CTOs and CDOs accountable for enterprise transformation programmes. Consume long-form thought leadership (reports, whitepapers, executive briefings). Peer validation and analyst recognition (Gartner, Forrester) are primary trust signals. LinkedIn is the dominant professional channel; in-person events build the relationship that closes the deal.",
+        "fan_truth_benchmark": "Fan Truth must score Special > 84. 'The CIO who chose the right partner five years ago is still ahead of the one who chose the cheapest' scores 90/100. Strategic partner framing — not vendor framing — is the only language that lands with this segment.",
+    },
+    {
+        "brand": "Infosys", "segment_name": "Enterprise IT Decision Influencers", "size_estimate": 180000,
+        "age_range": "32-50", "income_band": "USD80k-USD150k",
+        "top_channels": ["LinkedIn", "Google Ads", "Webinars"], "avg_weekly_spend_gbp": 0,
+        "behavioural_notes": "VPs, Directors and senior managers who evaluate, shortlist and recommend technology partners. Heavily research-driven — reads case studies, attends webinars, compares analyst ratings. Google search is high-intent at shortlist stage. LinkedIn for brand awareness and thought leadership earlier in the journey.",
+        "fan_truth_benchmark": "Fan Truth must score Specific > 80. 'The organisations that navigate uncertainty fastest aren't lucky — they're better wired' scores 80/100. Specificity about business outcomes (speed, resilience, advantage) outperforms generic capability claims.",
+    },
+    {
+        "brand": "Infosys", "segment_name": "AI & Innovation Agenda Owners", "size_estimate": 95000,
+        "age_range": "35-52", "income_band": "USD120k-USD250k",
+        "top_channels": ["LinkedIn", "YouTube", "Programmatic"], "avg_weekly_spend_gbp": 0,
+        "behavioural_notes": "Chief AI Officers, heads of innovation and digital labs. Actively tracking AI developments — reads tech press, follows AI researchers on LinkedIn, attends AI-specific conferences. Highly sceptical of vendor hype; responds to demonstrated capability and honest limitation acknowledgement. YouTube for deep-dive technical content.",
+        "fan_truth_benchmark": "Fan Truth must score Special > 86. 'AI doesn't replace strategy — it amplifies the quality of the people who set it' scores 88/100. Human-amplification framing consistently outperforms automation/replacement messaging with this audience.",
+    },
+
     # Generic segments for any brand
     {
         "brand": "All", "segment_name": "Digital Natives (18-28)", "size_estimate": 2800000,
@@ -497,48 +532,87 @@ def _load_local_guidelines(brand: str) -> tuple[str, str]:
     return "", ""
 
 
+# Brands that live only in GCS (not in local bucket): map brand name → GCS blob path
+GCS_ONLY_BRANDS = {
+    "Infosys": "brands/Infosys/Guidelines/Guideline.md",
+}
+
+
+def _load_gcs_guidelines(brand: str, blob_path: str) -> tuple[str, str]:
+    """Download brand guidelines from GCS. Returns (content, source_file)."""
+    try:
+        from google.cloud import storage as _gcs
+        gcs_bucket = (
+            os.getenv("GCS_BUCKET")
+            or os.getenv("BUCKET_NAME")
+            or f"{GCP_PROJECT}-campaignos"
+        )
+        if not gcs_bucket:
+            print(f"  WARNING: GCS_BUCKET not set — cannot load {brand} from GCS")
+            return "", ""
+        client = _gcs.Client(project=GCP_PROJECT)
+        blob   = client.bucket(gcs_bucket).blob(blob_path)
+        content = blob.download_as_text(encoding="utf-8")
+        return content, blob_path.rsplit("/", 1)[-1]
+    except Exception as e:
+        print(f"  WARNING: GCS load failed for {brand} ({e})")
+        return "", ""
+
+
 def seed_brand_guidelines_chunks(bq: bigquery.Client) -> None:
-    """Chunk and embed all locally available brand guidelines into BigQuery."""
+    """Chunk and embed brand guidelines (local + GCS-only brands) into BigQuery."""
     print("\nSeeding brand_guidelines_chunks...")
     _drop_create_table(bq, "brand_guidelines_chunks", GUIDELINES_SCHEMA)
 
     import pathlib
     brands_root = pathlib.Path(__file__).parent.parent / "bucket" / "brands"
-    if not brands_root.exists():
-        print(f"  No local bucket at {brands_root} — skipping brand guidelines chunks")
-        print("  (Run index_gcs_guidelines.py separately to load from GCS after setup)")
-        return
 
-    all_rows  = []
+    all_rows     = []
     brands_found = 0
-    for brand_dir in brands_root.iterdir():
-        if not brand_dir.is_dir():
-            continue
-        brand = brand_dir.name
-        content, source_file = _load_local_guidelines(brand)
+
+    # ── Local brands ──────────────────────────────────────────────────────────
+    if brands_root.exists():
+        for brand_dir in brands_root.iterdir():
+            if not brand_dir.is_dir():
+                continue
+            brand = brand_dir.name
+            content, source_file = _load_local_guidelines(brand)
+            if not content:
+                continue
+            brands_found += 1
+            chunks = _chunk_text(content)
+            print(f"  {brand}: {len(chunks)} chunks from {source_file} (local)")
+            for i, chunk in enumerate(chunks):
+                emb = _embed(f"{brand} brand guidelines {chunk}")
+                all_rows.append({
+                    "brand": brand, "content": chunk,
+                    "source_file": source_file, "chunk_index": i, "embedding": emb,
+                })
+                time.sleep(0.05)
+    else:
+        print(f"  No local bucket at {brands_root}")
+
+    # ── GCS-only brands ───────────────────────────────────────────────────────
+    for brand, blob_path in GCS_ONLY_BRANDS.items():
+        content, source_file = _load_gcs_guidelines(brand, blob_path)
         if not content:
             continue
-
         brands_found += 1
         chunks = _chunk_text(content)
-        print(f"  {brand}: {len(chunks)} chunks from {source_file}")
+        print(f"  {brand}: {len(chunks)} chunks from {source_file} (GCS)")
         for i, chunk in enumerate(chunks):
             emb = _embed(f"{brand} brand guidelines {chunk}")
             all_rows.append({
-                "brand":       brand,
-                "content":     chunk,
-                "source_file": source_file,
-                "chunk_index": i,
-                "embedding":   emb,
+                "brand": brand, "content": chunk,
+                "source_file": source_file, "chunk_index": i, "embedding": emb,
             })
-            # Rate-limit Gemini embedding calls
             time.sleep(0.05)
 
     if not all_rows:
-        print("  No brand guidelines found locally. Table created (empty).")
+        print("  No brand guidelines found. Table created (empty).")
         return
 
-    # Insert in batches of 100 (BQ streaming insert limit is 10MB per request)
+    # Insert in batches of 100 (BQ streaming insert limit ~10MB per request)
     batch_size = 100
     for i in range(0, len(all_rows), batch_size):
         batch  = all_rows[i: i + batch_size]
