@@ -1,0 +1,1417 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format/",
+  "name": "Infosys brand tokens",
+  "version": "1.0.0",
+  "generated": "2026-08-24",
+  "source": {
+    "styleGuide": "infosys-brand-styleguide.pdf, pp. 29–33",
+    "references": [
+      "Color-Reference.html",
+      "Logo-Reference.html"
+    ],
+    "contrastMethod": "WCAG 2.1 relative luminance; every ratio in this file is computed from the hex value, not transcribed"
+  },
+  "color": {
+    "primary": {
+      "infosysBlue": {
+        "$value": "#007CC3",
+        "$type": "color",
+        "rgb": [
+          0,
+          124,
+          195
+        ],
+        "pantone": "285 C",
+        "cmyk": "91/43/0/0",
+        "usage": "Cornerstone of the palette",
+        "contrast": {
+          "onWhite": 4.5,
+          "onBlack": 3.63
+        },
+        "textColor": {
+          "value": "white",
+          "basis": "measured"
+        },
+        "note": "Style guide also prints #007DC3; the supplied plain logo is filled #0072AD. Standardise digital on #007CC3."
+      },
+      "infosysChrome": {
+        "$value": "#6D6E71",
+        "$type": "color",
+        "rgb": [
+          109,
+          110,
+          113
+        ],
+        "pantone": "Cool Gray 11 C",
+        "cmyk": "0/0/0/70",
+        "usage": "Structure, UI text, offering descriptors",
+        "contrast": {
+          "onWhite": 5.1,
+          "onBlack": 3.2
+        },
+        "textColor": {
+          "value": "white",
+          "basis": "measured"
+        }
+      },
+      "white": {
+        "$value": "#FFFFFF",
+        "$type": "color",
+        "rgb": [
+          255,
+          255,
+          255
+        ],
+        "usage": "Reverse type, surfaces",
+        "contrast": {
+          "onWhite": 1.0,
+          "onBlack": 16.3
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      }
+    },
+    "sets": {
+      "sapphire": {
+        "description": "Primary set — default for corporate and digital work.",
+        "ultraLight": {
+          "$value": "#BEE3FF",
+          "$type": "color",
+          "rgb": [
+            190,
+            227,
+            255
+          ],
+          "pantone": "545 C",
+          "tier": "ultraLight",
+          "usage": "Backgrounds and illustration",
+          "contrast": {
+            "onWhite": 1.34,
+            "onBlack": 12.13
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "light": {
+          "$value": "#92D1FF",
+          "$type": "color",
+          "rgb": [
+            146,
+            209,
+            255
+          ],
+          "pantone": "2905 C",
+          "tier": "light",
+          "usage": "Portals and illustration",
+          "contrast": {
+            "onWhite": 1.64,
+            "onBlack": 9.92
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "medium": {
+          "$value": "#007CC3",
+          "$type": "color",
+          "rgb": [
+            0,
+            124,
+            195
+          ],
+          "pantone": "285 C",
+          "tier": "medium",
+          "usage": "Activation Portal, backgrounds, call-outs",
+          "contrast": {
+            "onWhite": 4.5,
+            "onBlack": 3.63
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "measured"
+          }
+        },
+        "dark": {
+          "$value": "#061838",
+          "$type": "color",
+          "rgb": [
+            6,
+            24,
+            56
+          ],
+          "pantone": "2965 C",
+          "tier": "dark",
+          "usage": "Typography, line art, logos",
+          "contrast": {
+            "onWhite": 17.57,
+            "onBlack": 1.08
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "measured"
+          }
+        }
+      },
+      "coral": {
+        "ultraLight": {
+          "$value": "#FCDDD6",
+          "$type": "color",
+          "rgb": [
+            252,
+            221,
+            214
+          ],
+          "pantone": "9262 C",
+          "tier": "ultraLight",
+          "usage": "Backgrounds and illustration",
+          "contrast": {
+            "onWhite": 1.28,
+            "onBlack": 12.77
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "light": {
+          "$value": "#FBC2BA",
+          "$type": "color",
+          "rgb": [
+            251,
+            194,
+            186
+          ],
+          "pantone": "487 C",
+          "tier": "light",
+          "usage": "Portals and illustration",
+          "contrast": {
+            "onWhite": 1.55,
+            "onBlack": 10.5
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "medium": {
+          "$value": "#F16C51",
+          "$type": "color",
+          "rgb": [
+            241,
+            108,
+            81
+          ],
+          "pantone": "7416 C",
+          "tier": "medium",
+          "usage": "Activation Portal, backgrounds, call-outs",
+          "contrast": {
+            "onWhite": 3.0,
+            "onBlack": 5.44
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "exception",
+            "ratio": 3.0,
+            "note": "Below AA. Approved campaign exception — see accessibility.exceptions."
+          }
+        },
+        "dark": {
+          "$value": "#4C0519",
+          "$type": "color",
+          "rgb": [
+            76,
+            5,
+            25
+          ],
+          "pantone": "7428 C",
+          "tier": "dark",
+          "usage": "Typography, line art, logos",
+          "contrast": {
+            "onWhite": 15.64,
+            "onBlack": 1.04
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "measured"
+          }
+        }
+      },
+      "topaz": {
+        "ultraLight": {
+          "$value": "#F4E0C8",
+          "$type": "color",
+          "rgb": [
+            244,
+            224,
+            200
+          ],
+          "pantone": "7506 C",
+          "tier": "ultraLight",
+          "usage": "Backgrounds and illustration",
+          "contrast": {
+            "onWhite": 1.28,
+            "onBlack": 12.69
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "light": {
+          "$value": "#EAC8A5",
+          "$type": "color",
+          "rgb": [
+            234,
+            200,
+            165
+          ],
+          "pantone": "1355 C",
+          "tier": "light",
+          "usage": "Portals and illustration",
+          "contrast": {
+            "onWhite": 1.58,
+            "onBlack": 10.33
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "medium": {
+          "$value": "#DF9926",
+          "$type": "color",
+          "rgb": [
+            223,
+            153,
+            38
+          ],
+          "pantone": "131 C",
+          "tier": "medium",
+          "usage": "Activation Portal, backgrounds, call-outs",
+          "contrast": {
+            "onWhite": 2.41,
+            "onBlack": 6.77
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "exception",
+            "ratio": 2.41,
+            "note": "Below AA. Approved campaign exception — see accessibility.exceptions."
+          }
+        },
+        "dark": {
+          "$value": "#2F1113",
+          "$type": "color",
+          "rgb": [
+            47,
+            17,
+            19
+          ],
+          "pantone": "4975 C",
+          "tier": "dark",
+          "usage": "Typography, line art, logos",
+          "contrast": {
+            "onWhite": 17.35,
+            "onBlack": 1.06
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "measured"
+          }
+        }
+      },
+      "jade": {
+        "ultraLight": {
+          "$value": "#D8E7DA",
+          "$type": "color",
+          "rgb": [
+            216,
+            231,
+            218
+          ],
+          "pantone": "621 C",
+          "tier": "ultraLight",
+          "usage": "Backgrounds and illustration",
+          "contrast": {
+            "onWhite": 1.28,
+            "onBlack": 12.7
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "light": {
+          "$value": "#A8D7CD",
+          "$type": "color",
+          "rgb": [
+            168,
+            215,
+            205
+          ],
+          "pantone": "338 C",
+          "tier": "light",
+          "usage": "Portals and illustration",
+          "contrast": {
+            "onWhite": 1.58,
+            "onBlack": 10.3
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "medium": {
+          "$value": "#00B28F",
+          "$type": "color",
+          "rgb": [
+            0,
+            178,
+            143
+          ],
+          "pantone": "339 C",
+          "tier": "medium",
+          "usage": "Activation Portal, backgrounds, call-outs",
+          "contrast": {
+            "onWhite": 2.7,
+            "onBlack": 6.03
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "exception",
+            "ratio": 2.7,
+            "note": "Below AA. Approved campaign exception — see accessibility.exceptions."
+          }
+        },
+        "dark": {
+          "$value": "#09321D",
+          "$type": "color",
+          "rgb": [
+            9,
+            50,
+            29
+          ],
+          "pantone": "3308 C",
+          "tier": "dark",
+          "usage": "Typography, line art, logos",
+          "contrast": {
+            "onWhite": 14.14,
+            "onBlack": 1.15
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "measured"
+          }
+        }
+      },
+      "amethyst": {
+        "ultraLight": {
+          "$value": "#E6DBE6",
+          "$type": "color",
+          "rgb": [
+            230,
+            219,
+            230
+          ],
+          "pantone": "5175 C",
+          "tier": "ultraLight",
+          "usage": "Backgrounds and illustration",
+          "contrast": {
+            "onWhite": 1.34,
+            "onBlack": 12.14
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "light": {
+          "$value": "#D0B5D5",
+          "$type": "color",
+          "rgb": [
+            208,
+            181,
+            213
+          ],
+          "pantone": "257 C",
+          "tier": "light",
+          "usage": "Portals and illustration",
+          "contrast": {
+            "onWhite": 1.87,
+            "onBlack": 8.73
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "medium": {
+          "$value": "#963596",
+          "$type": "color",
+          "rgb": [
+            150,
+            53,
+            150
+          ],
+          "pantone": "513 C",
+          "tier": "medium",
+          "usage": "Activation Portal, backgrounds, call-outs",
+          "contrast": {
+            "onWhite": 6.47,
+            "onBlack": 2.52
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "measured"
+          }
+        },
+        "dark": {
+          "$value": "#382261",
+          "$type": "color",
+          "rgb": [
+            56,
+            34,
+            97
+          ],
+          "pantone": "2627 C",
+          "tier": "dark",
+          "usage": "Typography, line art, logos",
+          "contrast": {
+            "onWhite": 13.38,
+            "onBlack": 1.22
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "measured"
+          }
+        }
+      },
+      "onyx": {
+        "description": "Reproduction limitations only.",
+        "ultraLight": {
+          "$value": "#DADADA",
+          "$type": "color",
+          "rgb": [
+            218,
+            218,
+            218
+          ],
+          "pantone": "Cool Gray 2 C",
+          "tier": "ultraLight",
+          "usage": "Backgrounds and illustration",
+          "contrast": {
+            "onWhite": 1.4,
+            "onBlack": 11.66
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "light": {
+          "$value": "#B8B8B8",
+          "$type": "color",
+          "rgb": [
+            184,
+            184,
+            184
+          ],
+          "pantone": "Cool Gray 4 C",
+          "tier": "light",
+          "usage": "Portals and illustration",
+          "contrast": {
+            "onWhite": 1.98,
+            "onBlack": 8.22
+          },
+          "textColor": {
+            "value": "black",
+            "basis": "measured"
+          }
+        },
+        "medium": {
+          "$value": "#7E7E7E",
+          "$type": "color",
+          "rgb": [
+            126,
+            126,
+            126
+          ],
+          "pantone": "Cool Gray 7 C",
+          "tier": "medium",
+          "usage": "Activation Portal, backgrounds, call-outs",
+          "contrast": {
+            "onWhite": 4.06,
+            "onBlack": 4.02
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "measured"
+          }
+        },
+        "dark": {
+          "$value": "#3F3F3F",
+          "$type": "color",
+          "rgb": [
+            63,
+            63,
+            63
+          ],
+          "pantone": "Cool Gray 11 C",
+          "tier": "dark",
+          "usage": "Typography, line art, logos",
+          "contrast": {
+            "onWhite": 10.53,
+            "onBlack": 1.55
+          },
+          "textColor": {
+            "value": "white",
+            "basis": "measured"
+          }
+        }
+      }
+    },
+    "secondary": {
+      "dukeBlue": {
+        "$value": "#21409A",
+        "$type": "color",
+        "rgb": [
+          33,
+          64,
+          154
+        ],
+        "pantone": "2738 C",
+        "contrast": {
+          "onWhite": 9.27,
+          "onBlack": 1.76
+        },
+        "textColor": {
+          "value": "white",
+          "basis": "measured"
+        }
+      },
+      "mineralBlue": {
+        "$value": "#219CD7",
+        "$type": "color",
+        "rgb": [
+          33,
+          156,
+          215
+        ],
+        "pantone": "299 C",
+        "contrast": {
+          "onWhite": 3.09,
+          "onBlack": 5.28
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "deepSkyBlue": {
+        "$value": "#47BAEB",
+        "$type": "color",
+        "rgb": [
+          71,
+          186,
+          235
+        ],
+        "pantone": "2915 C",
+        "contrast": {
+          "onWhite": 2.21,
+          "onBlack": 7.37
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "skyBlue": {
+        "$value": "#A1DDF3",
+        "$type": "color",
+        "rgb": [
+          161,
+          221,
+          243
+        ],
+        "pantone": "2975 M",
+        "usage": "Background and illustration only",
+        "contrast": {
+          "onWhite": 1.48,
+          "onBlack": 10.99
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "aliceBlue": {
+        "$value": "#D5EEF6",
+        "$type": "color",
+        "rgb": [
+          213,
+          238,
+          246
+        ],
+        "pantone": "628 C",
+        "usage": "Background and illustration only",
+        "contrast": {
+          "onWhite": 1.21,
+          "onBlack": 13.5
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "black": {
+        "$value": "#231F20",
+        "$type": "color",
+        "rgb": [
+          35,
+          31,
+          32
+        ],
+        "pantone": "426 C",
+        "contrast": {
+          "onWhite": 16.3,
+          "onBlack": 1.0
+        },
+        "textColor": {
+          "value": "white",
+          "basis": "measured"
+        }
+      },
+      "silver": {
+        "$value": "#A7A9AC",
+        "$type": "color",
+        "rgb": [
+          167,
+          169,
+          172
+        ],
+        "pantone": "Cool Gray 7 C",
+        "contrast": {
+          "onWhite": 2.36,
+          "onBlack": 6.92
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "platinum": {
+        "$value": "#E5E4E2",
+        "$type": "color",
+        "rgb": [
+          229,
+          228,
+          226
+        ],
+        "pantone": "Cool Gray 2 C",
+        "usage": "Background and illustration only",
+        "contrast": {
+          "onWhite": 1.27,
+          "onBlack": 12.83
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "snowHaze": {
+        "$value": "#F4F0EC",
+        "$type": "color",
+        "rgb": [
+          244,
+          240,
+          236
+        ],
+        "pantone": "Warm Gray 1 C",
+        "usage": "Background and illustration only",
+        "contrast": {
+          "onWhite": 1.13,
+          "onBlack": 14.38
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "rust": {
+        "$value": "#B74326",
+        "$type": "color",
+        "rgb": [
+          183,
+          67,
+          38
+        ],
+        "pantone": "1805 C",
+        "contrast": {
+          "onWhite": 5.46,
+          "onBlack": 2.98
+        },
+        "textColor": {
+          "value": "white",
+          "basis": "measured"
+        }
+      },
+      "vividOrange": {
+        "$value": "#F78E1E",
+        "$type": "color",
+        "rgb": [
+          247,
+          142,
+          30
+        ],
+        "pantone": "152 C",
+        "contrast": {
+          "onWhite": 2.37,
+          "onBlack": 6.86
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "orangeGlow": {
+        "$value": "#FAA41A",
+        "$type": "color",
+        "rgb": [
+          250,
+          164,
+          26
+        ],
+        "pantone": "138 C",
+        "contrast": {
+          "onWhite": 2.02,
+          "onBlack": 8.06
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "peach": {
+        "$value": "#F9DFAC",
+        "$type": "color",
+        "rgb": [
+          249,
+          223,
+          172
+        ],
+        "pantone": "7507 C",
+        "usage": "Background and illustration only",
+        "contrast": {
+          "onWhite": 1.3,
+          "onBlack": 12.56
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "desert": {
+        "$value": "#FFF0D7",
+        "$type": "color",
+        "rgb": [
+          255,
+          240,
+          215
+        ],
+        "pantone": "7499 C",
+        "usage": "Background and illustration only",
+        "contrast": {
+          "onWhite": 1.12,
+          "onBlack": 14.51
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "leafGreen": {
+        "$value": "#509542",
+        "$type": "color",
+        "rgb": [
+          80,
+          149,
+          66
+        ],
+        "pantone": "370 C",
+        "contrast": {
+          "onWhite": 3.67,
+          "onBlack": 4.44
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "grassGreen": {
+        "$value": "#6CB33F",
+        "$type": "color",
+        "rgb": [
+          108,
+          179,
+          63
+        ],
+        "pantone": "369 C",
+        "contrast": {
+          "onWhite": 2.57,
+          "onBlack": 6.33
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "mossGreen": {
+        "$value": "#7AC143",
+        "$type": "color",
+        "rgb": [
+          122,
+          193,
+          67
+        ],
+        "pantone": "368 C",
+        "contrast": {
+          "onWhite": 2.2,
+          "onBlack": 7.4
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "fernGreen": {
+        "$value": "#B4D88B",
+        "$type": "color",
+        "rgb": [
+          180,
+          216,
+          139
+        ],
+        "pantone": "367 C",
+        "usage": "Background and illustration only",
+        "contrast": {
+          "onWhite": 1.6,
+          "onBlack": 10.2
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      },
+      "mintGreen": {
+        "$value": "#D0E4A6",
+        "$type": "color",
+        "rgb": [
+          208,
+          228,
+          166
+        ],
+        "pantone": "366 C",
+        "usage": "Background and illustration only",
+        "contrast": {
+          "onWhite": 1.37,
+          "onBlack": 11.9
+        },
+        "textColor": {
+          "value": "black",
+          "basis": "measured"
+        }
+      }
+    },
+    "restricted": {
+      "finacleRed": {
+        "$value": "#ED1C2E",
+        "$type": "color",
+        "rgb": [
+          237,
+          28,
+          46
+        ],
+        "pantone": "186 C",
+        "usage": "Infosys Finacle only",
+        "contrast": {
+          "onWhite": 4.37,
+          "onBlack": 3.73
+        },
+        "textColor": {
+          "value": "white",
+          "basis": "measured"
+        },
+        "note": "Not permitted in any other layout, chart, alert state or icon."
+      }
+    }
+  },
+  "semantic": {
+    "textPrimary": {
+      "$value": "{color.sets.sapphire.dark}",
+      "$type": "color",
+      "contrastOnWhite": 17.57
+    },
+    "textSecondary": {
+      "$value": "{color.primary.infosysChrome}",
+      "$type": "color",
+      "contrastOnWhite": 5.1
+    },
+    "textLink": {
+      "$value": "{color.secondary.dukeBlue}",
+      "$type": "color",
+      "contrastOnWhite": 9.27
+    },
+    "textOnDark": {
+      "$value": "{color.primary.white}",
+      "$type": "color",
+      "contrastOnSapphireDark": 17.57
+    },
+    "textOnColor": {
+      "$value": "{color.primary.white}",
+      "$type": "color",
+      "rule": "White is the type colour on any filled ground. If white does not clear the ratio at the size required, change the ground — never the type."
+    },
+    "surface": {
+      "$value": "{color.primary.white}",
+      "$type": "color"
+    },
+    "surfaceAlt": {
+      "$value": "{color.secondary.snowHaze}",
+      "$type": "color"
+    },
+    "surfaceAccent": {
+      "$value": "{color.sets.sapphire.ultraLight}",
+      "$type": "color"
+    },
+    "border": {
+      "$value": "{color.secondary.platinum}",
+      "$type": "color"
+    },
+    "focusRing": {
+      "$value": "{color.sets.sapphire.dark}",
+      "$type": "color",
+      "note": "Clears 3:1 on every brand surface"
+    },
+    "stateError": {
+      "$value": "{color.secondary.rust}",
+      "$type": "color",
+      "note": "Rust, not Finacle Red",
+      "contrastOnWhite": 5.46
+    },
+    "stateSuccess": {
+      "$value": "{color.secondary.leafGreen}",
+      "$type": "color",
+      "contrastOnBlack": 4.44
+    }
+  },
+  "accessibility": {
+    "standard": "WCAG 2.1 AA",
+    "thresholds": {
+      "normalText": 4.5,
+      "largeText": 3.0,
+      "largeTextDefinition": "24px regular / 18.66px bold and above, measured at rendered size",
+      "uiAndGraphics": 3.0
+    },
+    "renderedSizeRule": {
+      "statement": "Large text qualifies at the size the user sees, not the size the file is authored at.",
+      "platformScale": {
+        "x": 0.42,
+        "linkedin": 0.46
+      },
+      "example": "A 44px headline on a 1200px X card renders near 18px in a desktop timeline."
+    },
+    "exceptions": [
+      {
+        "id": "medium-tier-white-type",
+        "status": "approved",
+        "appliesTo": [
+          {
+            "token": "color.sets.coral.medium",
+            "hex": "#F16C51",
+            "ratioWithWhite": 3.0
+          },
+          {
+            "token": "color.sets.jade.medium",
+            "hex": "#00B28F",
+            "ratioWithWhite": 2.7
+          },
+          {
+            "token": "color.sets.topaz.medium",
+            "hex": "#DF9926",
+            "ratioWithWhite": 2.41
+          }
+        ],
+        "rationale": "The set colour is the recognition asset in campaign work; white stays the type colour on these grounds.",
+        "allowedUses": [
+          "Campaign key visuals and social banners — event titles, session names, campaign headlines",
+          "Activation Portal hero panels",
+          "Stat and call-out figures with a short white label",
+          "Sub-brand campaign moments where the set colour carries recognition"
+        ],
+        "disallowedUses": [
+          "Body copy, captions and disclaimers",
+          "Interactive elements — buttons, form labels, links, focus and error states",
+          "Product UI and documentation"
+        ],
+        "scope": "Limited to these three named colours. Off-palette grounds sampled from photography are not covered.",
+        "weakest": {
+          "token": "color.sets.topaz.medium",
+          "ratio": 2.41,
+          "note": "Below the 3:1 large-text floor by a clear margin; the first candidate for a minimum type size."
+        }
+      }
+    ],
+    "keyPairings": [
+      {
+        "label": "White on Infosys Blue",
+        "fg": "#FFFFFF",
+        "bg": "#007CC3",
+        "ratio": 4.5,
+        "normalText": "AA",
+        "largeText": "AAA",
+        "note": "Computes to 4.4957:1 — rounds to 4.5 but sits under the threshold."
+      },
+      {
+        "label": "White on Sapphire Dark",
+        "fg": "#FFFFFF",
+        "bg": "#061838",
+        "ratio": 17.57,
+        "normalText": "AAA",
+        "largeText": "AAA"
+      },
+      {
+        "label": "White on Infosys Chrome",
+        "fg": "#FFFFFF",
+        "bg": "#6D6E71",
+        "ratio": 5.1,
+        "normalText": "AA",
+        "largeText": "AAA"
+      },
+      {
+        "label": "Sapphire Dark on white",
+        "fg": "#061838",
+        "bg": "#FFFFFF",
+        "ratio": 17.57,
+        "normalText": "AAA",
+        "largeText": "AAA"
+      },
+      {
+        "label": "Infosys Chrome on white",
+        "fg": "#6D6E71",
+        "bg": "#FFFFFF",
+        "ratio": 5.1,
+        "normalText": "AA",
+        "largeText": "AAA"
+      },
+      {
+        "label": "Duke Blue on white",
+        "fg": "#21409A",
+        "bg": "#FFFFFF",
+        "ratio": 9.27,
+        "normalText": "AAA",
+        "largeText": "AAA"
+      }
+    ]
+  },
+  "logo": {
+    "permittedColors": [
+      "#007CC3",
+      "#6D6E71",
+      "70% black",
+      "#FFFFFF (reverse only)"
+    ],
+    "clearSpace": {
+      "unit": "height of the capital I",
+      "minimum": {
+        "digitalPx": 10,
+        "printMm": 3
+      }
+    },
+    "minimumSize": {
+      "digitalPx": 90,
+      "printIn": 0.75,
+      "printMm": 19.05
+    },
+    "subBrandMinimumSize": {
+      "status": "unconfirmed",
+      "note": "The wordmark occupies roughly half a stacked lockup, so a 90px lockup renders the wordmark near 45px. Awaiting a published figure."
+    },
+    "assets": [
+      {
+        "file": "Infosys_WB.png",
+        "type": "primary",
+        "master": [
+          3072,
+          1137
+        ],
+        "colors": [
+          "#0072AD"
+        ],
+        "darkGroundMaster": "supplied (SVG)",
+        "flag": "Filled #0072AD — off the stated Infosys Blue. Re-export to #007CC3."
+      },
+      {
+        "file": "Infosys-tagline_WB.png",
+        "type": "taglineLockup",
+        "master": [
+          3163,
+          1608
+        ],
+        "colors": [
+          "#007CC3"
+        ],
+        "darkGroundMaster": "supplied (SVG)"
+      },
+      {
+        "file": "Infosys_offering_WB.png",
+        "type": "offeringLockup",
+        "master": [
+          4702,
+          760
+        ],
+        "colors": [
+          "#007DC3",
+          "#6D6E71"
+        ],
+        "darkGroundMaster": "supplied (SVG)",
+        "rule": "Offering name in 26 characters or less, separated by a rule the height of the I."
+      },
+      {
+        "file": "Topaz_WB.png",
+        "type": "subBrand",
+        "domain": "AI",
+        "master": [
+          2674,
+          1602
+        ],
+        "colors": [
+          "#007DC3",
+          "#004A85"
+        ],
+        "darkGroundMaster": "not supplied",
+        "vectorMaster": "not supplied"
+      },
+      {
+        "file": "Cobalt_WB.png",
+        "type": "subBrand",
+        "domain": "Cloud",
+        "master": [
+          2952,
+          1410
+        ],
+        "colors": [
+          "#007DC3",
+          "#004A85"
+        ],
+        "darkGroundMaster": "not supplied",
+        "vectorMaster": "not supplied"
+      },
+      {
+        "file": "Aster_WB.png",
+        "type": "subBrand",
+        "domain": "Marketing",
+        "master": [
+          2406,
+          1416
+        ],
+        "colors": [
+          "#007DC3",
+          "#004A85"
+        ],
+        "darkGroundMaster": "not supplied",
+        "vectorMaster": "not supplied"
+      }
+    ],
+    "subBrandConstruction": {
+      "layout": "Stacked, two-tone. Wordmark above the sub-brand name, optically right-aligned, no dividing rule.",
+      "wordmarkColor": "#007DC3",
+      "nameColor": "#004A85",
+      "wordmarkWidthPx": 1689,
+      "note": "The wordmark is drawn at an identical size in all three files, so the sub-brand name sets the lockup width."
+    },
+    "openIssues": [
+      "Four blues across supplied artwork: #0072AD, #007CC3, #007DC3, #004A85.",
+      "#004A85 is not in the three-colour logo palette — confirm it is the approved sub-brand navy.",
+      "No _DB or vector masters supplied for Topaz, Cobalt or Aster."
+    ]
+  },
+  "banners": {
+    "textColor": "white",
+    "rule": "Where a ground falls short, darken the ground — never flip the type to dark.",
+    "audit": [
+      {
+        "file": "C41_Linkedin__15_.png",
+        "campaign": "Infosys at OHLSS 2025",
+        "platform": "linkedin",
+        "size": [
+          1200,
+          627
+        ],
+        "ground": [
+          "#0060AC"
+        ],
+        "gradient": false,
+        "inPalette": false,
+        "whiteContrast": {
+          "min": 6.42,
+          "max": 6.42
+        },
+        "verdict": "AA at any size",
+        "smallestTextPx": 29,
+        "renderedSmallestPx": 13
+      },
+      {
+        "file": "C41_Linkedin__34_.png",
+        "campaign": "Atlassian Team on Tour",
+        "platform": "linkedin",
+        "size": [
+          1200,
+          627
+        ],
+        "ground": [
+          "#007D98"
+        ],
+        "gradient": false,
+        "inPalette": false,
+        "whiteContrast": {
+          "min": 4.79,
+          "max": 4.79
+        },
+        "verdict": "AA at any size",
+        "smallestTextPx": 34,
+        "renderedSmallestPx": 16
+      },
+      {
+        "file": "C25_2_Twitter.png",
+        "campaign": "Oracle AI World 2025",
+        "platform": "x",
+        "size": [
+          1200,
+          675
+        ],
+        "ground": [
+          "#03877D",
+          "#1D83B7"
+        ],
+        "gradient": true,
+        "inPalette": false,
+        "whiteContrast": {
+          "min": 4.21,
+          "max": 4.41
+        },
+        "verdict": "large text only",
+        "smallestTextPx": 21,
+        "renderedSmallestPx": 9
+      },
+      {
+        "file": "C33_Twitter__3_.png",
+        "campaign": "Redefining Customer Experiences (Shard)",
+        "platform": "x",
+        "size": [
+          1200,
+          675
+        ],
+        "ground": [
+          "#55859B"
+        ],
+        "gradient": false,
+        "inPalette": false,
+        "whiteContrast": {
+          "min": 4.03,
+          "max": 4.03
+        },
+        "verdict": "large text only",
+        "smallestTextPx": 31,
+        "renderedSmallestPx": 13
+      },
+      {
+        "file": "C15_Twitter.png",
+        "campaign": "From Hype to Impact",
+        "platform": "x",
+        "size": [
+          1200,
+          675
+        ],
+        "ground": [
+          "#598BAF"
+        ],
+        "gradient": false,
+        "inPalette": false,
+        "whiteContrast": {
+          "min": 3.66,
+          "max": 3.66
+        },
+        "verdict": "large text only",
+        "smallestTextPx": 34,
+        "renderedSmallestPx": 14
+      },
+      {
+        "file": "C32_Twitter__28_.png",
+        "campaign": "Redefining Customer Experiences (Kensington)",
+        "platform": "x",
+        "size": [
+          1200,
+          675
+        ],
+        "ground": [
+          "#4899DB"
+        ],
+        "gradient": false,
+        "inPalette": false,
+        "whiteContrast": {
+          "min": 3.06,
+          "max": 3.06
+        },
+        "verdict": "large text only",
+        "smallestTextPx": 28,
+        "renderedSmallestPx": 12
+      },
+      {
+        "file": "C34_Twitter__1_.png",
+        "campaign": "AUSOUG Connect 2025",
+        "platform": "x",
+        "size": [
+          1200,
+          675
+        ],
+        "ground": [
+          "#6EB18E"
+        ],
+        "gradient": false,
+        "inPalette": false,
+        "whiteContrast": {
+          "min": 2.52,
+          "max": 2.52
+        },
+        "verdict": "fails at every size",
+        "smallestTextPx": 34,
+        "renderedSmallestPx": 14
+      }
+    ],
+    "findings": [
+      "Six of seven grounds are outside the palette — sampled from photography rather than a colour set.",
+      "The Oracle banner runs a green-to-blue gradient the palette does not permit.",
+      "Two banners from one campaign use two different grounds.",
+      "#6EB18E fails with white at every size and is not covered by the Medium-tier exception; rebuild on Jade Medium or Jade Dark."
+    ]
+  },
+  "rules": [
+    "No screening of primary colours — use the Sapphire set for lighter and darker steps.",
+    "Never mix two colour sets in one asset.",
+    "No gradients, including chart fills and button states.",
+    "No colours outside the brand sets, including opacity-derived greys.",
+    "Dark tiers are not layout backgrounds, except digital surfaces where Sapphire Dark is the reading background.",
+    "Red is Finacle only.",
+    "Tier discipline: Ultra Light for backgrounds and illustration, Light for Portals and illustration, Medium for the Activation Portal, backgrounds and call-outs, Dark for typography, line art and logos.",
+    "AA is the floor, with three named exceptions — see accessibility.exceptions.",
+    "White is the type colour on any coloured ground.",
+    "Judge large text at rendered size, not authored size.",
+    "Never rely on colour alone to carry meaning.",
+    "Never recreate, re-trace, re-colour or re-proportion any logo."
+  ]
+}

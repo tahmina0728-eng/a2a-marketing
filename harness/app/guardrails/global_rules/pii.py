@@ -10,12 +10,28 @@ from ..models import GuardrailResult, Flag, Severity, Action
 from ..registry import register
 
 _PATTERNS: list[tuple[str, str, str]] = [
-    # (pattern, label, action)
+    # ── Universal ──────────────────────────────────────────────────────────────
     (r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "email address", "redact"),
-    (r"\b(?:\+44|0044|0)7\d{9}\b",                       "UK phone",      "redact"),
     (r"\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b",    "credit card",   "block"),
+
+    # ── UK ─────────────────────────────────────────────────────────────────────
+    (r"\b(?:\+44|0044|0)7\d{9}\b",                       "UK phone",      "redact"),
     (r"\b[A-Z]{2}\d{6}[A-D]\b",                          "NI number",     "block"),
-    (r"\b[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}\b",          "postcode",      "warn"),
+    (r"\b[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}\b",          "UK postcode",   "warn"),
+
+    # ── US ─────────────────────────────────────────────────────────────────────
+    # US SSN — hard block; never appears in marketing copy legitimately
+    (r"\b\d{3}-\d{2}-\d{4}\b",                                                   "US SSN",   "block"),
+    # US phone (various formats: 555-867-5309, (555) 867-5309, +1 555 867 5309)
+    (r"\b(?:\+1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b",                   "US phone", "redact"),
+
+    # ── India ──────────────────────────────────────────────────────────────────
+    # Aadhaar — 12-digit national ID in 4-4-4 groups; hard block
+    (r"\b\d{4}[\s-]\d{4}[\s-]\d{4}\b",                                           "Aadhaar number", "block"),
+    # PAN — AAAAA9999A format; hard block
+    (r"\b[A-Z]{5}[0-9]{4}[A-Z]\b",                                               "Indian PAN",     "block"),
+    # Indian mobile: starts 6-9, 10 digits (may be split 5+5 or 4+6 with separator)
+    (r"(?:\+91[\s.-]?)?[6-9]\d{4}[\s.-]?\d{5}\b",                               "Indian phone",   "redact"),
 ]
 
 
@@ -71,6 +87,8 @@ def _all_text(payload: dict) -> str:
 def _redact(text: str) -> str:
     text = re.sub(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "[EMAIL REDACTED]", text)
     text = re.sub(r"\b(?:\+44|0044|0)7\d{9}\b", "[PHONE REDACTED]", text)
+    text = re.sub(r"\b(?:\+1[\s.-]?)?\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}\b", "[PHONE REDACTED]", text)
+    text = re.sub(r"(?:\+91[\s.-]?)?[6-9]\d{4}[\s.-]?\d{5}\b", "[PHONE REDACTED]", text)
     return text
 
 

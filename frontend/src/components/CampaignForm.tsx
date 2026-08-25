@@ -5,6 +5,7 @@ import { API_BASE_PUB } from "../services/briefingApi";
 
 /* ── Data ──────────────────────────────────────────────────────── */
 const BRANDS = [
+  { id: "Infosys",     label: "Infosys",            logo: `${API_BASE_PUB}/brand-logo/Infosys` },
   { id: "Rnorr",       label: "Rnorr",             logo: `${API_BASE_PUB}/brands/Rnorr/serve/Logos/Rnorr-Logo.png` },
   { id: "Sunglow",     label: "Sunglow",            logo: `${API_BASE_PUB}/brands/Sunglow/serve/Logos/sunglow_logo.png` },
   { id: "Boozt",       label: "Boozt",              logo: `${API_BASE_PUB}/brands/Boozt/serve/Logos/Boozt_Logo.png` },
@@ -113,6 +114,7 @@ const HALEON_BRANDS_BY_CATEGORY: Record<string, string[]> = {
 
 // All other brands: single flat dropdown
 const BRAND_PRODUCTS: Record<string, string[]> = {
+  Infosys:     ["Infosys (IT Services & Consulting)", "Infosys Topaz (AI/Cloud)", "Infosys Cobalt (Cybersecurity)", "Infosys Aster (Healthcare)", "Finacle (Banking)", "McCamish (Insurance)", "Infosys BPM"],
   Barclays:    ["Wimbledon", "Premier League", "Brand Awareness", "Mortgage", "Business Banking", "Personal Loans", "Savings Account", "Credit Card"],
   Glenfiddich: ["12 Year Old", "15 Year Old", "18 Year Old", "21 Year Old", "Gran Reserva", "Fire & Cane", "IPA Experiment"],
   "UBS Bank":  ["Wealth Management", "Private Banking", "Investment Banking", "Personal Banking", "SME Banking"],

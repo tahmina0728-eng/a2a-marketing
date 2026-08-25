@@ -1150,6 +1150,59 @@ async def campaign_events(campaign_id: str):
     })
 
 
+# ── Infosys A2A Pipeline ───────────────────────────────────────────────────────
+
+class InfosysPipelineRequest(_BaseModel):
+    campaign_name: str       = ""
+    sub_brand:     str       = ""   # Topaz | Cobalt | Aster | Finacle | McCamish | BPM
+    objective:     str       = ""
+    audience:      str       = ""
+    buyer_truth:   str       = ""
+    channels:      list[str] = ["LinkedIn"]
+    market:        str       = "UK"
+    locale:        str       = "en-GB"
+    industry:      str       = ""
+    timing:        str       = ""
+    budget:        str       = ""
+    product_area:  str       = ""
+    run_aether:    bool      = False   # Phase 0: market intelligence
+    run_visuals:   bool      = False   # Phase 4: Morphis + Kinetik
+
+
+@app.post("/infosys/pipeline")
+async def infosys_pipeline(req: InfosysPipelineRequest):
+    """
+    Run the Infosys A2A pipeline:
+      [Aether →] Logos → Helia → Ideon [→ parallel(Morphis, Kinetik)]
+
+    Each stage uses the agent's SKILL.md + Infosys BrandContext as ADK instruction.
+    Guardrails (analyst citations, sub-brand scope, competitor block, PII) fire automatically.
+    """
+    try:
+        from app.agents.infosys.orchestrator import CampaignOrchestrator
+        orch = CampaignOrchestrator()
+        brief = req.model_dump(exclude={"run_aether", "run_visuals"})
+        return await orch.run_async(
+            brief,
+            run_aether  = req.run_aether,
+            run_visuals = req.run_visuals,
+        )
+    except Exception as exc:
+        logger.error("infosys_pipeline_error", error=str(exc))
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.post("/infosys/logos")
+async def infosys_logos(req: _BaseModel):
+    """Run only the Logos (brief validation) stage for Infosys."""
+    try:
+        from app.agents.infosys.logos import LogosAgent
+        r = LogosAgent().run(req.model_dump())
+        return r.model_dump()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.post("/pipeline")
 async def run_pipeline(brief: BriefRequest):
     """
@@ -1682,6 +1735,24 @@ async def serve_brand_logo(brand: str):
 
         # ── Brand-specific logos: serve actual brand files, PIL fallback for Cloud Run ─
         import re as _re
+
+        if brand.lower() == "infosys":
+            # Serve from app/brands/infosys/logos/ — prefer the white-background lockup
+            _logos_dir = _Path(__file__).parent / "app/brands/infosys/logos"
+            _preferred = [
+                "Infosys-tagline_WB.png",
+                "Infosys-tagline_DB.png",
+                "Infosys_India-Mark_WB.png",
+            ]
+            for _fname in _preferred:
+                _f = _logos_dir / _fname
+                if _f.exists():
+                    return Response(content=_f.read_bytes(), media_type="image/png",
+                                    headers={"Cache-Control": "public, max-age=86400"})
+            # Fallback: any PNG in the logos dir
+            for _f in sorted(_logos_dir.glob("*.png")):
+                return Response(content=_f.read_bytes(), media_type="image/png",
+                                headers={"Cache-Control": "public, max-age=86400"})
 
         if brand.lower() in ("sunrise",):
             # Red SVG is the actual Sunrise logo mark (~square, visible on any bg)

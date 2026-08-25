@@ -15,7 +15,7 @@ interface GeneratedResult {
   tagline?:   string;
 }
 
-const BRANDS    = ["Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank","Sunrise","Haleon","Barclays"];
+const BRANDS    = ["Infosys","Rnorr","Sunglow","Boozt","Glenfiddich","UBS Bank","Sunrise","Haleon","Barclays"];
 const GOALS     = ["Brand Awareness","Drive Sales","Lead Generation","Product Launch","Engagement"];
 const DEFAULT_AUDIENCES = ["Women 18–35","Men 25–45","Gen Z 16–24","Professionals 30–50","Families"];
 const BRAND_AUDIENCES: Record<string, string[]> = {
@@ -60,6 +60,13 @@ const BRAND_AUDIENCES: Record<string, string[]> = {
     "Small Business Owners",
     "Wealth Builders 35–55",
     "Students & Graduates 18–25",
+  ],
+  "Infosys": [
+    "CIOs & CTOs (BFSI)",
+    "CDOs & Digital Leaders",
+    "Procurement & IT Heads",
+    "Innovation & Transformation Leaders",
+    "Enterprise Architects 35–55",
   ],
 };
 const PLATFORMS = ["Instagram","TikTok","YouTube","LinkedIn","Facebook","Website","Email"];
@@ -115,6 +122,7 @@ const HALEON_BRANDS_BY_CATEGORY: Record<string, string[]> = {
 
 // Other brands: flat product/service list (Barclays and Sunrise handled separately)
 const BRAND_PRODUCTS: Record<string, string[]> = {
+  Infosys:     ["Infosys (IT Services & Consulting)", "Infosys Topaz (AI/Cloud)", "Infosys Cobalt (Cybersecurity)", "Infosys Aster (Healthcare)", "Finacle (Banking)", "McCamish (Insurance)", "Infosys BPM"],
   Glenfiddich: ["12 Year Old", "15 Year Old", "18 Year Old", "21 Year Old", "Gran Reserva", "Fire & Cane", "IPA Experiment"],
   "UBS Bank":  ["Wealth Management", "Private Banking", "Investment Banking", "Personal Banking", "SME Banking"],
   Rnorr:       ["Stock Cubes", "Soups & Broths", "Seasonings", "Recipe Mixes"],
@@ -136,6 +144,7 @@ const MARKET_CURRENCY_SYMBOL: Record<string, string> = {
 };
 
 const BRAND_ICONS: Record<string, string> = {
+  "Infosys":     "/brand-logo/Infosys",
   "Rnorr":       "/brands/Rnorr/serve/Logos/Rnorr-Logo.png",
   "Sunglow":     "/brands/Sunglow/serve/Logos/sunglow_logo.png",
   "Boozt":       "/brands/Boozt/serve/Logos/Boozt_Logo.png",
@@ -712,7 +721,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
               )}
               {/* Other brands: flat Product or Service chip */}
               {brand && !["Sunrise","Barclays","Haleon"].includes(brand) && (BRAND_PRODUCTS[brand] ?? []).length > 0 && (
-                <ChipSel label="Product" value={product}
+                <ChipSel label="Product or Service" value={product}
                   onChange={setProduct}
                   opts={BRAND_PRODUCTS[brand] ?? []}
                   icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>} />

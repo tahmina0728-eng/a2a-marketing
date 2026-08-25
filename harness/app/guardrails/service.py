@@ -123,4 +123,5 @@ def _ensure_rules_loaded() -> None:
     """Import all rule modules so they self-register via register()."""
     from .global_rules   import safety, profanity, pii, secrets, prompt_injection, hate_harassment  # noqa
     from .brand_rules    import competitors, tone, claims, terminology, scope       # noqa
+    from .brand_rules    import analyst_citations, sub_brand_scope                 # noqa
     from .campaign_rules import audience, approved_claims, partnership              # noqa

@@ -1,0 +1,119 @@
+{
+  "brand": "Infosys",
+  "industry": "enterprise_technology",
+  "markets": [
+    "global", "uk", "united kingdom", "gb", "us", "united states",
+    "europe", "eu", "germany", "france", "netherlands", "nordics",
+    "apac", "australia", "singapore", "japan", "india"
+  ],
+  "competitors": [
+    "TCS", "Tata Consultancy Services",
+    "Accenture",
+    "Cognizant",
+    "Wipro",
+    "IBM",
+    "Capgemini",
+    "HCLTech", "HCL Technologies",
+    "Tech Mahindra",
+    "Atos",
+    "DXC Technology",
+    "LTIMindtree"
+  ],
+  "banned_phrases": [
+    "market leader in IT",
+    "largest IT company",
+    "best IT services company",
+    "number one IT firm",
+    "guaranteed ROI",
+    "guaranteed results",
+    "risk-free transformation",
+    "100% success rate",
+    "no implementation risk",
+    "faster than any competitor",
+    "cheaper than competitors",
+    "beats TCS",
+    "beats Accenture",
+    "beats Wipro"
+  ],
+  "avoid_terms": {
+    "vendor": "partner",
+    "outsourcing": "strategic engagement",
+    "offshoring": "global delivery",
+    "cheap": "efficient",
+    "cheapest": "most efficient",
+    "churn": "attrition",
+    "failure": "learning",
+    "problem": "challenge"
+  },
+  "sub_brands": {
+    "Topaz": {
+      "domains": ["ai", "artificial intelligence", "generative ai", "gen ai", "digital", "cloud", "data", "ml", "machine learning", "llm", "automation"],
+      "colour_set": "Sapphire family",
+      "lockup_prefix": "Infosys Topaz"
+    },
+    "Cobalt": {
+      "domains": ["cybersecurity", "cyber", "security", "threat", "zero trust", "compliance", "soc", "identity", "iam", "siem"],
+      "colour_set": "Cobalt family",
+      "lockup_prefix": "Infosys Cobalt"
+    },
+    "Aster": {
+      "domains": ["healthcare", "pharma", "life sciences", "clinical", "hospital", "patient", "drug", "medtech"],
+      "colour_set": "Aster family",
+      "lockup_prefix": "Infosys Aster"
+    },
+    "Finacle": {
+      "domains": ["banking", "financial services", "fintech", "payments", "core banking", "lending", "deposits", "wealth"],
+      "colour_set": "Infosys Blue",
+      "lockup_prefix": "Finacle"
+    },
+    "McCamish": {
+      "domains": ["insurance", "life insurance", "annuity", "policy administration", "retirement"],
+      "colour_set": "Infosys Blue",
+      "lockup_prefix": "McCamish"
+    },
+    "BPM": {
+      "domains": ["bpo", "business process", "operations", "shared services", "managed services", "back office"],
+      "colour_set": "Infosys Blue",
+      "lockup_prefix": "Infosys BPM"
+    }
+  },
+  "analyst_firms": [
+    "Gartner", "Forrester", "IDC", "Everest Group", "HFS Research",
+    "ISG", "NelsonHall", "Avasant", "Zinnov"
+  ],
+  "approved_claim_tokens": [
+    "[APPROVED_ANALYST_CITATION]",
+    "[APPROVED_CLIENT_REF]",
+    "[APPROVED_AWARD]",
+    "[APPROVED_PARTNER_CLAIM]",
+    "[APPROVED_INTERNAL_DATA]"
+  ],
+  "approved_partners": [
+    "Microsoft", "Microsoft Azure",
+    "AWS", "Amazon Web Services",
+    "Google Cloud",
+    "SAP",
+    "Salesforce",
+    "ServiceNow",
+    "Adobe",
+    "Oracle",
+    "Snowflake",
+    "Databricks"
+  ],
+  "approved_claims": [
+    "Infosys is a global leader in next-generation digital services and consulting",
+    "Infosys navigates clients in their digital transformation journey",
+    "NASDAQ-listed company"
+  ],
+  "required_disclaimers": [
+    "Infosys Limited. All rights reserved.",
+    "Subject to terms and conditions"
+  ],
+  "quiet_period_windows": [
+    {"label": "Q1 results (Apr)", "month": 4, "day_start": 1, "day_end": 20},
+    {"label": "Q2 results (Jul)", "month": 7, "day_start": 1, "day_end": 20},
+    {"label": "Q3 results (Oct)", "month": 10, "day_start": 1, "day_end": 20},
+    {"label": "Q4 results (Jan)", "month": 1, "day_start": 1, "day_end": 20}
+  ],
+  "hitl_required": true
+}

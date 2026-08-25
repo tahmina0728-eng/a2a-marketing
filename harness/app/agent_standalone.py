@@ -83,17 +83,89 @@ def publish_standalone_channel(
     raise ValueError(f"Unknown or unsupported channel '{channel}' for standalone runs.")
 
 
+def _infosys_runner(agent_key: str, text: str) -> dict:
+    """
+    Thin runner for individual Infosys A2A agents called from the standalone sidebar.
+
+    The user's free-text prompt is treated as the campaign brief objective if it
+    cannot be parsed as JSON.  Each agent returns an AgentResponse whose .artifact.content
+    dict is what the UI renders.
+    """
+    import asyncio, json as _json
+
+    # Accept JSON brief or natural-language text
+    try:
+        brief: dict = _json.loads(text)
+    except Exception:
+        brief = {"campaign_name": "Infosys Campaign", "objective": text,
+                 "channels": ["LinkedIn"], "market": "UK"}
+
+    if agent_key == "infosys_logos":
+        from app.agents.infosys.logos import LogosAgent
+        r = LogosAgent().run(brief)
+    elif agent_key == "infosys_helia":
+        from app.agents.infosys.logos import LogosAgent
+        from app.agents.infosys.helia import HeliaAgent
+        logos = LogosAgent().run(brief)
+        r = HeliaAgent().run(logos)
+    elif agent_key == "infosys_ideon":
+        from app.agents.infosys.logos import LogosAgent
+        from app.agents.infosys.helia import HeliaAgent
+        from app.agents.infosys.ideon import IdeonAgent
+        logos = LogosAgent().run(brief)
+        helia = HeliaAgent().run(logos)
+        r = IdeonAgent().run({"brief": logos, "creative_platform": helia})
+    elif agent_key == "infosys_aether":
+        from app.agents.infosys.aether import AetherAgent
+        scope = {**brief, "segment": brief.get("audience", ""), "brand": "Infosys"}
+        r = AetherAgent().run(scope)
+    elif agent_key == "infosys_morphis":
+        from app.agents.infosys.logos import LogosAgent
+        from app.agents.infosys.helia import HeliaAgent
+        from app.agents.infosys.ideon import IdeonAgent
+        from app.agents.infosys.morphis import MorphisAgent
+        logos = LogosAgent().run(brief)
+        helia = HeliaAgent().run(logos)
+        ideon = IdeonAgent().run({"brief": logos, "creative_platform": helia})
+        r = MorphisAgent().run({"creative_platform": helia, "copy_deck": ideon})
+    elif agent_key == "infosys_kinetik":
+        from app.agents.infosys.logos import LogosAgent
+        from app.agents.infosys.helia import HeliaAgent
+        from app.agents.infosys.ideon import IdeonAgent
+        from app.agents.infosys.kinetik import KinetikAgent
+        logos = LogosAgent().run(brief)
+        helia = HeliaAgent().run(logos)
+        ideon = IdeonAgent().run({"brief": logos, "creative_platform": helia})
+        r = KinetikAgent().run({"creative_platform": helia, "copy_deck": ideon})
+    elif agent_key == "infosys":
+        # Full pipeline
+        from app.agents.infosys.orchestrator import CampaignOrchestrator
+        return asyncio.run(CampaignOrchestrator().run_async(brief))
+    else:
+        raise ValueError(f"Unknown Infosys agent key: '{agent_key}'")
+
+    return r.artifact.content if r and r.artifact else r.qa if r else {}
+
+
 _RUNNERS = {
-    "briefing":        run_briefing,
-    "strategy":        run_strategy,
-    "copy":            run_copy,
-    "culture":         run_culture,
-    "channel":         run_channel,
-    "kv":              run_kv,
-    "reel":            run_reel,
-    "tvc":             run_tvc,
-    "email_templates": run_email_templates,
-    "email_converter": run_email_converter,
+    "briefing":         run_briefing,
+    "strategy":         run_strategy,
+    "copy":             run_copy,
+    "culture":          run_culture,
+    "channel":          run_channel,
+    "kv":               run_kv,
+    "reel":             run_reel,
+    "tvc":              run_tvc,
+    "email_templates":  run_email_templates,
+    "email_converter":  run_email_converter,
+    # ── Infosys A2A agents ─────────────────────────────────────────────────────
+    "infosys":          lambda brand, text: _infosys_runner("infosys", text),
+    "infosys_logos":    lambda brand, text: _infosys_runner("infosys_logos", text),
+    "infosys_helia":    lambda brand, text: _infosys_runner("infosys_helia", text),
+    "infosys_ideon":    lambda brand, text: _infosys_runner("infosys_ideon", text),
+    "infosys_aether":   lambda brand, text: _infosys_runner("infosys_aether", text),
+    "infosys_morphis":  lambda brand, text: _infosys_runner("infosys_morphis", text),
+    "infosys_kinetik":  lambda brand, text: _infosys_runner("infosys_kinetik", text),
 }
 
 

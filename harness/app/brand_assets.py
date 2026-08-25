@@ -73,8 +73,21 @@ class BrandAssetLoader:
                 logger.warning("gcs_list_brands_failed", error=str(e))
                 return []
         if not self._local_root.is_dir():
-            return []
-        return sorted(p.name for p in self._local_root.iterdir() if p.is_dir())
+            names_local: list[str] = []
+        else:
+            names_local = [p.name for p in self._local_root.iterdir() if p.is_dir()]
+
+        # Also pick up brands that live under app/brands/ (e.g. Infosys) rather
+        # than the bucket — these use a different asset layout but share the same
+        # guardrail/policy stack and must appear in _extract_brand() lookups.
+        _app_brands = Path(__file__).parent / "brands"
+        if _app_brands.is_dir():
+            for d in _app_brands.iterdir():
+                if d.is_dir() and not d.name.startswith("_") and d.name not in names_local:
+                    # Normalise folder name → Title-case brand name ("infosys" → "Infosys")
+                    names_local.append(d.name.capitalize())
+
+        return sorted(set(names_local))
 
     def load_guidelines(self, brand: str) -> str:
         """Return brand guidelines text.

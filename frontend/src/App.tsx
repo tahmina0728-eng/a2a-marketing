@@ -87,6 +87,7 @@ const GOALS = [
 ];
 
 const BRANDS = [
+  { id: "Infosys",     label: "Infosys",            emoji: "🔷", logo: `${API_BASE_PUB}/brand-logo/Infosys`                                       },
   { id: "Rnorr",       label: "Rnorr",             emoji: "🥣", logo: `${API_BASE_PUB}/brands/Rnorr/serve/Logos/Rnorr-Logo.png`                 },
   { id: "Sunglow",     label: "Sunglow",            emoji: "✨", logo: `${API_BASE_PUB}/brands/Sunglow/serve/Logos/sunglow_logo.png`              },
   { id: "Boozt",       label: "Boozt",              emoji: "💨", logo: `${API_BASE_PUB}/brands/Boozt/serve/Logos/Boozt_Logo.png`                  },

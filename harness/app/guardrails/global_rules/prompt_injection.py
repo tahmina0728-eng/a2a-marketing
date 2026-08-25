@@ -13,7 +13,7 @@ _INJECTION_PATTERNS = [
     r"ignore\s+(all\s+)?(previous|prior|above)\s+instructions?",
     r"disregard\s+(your\s+)?(previous\s+)?instructions?",
     r"forget\s+(everything|all)\s+(you\s+)?(were\s+)?told",
-    r"you are now\s+(?!Logos|Stratos|Verba|Pulse|Morphis|Kinetik)",
+    r"you are now\s+(?!Logos|Stratos|Verba|Pulse|Morphis|Kinetik|Aether|Helia|Ideon|Director)",
     r"act\s+as\s+(?:DAN|jailbreak|unrestricted)",
     r"bypass\s+(safety|content|guardrail|filter)",
     r"do\s+not\s+follow\s+(your\s+)?(?:guidelines|rules|policy)",
