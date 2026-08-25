@@ -240,9 +240,9 @@ def _paste_speaker_circle(
     img_rgba.paste(headshot_rgba, (bx + _SPK_BORDER, by + _SPK_BORDER), headshot_rgba)
     img = img_rgba.convert("RGB")
 
-    # Name + title below circle
-    f_name  = _load_font("MYRIADPRO-BOLD.OTF",    26)
-    f_title = _load_font("MYRIADPRO-REGULAR.OTF", 20)
+    # Name + title below circle — ref: SemiBold 22px name, Regular 18px title
+    f_name  = _load_font("MYRIADPRO-SEMIBOLD.OTF", 22)
+    f_title = _load_font("MYRIADPRO-REGULAR.OTF",  18)
     draw = ImageDraw.Draw(img)
 
     name_y  = _SPK_CY + _SPK_R + 18
@@ -329,10 +329,10 @@ def generate_kv(
     draw = ImageDraw.Draw(img)
 
     # 4. Load fonts per Infosys brand spec
-    f_head  = _load_font("MYRIADPRO-BOLD.OTF",     48)
-    f_sub   = _load_font("MYRIADPRO-SEMIBOLD.OTF", 26)
-    f_cta   = _load_font("MYRIADPRO-REGULAR.OTF",  20)
-    f_badge = _load_font("MYRIADPRO-BOLD.OTF",     18)
+    f_head  = _load_font("MYRIADPRO-BOLD.OTF",    44)   # ref: ~44px bold headline
+    f_sub   = _load_font("MYRIADPRO-BOLD.OTF",    26)   # ref: bold (not semibold) subheadline
+    f_cta   = _load_font("MYRIADPRO-REGULAR.OTF", 20)
+    f_badge = _load_font("MYRIADPRO-BOLD.OTF",    18)
 
     # 5. Optional content-type badge (BYLINE / MEDIA ARTICLE) above headline
     y = _HEADING_Y
@@ -353,7 +353,7 @@ def generate_kv(
     head_lines = _wrap_balanced(headline, f_head, _TEXT_MAX_W, max_lines=3)
     for line in head_lines:
         draw.text((_TEXT_X, y), line, font=f_head, fill=_WHITE)
-        y += 50   # 48px font + 2px — tight, no visible gap between lines
+        y += 46   # 44px font + 2px — tight, no visible gap between lines
 
     # 7. Sub-heading — gap after headline block, then tight leading between sub lines
     if subline:
