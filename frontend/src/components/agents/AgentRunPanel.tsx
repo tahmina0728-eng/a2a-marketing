@@ -81,14 +81,17 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
 
   const IDEON_COPY_KEY = "infosys_ideon_copy";
 
-  // For Morphis: read the saved Ideon copy on mount so we can show a preview banner
+  // For Morphis: show saved Ideon copy as an option — user must explicitly opt in
   const [savedIdeonCopy, setSavedIdeonCopy] = useState<{headline:string;subheadline:string;cta:string}|null>(null);
+  const [useIdeonCopy, setUseIdeonCopy] = useState(false); // explicit opt-in — never auto-inject
   useEffect(() => {
     if (agentKey !== "infosys_morphis") return;
+    setUseIdeonCopy(false); // reset on agent switch — always default to fresh run
     try {
       const raw = localStorage.getItem(IDEON_COPY_KEY);
       if (raw) setSavedIdeonCopy(JSON.parse(raw));
-    } catch { /* ignore */ }
+      else setSavedIdeonCopy(null);
+    } catch { setSavedIdeonCopy(null); }
   }, [agentKey]);
 
   const runWithPrompt = async (p: string) => {
@@ -105,20 +108,12 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
       if (agentKey === "reel" && kvBrand) {
         body.brand = kvBrand;
       }
-      // Morphis: inject the best copy from the last Ideon run so the image
-      // is generated with that copy instead of running Ideon again from scratch.
-      if (agentKey === "infosys_morphis") {
-        try {
-          const saved = localStorage.getItem(IDEON_COPY_KEY);
-          if (saved) {
-            const c = JSON.parse(saved) as { headline: string; subheadline: string; cta: string };
-            if (c.headline) {
-              body.copy_headline = c.headline;
-              body.copy_subline  = c.subheadline ?? "";
-              body.copy_cta      = c.cta ?? "";
-            }
-          }
-        } catch { /* ignore localStorage errors */ }
+      // Morphis: only inject saved Ideon copy if the user explicitly opted in.
+      // Default is always a fresh run (full Logos→Helia→Ideon pipeline).
+      if (agentKey === "infosys_morphis" && useIdeonCopy && savedIdeonCopy?.headline) {
+        body.copy_headline = savedIdeonCopy.headline;
+        body.copy_subline  = savedIdeonCopy.subheadline ?? "";
+        body.copy_cta      = savedIdeonCopy.cta ?? "";
       }
       const res = await fetch(`${API_BASE_PUB}/agents/${agentKey}/run`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -347,25 +342,43 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
             </div>
           )}
 
-          {/* Morphis: show saved Ideon copy if available, or explain the auto-pipeline */}
-          {agentKey === "infosys_morphis" && status === "idle" && (
-            savedIdeonCopy?.headline ? (
-              <div style={{ marginBottom: 14, padding: "12px 16px", borderRadius: 12,
-                background: `${color}0d`, border: `1.5px solid ${color}30`,
-                display: "flex", flexDirection: "column" as const, gap: 6 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
-                    textTransform: "uppercase" as const, color, background: `${color}18`,
-                    padding: "2px 8px", borderRadius: 99 }}>Using copy from Ideon</span>
-                  <button onClick={() => { localStorage.removeItem(IDEON_COPY_KEY); setSavedIdeonCopy(null); }}
-                    title="Discard and run fresh AI pipeline instead"
-                    style={{ marginLeft: "auto", fontSize: 11, fontWeight: 600,
-                      color: "var(--text-secondary)", background: "var(--card-bg-soft)",
-                      border: "1px solid var(--card-border)", borderRadius: 6,
-                      cursor: "pointer", padding: "3px 10px" }}>
-                    Run fresh instead
+          {/* Morphis: copy-from-Ideon panel — always explicit opt-in, never auto */}
+          {agentKey === "infosys_morphis" && status === "idle" && savedIdeonCopy?.headline && (
+            <div style={{ marginBottom: 14, borderRadius: 12, overflow: "hidden",
+              border: `1.5px solid ${useIdeonCopy ? color + "60" : "var(--card-border)"}` }}>
+              {/* Header */}
+              <div style={{ padding: "10px 14px", background: useIdeonCopy ? `${color}14` : "var(--card-bg-soft)",
+                display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" as const }}>
+                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.07em",
+                  textTransform: "uppercase" as const, color: "var(--text-muted)" }}>
+                  Ideon copy available
+                </span>
+                <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+                  {!useIdeonCopy ? (
+                    <button onClick={() => setUseIdeonCopy(true)}
+                      style={{ fontSize: 11, fontWeight: 700, padding: "4px 12px", borderRadius: 6,
+                        background: `linear-gradient(135deg, ${color}, #6366f1)`, color: "#fff",
+                        border: "none", cursor: "pointer" }}>
+                      Use this copy
+                    </button>
+                  ) : (
+                    <button onClick={() => setUseIdeonCopy(false)}
+                      style={{ fontSize: 11, fontWeight: 600, padding: "4px 12px", borderRadius: 6,
+                        background: "var(--card-bg)", color: color,
+                        border: `1px solid ${color}40`, cursor: "pointer" }}>
+                      ✓ Selected — click to deselect
+                    </button>
+                  )}
+                  <button onClick={() => { localStorage.removeItem(IDEON_COPY_KEY); setSavedIdeonCopy(null); setUseIdeonCopy(false); }}
+                    style={{ fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 6,
+                      background: "transparent", color: "var(--text-muted)",
+                      border: "1px solid var(--card-border)", cursor: "pointer" }}>
+                    Clear
                   </button>
                 </div>
+              </div>
+              {/* Copy preview */}
+              <div style={{ padding: "10px 14px", display: "flex", flexDirection: "column" as const, gap: 4 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
                   {savedIdeonCopy.headline}
                 </div>
@@ -373,22 +386,19 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
                   <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{savedIdeonCopy.subheadline}</div>
                 )}
                 {savedIdeonCopy.cta && (
-                  <div style={{ display: "inline-flex" }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color,
-                      background: `${color}14`, padding: "3px 10px", borderRadius: 99,
-                      border: `1px solid ${color}30` }}>{savedIdeonCopy.cta} →</span>
-                  </div>
+                  <span style={{ fontSize: 11, fontWeight: 700, color,
+                    background: `${color}14`, padding: "2px 10px", borderRadius: 99,
+                    border: `1px solid ${color}30`, display: "inline-block", marginTop: 2 }}>
+                    {savedIdeonCopy.cta} →
+                  </span>
                 )}
+                <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                  {useIdeonCopy
+                    ? "Morphis will use this copy to generate the KV image."
+                    : "Click \"Use this copy\" above, or just run Morphis to generate fresh AI copy."}
+                </div>
               </div>
-            ) : (
-              <div style={{ marginBottom: 14, padding: "10px 14px", borderRadius: 10,
-                background: "var(--card-bg-soft)", border: "1px solid var(--card-border)",
-                fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>
-                Morphis will run the full AI pipeline — Logos → Helia → Ideon (auto-selects
-                best copy) → generates the KV image. Run <strong>Ideon first</strong> to
-                pre-select copy and skip straight to image generation.
-              </div>
-            )
+            </div>
           )}
 
           <div style={{
