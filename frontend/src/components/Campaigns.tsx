@@ -411,6 +411,12 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
 
   const [formats, setFormats] = useState<Set<FormatType>>(new Set());
   const [infosysColor, setInfosysColor] = useState("blue");
+  // Infosys executive / speaker layout
+  const [speakerMode,   setSpeakerMode]   = useState(false);
+  const [speakerImgB64, setSpeakerImgB64] = useState("");
+  const [speakerName,   setSpeakerName]   = useState("");
+  const [speakerTitle,  setSpeakerTitle]  = useState("");
+  const [speakerBadge,  setSpeakerBadge]  = useState("");
   const [imgSz, setImgSz]     = useState("16:9");
   const [reelSz, setReelSz]   = useState("9:16");
   const [tvcLen, setTvcLen]   = useState("15");
@@ -679,7 +685,15 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
             body.copy_subline  = copyRes.subline || "";
             body.copy_cta      = copyRes.cta     || "";
           }
-          if (brand === "Infosys") body.color_theme = infosysColor;
+          if (brand === "Infosys") {
+            body.color_theme = infosysColor;
+            if (speakerMode && speakerImgB64 && speakerName) {
+              body.speaker_image_b64  = speakerImgB64;
+              body.speaker_name       = speakerName;
+              body.speaker_title      = speakerTitle;
+              body.content_type_badge = speakerBadge;
+            }
+          }
         }
         const key = fmt==="image"?"kv":fmt==="tvc"?"tvc":"reel";
         const r = await fetch(`${API_BASE}/agents/${key}/run`, {
@@ -1137,6 +1151,107 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                     {({"blue":"Infosys Blue","purple":"Light Purple","amber":"Gold/Amber","deep-purple":"Deep Purple"} as Record<string,string>)[infosysColor]}
                   </span>
                 </div>
+              </div>
+            )}
+
+            {/* Infosys executive / speaker layout — shown when Image is selected */}
+            {brand === "Infosys" && formats.has("image") && (
+              <div style={{ marginTop:14, padding:"16px 20px", borderRadius:14,
+                background:"var(--card-bg)", border:"1.5px solid var(--card-border)" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom: speakerMode ? 14 : 0 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:"var(--text-secondary)",
+                    textTransform:"uppercase" as const, letterSpacing:".08em" }}>
+                    Executive / Speaker on KV
+                  </div>
+                  <button onClick={() => setSpeakerMode(m => !m)}
+                    style={{ padding:"3px 14px", borderRadius:99, fontSize:11, fontWeight:700,
+                      cursor:"pointer", fontFamily:"inherit", transition:"all .15s",
+                      border:`1.5px solid ${speakerMode ? "#7c3aed" : "var(--card-border)"}`,
+                      background: speakerMode ? "rgba(124,58,237,0.1)" : "var(--card-bg-soft)",
+                      color: speakerMode ? "#7c3aed" : "var(--text-secondary)" }}>
+                    {speakerMode ? "On" : "Off"}
+                  </button>
+                </div>
+
+                {speakerMode && (
+                  <div style={{ display:"flex", flexDirection:"column" as const, gap:12 }}>
+
+                    {/* Photo upload */}
+                    <div>
+                      <div style={{ fontSize:10, fontWeight:700, color:"var(--text-muted)",
+                        letterSpacing:".06em", textTransform:"uppercase" as const, marginBottom:6 }}>
+                        Headshot photo
+                      </div>
+                      <label style={{ display:"inline-flex", alignItems:"center", gap:6,
+                        padding:"7px 14px", borderRadius:9, border:"1.5px dashed var(--card-border)",
+                        background: speakerImgB64 ? "rgba(124,58,237,0.06)" : "transparent",
+                        color: speakerImgB64 ? "#7c3aed" : "var(--text-secondary)",
+                        fontSize:12, fontWeight:600, cursor:"pointer" }}>
+                        {speakerImgB64 ? "✓ Photo loaded — click to replace" : "Upload headshot (JPEG / PNG)"}
+                        <input type="file" accept="image/jpeg,image/png,image/webp"
+                          style={{ display:"none" }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              const dataUrl = reader.result as string;
+                              setSpeakerImgB64(dataUrl.split(",")[1] ?? "");
+                            };
+                            reader.readAsDataURL(file);
+                          }} />
+                      </label>
+                    </div>
+
+                    {/* Name + Title inline */}
+                    <div style={{ display:"flex", gap:10 }}>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:"var(--text-muted)",
+                          letterSpacing:".06em", textTransform:"uppercase" as const, marginBottom:4 }}>
+                          Name
+                        </div>
+                        <input value={speakerName} onChange={e => setSpeakerName(e.target.value)}
+                          placeholder="e.g. Salil Parekh"
+                          style={{ width:"100%", padding:"8px 11px", borderRadius:8,
+                            border:"1.5px solid var(--card-border)", background:"var(--card-bg-soft)",
+                            color:"var(--text-primary)", fontSize:13, fontFamily:"inherit",
+                            boxSizing:"border-box" as const }} />
+                      </div>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:"var(--text-muted)",
+                          letterSpacing:".06em", textTransform:"uppercase" as const, marginBottom:4 }}>
+                          Title / Company
+                        </div>
+                        <input value={speakerTitle} onChange={e => setSpeakerTitle(e.target.value)}
+                          placeholder="e.g. CEO & MD, Infosys"
+                          style={{ width:"100%", padding:"8px 11px", borderRadius:8,
+                            border:"1.5px solid var(--card-border)", background:"var(--card-bg-soft)",
+                            color:"var(--text-primary)", fontSize:13, fontFamily:"inherit",
+                            boxSizing:"border-box" as const }} />
+                      </div>
+                    </div>
+
+                    {/* Badge presets */}
+                    <div>
+                      <div style={{ fontSize:10, fontWeight:700, color:"var(--text-muted)",
+                        letterSpacing:".06em", textTransform:"uppercase" as const, marginBottom:6 }}>
+                        Content badge (optional)
+                      </div>
+                      <div style={{ display:"flex", gap:6, flexWrap:"wrap" as const }}>
+                        {["", "BYLINE", "MEDIA ARTICLE", "THOUGHT LEADERSHIP"].map(b => (
+                          <button key={b || "none"} onClick={() => setSpeakerBadge(b)}
+                            style={{ padding:"4px 12px", borderRadius:99, fontSize:11, fontWeight:700,
+                              cursor:"pointer", fontFamily:"inherit", transition:"all .15s",
+                              border:`1.5px solid ${speakerBadge === b ? "#7c3aed" : "var(--card-border)"}`,
+                              background: speakerBadge === b ? "rgba(124,58,237,0.1)" : "var(--card-bg-soft)",
+                              color: speakerBadge === b ? "#7c3aed" : "var(--text-secondary)" }}>
+                            {b || "None"}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
