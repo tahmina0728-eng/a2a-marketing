@@ -149,6 +149,48 @@ def _wrap(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> list[str]:
     return lines
 
 
+def _wrap_balanced(text: str, font: ImageFont.FreeTypeFont, max_w: int, max_lines: int = 3) -> list[str]:
+    """Wrap text with balanced line lengths — each line as equal width as possible.
+
+    For a headline that needs 2 lines, finds the word-split that minimises the
+    difference between line widths (not greedy first-fit), matching the reference
+    KV layout where short headlines split evenly across two compact lines.
+    Falls back to greedy _wrap() when the text needs 3+ lines.
+    """
+    words = text.split()
+    if not words:
+        return []
+
+    def _w(s: str) -> float:
+        try:
+            return font.getlength(s)
+        except Exception:
+            return len(s) * (font.size // 2)
+
+    # Fits on one line — no wrapping needed
+    if _w(text) <= max_w:
+        return [text]
+
+    # Try balanced 2-line split: pick the split that minimises max(w1, w2)
+    best_split: int | None = None
+    best_score = float("inf")
+    for i in range(1, len(words)):
+        l1 = " ".join(words[:i])
+        l2 = " ".join(words[i:])
+        w1, w2 = _w(l1), _w(l2)
+        if w1 <= max_w and w2 <= max_w:
+            score = max(w1, w2)          # minimise the longest line
+            if score < best_score:
+                best_score = score
+                best_split = i
+
+    if best_split is not None:
+        return [" ".join(words[:best_split]), " ".join(words[best_split:])]
+
+    # Can't fit in 2 balanced lines — greedy wrap at max_w
+    return _wrap(text, font, max_w)[:max_lines]
+
+
 # ── Speaker / executive circle layout constants ───────────────────────────────
 _SPK_CX = 870   # circle center x  (right half of 1200px canvas)
 _SPK_CY = 270   # circle center y  (vertically centred in 627px canvas)
@@ -307,17 +349,19 @@ def generate_kv(
         draw.text((_TEXT_X + pad_x, y + pad_y), badge_text, font=f_badge, fill=_WHITE)
         y = by2 + 18   # shift headline below badge
 
-    # 6. Headline — Myriad Pro Bold, up to 3 lines
-    for line in _wrap(headline, f_head, _TEXT_MAX_W)[:3]:
+    # 6. Headline — Myriad Pro Bold, balanced split, tight leading (no gap between lines)
+    head_lines = _wrap_balanced(headline, f_head, _TEXT_MAX_W, max_lines=3)
+    for line in head_lines:
         draw.text((_TEXT_X, y), line, font=f_head, fill=_WHITE)
-        y += 58   # 48px + 10px leading
+        y += 50   # 48px font + 2px — tight, no visible gap between lines
 
-    # 7. Sub-heading — flows immediately below headline
+    # 7. Sub-heading — gap after headline block, then tight leading between sub lines
     if subline:
-        y += 14
-        for line in _wrap(subline, f_sub, _TEXT_MAX_W)[:2]:
+        y += 14   # gap between headline block and subheading
+        sub_lines = _wrap_balanced(subline, f_sub, _TEXT_MAX_W, max_lines=2)
+        for line in sub_lines:
             draw.text((_TEXT_X, y), line, font=f_sub, fill=_WHITE)
-            y += 32
+            y += 28   # 26px font + 2px — tight
 
     # 8. CTA — flows immediately below sub-heading
     if cta:
