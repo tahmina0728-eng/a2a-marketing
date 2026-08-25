@@ -128,6 +128,10 @@ def generate_kv(
         sub_brand:    e.g. "Infosys Aster (Healthcare)", "Infosys Topaz (AI/Cloud)"
         aspect_ratio: Ignored for now (always 16:9 LinkedIn); reserved for future formats
     """
+    headline = headline.rstrip(" .,;:!?")
+    subline  = subline.rstrip(" .,;:!?")
+    cta      = cta.rstrip(" .,;:!?")
+
     key      = _tpl_key(sub_brand)
     tpl_path = _TPL.get(key, _TPL["default"])
     bg_rgb   = _BG.get(key, _BG["default"])
