@@ -186,27 +186,17 @@ def generate_kv(
         bg_rgb = _BG.get(key, _THEMES["blue"])
         color_theme = "blue"  # suppress recolor for sub-brand templates
 
-    import numpy as np
     # 1. Load and resize template
     img = Image.open(tpl_path).convert("RGB")
     img = img.resize((_W, _H), Image.LANCZOS)
 
-    # 2. Clean placeholder text BEFORE recoloring.
-    # The template has white text ("Heading", "Sub headings", "Text") with JPEG
-    # anti-aliasing edges whose pixel values range from ~50 to ~220 — far above
-    # the background grid (which stays within ±15 units of source blue).
-    # Replacing them NOW (before recolor) means the cleaned zone gets mapped
-    # cleanly to the target colour with no ghost text in any of the 4 themes.
+    # 2. Flood the placeholder text zone with solid source blue BEFORE recoloring.
+    # Pixel-threshold detection can't reliably separate JPEG anti-aliasing halos
+    # from grid texture — both sit in the same 0–18 unit range from source blue.
+    # A solid fill is 100% reliable: the recolor step then maps the flat blue to
+    # the target color, and the text zone ends up clean on all 4 themes.
     x1, y1, x2, y2 = _CLEAR_RECT
-    patch_orig = np.array(img.crop((x1, y1, x2, y2)), dtype=np.float32)
-    src_f = np.array(_BLUE_SRC, dtype=np.float32)
-    # Any pixel whose max-channel diff from source blue exceeds 18 is text/JPEG edge.
-    # Background grid pixels vary by ≤15 units; threshold of 18 gives 3 units of buffer
-    # while catching the faint anti-aliasing halos that the previous threshold missed.
-    not_bg = np.abs(patch_orig - src_f).max(axis=2) > 18
-    for c in range(3):
-        patch_orig[:, :, c] = np.where(not_bg, src_f[c], patch_orig[:, :, c])
-    img.paste(Image.fromarray(patch_orig.astype(np.uint8)), (x1, y1))
+    img.paste(Image.new("RGB", (x2 - x1, y2 - y1), _BLUE_SRC), (x1, y1))
 
     # 3. Apply color theme — run for ALL colors.
     # Blue→blue is a no-op on hue, but amplify=3.0 brings up the subtle blue grid
