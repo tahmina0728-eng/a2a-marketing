@@ -1040,7 +1040,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                               {score !== null && (
                                 <span style={{ marginLeft:"auto", fontSize:11, fontWeight:700,
                                   color: isSelected ? "#7c3aed" : "var(--text-muted)" }}>
-                                  {(score * 10).toFixed(0)}/10
+                                  {(score <= 1 ? score * 10 : score).toFixed(1)}/10
                                 </span>
                               )}
                               {isSelected && (
