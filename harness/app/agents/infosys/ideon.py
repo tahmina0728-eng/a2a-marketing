@@ -19,7 +19,7 @@ _OUTPUT_SCHEMA = """{
   "big_idea_anchor": "string — big idea statement this deck executes",
   "headlines": {
     "hero_options": [
-      "string (option 1 — ≤7 words, char count in brackets e.g. [21 chars])",
+      "string (option 1 — ≤7 words, no annotations or char counts in the output)",
       "string (option 2)",
       "string (option 3)"
     ],

@@ -279,13 +279,13 @@ def run_kv(
 
     # ── Infosys: template-based compositor — no AI image generation needed ────
     if _is_infosys:
-        import base64
-        from app.brands.infosys import generate_kv as _infosys_kv
         try:
+            import base64
+            from app.brands.infosys.compositor import generate_kv as _infosys_kv
             img_bytes = _infosys_kv(
                 headline     = copy_headline or headline if copy_headline else prompt[:80],
                 subline      = copy_subline  or "",
-                body         = copy_body     or "",
+                cta          = copy_cta      or "Navigate Your Next",
                 sub_brand    = product_name  or "",
                 aspect_ratio = aspect_ratio,
             )

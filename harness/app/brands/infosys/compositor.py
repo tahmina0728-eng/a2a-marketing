@@ -1,5 +1,5 @@
 """
-brands/infosys.py — Infosys LinkedIn KV compositor.
+brands/infosys/compositor.py — Infosys LinkedIn KV compositor.
 
 Produces on-brand LinkedIn 1200×627 key visuals by:
 1. Selecting the correct template JPG by sub-brand
@@ -24,7 +24,7 @@ import io
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
-_BRAND_DIR = Path(__file__).parent / "infosys"
+_BRAND_DIR = Path(__file__).parent          # harness/app/brands/infosys/
 _ASSETS    = _BRAND_DIR / "assets"
 _FONTS     = _BRAND_DIR / "fonts"
 
@@ -48,15 +48,21 @@ _BG = {
 }
 
 # ── Text layout at 1200×627 ───────────────────────────────────────────────────
-# Derived from template at 3600×1881 → ÷3
-_TEXT_X       = 85     # left edge of text block (after the white vertical bar)
-_TEXT_MAX_W   = 530    # max text zone width (~left 48% of canvas)
-_HEADING_Y    = 155    # top of headline
-_SUBHEAD_Y    = 220    # top of sub-heading
-_BODY_Y       = 285    # top of body text
+# Per Infosys Type-Reference brand spec:
+#   Headline  → Tungsten Medium 72px  (online banners: bold condensed headline font)
+#   Sub-line  → Myriad Pro SemiBold 24px  (attribution / standout text)
+#   CTA       → Myriad Pro Regular 20px   (body / caption weight)
+# Left white bars: x≈18–62 → text starts at x=90 (safe margin past bars)
+_TEXT_X       = 90     # left edge of text (right of white vertical bars)
+_TEXT_MAX_W   = 570    # max line width (~left 48% of 1200px canvas)
+_HEADING_Y    = 155    # top of headline (Tungsten starts higher for visual balance)
+_SUBHEAD_Y    = 400    # top of sub-heading (after up to 3 Tungsten lines at 80px)
+_BODY_Y       = 460    # top of CTA line
 
-# Clear rectangle that covers the placeholder "Heading / Sub Heading / Text goes here"
-_CLEAR_RECT = (68, 140, 680, 340)   # (x1, y1, x2, y2)
+# Clear rectangle: covers ALL template placeholder text.
+# x1=80 keeps both left white bars visible (bars end at x≈62).
+# y extends to 540 to cover 3 Tungsten lines + subline + CTA.
+_CLEAR_RECT = (80, 140, 750, 540)   # (x1, y1, x2, y2)
 
 _WHITE = (255, 255, 255)
 
@@ -108,7 +114,7 @@ def _wrap(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> list[str]:
 def generate_kv(
     headline:     str,
     subline:      str = "",
-    body:         str = "",
+    cta:          str = "",
     sub_brand:    str = "",
     aspect_ratio: str = "16:9",
 ) -> bytes:
@@ -119,7 +125,7 @@ def generate_kv(
     Args:
         headline:     Campaign headline (from Ideon copy deck)
         subline:      Sub-heading / support line
-        body:         First sentence of body copy (truncated if long)
+        cta:          Short CTA text shown in the lower text zone (≤ 5 words)
         sub_brand:    e.g. "Infosys Aster (Healthcare)", "Infosys Topaz (AI/Cloud)"
         aspect_ratio: Ignored for now (always 16:9 LinkedIn); reserved for future formats
     """
@@ -136,33 +142,31 @@ def generate_kv(
     # 2. Clear placeholder text zone with the brand background colour
     draw.rectangle(_CLEAR_RECT, fill=bg_rgb)
 
-    # 3. Load Myriad Pro fonts
-    f_head = _load_font("MYRIADPRO-BOLD.OTF",     44)
-    f_sub  = _load_font("MYRIADPRO-SEMIBOLD.OTF", 30)
-    f_body = _load_font("MYRIADPRO-REGULAR.OTF",  23)
+    # 3. Load fonts per Infosys brand spec
+    # Tungsten Medium = brand headline font (online banners)
+    # Myriad Pro SemiBold = attribution / standout text
+    # Myriad Pro Regular = body / CTA
+    f_head = _load_font("Tungsten-Medium.ttf",     72)   # brand headline font
+    f_sub  = _load_font("MYRIADPRO-SEMIBOLD.OTF", 24)   # support / attribution
+    f_cta  = _load_font("MYRIADPRO-REGULAR.OTF",  20)   # CTA caption
 
-    # 4. Headline — up to 2 lines, sentence-case preserved
+    # 4. Headline — Tungsten Medium, up to 3 lines (condensed so fits more)
     y = _HEADING_Y
-    for line in _wrap(headline, f_head, _TEXT_MAX_W)[:2]:
+    for line in _wrap(headline, f_head, _TEXT_MAX_W)[:3]:
         draw.text((_TEXT_X, y), line, font=f_head, fill=_WHITE)
-        y += 52
+        y += 80   # 72px + 8px leading
 
-    # 5. Sub-heading — up to 2 lines
+    # 5. Sub-heading — up to 2 lines, semi-bold
     if subline:
-        y = max(y + 6, _SUBHEAD_Y)
+        y = max(y + 10, _SUBHEAD_Y)
         for line in _wrap(subline, f_sub, _TEXT_MAX_W)[:2]:
             draw.text((_TEXT_X, y), line, font=f_sub, fill=_WHITE)
-            y += 36
+            y += 30   # 24px + 6px leading
 
-    # 6. Body — first sentence only, up to 2 lines
-    if body:
-        first_sentence = (body.split(".")[0] + ".").strip()
-        if len(first_sentence) > 140:
-            first_sentence = first_sentence[:137] + "…"
-        y = max(y + 10, _BODY_Y)
-        for line in _wrap(first_sentence, f_body, _TEXT_MAX_W)[:2]:
-            draw.text((_TEXT_X, y), line, font=f_body, fill=_WHITE)
-            y += 28
+    # 6. CTA — single line, regular weight
+    if cta:
+        y = max(y + 14, _BODY_Y)
+        draw.text((_TEXT_X, y), cta[:50], font=f_cta, fill=_WHITE)
 
     # 7. Encode and return
     buf = io.BytesIO()
