@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { saveToContentHub } from "../hooks/useContentHub";
 import { DEFAULT_VOICES, VOICE_STORAGE_KEY } from "../constants/brandVoices";
 import type { BrandVoice } from "../constants/brandVoices";
@@ -271,8 +271,8 @@ function ChipMultiSel({ icon, label, values, onChange, opts }: {
   onChange: (v: string[]) => void; opts: string[];
 }) {
   const [open, setOpen] = useState(false);
-  const ref = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
