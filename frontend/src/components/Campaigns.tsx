@@ -567,62 +567,39 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
     setCopyBusy(true);
     try {
       if (brand === "Infosys") {
-        // Route to the Infosys A2A pipeline instead of the generic copy agent
+        // Call the same standalone Ideon endpoint as the AI Agent nav section,
+        // so the response format is identical (variants[] at root, no copy_deck wrapper).
         const subBrand = product === "Infosys (IT Services & Consulting)" ? "" : (product || "");
-        const r = await fetch(`${API_BASE}/infosys/pipeline`, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            campaign_name: brief.slice(0, 80) || "Infosys Campaign",
-            sub_brand:     subBrand,
-            objective:     brief,
-            audience:      audience || "CIOs & CTOs",
-            channels:      platforms.length ? platforms : ["LinkedIn"],
-            market:        market || "UK",
-            locale:        "en-GB",
-            industry:      "enterprise_technology",
-            run_aether:    false,
-            run_visuals:   false,
-          }),
+        // Build a structured prompt — the standalone runner parses JSON briefs directly.
+        const briefPrompt = JSON.stringify({
+          campaign_name: brief.slice(0, 80) || "Infosys Campaign",
+          brand:         "Infosys",
+          sub_brand:     subBrand,
+          objective:     brief,
+          audience:      audience || "CIOs & CTOs",
+          channels:      platforms.length ? platforms : ["LinkedIn"],
+          market:        market || "UK",
         });
-        if (!r.ok) throw new Error(`Infosys pipeline returned ${r.status}`);
+        const r = await fetch(`${API_BASE}/agents/infosys_ideon/run`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: `Infosys — ${briefPrompt}` }),
+        });
+        if (!r.ok) throw new Error(`Ideon returned ${r.status}`);
         const d = await r.json();
 
-        // Logos gate blocked the brief — surface what's missing to the user
-        if (d.status === "blocked") {
-          const blockers: string[] = (d.blockers ?? []).map((b: any) => `${b.element}: ${b.rule}`);
-          const vb = d.validated_brief ?? {};
-          const missing = [
-            vb.kpi?.startsWith("MISSING") ? "KPI (e.g. 150 MQLs over 8 weeks)" : null,
-            vb.buyer_truth?.statement?.startsWith("MISSING") ? "Buyer truth (the human tension)" : null,
-            (vb.formats ?? []).some((f: string) => f.startsWith("MISSING")) ? "Ad formats/specs (e.g. LinkedIn 1200×627)" : null,
-            vb.budget === "MISSING" ? "Budget" : null,
-            vb.timing === "MISSING" ? "Flight dates" : null,
-          ].filter(Boolean);
-          const bodyText = vb.display_brief ?? blockers.join("\n");
-          setCopyRes({
-            headline: "⚠ Brief Incomplete — Logos Gate",
-            subline:  `Missing: ${missing.join(" · ")}`,
-            body:     bodyText,
-            cta:      "Please fill in the missing fields above and regenerate",
-          });
-          return;
-        }
-
-        const deck = d.copy_deck ?? {};
-        const recIdx = typeof deck.recommended_variant === "number" ? deck.recommended_variant : 0;
-        const variants: any[] = Array.isArray(deck.variants) ? deck.variants : [];
+        // Response is the Ideon artifact content directly — same as standalone agent
+        const recIdx  = typeof d.recommended_variant === "number" ? d.recommended_variant : 0;
+        const variants: any[] = Array.isArray(d.variants) ? d.variants : [];
         const best = variants[recIdx] ?? variants[0] ?? null;
         const headline = best?.headline
-          ?? deck.banner_copy?.linkedin_1200x627?.heading
-          ?? deck.headlines?.hero_options?.[0]
+          ?? d.banner_copy?.linkedin_1200x627?.heading
           ?? "";
         const subline  = best?.subheadline
-          ?? deck.banner_copy?.linkedin_1200x627?.subheading
-          ?? deck.headlines?.support_options?.[0]
+          ?? d.banner_copy?.linkedin_1200x627?.subheading
           ?? "";
-        const body     = best?.body ?? deck.body_copy?.web ?? "";
-        const cta      = best?.cta  ?? deck.cta_bank?.[0] ?? "Navigate Your Next";
-        if (!headline && !body) throw new Error("Empty response from Infosys pipeline");
+        const body     = best?.body ?? d.body_copy?.web ?? "";
+        const cta      = best?.cta  ?? d.cta_bank?.[0] ?? "Navigate Your Next";
+        if (!headline && !body) throw new Error("Empty response from Ideon");
         setCopyVariants(variants);
         setSelectedVariantIdx(recIdx);
         setCopyRes({ headline, subline, body, cta });
