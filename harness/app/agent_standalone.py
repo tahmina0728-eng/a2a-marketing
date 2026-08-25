@@ -83,6 +83,47 @@ def publish_standalone_channel(
     raise ValueError(f"Unknown or unsupported channel '{channel}' for standalone runs.")
 
 
+def _pick_best_ideon_copy(ideon_content: dict) -> dict:
+    """
+    Given the full Ideon artifact content, return a copy of the dict where
+    banner_copy.linkedin_1200x627 is overwritten with the recommended/highest-scoring
+    variant's copy so Morphis always receives a single, unambiguous copy to work from.
+    """
+    import copy as _copy
+    out = _copy.deepcopy(ideon_content)
+
+    variants: list = out.get("variants", [])
+    if not variants:
+        return out
+
+    # Use recommended_variant index if valid, otherwise pick by highest quality_score
+    rec_idx = out.get("recommended_variant", 0)
+    if not (isinstance(rec_idx, int) and 0 <= rec_idx < len(variants)):
+        rec_idx = max(range(len(variants)),
+                      key=lambda i: variants[i].get("quality_score", 0))
+
+    best = variants[rec_idx]
+
+    # Overwrite banner_copy with the best variant's copy so Morphis has no ambiguity
+    out.setdefault("banner_copy", {})
+    out["banner_copy"]["linkedin_1200x627"] = {
+        "heading":    best.get("headline", ""),
+        "subheading": best.get("subheadline", ""),
+        "cta":        best.get("cta", ""),
+    }
+    # Expose selected_copy so Morphis LLM can reference it directly
+    out["selected_copy"] = {
+        "variant_index": rec_idx,
+        "tone":          best.get("tone", ""),
+        "headline":      best.get("headline", ""),
+        "subheadline":   best.get("subheadline", ""),
+        "body":          best.get("body", ""),
+        "cta":           best.get("cta", ""),
+        "quality_score": best.get("quality_score", 0),
+    }
+    return out
+
+
 def _infosys_runner(agent_key: str, text: str) -> dict:
     """
     Thin runner for individual Infosys A2A agents called from the standalone sidebar.
@@ -124,18 +165,34 @@ def _infosys_runner(agent_key: str, text: str) -> dict:
         from app.agents.infosys.helia import HeliaAgent
         from app.agents.infosys.ideon import IdeonAgent
         from app.agents.infosys.morphis import MorphisAgent
+        from app.schemas.common import AgentResponse, AgentInfo, JobInfo, Artifact
         logos = LogosAgent().run(brief)
         helia = HeliaAgent().run(logos)
         ideon = IdeonAgent().run({"brief": logos, "creative_platform": helia})
+        # Auto-select the best-scoring copy variant so Morphis gets one clear copy
+        if ideon and ideon.artifact:
+            best_content = _pick_best_ideon_copy(ideon.artifact.content)
+            ideon = AgentResponse(
+                agent=ideon.agent, job=ideon.job, status=ideon.status,
+                artifact=Artifact(type=ideon.artifact.type, content=best_content),
+            )
         r = MorphisAgent().run({"creative_platform": helia, "copy_deck": ideon})
     elif agent_key == "infosys_kinetik":
         from app.agents.infosys.logos import LogosAgent
         from app.agents.infosys.helia import HeliaAgent
         from app.agents.infosys.ideon import IdeonAgent
         from app.agents.infosys.kinetik import KinetikAgent
+        from app.schemas.common import AgentResponse, AgentInfo, JobInfo, Artifact
         logos = LogosAgent().run(brief)
         helia = HeliaAgent().run(logos)
         ideon = IdeonAgent().run({"brief": logos, "creative_platform": helia})
+        # Auto-select the best-scoring copy variant
+        if ideon and ideon.artifact:
+            best_content = _pick_best_ideon_copy(ideon.artifact.content)
+            ideon = AgentResponse(
+                agent=ideon.agent, job=ideon.job, status=ideon.status,
+                artifact=Artifact(type=ideon.artifact.type, content=best_content),
+            )
         r = KinetikAgent().run({"creative_platform": helia, "copy_deck": ideon})
     elif agent_key == "infosys":
         # Full pipeline

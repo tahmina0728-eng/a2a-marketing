@@ -15,30 +15,51 @@ from app.schemas.common import AgentResponse
 
 _OUTPUT_SCHEMA = """{
   "campaign_name": "string",
+  "content_type": "string — e.g. 'Campaign Ad'",
+  "channel": "string — e.g. 'LinkedIn'",
   "territory": "string — territory name from Helia",
   "big_idea_anchor": "string — big idea statement this deck executes",
-  "headlines": {
-    "hero_options": [
-      "string (option 1 — ≤7 words, no annotations or char counts in the output)",
-      "string (option 2)",
-      "string (option 3)"
-    ],
-    "support_options": [
-      "string (option 1)",
-      "string (option 2)",
-      "string (option 3)"
-    ]
+
+  "audience": {
+    "insight": "string — core tension or unmet need driving this audience"
+  },
+  "strategic_context": {
+    "key_message": "string — the one message this territory is built on"
+  },
+
+  "recommended_variant": 0,
+
+  "variants": [
+    {
+      "tone": "string — 2-4 word tone label e.g. 'confident and thoughtful'",
+      "approach": "string — 1-sentence rationale for this angle",
+      "headline": "string — ≤7 words, sentence case, no period",
+      "subheadline": "string — 1 support line expanding the promise",
+      "body": "string — 2-3 sentence body copy: hook → role implication → proof token → CTA",
+      "cta": "string — ≤5 words, plain action verb",
+      "quality_score": 0.0,
+      "scores": {
+        "brand_voice": 0.0,
+        "strategy_alignment": 0.0,
+        "message_clarity": 0.0,
+        "audience_relevance": 0.0,
+        "originality": 0.0,
+        "channel_suitability": 0.0,
+        "grammar_readability": 0.0
+      }
+    }
+  ],
+
+  "banner_copy": {
+    "linkedin_1200x627": {
+      "heading": "string — from recommended variant: fits 546px column at 48px, ≤18 chars/line, 2 lines max",
+      "subheading": "string — from recommended variant, ≤20 chars at 42px",
+      "cta": "string — from recommended variant CTA"
+    }
   },
   "body_copy": {
     "web": "string — hook → what it means for this CXO role → proof ([APPROVED_...]) → CTA",
     "email": "string — subject line + preview + body"
-  },
-  "banner_copy": {
-    "linkedin_1200x627": {
-      "heading": "string — fits 546px column at 48px: ≤18 chars/line, 2 lines max",
-      "subheading": "string — ≤20 chars at 42px",
-      "cta": "string"
-    }
   },
   "cta_bank": [
     "string — specific CTA 1 (max 5 words)",
@@ -50,27 +71,7 @@ _OUTPUT_SCHEMA = """{
     "linkedin": "string — professional, value-first, 1-2 lines before 'see more', ≤3 hashtags",
     "x": "string — one tight idea"
   },
-  "scripts": [
-    {
-      "format": "string — e.g. '30s social film'",
-      "territory": "string",
-      "scenes": [
-        {
-          "time": "string — e.g. '0:00–0:08'",
-          "visual": "string — [image zone] description",
-          "super": "string — on-screen text",
-          "vo": "string — spoken voiceover"
-        }
-      ],
-      "end_frame": "string — lockup on [colour ground]; endline SUPER: [hero line]",
-      "legal_supers": ["string — [APPROVED_...] tokens shown on-screen"]
-    }
-  ],
   "compliance_flags": ["string — each BLOCK: element + [TOKEN] + routing"],
-  "lead_picks": {
-    "linkedin_banner": "string — which hero option",
-    "social_caption": "string — which platform version"
-  },
   "display_deck": "string — the complete copy deck in the Ideon output format (all sections, with variants, tokens, alt text, flags)"
 }"""
 
