@@ -266,6 +266,77 @@ function ChipSel({ icon, label, value, onChange, opts }: {
   );
 }
 
+function ChipMultiSel({ icon, label, values, onChange, opts }: {
+  icon: React.ReactNode; label: string; values: string[];
+  onChange: (v: string[]) => void; opts: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+  const toggle = (o: string) => {
+    onChange(values.includes(o) ? values.filter(v => v !== o) : [...values, o]);
+  };
+  const hasVal = values.length > 0;
+  return (
+    <div ref={ref} style={{ position: "relative" as const, flexShrink: 0 }}>
+      <button onClick={() => setOpen(o => !o)} style={{
+        display: "flex", alignItems: "center", gap: 8, padding: "8px 14px",
+        borderRadius: 99, border: `1.5px solid ${hasVal ? "#7c3aed" : "var(--card-border)"}`,
+        background: hasVal ? "rgba(124,58,237,0.08)" : "var(--card-bg-soft)",
+        cursor: "pointer", fontFamily: "inherit", color: "var(--text-primary)", fontSize: 13,
+        fontWeight: 600, transition: "all 0.15s", whiteSpace: "nowrap" as const,
+      }}>
+        <span style={{ opacity: 0.6, color: "var(--text-secondary)" }}>{icon}</span>
+        <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 500 }}>{label}</span>
+        <span style={{ color: hasVal ? "#7c3aed" : "var(--text-secondary)", fontWeight: hasVal ? 700 : 400 }}>
+          {values.length === 0 ? "Select…" : values.length === 1 ? values[0] : `${values.length} selected`}
+        </span>
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
+          <path d="M1 1l4 4 4-4" stroke="var(--text-secondary)" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+      </button>
+      {open && (
+        <div style={{ position: "absolute" as const, top: "calc(100% + 6px)", left: 0, zIndex: 100,
+          background: "var(--card-bg)", border: "1px solid var(--card-border)",
+          borderRadius: 12, boxShadow: "0 16px 40px rgba(0,0,0,0.15)",
+          minWidth: 180, overflow: "hidden" }}>
+          {opts.map(o => {
+            const sel = values.includes(o);
+            return (
+              <button key={o} onClick={() => toggle(o)}
+                style={{ display: "flex", alignItems: "center", gap: 10, width: "100%",
+                  padding: "10px 16px", border: "none",
+                  background: sel ? "rgba(124,58,237,0.08)" : "transparent",
+                  color: sel ? "#7c3aed" : "var(--text-primary)",
+                  textAlign: "left" as const, cursor: "pointer", fontFamily: "inherit",
+                  fontSize: 13, fontWeight: sel ? 600 : 400 }}>
+                <span style={{
+                  width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                  border: `2px solid ${sel ? "#7c3aed" : "var(--card-border)"}`,
+                  background: sel ? "#7c3aed" : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  {sel && <svg width="9" height="7" viewBox="0 0 9 7" fill="none">
+                    <path d="M1 3.5l2.5 2.5L8 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>}
+                </span>
+                {o}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Format Cards (Step 2) ──────────────────────────────────────
 function FormatCard({ label, desc, icon, selected, onClick, sizes, selSize, onSize }: {
   type?: FormatType; label: string; desc: string; icon: React.ReactNode;
@@ -321,7 +392,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   const [goal, setGoal]       = useState("");
   const [audience, setAudience] = useState(initialContext?.audience ?? "");
   const audiences = BRAND_AUDIENCES[brand] ?? DEFAULT_AUDIENCES;
-  const [platform, setPlatform] = useState("");
+  const [platforms, setPlatforms] = useState<string[]>([]);
   const [voiceName, setVoiceName] = useState("");
   const [market, setMarket]       = useState(initialContext?.market ?? "");
   const [language, setLanguage]   = useState(initialContext?.language ?? "");
@@ -387,7 +458,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
     brief,
     goal && `Goal: ${goal}`,
     audience && `Audience: ${audience}`,
-    platform && `Channel: ${platform}`,
+    platforms.length > 0 && `Channels: ${platforms.join(", ")}`,
     market && `Market: ${market}`,
     language && `Language: ${language}`,
   ].filter(Boolean).join(". ");
@@ -497,7 +568,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
             sub_brand:     subBrand,
             objective:     brief,
             audience:      audience || "CIOs & CTOs",
-            channels:      platform ? [platform] : ["LinkedIn"],
+            channels:      platforms.length ? platforms : ["LinkedIn"],
             market:        market || "UK",
             locale:        "en-GB",
             industry:      "enterprise_technology",
@@ -783,7 +854,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/></svg>} />
               <ChipSel label="Target Audience" value={audience} onChange={setAudience} opts={audiences}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>} />
-              <ChipSel label="Channel" value={platform} onChange={setPlatform} opts={PLATFORMS}
+              <ChipMultiSel label="Channel" values={platforms} onChange={setPlatforms} opts={PLATFORMS}
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>} />
               <ChipSel label="Market" value={market} onChange={v => {
                   setMarket(v);
@@ -1179,7 +1250,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:12 }}>
                   {[
                     { icon:"🏆", label:"Best Format", val:formats.has("reel")?"Reel":"Image", sub:"92% higher engagement" },
-                    { icon:"📱", label:"Top Platform", val:platform||"Instagram", sub:"76% of your audience" },
+                    { icon:"📱", label:"Top Platform", val:platforms.length ? platforms[0] : "Instagram", sub:"76% of your audience" },
                     { icon:"⏰", label:"Best Time", val:"7:00 PM", sub:"Peak engagement" },
                   ].map(i=>(
                     <div key={i.label} style={{ padding:16, borderRadius:14,
