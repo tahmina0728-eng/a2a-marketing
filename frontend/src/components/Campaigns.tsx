@@ -425,6 +425,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   const [copyRes, setCopyRes] = useState<{headline:string;subline:string;body:string;cta:string}|null>(null);
   const [copyVariants, setCopyVariants] = useState<any[]>([]);
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
+  const [recommendedVariantIdx, setRecommendedVariantIdx] = useState(0);
   const [copyBusy, setCopyBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [results, setResults] = useState<Partial<Record<FormatType, GeneratedResult>>>(initialResults ?? {});
@@ -602,6 +603,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         if (!headline && !body) throw new Error("Empty response from Ideon");
         setCopyVariants(variants);
         setSelectedVariantIdx(recIdx);
+        setRecommendedVariantIdx(recIdx);
         setCopyRes({ headline, subline, body, cta });
       } else {
         const r = await fetch(`${API_BASE}/agents/copy/run`, {
@@ -981,10 +983,8 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                     <div style={{ display:"flex", flexDirection:"column" as const, gap:10 }}>
                       {copyVariants.map((v: any, i: number) => {
                         const isSelected = i === selectedVariantIdx;
+                        const isRec = i === recommendedVariantIdx;
                         const score = typeof v.quality_score === "number" ? v.quality_score : null;
-                        const isRec = i === (typeof copyVariants.length === "number" ?
-                          copyVariants.indexOf(copyVariants.reduce((a: any, b: any) =>
-                            (b.quality_score ?? 0) > (a.quality_score ?? 0) ? b : a)) : 0);
                         return (
                           <div key={i} onClick={() => {
                             setSelectedVariantIdx(i);
