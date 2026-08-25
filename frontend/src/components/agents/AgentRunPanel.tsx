@@ -79,6 +79,18 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
     }
   };
 
+  const IDEON_COPY_KEY = "infosys_ideon_copy";
+
+  // For Morphis: read the saved Ideon copy on mount so we can show a preview banner
+  const [savedIdeonCopy, setSavedIdeonCopy] = useState<{headline:string;subheadline:string;cta:string}|null>(null);
+  useEffect(() => {
+    if (agentKey !== "infosys_morphis") return;
+    try {
+      const raw = localStorage.getItem(IDEON_COPY_KEY);
+      if (raw) setSavedIdeonCopy(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, [agentKey]);
+
   const runWithPrompt = async (p: string) => {
     setStatus("running"); setErrorMsg(""); setResult(null);
     setKvSaveState("idle"); setReelSaveState("idle");
@@ -93,12 +105,45 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
       if (agentKey === "reel" && kvBrand) {
         body.brand = kvBrand;
       }
+      // Morphis: inject the best copy from the last Ideon run so the image
+      // is generated with that copy instead of running Ideon again from scratch.
+      if (agentKey === "infosys_morphis") {
+        try {
+          const saved = localStorage.getItem(IDEON_COPY_KEY);
+          if (saved) {
+            const c = JSON.parse(saved) as { headline: string; subheadline: string; cta: string };
+            if (c.headline) {
+              body.copy_headline = c.headline;
+              body.copy_subline  = c.subheadline ?? "";
+              body.copy_cta      = c.cta ?? "";
+            }
+          }
+        } catch { /* ignore localStorage errors */ }
+      }
       const res = await fetch(`${API_BASE_PUB}/agents/${agentKey}/run`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.detail || `Run failed (${res.status})`);
+
+      // After Ideon completes: persist the recommended variant's copy so Morphis
+      // can pick it up without having to run the copy pipeline again.
+      if (agentKey === "infosys_ideon" && data) {
+        try {
+          const variants: any[] = Array.isArray(data.variants) ? data.variants : [];
+          const rec: number = typeof data.recommended_variant === "number" ? data.recommended_variant : 0;
+          const best = variants[rec] ?? variants[0];
+          if (best) {
+            localStorage.setItem(IDEON_COPY_KEY, JSON.stringify({
+              headline:    best.headline    ?? "",
+              subheadline: best.subheadline ?? "",
+              cta:         best.cta         ?? "",
+            }));
+          }
+        } catch { /* ignore */ }
+      }
+
       setResult(data);
       setStatus("done");
       onDone?.();
@@ -299,6 +344,39 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
               <span style={{ fontSize: 11, color: "var(--text-secondary)", marginLeft: 4 }}>
                 {tvcDuration === 15 ? "~5–8 min" : "~8–15 min"}
               </span>
+            </div>
+          )}
+
+          {/* Morphis copy-ready banner — shows when Ideon copy is available */}
+          {agentKey === "infosys_morphis" && savedIdeonCopy?.headline && status === "idle" && (
+            <div style={{ marginBottom: 14, padding: "12px 16px", borderRadius: 12,
+              background: `${color}0d`, border: `1.5px solid ${color}30`,
+              display: "flex", flexDirection: "column" as const, gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.08em",
+                  textTransform: "uppercase" as const, color, background: `${color}18`,
+                  padding: "2px 8px", borderRadius: 99 }}>Copy ready from Ideon</span>
+                <button onClick={() => { localStorage.removeItem(IDEON_COPY_KEY); setSavedIdeonCopy(null); }}
+                  title="Clear saved copy" style={{ marginLeft: "auto", fontSize: 10,
+                    color: "var(--text-muted)", background: "none", border: "none",
+                    cursor: "pointer", padding: "2px 6px" }}>clear</button>
+              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
+                {savedIdeonCopy.headline}
+              </div>
+              {savedIdeonCopy.subheadline && (
+                <div style={{ fontSize: 12, color: "var(--text-secondary)" }}>{savedIdeonCopy.subheadline}</div>
+              )}
+              {savedIdeonCopy.cta && (
+                <div style={{ display: "inline-flex" }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color,
+                    background: `${color}14`, padding: "3px 10px", borderRadius: 99,
+                    border: `1px solid ${color}30` }}>{savedIdeonCopy.cta} →</span>
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
+                Morphis will generate the KV image using this copy.
+              </div>
             </div>
           )}
 

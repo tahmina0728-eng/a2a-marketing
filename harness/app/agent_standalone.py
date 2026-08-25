@@ -124,7 +124,81 @@ def _pick_best_ideon_copy(ideon_content: dict) -> dict:
     return out
 
 
-def _infosys_runner(agent_key: str, text: str) -> dict:
+def _infosys_morphis_with_copy(
+    brief: dict,
+    copy_headline: str,
+    copy_subline: str,
+    copy_cta: str,
+    color_theme: str = "blue",
+    sub_brand: str = "",
+) -> dict:
+    """
+    Run Morphis using pre-supplied copy (from a previous Ideon run).
+    Skips the internal Logos→Helia→Ideon pipeline and goes straight to:
+      1. Morphis visual spec (for layout / image-prompt details)
+      2. KV compositor (generates the actual image with the supplied copy)
+    Returns a dict with image_b64, headline, brand, and Morphis spec fields.
+    """
+    import base64
+    from app.agents.infosys.logos import LogosAgent
+    from app.agents.infosys.helia import HeliaAgent
+    from app.agents.infosys.morphis import MorphisAgent
+    from app.schemas.common import AgentResponse, Artifact, AgentInfo, JobInfo
+    from app.brands.infosys.compositor import generate_kv
+
+    # Still need Logos+Helia for creative territory context (fast — no copy generation)
+    logos = LogosAgent().run(brief)
+    helia = HeliaAgent().run(logos)
+
+    # Build a synthetic Ideon copy_deck from the supplied copy
+    synthetic_copy = {
+        "campaign_name": brief.get("campaign_name", "Infosys Campaign"),
+        "selected_copy": {
+            "headline":    copy_headline,
+            "subheadline": copy_subline,
+            "cta":         copy_cta,
+        },
+        "banner_copy": {
+            "linkedin_1200x627": {
+                "heading":    copy_headline,
+                "subheading": copy_subline,
+                "cta":        copy_cta,
+            }
+        },
+    }
+    synthetic_ideon = AgentResponse(
+        agent    = AgentInfo(name="ideon"),
+        job      = JobInfo(campaign_name=brief.get("campaign_name", "")),
+        status   = "completed",
+        artifact = Artifact(type="copy_deck", content=synthetic_copy),
+    )
+
+    # Run Morphis for visual spec
+    morphis_r = MorphisAgent().run({"creative_platform": helia, "copy_deck": synthetic_ideon})
+    spec = morphis_r.artifact.content if morphis_r and morphis_r.artifact else {}
+
+    # Generate the actual KV image with the compositor
+    img_bytes = generate_kv(
+        headline     = copy_headline,
+        subline      = copy_subline,
+        cta          = copy_cta,
+        sub_brand    = sub_brand,
+        aspect_ratio = "16:9",
+        color_theme  = color_theme,
+    )
+
+    return {
+        "image_b64": base64.b64encode(img_bytes).decode(),
+        "brand":     "Infosys",
+        "headline":  copy_headline,
+        "subline":   copy_subline,
+        "cta":       copy_cta,
+        "color_theme": color_theme,
+        "morphis_spec": spec,
+    }
+
+
+def _infosys_runner(agent_key: str, text: str, **kwargs) -> dict:
     """
     Thin runner for individual Infosys A2A agents called from the standalone sidebar.
 
@@ -161,6 +235,18 @@ def _infosys_runner(agent_key: str, text: str) -> dict:
         scope = {**brief, "segment": brief.get("audience", ""), "brand": "Infosys"}
         r = AetherAgent().run(scope)
     elif agent_key == "infosys_morphis":
+        copy_headline = kwargs.get("copy_headline", "")
+        copy_subline  = kwargs.get("copy_subline",  "")
+        copy_cta      = kwargs.get("copy_cta",      "")
+        color_theme   = kwargs.get("color_theme",   "blue")
+        if copy_headline:
+            # User already ran Ideon — use that copy directly and generate the image
+            return _infosys_morphis_with_copy(
+                brief, copy_headline, copy_subline, copy_cta,
+                color_theme=color_theme,
+                sub_brand=brief.get("sub_brand", ""),
+            )
+        # Fallback: run full pipeline when no copy is pre-supplied
         from app.agents.infosys.logos import LogosAgent
         from app.agents.infosys.helia import HeliaAgent
         from app.agents.infosys.ideon import IdeonAgent
@@ -169,7 +255,6 @@ def _infosys_runner(agent_key: str, text: str) -> dict:
         logos = LogosAgent().run(brief)
         helia = HeliaAgent().run(logos)
         ideon = IdeonAgent().run({"brief": logos, "creative_platform": helia})
-        # Auto-select the best-scoring copy variant so Morphis gets one clear copy
         if ideon and ideon.artifact:
             best_content = _pick_best_ideon_copy(ideon.artifact.content)
             ideon = AgentResponse(
@@ -215,14 +300,14 @@ _RUNNERS = {
     "tvc":              run_tvc,
     "email_templates":  run_email_templates,
     "email_converter":  run_email_converter,
-    # ── Infosys A2A agents ─────────────────────────────────────────────────────
-    "infosys":          lambda brand, text: _infosys_runner("infosys", text),
-    "infosys_logos":    lambda brand, text: _infosys_runner("infosys_logos", text),
-    "infosys_helia":    lambda brand, text: _infosys_runner("infosys_helia", text),
-    "infosys_ideon":    lambda brand, text: _infosys_runner("infosys_ideon", text),
-    "infosys_aether":   lambda brand, text: _infosys_runner("infosys_aether", text),
-    "infosys_morphis":  lambda brand, text: _infosys_runner("infosys_morphis", text),
-    "infosys_kinetik":  lambda brand, text: _infosys_runner("infosys_kinetik", text),
+    # ── Infosys A2A agents — kwargs forwarded from run_agent_standalone ────────
+    "infosys":          lambda brand, text, **kw: _infosys_runner("infosys", text, **kw),
+    "infosys_logos":    lambda brand, text, **kw: _infosys_runner("infosys_logos", text, **kw),
+    "infosys_helia":    lambda brand, text, **kw: _infosys_runner("infosys_helia", text, **kw),
+    "infosys_ideon":    lambda brand, text, **kw: _infosys_runner("infosys_ideon", text, **kw),
+    "infosys_aether":   lambda brand, text, **kw: _infosys_runner("infosys_aether", text, **kw),
+    "infosys_morphis":  lambda brand, text, **kw: _infosys_runner("infosys_morphis", text, **kw),
+    "infosys_kinetik":  lambda brand, text, **kw: _infosys_runner("infosys_kinetik", text, **kw),
 }
 
 
@@ -272,4 +357,12 @@ def run_agent_standalone(
         )
     if agent_key == "reel":
         return runner(brand, text, campaign_type=campaign_type, copy_headline=copy_headline)
+    # Infosys A2A agents — forward copy fields and color_theme so Morphis/Kinetik
+    # can use a previously-generated Ideon copy without re-running the full pipeline.
+    if agent_key.startswith("infosys"):
+        return runner(
+            brand, text,
+            copy_headline=copy_headline, copy_subline=copy_subline,
+            copy_cta=copy_cta, color_theme=color_theme,
+        )
     return runner(brand, text)
