@@ -186,29 +186,33 @@ def generate_kv(
         bg_rgb = _BG.get(key, _THEMES["blue"])
         color_theme = "blue"  # suppress recolor for sub-brand templates
 
+    import numpy as np
     # 1. Load and resize template
     img = Image.open(tpl_path).convert("RGB")
     img = img.resize((_W, _H), Image.LANCZOS)
 
-    # 2. Apply color theme — run for ALL colors.
+    # 2. Clean placeholder text BEFORE recoloring.
+    # The template has white text ("Heading", "Sub headings", "Text") with JPEG
+    # anti-aliasing edges whose pixel values range from ~50 to ~220 — far above
+    # the background grid (which stays within ±15 units of source blue).
+    # Replacing them NOW (before recolor) means the cleaned zone gets mapped
+    # cleanly to the target colour with no ghost text in any of the 4 themes.
+    x1, y1, x2, y2 = _CLEAR_RECT
+    patch_orig = np.array(img.crop((x1, y1, x2, y2)), dtype=np.float32)
+    src_f = np.array(_BLUE_SRC, dtype=np.float32)
+    # Any pixel whose max-channel diff from source blue exceeds 28 is text/JPEG edge.
+    # Background grid pixels vary by ≤15 units so they are safely preserved.
+    not_bg = np.abs(patch_orig - src_f).max(axis=2) > 28
+    for c in range(3):
+        patch_orig[:, :, c] = np.where(not_bg, src_f[c], patch_orig[:, :, c])
+    img.paste(Image.fromarray(patch_orig.astype(np.uint8)), (x1, y1))
+
+    # 3. Apply color theme — run for ALL colors.
     # Blue→blue is a no-op on hue, but amplify=3.0 brings up the subtle blue grid
     # to the same perceptual contrast level as amber/purple (which naturally have
     # high contrast because their small B-channel amplifies the same +10 pixel offset).
     amp = 3.0 if color_theme == "blue" else 1.0
     img = _recolor_bg(img, bg_rgb, amplify=amp)
-
-    # 3. Erase only the white placeholder text pixels in the text zone.
-    # Instead of a flat rectangle (which would paint over the grid texture),
-    # we detect white pixels (min channel > 200) and replace only those with
-    # the brand background colour, leaving the grid/diamond texture intact.
-    import numpy as np
-    x1, y1, x2, y2 = _CLEAR_RECT
-    patch = np.array(img.crop((x1, y1, x2, y2)), dtype=np.int32)
-    white_mask = patch.min(axis=2) > 200
-    bg_arr = np.array(bg_rgb, dtype=np.int32)
-    for c in range(3):
-        patch[:, :, c] = np.where(white_mask, bg_arr[c], patch[:, :, c])
-    img.paste(Image.fromarray(patch.astype(np.uint8)), (x1, y1))
 
     draw = ImageDraw.Draw(img)
 
