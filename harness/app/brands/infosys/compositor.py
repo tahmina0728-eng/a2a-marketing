@@ -102,7 +102,7 @@ _HEADING_Y    = 225    # matches template "Heading" zone
 # Clear rectangle: covers template placeholder text only.
 # Bar 1: x=70..94, Bar 2: x=97..115 — x1=116 preserves both bars completely.
 # y: from just above heading zone to well below "Text goes here".
-_CLEAR_RECT = (116, 210, 750, 420)   # (x1, y1, x2, y2)
+_CLEAR_RECT = (116, 200, 780, 470)   # (x1, y1, x2, y2) — wide enough to cover all placeholder text rows
 
 _WHITE = (255, 255, 255)
 
@@ -200,9 +200,10 @@ def generate_kv(
     x1, y1, x2, y2 = _CLEAR_RECT
     patch_orig = np.array(img.crop((x1, y1, x2, y2)), dtype=np.float32)
     src_f = np.array(_BLUE_SRC, dtype=np.float32)
-    # Any pixel whose max-channel diff from source blue exceeds 28 is text/JPEG edge.
-    # Background grid pixels vary by ≤15 units so they are safely preserved.
-    not_bg = np.abs(patch_orig - src_f).max(axis=2) > 28
+    # Any pixel whose max-channel diff from source blue exceeds 18 is text/JPEG edge.
+    # Background grid pixels vary by ≤15 units; threshold of 18 gives 3 units of buffer
+    # while catching the faint anti-aliasing halos that the previous threshold missed.
+    not_bg = np.abs(patch_orig - src_f).max(axis=2) > 18
     for c in range(3):
         patch_orig[:, :, c] = np.where(not_bg, src_f[c], patch_orig[:, :, c])
     img.paste(Image.fromarray(patch_orig.astype(np.uint8)), (x1, y1))

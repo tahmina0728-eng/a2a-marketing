@@ -283,10 +283,45 @@ def run_kv(
         try:
             import base64
             from app.brands.infosys.compositor import generate_kv as _infosys_kv
+
+            _headline = copy_headline
+            _subline  = copy_subline or ""
+            _cta      = copy_cta     or "Navigate Your Next"
+
+            if not _headline:
+                # No pre-supplied copy — run Logos→Helia→Ideon to generate it.
+                # Avoids letting the raw user prompt bleed through as the KV headline.
+                from app.agents.infosys.logos import LogosAgent
+                from app.agents.infosys.helia import HeliaAgent
+                from app.agents.infosys.ideon import IdeonAgent
+                import copy as _copy_mod
+
+                brief = {
+                    "campaign_name": "Infosys Campaign",
+                    "objective": prompt,
+                    "channels": ["LinkedIn"],
+                    "market": market or "UK",
+                }
+                logos = LogosAgent().run(brief)
+                helia = HeliaAgent().run(logos)
+                ideon = IdeonAgent().run({"brief": logos, "creative_platform": helia})
+
+                if ideon and ideon.artifact:
+                    content = _copy_mod.deepcopy(ideon.artifact.content)
+                    variants: list = content.get("variants", [])
+                    rec_idx = content.get("recommended_variant", 0)
+                    if not (isinstance(rec_idx, int) and 0 <= rec_idx < len(variants)):
+                        rec_idx = max(range(len(variants)),
+                                      key=lambda i: variants[i].get("quality_score", 0)) if variants else 0
+                    best = variants[rec_idx] if variants else {}
+                    _headline = best.get("headline", "")
+                    _subline  = best.get("subheadline", _subline)
+                    _cta      = best.get("cta", _cta) or _cta
+
             img_bytes = _infosys_kv(
-                headline     = copy_headline or headline if copy_headline else prompt[:80],
-                subline      = copy_subline  or "",
-                cta          = copy_cta      or "Navigate Your Next",
+                headline     = _headline,
+                subline      = _subline,
+                cta          = _cta,
                 sub_brand    = product_name  or "",
                 aspect_ratio = aspect_ratio,
                 color_theme  = color_theme   or "blue",
@@ -294,9 +329,9 @@ def run_kv(
             return {
                 "agent":    "kv",
                 "brand":    brand,
-                "headline": copy_headline or prompt[:80],
-                "subline":  copy_subline  or "",
-                "cta":      copy_cta      or "Navigate Your Next",
+                "headline": _headline,
+                "subline":  _subline,
+                "cta":      _cta,
                 "image_b64": base64.b64encode(img_bytes).decode("utf-8"),
                 "creative_qa": {},
                 "final_qa":   {},
