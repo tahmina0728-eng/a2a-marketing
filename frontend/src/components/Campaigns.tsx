@@ -601,10 +601,21 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         }
 
         const deck = d.copy_deck ?? {};
-        const headline = deck.headlines?.hero_options?.[0] ?? "";
-        const subline  = deck.headlines?.support_options?.[0] ?? "";
-        const body     = deck.body_copy?.web ?? "";
-        const cta      = deck.cta_bank?.[0] ?? "Navigate Your Next";
+        // New schema: pick recommended variant (or highest-scored); fall back to
+        // banner_copy then the old headlines.hero_options path for backwards compat.
+        const recIdx = typeof deck.recommended_variant === "number" ? deck.recommended_variant : 0;
+        const variants: any[] = Array.isArray(deck.variants) ? deck.variants : [];
+        const best = variants[recIdx] ?? variants[0] ?? null;
+        const headline = best?.headline
+          ?? deck.banner_copy?.linkedin_1200x627?.heading
+          ?? deck.headlines?.hero_options?.[0]
+          ?? "";
+        const subline  = best?.subheadline
+          ?? deck.banner_copy?.linkedin_1200x627?.subheading
+          ?? deck.headlines?.support_options?.[0]
+          ?? "";
+        const body     = best?.body ?? deck.body_copy?.web ?? "";
+        const cta      = best?.cta  ?? deck.cta_bank?.[0] ?? "Navigate Your Next";
         if (!headline && !body) throw new Error("Empty response from Infosys pipeline");
         setCopyRes({ headline, subline, body, cta });
       } else {
