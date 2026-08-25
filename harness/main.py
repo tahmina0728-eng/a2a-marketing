@@ -1167,6 +1167,7 @@ class InfosysPipelineRequest(_BaseModel):
     product_area:  str       = ""
     run_aether:    bool      = False   # Phase 0: market intelligence
     run_visuals:   bool      = False   # Phase 4: Morphis + Kinetik
+    strict_gate:   bool      = False   # True = block pipeline on any Logos BLOCK flag; False = warn and continue
 
 
 @app.post("/infosys/pipeline")
@@ -1181,11 +1182,12 @@ async def infosys_pipeline(req: InfosysPipelineRequest):
     try:
         from app.agents.infosys.orchestrator import CampaignOrchestrator
         orch = CampaignOrchestrator()
-        brief = req.model_dump(exclude={"run_aether", "run_visuals"})
+        brief = req.model_dump(exclude={"run_aether", "run_visuals", "strict_gate"})
         return await orch.run_async(
             brief,
             run_aether  = req.run_aether,
             run_visuals = req.run_visuals,
+            strict_gate = req.strict_gate,
         )
     except Exception as exc:
         logger.error("infosys_pipeline_error", error=str(exc))

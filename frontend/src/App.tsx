@@ -4905,7 +4905,7 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 
 // ── Main App ──────────────────────────────────────────────────
 export default function App() {
-  const { state, startFullCampaign, reset } = usePipeline();
+  const { state, startFullCampaign, startInfosysCampaign, reset } = usePipeline();
   const { theme, toggleTheme } = useTheme();
   const [view, setView] = useState<"app" | "hub" | "agent" | "brand-hub" | "publishing" | "campaigns" | "campaign-list" | "email-converter" | "analytics">("app");
   const [selectedCampaign, setSelectedCampaign] = useState<{id:string;name:string;brand:string}|null>(null);
@@ -4946,7 +4946,11 @@ export default function App() {
     if (brief.campaign_name?.trim()) setCampaignName(brief.campaign_name.trim());
     setBriefData(brief);
     setBriefApproved(false);
-    startFullCampaign(brief);
+    if (brief.brand === "Infosys") {
+      startInfosysCampaign(brief);
+    } else {
+      startFullCampaign(brief);
+    }
   };
 
   const handlePipelineRegenerate = (updatedBrief: import("./types/pipeline").HarnessBriefRequest) => {
@@ -4954,7 +4958,11 @@ export default function App() {
     setBriefData(updatedBrief);
     setBriefApproved(false);
     reset();
-    startFullCampaign(updatedBrief);
+    if (updatedBrief.brand === "Infosys") {
+      startInfosysCampaign(updatedBrief);
+    } else {
+      startFullCampaign(updatedBrief);
+    }
   };
 
   // Derive which workflow stage is currently active

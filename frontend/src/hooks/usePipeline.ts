@@ -223,7 +223,150 @@ export function usePipeline() {
     }
   }, [closeSSE]);
 
+  // ── Infosys A2A pipeline ───────────────────────────────────────────────────
+  const startInfosysCampaign = useCallback(async (brief: HarnessBriefRequest) => {
+    closeSSE();
+    setState({ ...INITIAL_STATE, status: "running" });
+
+    // Map HarnessBriefRequest → InfosysPipelineRequest
+    const product = (brief as any).product ?? "";
+    const subBrand = product === "Infosys (IT Services & Consulting)" ? "" : product;
+
+    const b = brief as any;
+    const body = {
+      campaign_name: brief.campaign_name ?? "Infosys Campaign",
+      sub_brand:     subBrand,
+      objective:     b.objective ?? b.campaign_objective ?? brief.goal ?? "",
+      audience:      b.audience_description ?? b.audience ?? "",
+      buyer_truth:   b.buyer_truth ?? b.fan_truth ?? "",
+      channels:      brief.channels ?? ["LinkedIn"],
+      market:        brief.market ?? "UK",
+      locale:        b.locale ?? "en-GB",
+      industry:      "enterprise_technology",
+      budget:        b.budget_range ?? brief.budget ?? "",
+      run_aether:    false,
+      run_visuals:   false,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/infosys/pipeline`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        let msg = text;
+        try {
+          const j = JSON.parse(text);
+          msg = Array.isArray(j.detail) ? j.detail.map((e: any) => e.msg).join(", ") : j.detail ?? text;
+        } catch {}
+        setState((s) => ({ ...s, status: "error", error: msg }));
+        return;
+      }
+
+      const result = await res.json();
+
+      // Logos gate blocked the brief — surface feedback as a structured pipeline output
+      if (result.status === "blocked") {
+        const vb = result.validated_brief ?? {};
+        const blockers: string[] = (result.blockers ?? []).map((b: any) => `${b.element}: ${b.rule}`);
+        const missing = [
+          vb.kpi?.startsWith?.("MISSING") ? "KPI (e.g. 150 MQLs over 8 weeks)" : null,
+          vb.buyer_truth?.statement?.startsWith?.("MISSING") ? "Buyer truth (the human tension)" : null,
+          (vb.formats ?? []).some((f: string) => f?.startsWith?.("MISSING")) ? "Ad formats/specs (e.g. LinkedIn 1200×627)" : null,
+          vb.budget === "MISSING" ? "Budget" : null,
+          vb.timing === "MISSING" ? "Flight dates" : null,
+        ].filter(Boolean);
+        setState({
+          campaign_id:     null,
+          status:          "done",
+          pipeline_output: {
+            campaign_copy: {
+              short_headline:  "⚠ Brief Incomplete — Logos Gate",
+              medium_headline: `Missing: ${missing.join(" · ")}`,
+              body:            vb.display_brief ?? blockers.join("\n"),
+              cta:             "Please add the missing fields and regenerate",
+            },
+            creative_strategy: { hero_message: "Brief blocked at Logos validation gate" },
+            validated_brief:   vb,
+            infosys_pipeline:  true,
+            infosys_blocked:   true,
+            compliance_flags:  result.blockers ?? [],
+          },
+          error:       null,
+          agentStatus: { logos: "done" },
+          liveLog:     [],
+          milestones:  {
+            copy: {
+              short_headline:  "⚠ Brief Incomplete — Logos Gate",
+              medium_headline: `Missing: ${missing.join(" · ")}`,
+              body:            vb.display_brief ?? blockers.join("\n"),
+              cta:             "Please add the missing fields and regenerate",
+            },
+          },
+        });
+        return;
+      }
+
+      const deck  = result.copy_deck ?? {};
+      const plat  = result.creative_platform ?? {};
+      const vbrief = result.validated_brief ?? {};
+
+      // Normalise into standard pipeline_output shape so existing panels render
+      const campaign_copy = {
+        short_headline:  deck.headlines?.hero_options?.[0] ?? "",
+        medium_headline: deck.headlines?.hero_options?.[1] ?? deck.headlines?.support_options?.[0] ?? "",
+        body:            deck.body_copy?.web ?? "",
+        cta:             deck.cta_bank?.[0] ?? "",
+        channel_copy: {
+          linkedin:      deck.social_captions?.linkedin ?? "",
+          email:         deck.body_copy?.email ?? "",
+          ...(deck.banner_copy?.linkedin_1200x627
+            ? { linkedin_banner: `${deck.banner_copy.linkedin_1200x627.heading} — ${deck.banner_copy.linkedin_1200x627.subheading}` }
+            : {}),
+        },
+      };
+
+      const creative_strategy = {
+        hero_message:       plat.big_idea ?? plat.territory_name ?? "",
+        brand_territory:    plat.territory_name ?? "",
+        creative_direction: plat.visual_world ?? "",
+        tone_of_voice:      plat.tone_of_voice ?? "",
+        audience_insight:   vbrief.buyer_truth ?? vbrief.audience ?? "",
+      };
+
+      setState({
+        campaign_id:     null,
+        status:          "done",
+        pipeline_output: {
+          campaign_copy,
+          creative_strategy,
+          validated_brief:    vbrief,
+          creative_platform:  plat,
+          copy_deck:          deck,
+          infosys_pipeline:   true,
+          compliance_flags:   result.compliance_flags ?? [],
+        },
+        error:       null,
+        agentStatus: { logos: "done", helia: "done", ideon: "done" },
+        liveLog:     [],
+        milestones:  {
+          copy: {
+            short_headline:  campaign_copy.short_headline,
+            medium_headline: campaign_copy.medium_headline,
+            body:            campaign_copy.body,
+            cta:             campaign_copy.cta,
+          },
+        },
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Connection failed — is the harness running?";
+      setState((s) => ({ ...s, status: "error", error: msg }));
+    }
+  }, [closeSSE]);
+
   const reset = useCallback(() => { closeSSE(); setState(INITIAL_STATE); }, [closeSSE]);
 
-  return { state, startCampaign, startFullCampaign, reset };
+  return { state, startCampaign, startFullCampaign, startInfosysCampaign, reset };
 }

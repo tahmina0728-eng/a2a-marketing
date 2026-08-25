@@ -486,18 +486,69 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   const genCopy = async () => {
     setCopyBusy(true);
     try {
-      const r = await fetch(`${API_BASE}/agents/copy/run`, {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ prompt }),
-      });
-      if (!r.ok) throw new Error(`Copy agent returned ${r.status}`);
-      const d = await r.json();
-      if (d.error) throw new Error(d.error);
-      const headline = d.short?.headline || d.headline || "";
-      const subline  = d.short?.subline  || d.subline  || "";
-      const body     = d.long?.body     || d.body     || "";
-      if (!headline && !body) throw new Error("Empty response from copy agent");
-      setCopyRes({ headline, subline, body, cta: d.cta || "Learn More" });
+      if (brand === "Infosys") {
+        // Route to the Infosys A2A pipeline instead of the generic copy agent
+        const subBrand = product === "Infosys (IT Services & Consulting)" ? "" : (product || "");
+        const r = await fetch(`${API_BASE}/infosys/pipeline`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            campaign_name: brief.slice(0, 80) || "Infosys Campaign",
+            sub_brand:     subBrand,
+            objective:     brief,
+            audience:      audience || "CIOs & CTOs",
+            channels:      platform ? [platform] : ["LinkedIn"],
+            market:        market || "UK",
+            locale:        "en-GB",
+            industry:      "enterprise_technology",
+            run_aether:    false,
+            run_visuals:   false,
+          }),
+        });
+        if (!r.ok) throw new Error(`Infosys pipeline returned ${r.status}`);
+        const d = await r.json();
+
+        // Logos gate blocked the brief — surface what's missing to the user
+        if (d.status === "blocked") {
+          const blockers: string[] = (d.blockers ?? []).map((b: any) => `${b.element}: ${b.rule}`);
+          const vb = d.validated_brief ?? {};
+          const missing = [
+            vb.kpi?.startsWith("MISSING") ? "KPI (e.g. 150 MQLs over 8 weeks)" : null,
+            vb.buyer_truth?.statement?.startsWith("MISSING") ? "Buyer truth (the human tension)" : null,
+            (vb.formats ?? []).some((f: string) => f.startsWith("MISSING")) ? "Ad formats/specs (e.g. LinkedIn 1200×627)" : null,
+            vb.budget === "MISSING" ? "Budget" : null,
+            vb.timing === "MISSING" ? "Flight dates" : null,
+          ].filter(Boolean);
+          const bodyText = vb.display_brief ?? blockers.join("\n");
+          setCopyRes({
+            headline: "⚠ Brief Incomplete — Logos Gate",
+            subline:  `Missing: ${missing.join(" · ")}`,
+            body:     bodyText,
+            cta:      "Please fill in the missing fields above and regenerate",
+          });
+          return;
+        }
+
+        const deck = d.copy_deck ?? {};
+        const headline = deck.headlines?.hero_options?.[0] ?? "";
+        const subline  = deck.headlines?.support_options?.[0] ?? "";
+        const body     = deck.body_copy?.web ?? "";
+        const cta      = deck.cta_bank?.[0] ?? "Navigate Your Next";
+        if (!headline && !body) throw new Error("Empty response from Infosys pipeline");
+        setCopyRes({ headline, subline, body, cta });
+      } else {
+        const r = await fetch(`${API_BASE}/agents/copy/run`, {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({ prompt }),
+        });
+        if (!r.ok) throw new Error(`Copy agent returned ${r.status}`);
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        const headline = d.short?.headline || d.headline || "";
+        const subline  = d.short?.subline  || d.subline  || "";
+        const body     = d.long?.body     || d.body     || "";
+        if (!headline && !body) throw new Error("Empty response from copy agent");
+        setCopyRes({ headline, subline, body, cta: d.cta || "Learn More" });
+      }
     } catch (e) {
       setCopyRes({ headline: "", subline: "", body: "", cta: `Error: ${(e as Error).message}` });
     } finally { setCopyBusy(false); }

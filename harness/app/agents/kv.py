@@ -12,7 +12,7 @@ settings = get_settings()
 
 # Real enterprise brands — replace "fictional brand" prompt with
 # explicit "no logos — composited in post-production" instruction.
-_REAL_BRANDS = frozenset({"barclays", "haleon", "ubs bank", "sunrise", "glenfiddich", "boozt"})
+_REAL_BRANDS = frozenset({"barclays", "haleon", "ubs bank", "sunrise", "glenfiddich", "boozt", "infosys"})
 
 
 def _build_wimbledon_prompt(concept: dict, aspect_ratio: str) -> str:
@@ -274,7 +274,33 @@ def run_kv(
     _campaign_id  = (campaign_id or campaign_type or "").lower().strip()
     _is_wimbledon = brand.lower() == "barclays" and _campaign_id == "wimbledon"
     _is_haleon    = brand.lower() == "haleon"
+    _is_infosys   = brand.lower() == "infosys"
     _is_real      = brand.lower() in _REAL_BRANDS
+
+    # ── Infosys: template-based compositor — no AI image generation needed ────
+    if _is_infosys:
+        import base64
+        from app.brands.infosys import generate_kv as _infosys_kv
+        try:
+            img_bytes = _infosys_kv(
+                headline     = copy_headline or headline if copy_headline else prompt[:80],
+                subline      = copy_subline  or "",
+                body         = copy_body     or "",
+                sub_brand    = product_name  or "",
+                aspect_ratio = aspect_ratio,
+            )
+            return {
+                "agent":    "kv",
+                "brand":    brand,
+                "headline": copy_headline or prompt[:80],
+                "subline":  copy_subline  or "",
+                "cta":      copy_cta      or "Navigate Your Next",
+                "image_b64": base64.b64encode(img_bytes).decode("utf-8"),
+                "creative_qa": {},
+                "final_qa":   {},
+            }
+        except Exception as _ie:
+            logger.warning("infosys_kv_failed", error=str(_ie))
 
     # ── 2. Audience persona ───────────────────────────────────────────────────
     _al = (audience or "").lower()

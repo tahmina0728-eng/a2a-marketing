@@ -58,7 +58,7 @@ class CampaignOrchestrator:
         self.morphis = MorphisAgent()
         self.kinetik = KinetikAgent()
 
-    def run(self, request: dict, run_aether: bool = False, run_visuals: bool = False) -> dict:
+    def run(self, request: dict, run_aether: bool = False, run_visuals: bool = False, strict_gate: bool = False) -> dict:
         """
         Run the full pipeline synchronously.
 
@@ -111,16 +111,18 @@ class CampaignOrchestrator:
 
         brief_content = logos_result.artifact.content if logos_result.artifact else {}
 
-        # Surface any compliance blockers from the brief gate
+        # Surface any compliance blockers from the brief gate.
+        # In strict_gate mode (production), a BLOCK halts the pipeline.
+        # In non-strict mode (UI/demo), gate warnings are surfaced but the
+        # pipeline continues so the user can see the generated copy.
         gate = brief_content.get("gate", {})
-        if gate.get("overall") == "BLOCK":
+        gate_blockers = [f for f in gate.get("flags", []) if f.get("status") == "BLOCK"]
+        if strict_gate and gate.get("overall") == "BLOCK":
             return {
                 "status": "blocked",
                 "stage": "logos",
                 "validated_brief": brief_content,
-                "blockers": [
-                    f for f in gate.get("flags", []) if f.get("status") == "BLOCK"
-                ],
+                "blockers": gate_blockers,
             }
 
         # ── Phase 2: Helia — creative platform ────────────────────────────────
@@ -194,6 +196,7 @@ class CampaignOrchestrator:
             ),
             "compliance_flags": [f.model_dump() for f in all_flags],
             "blocker_count": sum(1 for f in all_flags if f.status == "BLOCK"),
+            "gate_warnings": gate_blockers,
         }
 
         if aether_content:
@@ -211,10 +214,11 @@ class CampaignOrchestrator:
         *,
         run_aether: bool = False,
         run_visuals: bool = False,
+        strict_gate: bool = False,
     ) -> dict:
         """Async wrapper — runs the sync pipeline in a thread so it's safe inside FastAPI."""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
             None,
-            lambda: self.run(request, run_aether=run_aether, run_visuals=run_visuals),
+            lambda: self.run(request, run_aether=run_aether, run_visuals=run_visuals, strict_gate=strict_gate),
         )
