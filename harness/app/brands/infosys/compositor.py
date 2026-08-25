@@ -149,27 +149,106 @@ def _wrap(text: str, font: ImageFont.FreeTypeFont, max_w: int) -> list[str]:
     return lines
 
 
+# ── Speaker / executive circle layout constants ───────────────────────────────
+_SPK_CX = 870   # circle center x  (right half of 1200px canvas)
+_SPK_CY = 270   # circle center y  (vertically centred in 627px canvas)
+_SPK_R  = 118   # outer radius including white border
+_SPK_BORDER = 6 # white border ring width
+
+
+def _paste_speaker_circle(
+    img: Image.Image,
+    image_bytes: bytes,
+    name: str,
+    title: str,
+) -> Image.Image:
+    """
+    Composite a circular executive headshot onto the right zone of the KV,
+    followed by name (bold) and title (regular) centred below the circle.
+    Matches the layout used in Campaign4_2/3/4 reference assets.
+    """
+    inner_r   = _SPK_R - _SPK_BORDER
+    inner_d   = inner_r * 2
+    outer_d   = _SPK_R * 2
+
+    # Load headshot, centre-crop to square, resize to inner diameter
+    headshot = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    w, h = headshot.size
+    side = min(w, h)
+    headshot = headshot.crop(((w - side) // 2, (h - side) // 2,
+                               (w + side) // 2, (h + side) // 2))
+    headshot = headshot.resize((inner_d, inner_d), Image.LANCZOS)
+
+    # Circular mask for the headshot
+    mask = Image.new("L", (inner_d, inner_d), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, inner_d - 1, inner_d - 1), fill=255)
+    headshot_rgba = headshot.convert("RGBA")
+    headshot_rgba.putalpha(mask)
+
+    # White border disc (full circle, slightly larger)
+    border_disc = Image.new("RGBA", (outer_d, outer_d), (0, 0, 0, 0))
+    ImageDraw.Draw(border_disc).ellipse((0, 0, outer_d - 1, outer_d - 1),
+                                        fill=(255, 255, 255, 255))
+
+    # Composite: paste border disc, then headshot centred inside it
+    img_rgba = img.convert("RGBA")
+    bx = _SPK_CX - _SPK_R
+    by = _SPK_CY - _SPK_R
+    img_rgba.paste(border_disc, (bx, by), border_disc)
+    img_rgba.paste(headshot_rgba, (bx + _SPK_BORDER, by + _SPK_BORDER), headshot_rgba)
+    img = img_rgba.convert("RGB")
+
+    # Name + title below circle
+    f_name  = _load_font("MYRIADPRO-BOLD.OTF",    26)
+    f_title = _load_font("MYRIADPRO-REGULAR.OTF", 20)
+    draw = ImageDraw.Draw(img)
+
+    name_y  = _SPK_CY + _SPK_R + 18
+    title_y = name_y + 34
+
+    try:
+        name_w  = f_name.getlength(name)
+        title_w = f_title.getlength(title) if title else 0
+    except Exception:
+        name_w  = len(name)  * 13
+        title_w = len(title) * 10
+
+    draw.text((_SPK_CX - name_w  // 2, name_y),  name,  font=f_name,  fill=_WHITE)
+    if title:
+        draw.text((_SPK_CX - title_w // 2, title_y), title, font=f_title, fill=_WHITE)
+
+    return img
+
+
 # ── Public API ────────────────────────────────────────────────────────────────
 
 def generate_kv(
-    headline:     str,
-    subline:      str = "",
-    cta:          str = "",
-    sub_brand:    str = "",
-    aspect_ratio: str = "16:9",
-    color_theme:  str = "blue",
+    headline:            str,
+    subline:             str = "",
+    cta:                 str = "",
+    sub_brand:           str = "",
+    aspect_ratio:        str = "16:9",
+    color_theme:         str = "blue",
+    speaker_image_b64:   str = "",
+    speaker_name:        str = "",
+    speaker_title:       str = "",
+    content_type_badge:  str = "",
 ) -> bytes:
     """
     Composite an Infosys LinkedIn KV from the brand template.
     Returns JPEG bytes at 1200×627.
 
     Args:
-        headline:     Campaign headline (from Ideon copy deck)
-        subline:      Sub-heading / support line
-        cta:          Short CTA text shown in the lower text zone (≤ 5 words)
-        sub_brand:    e.g. "Infosys Aster (Healthcare)", "Infosys Topaz (AI/Cloud)"
-        aspect_ratio: Ignored for now (always 16:9 LinkedIn); reserved for future formats
-        color_theme:  IT Services color variant: "blue" | "purple" | "amber" | "deep-purple"
+        headline:           Campaign headline (from Ideon copy deck)
+        subline:            Sub-heading / support line
+        cta:                Short CTA text shown in the lower text zone (≤ 5 words)
+        sub_brand:          e.g. "Infosys Aster (Healthcare)", "Infosys Topaz (AI/Cloud)"
+        aspect_ratio:       Ignored for now (always 16:9 LinkedIn); reserved for future formats
+        color_theme:        IT Services color variant: "blue" | "purple" | "amber" | "deep-purple"
+        speaker_image_b64:  Base-64 JPEG/PNG of executive headshot — triggers circle layout
+        speaker_name:       Executive name shown below circle, e.g. "Salil Parekh"
+        speaker_title:      Role/company line, e.g. "CEO & MD, Infosys"
+        content_type_badge: Optional label above headline, e.g. "BYLINE" or "MEDIA ARTICLE"
     """
     headline = headline.replace(".", "").rstrip(" ,;:!?")
     subline  = subline.replace(".", "").rstrip(" ,;:!?")
@@ -208,32 +287,53 @@ def generate_kv(
     draw = ImageDraw.Draw(img)
 
     # 4. Load fonts per Infosys brand spec
-    # Myriad Pro Bold = headline (matches template "Heading" — broad, heavy, non-condensed)
-    # Myriad Pro SemiBold = sub-heading / attribution
-    # Myriad Pro Regular = CTA
-    f_head = _load_font("MYRIADPRO-BOLD.OTF",     48)   # headline — matches Campaign2_1 weight
-    f_sub  = _load_font("MYRIADPRO-SEMIBOLD.OTF", 26)   # sub-heading
-    f_cta  = _load_font("MYRIADPRO-REGULAR.OTF",  20)   # CTA caption
+    f_head  = _load_font("MYRIADPRO-BOLD.OTF",     48)
+    f_sub   = _load_font("MYRIADPRO-SEMIBOLD.OTF", 26)
+    f_cta   = _load_font("MYRIADPRO-REGULAR.OTF",  20)
+    f_badge = _load_font("MYRIADPRO-BOLD.OTF",     18)
 
-    # 5. Headline — Myriad Pro Bold, flows from _HEADING_Y, up to 3 lines
+    # 5. Optional content-type badge (BYLINE / MEDIA ARTICLE) above headline
     y = _HEADING_Y
+    if content_type_badge:
+        badge_text = content_type_badge.upper()
+        try:
+            badge_w = f_badge.getlength(badge_text)
+        except Exception:
+            badge_w = len(badge_text) * 9
+        pad_x, pad_y = 10, 5
+        bx2 = _TEXT_X + int(badge_w) + pad_x * 2
+        by2 = y + 28
+        draw.rectangle((_TEXT_X, y, bx2, by2), outline=_WHITE, width=2)
+        draw.text((_TEXT_X + pad_x, y + pad_y), badge_text, font=f_badge, fill=_WHITE)
+        y = by2 + 18   # shift headline below badge
+
+    # 6. Headline — Myriad Pro Bold, up to 3 lines
     for line in _wrap(headline, f_head, _TEXT_MAX_W)[:3]:
         draw.text((_TEXT_X, y), line, font=f_head, fill=_WHITE)
         y += 58   # 48px + 10px leading
 
-    # 6. Sub-heading — flows immediately below headline, no floor gap
+    # 7. Sub-heading — flows immediately below headline
     if subline:
-        y += 14   # fixed gap between headline block and sub-heading
+        y += 14
         for line in _wrap(subline, f_sub, _TEXT_MAX_W)[:2]:
             draw.text((_TEXT_X, y), line, font=f_sub, fill=_WHITE)
-            y += 32   # 26px + 6px leading
+            y += 32
 
-    # 7. CTA — flows immediately below sub-heading
+    # 8. CTA — flows immediately below sub-heading
     if cta:
-        y += 16   # fixed gap between sub-heading and CTA
+        y += 16
         draw.text((_TEXT_X, y), cta[:50], font=f_cta, fill=_WHITE)
 
-    # 8. Encode and return
+    # 9. Speaker circle — composited last so it sits on top
+    if speaker_image_b64 and speaker_name:
+        import base64
+        try:
+            img_bytes = base64.b64decode(speaker_image_b64)
+            img = _paste_speaker_circle(img, img_bytes, speaker_name, speaker_title)
+        except Exception:
+            pass  # silently skip if decode/composite fails
+
+    # 10. Encode and return
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=93, optimize=True)
     return buf.getvalue()

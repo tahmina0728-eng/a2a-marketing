@@ -2440,11 +2440,15 @@ class AgentStandaloneRequest(_BaseModel):
     copy_subline:  str = ""  # Subline from Copy Agent — rendered below headline on banner
     copy_body:     str = ""  # Body copy from Copy Agent — for channel/email use
     copy_cta:      str = ""  # CTA from Copy Agent — rendered in bottom bar on standard banners
-    campaign_type: str = ""  # Legacy: kept for backwards compat; prefer campaign_id
-    campaign_id:   str = ""  # Explicit campaign identifier, e.g. "wimbledon" — exact match, no substring
-    concept_id:    str = ""  # Specific creative concept, e.g. "c1_journey" — skips keyword matching
-    aspect_ratio:  str = "16:9"  # Output image aspect ratio: "16:9" | "1:1" | "4:5" | "9:16"
-    color_theme:   str = "blue"  # Infosys IT Services color: "blue"|"purple"|"amber"|"deep-purple"
+    campaign_type:      str = ""    # Legacy: kept for backwards compat; prefer campaign_id
+    campaign_id:        str = ""    # Explicit campaign identifier, e.g. "wimbledon" — exact match, no substring
+    concept_id:         str = ""    # Specific creative concept, e.g. "c1_journey" — skips keyword matching
+    aspect_ratio:       str = "16:9"  # Output image aspect ratio: "16:9" | "1:1" | "4:5" | "9:16"
+    color_theme:        str = "blue"  # Infosys IT Services color: "blue"|"purple"|"amber"|"deep-purple"
+    speaker_image_b64:  str = ""    # Base-64 executive headshot — enables circular speaker layout
+    speaker_name:       str = ""    # Executive name shown below circle
+    speaker_title:      str = ""    # Role / company line shown under name
+    content_type_badge: str = ""    # Optional label above headline e.g. "BYLINE", "MEDIA ARTICLE"
 
 
 @app.post("/agents/{agent_key}/run")
@@ -2477,6 +2481,8 @@ async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
             campaign_type=req.campaign_type, campaign_id=req.campaign_id,
             concept_id=req.concept_id, aspect_ratio=req.aspect_ratio,
             color_theme=req.color_theme,
+            speaker_image_b64=req.speaker_image_b64, speaker_name=req.speaker_name,
+            speaker_title=req.speaker_title, content_type_badge=req.content_type_badge,
         )
         return result
     except ValueError as e:

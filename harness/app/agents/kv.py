@@ -251,6 +251,10 @@ def run_kv(
     concept_id: str = "",
     aspect_ratio: str = "16:9",
     color_theme: str = "blue",
+    speaker_image_b64: str = "",
+    speaker_name: str = "",
+    speaker_title: str = "",
+    content_type_badge: str = "",
 ) -> dict:
     """
     Standalone Morphis — key visual generator.
@@ -319,12 +323,16 @@ def run_kv(
                     _cta      = best.get("cta", _cta) or _cta
 
             img_bytes = _infosys_kv(
-                headline     = _headline,
-                subline      = _subline,
-                cta          = _cta,
-                sub_brand    = product_name  or "",
-                aspect_ratio = aspect_ratio,
-                color_theme  = color_theme   or "blue",
+                headline            = _headline,
+                subline             = _subline,
+                cta                 = _cta,
+                sub_brand           = product_name       or "",
+                aspect_ratio        = aspect_ratio,
+                color_theme         = color_theme        or "blue",
+                speaker_image_b64   = speaker_image_b64  or "",
+                speaker_name        = speaker_name       or "",
+                speaker_title       = speaker_title      or "",
+                content_type_badge  = content_type_badge or "",
             )
             return {
                 "agent":    "kv",

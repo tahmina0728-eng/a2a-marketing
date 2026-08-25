@@ -343,6 +343,10 @@ def run_agent_standalone(
     concept_id: str = "",
     aspect_ratio: str = "16:9",
     color_theme: str = "blue",
+    speaker_image_b64: str = "",
+    speaker_name: str = "",
+    speaker_title: str = "",
+    content_type_badge: str = "",
 ) -> dict:
     """text is the whole free-text prompt, e.g. "UBS Bank for UK market, festive: christmas" —
     the brand is detected from it automatically rather than passed separately."""
@@ -369,6 +373,8 @@ def run_agent_standalone(
             campaign_type=campaign_type, campaign_id=campaign_id,
             concept_id=concept_id, aspect_ratio=aspect_ratio,
             color_theme=color_theme,
+            speaker_image_b64=speaker_image_b64, speaker_name=speaker_name,
+            speaker_title=speaker_title, content_type_badge=content_type_badge,
         )
     if agent_key == "reel":
         return runner(brand, text, campaign_type=campaign_type, copy_headline=copy_headline)
