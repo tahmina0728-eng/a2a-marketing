@@ -177,25 +177,25 @@ def generate_kv(
     draw.rectangle(_CLEAR_RECT, fill=bg_rgb)
 
     # 4. Load fonts per Infosys brand spec
-    # Tungsten Medium = brand headline font (online banners)
-    # Myriad Pro SemiBold = attribution / standout text
-    # Myriad Pro Regular = body / CTA
-    f_head = _load_font("Tungsten-Medium.ttf",     72)   # brand headline font
-    f_sub  = _load_font("MYRIADPRO-SEMIBOLD.OTF", 24)   # support / attribution
+    # Myriad Pro Bold = headline (matches template "Heading" — broad, heavy, non-condensed)
+    # Myriad Pro SemiBold = sub-heading / attribution
+    # Myriad Pro Regular = CTA
+    f_head = _load_font("MYRIADPRO-BOLD.OTF",     48)   # headline — matches Campaign2_1 weight
+    f_sub  = _load_font("MYRIADPRO-SEMIBOLD.OTF", 26)   # sub-heading
     f_cta  = _load_font("MYRIADPRO-REGULAR.OTF",  20)   # CTA caption
 
-    # 5. Headline — Tungsten Medium, flows from _HEADING_Y, up to 3 lines
+    # 5. Headline — Myriad Pro Bold, flows from _HEADING_Y, up to 3 lines
     y = _HEADING_Y
     for line in _wrap(headline, f_head, _TEXT_MAX_W)[:3]:
         draw.text((_TEXT_X, y), line, font=f_head, fill=_WHITE)
-        y += 80   # 72px + 8px leading
+        y += 58   # 48px + 10px leading
 
     # 6. Sub-heading — flows immediately below headline, no floor gap
     if subline:
         y += 14   # fixed gap between headline block and sub-heading
         for line in _wrap(subline, f_sub, _TEXT_MAX_W)[:2]:
             draw.text((_TEXT_X, y), line, font=f_sub, fill=_WHITE)
-            y += 30   # 24px + 6px leading
+            y += 32   # 26px + 6px leading
 
     # 7. CTA — flows immediately below sub-heading
     if cta:
