@@ -126,10 +126,19 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
       }
       // Morphis: only inject saved Ideon copy if the user explicitly opted in.
       // Default is always a fresh run (full Logos→Helia→Ideon pipeline).
-      if (agentKey === "infosys_morphis" && useIdeonCopy && savedIdeonCopy?.headline) {
-        body.copy_headline = savedIdeonCopy.headline;
-        body.copy_subline  = savedIdeonCopy.subheadline ?? "";
-        body.copy_cta      = savedIdeonCopy.cta ?? "";
+      if (agentKey === "infosys_morphis") {
+        if (useIdeonCopy && savedIdeonCopy?.headline) {
+          body.copy_headline = savedIdeonCopy.headline;
+          body.copy_subline  = savedIdeonCopy.subheadline ?? "";
+          body.copy_cta      = savedIdeonCopy.cta ?? "";
+        }
+        body.color_theme = kvColorTheme;
+        if (speakerMode && speakerImgB64 && speakerName) {
+          body.speaker_image_b64  = speakerImgB64;
+          body.speaker_name       = speakerName;
+          body.speaker_title      = speakerTitle;
+          body.content_type_badge = speakerBadge;
+        }
       }
       const res = await fetch(`${API_BASE_PUB}/agents/${agentKey}/run`, {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -311,7 +320,7 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
               )}
 
               {/* Infosys: color theme + speaker / executive layout */}
-              {agentKey === "kv" && kvBrand === "Infosys" && (
+              {(agentKey === "infosys_morphis" || (agentKey === "kv" && kvBrand === "Infosys")) && (
                 <>
                   <div style={{ marginTop: 10 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",

@@ -131,6 +131,10 @@ def _infosys_morphis_with_copy(
     copy_cta: str,
     color_theme: str = "blue",
     sub_brand: str = "",
+    speaker_image_b64: str = "",
+    speaker_name: str = "",
+    speaker_title: str = "",
+    content_type_badge: str = "",
 ) -> dict:
     """
     Run Morphis using pre-supplied copy (from a previous Ideon run).
@@ -179,12 +183,16 @@ def _infosys_morphis_with_copy(
 
     # Generate the actual KV image with the compositor
     img_bytes = generate_kv(
-        headline     = copy_headline,
-        subline      = copy_subline,
-        cta          = copy_cta,
-        sub_brand    = sub_brand,
-        aspect_ratio = "16:9",
-        color_theme  = color_theme,
+        headline            = copy_headline,
+        subline             = copy_subline,
+        cta                 = copy_cta,
+        sub_brand           = sub_brand,
+        aspect_ratio        = "16:9",
+        color_theme         = color_theme,
+        speaker_image_b64   = speaker_image_b64,
+        speaker_name        = speaker_name,
+        speaker_title       = speaker_title,
+        content_type_badge  = content_type_badge,
     )
 
     return {
@@ -235,16 +243,25 @@ def _infosys_runner(agent_key: str, text: str, **kwargs) -> dict:
         scope = {**brief, "segment": brief.get("audience", ""), "brand": "Infosys"}
         r = AetherAgent().run(scope)
     elif agent_key == "infosys_morphis":
-        copy_headline = kwargs.get("copy_headline", "")
-        copy_subline  = kwargs.get("copy_subline",  "")
-        copy_cta      = kwargs.get("copy_cta",      "")
-        color_theme   = kwargs.get("color_theme",   "blue")
+        copy_headline      = kwargs.get("copy_headline",      "")
+        copy_subline       = kwargs.get("copy_subline",       "")
+        copy_cta           = kwargs.get("copy_cta",           "")
+        color_theme        = kwargs.get("color_theme",        "blue")
+        speaker_image_b64  = kwargs.get("speaker_image_b64",  "")
+        speaker_name       = kwargs.get("speaker_name",       "")
+        speaker_title      = kwargs.get("speaker_title",      "")
+        content_type_badge = kwargs.get("content_type_badge", "")
+        _spk = dict(
+            speaker_image_b64=speaker_image_b64, speaker_name=speaker_name,
+            speaker_title=speaker_title, content_type_badge=content_type_badge,
+        )
         if copy_headline:
             # User already ran Ideon — use that copy directly and generate the image
             return _infosys_morphis_with_copy(
                 brief, copy_headline, copy_subline, copy_cta,
                 color_theme=color_theme,
                 sub_brand=brief.get("sub_brand", ""),
+                **_spk,
             )
         # No pre-supplied copy: run full Logos→Helia→Ideon pipeline,
         # auto-select the best copy variant, then generate the KV image.
@@ -269,6 +286,7 @@ def _infosys_runner(agent_key: str, text: str, **kwargs) -> dict:
                 brief, auto_headline, auto_subline, auto_cta,
                 color_theme=color_theme,
                 sub_brand=brief.get("sub_brand", ""),
+                **_spk,
             )
         # Last resort: return Morphis visual spec when image generation isn't possible
         from app.agents.infosys.morphis import MorphisAgent
@@ -385,5 +403,7 @@ def run_agent_standalone(
             brand, text,
             copy_headline=copy_headline, copy_subline=copy_subline,
             copy_cta=copy_cta, color_theme=color_theme,
+            speaker_image_b64=speaker_image_b64, speaker_name=speaker_name,
+            speaker_title=speaker_title, content_type_badge=content_type_badge,
         )
     return runner(brand, text)
