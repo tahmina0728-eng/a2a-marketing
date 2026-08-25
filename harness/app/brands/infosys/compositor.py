@@ -56,14 +56,20 @@ _THEMES: dict[str, tuple[int, int, int]] = {
 _BLUE_SRC = (0, 124, 195)  # source blue pixels to recolor in template
 
 
-def _recolor_bg(img: Image.Image, tgt: tuple[int, int, int], tol: int = 55) -> Image.Image:
+def _recolor_bg(
+    img: Image.Image,
+    tgt: tuple[int, int, int],
+    tol: int = 55,
+    amplify: float = 1.0,
+) -> Image.Image:
     """Recolor blue background to target color, preserving the template grid texture.
 
     Each blue-ish pixel keeps its relative lightness offset from the source blue
-    and that same offset is applied to the target color:
-        new_pixel = target + (old_pixel - source_blue)
-    This means the grid pattern (slightly lighter/darker blue pixels) is reproduced
-    identically in the target color — the texture is never flattened to solid.
+    and that offset is applied (optionally amplified) to the target color:
+        new_pixel = target + (old_pixel - source_blue) * amplify
+
+    amplify > 1.0 makes the grid more visible — needed for blue→blue because
+    blue-on-blue grid contrast is perceptually much lower than amber/purple-on-self.
     """
     import numpy as np
     arr  = np.array(img, dtype=np.float32)
@@ -77,7 +83,7 @@ def _recolor_bg(img: Image.Image, tgt: tuple[int, int, int], tol: int = 55) -> I
     for c in range(3):
         new_arr[:, :, c] = np.where(
             mask,
-            np.clip(tgt_f[c] + diff[:, :, c], 0, 255),
+            np.clip(tgt_f[c] + diff[:, :, c] * amplify, 0, 255),
             arr[:, :, c],
         )
     return Image.fromarray(new_arr.astype(np.uint8))
@@ -184,14 +190,27 @@ def generate_kv(
     img = Image.open(tpl_path).convert("RGB")
     img = img.resize((_W, _H), Image.LANCZOS)
 
-    # 2. Apply color theme (recolor blue background pixels if not default)
-    if color_theme != "blue":
-        img = _recolor_bg(img, bg_rgb)
+    # 2. Apply color theme — run for ALL colors.
+    # Blue→blue is a no-op on hue, but amplify=3.0 brings up the subtle blue grid
+    # to the same perceptual contrast level as amber/purple (which naturally have
+    # high contrast because their small B-channel amplifies the same +10 pixel offset).
+    amp = 3.0 if color_theme == "blue" else 1.0
+    img = _recolor_bg(img, bg_rgb, amplify=amp)
+
+    # 3. Erase only the white placeholder text pixels in the text zone.
+    # Instead of a flat rectangle (which would paint over the grid texture),
+    # we detect white pixels (min channel > 200) and replace only those with
+    # the brand background colour, leaving the grid/diamond texture intact.
+    import numpy as np
+    x1, y1, x2, y2 = _CLEAR_RECT
+    patch = np.array(img.crop((x1, y1, x2, y2)), dtype=np.int32)
+    white_mask = patch.min(axis=2) > 200
+    bg_arr = np.array(bg_rgb, dtype=np.int32)
+    for c in range(3):
+        patch[:, :, c] = np.where(white_mask, bg_arr[c], patch[:, :, c])
+    img.paste(Image.fromarray(patch.astype(np.uint8)), (x1, y1))
 
     draw = ImageDraw.Draw(img)
-
-    # 3. Clear placeholder text zone with the brand background colour
-    draw.rectangle(_CLEAR_RECT, fill=bg_rgb)
 
     # 4. Load fonts per Infosys brand spec
     # Myriad Pro Bold = headline (matches template "Heading" — broad, heavy, non-condensed)
