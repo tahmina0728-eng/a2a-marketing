@@ -57,13 +57,30 @@ _BLUE_SRC = (0, 124, 195)  # source blue pixels to recolor in template
 
 
 def _recolor_bg(img: Image.Image, tgt: tuple[int, int, int], tol: int = 55) -> Image.Image:
-    """Replace blue background pixels with target color (numpy, JPEG-tolerant)."""
+    """Recolor blue background to target color, preserving the template grid texture.
+
+    Each blue-ish pixel keeps its relative lightness offset from the source blue
+    and that same offset is applied to the target color:
+        new_pixel = target + (old_pixel - source_blue)
+    This means the grid pattern (slightly lighter/darker blue pixels) is reproduced
+    identically in the target color — the texture is never flattened to solid.
+    """
     import numpy as np
-    arr  = np.array(img, dtype=np.int32)
-    src  = np.array(_BLUE_SRC, dtype=np.int32)
-    mask = np.abs(arr - src).max(axis=2) < tol
-    arr[mask] = np.array(tgt, dtype=np.int32)
-    return Image.fromarray(arr.astype(np.uint8))
+    arr  = np.array(img, dtype=np.float32)
+    src  = np.array(_BLUE_SRC, dtype=np.float32)
+    tgt_f = np.array(tgt, dtype=np.float32)
+
+    diff = arr - src                            # signed per-pixel offset from source blue
+    mask = np.abs(diff).max(axis=2) < tol      # pixels close enough to source blue
+
+    new_arr = arr.copy()
+    for c in range(3):
+        new_arr[:, :, c] = np.where(
+            mask,
+            np.clip(tgt_f[c] + diff[:, :, c], 0, 255),
+            arr[:, :, c],
+        )
+    return Image.fromarray(new_arr.astype(np.uint8))
 
 # ── Text layout at 1200×627 ───────────────────────────────────────────────────
 # Per Infosys Type-Reference brand spec + template pixel measurements
