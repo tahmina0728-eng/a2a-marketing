@@ -148,9 +148,9 @@ def generate_kv(
         aspect_ratio: Ignored for now (always 16:9 LinkedIn); reserved for future formats
         color_theme:  IT Services color variant: "blue" | "purple" | "amber" | "deep-purple"
     """
-    headline = headline.rstrip(" .,;:!?")
-    subline  = subline.rstrip(" .,;:!?")
-    cta      = cta.rstrip(" .,;:!?")
+    headline = headline.replace(".", "").rstrip(" ,;:!?")
+    subline  = subline.replace(".", "").rstrip(" ,;:!?")
+    cta      = cta.replace(".", "").rstrip(" ,;:!?")
 
     key      = _tpl_key(sub_brand)
     tpl_path = _TPL.get(key, _TPL["default"])
