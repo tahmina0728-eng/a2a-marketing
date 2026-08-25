@@ -48,21 +48,20 @@ _BG = {
 }
 
 # ── Text layout at 1200×627 ───────────────────────────────────────────────────
-# Per Infosys Type-Reference brand spec:
-#   Headline  → Tungsten Medium 72px  (online banners: bold condensed headline font)
-#   Sub-line  → Myriad Pro SemiBold 24px  (attribution / standout text)
-#   CTA       → Myriad Pro Regular 20px   (body / caption weight)
-# Left white bars: x≈18–62 → text starts at x=90 (safe margin past bars)
-_TEXT_X       = 90     # left edge of text (right of white vertical bars)
-_TEXT_MAX_W   = 570    # max line width (~left 48% of 1200px canvas)
-_HEADING_Y    = 155    # top of headline (Tungsten starts higher for visual balance)
-_SUBHEAD_Y    = 400    # top of sub-heading (after up to 3 Tungsten lines at 80px)
-_BODY_Y       = 460    # top of CTA line
+# Per Infosys Type-Reference brand spec + template pixel measurements
+# (template 3600×1881 → output 1200×627, scale ÷3):
+#   "Heading" zone starts at y≈227, left bars x≈38–58, y≈225–306
+#   Headline  → Tungsten Medium 72px  (brand headline font for banners)
+#   Sub-line  → Myriad Pro SemiBold 24px
+#   CTA       → Myriad Pro Regular 20px
+_TEXT_X       = 120    # left edge of text — just past bar 2 (ends x=115)
+_TEXT_MAX_W   = 530    # max line width — stays inside left text zone
+_HEADING_Y    = 225    # matches template "Heading" zone
 
-# Clear rectangle: covers ALL template placeholder text.
-# x1=80 keeps both left white bars visible (bars end at x≈62).
-# y extends to 540 to cover 3 Tungsten lines + subline + CTA.
-_CLEAR_RECT = (80, 140, 750, 540)   # (x1, y1, x2, y2)
+# Clear rectangle: covers template placeholder text only.
+# Bar 1: x=70..94, Bar 2: x=97..115 — x1=116 preserves both bars completely.
+# y: from just above heading zone to well below "Text goes here".
+_CLEAR_RECT = (116, 210, 750, 420)   # (x1, y1, x2, y2)
 
 _WHITE = (255, 255, 255)
 
@@ -150,22 +149,22 @@ def generate_kv(
     f_sub  = _load_font("MYRIADPRO-SEMIBOLD.OTF", 24)   # support / attribution
     f_cta  = _load_font("MYRIADPRO-REGULAR.OTF",  20)   # CTA caption
 
-    # 4. Headline — Tungsten Medium, up to 3 lines (condensed so fits more)
+    # 4. Headline — Tungsten Medium, flows from _HEADING_Y, up to 3 lines
     y = _HEADING_Y
     for line in _wrap(headline, f_head, _TEXT_MAX_W)[:3]:
         draw.text((_TEXT_X, y), line, font=f_head, fill=_WHITE)
         y += 80   # 72px + 8px leading
 
-    # 5. Sub-heading — up to 2 lines, semi-bold
+    # 5. Sub-heading — flows immediately below headline, no floor gap
     if subline:
-        y = max(y + 10, _SUBHEAD_Y)
+        y += 14   # fixed gap between headline block and sub-heading
         for line in _wrap(subline, f_sub, _TEXT_MAX_W)[:2]:
             draw.text((_TEXT_X, y), line, font=f_sub, fill=_WHITE)
             y += 30   # 24px + 6px leading
 
-    # 6. CTA — single line, regular weight
+    # 6. CTA — flows immediately below sub-heading
     if cta:
-        y = max(y + 14, _BODY_Y)
+        y += 16   # fixed gap between sub-heading and CTA
         draw.text((_TEXT_X, y), cta[:50], font=f_cta, fill=_WHITE)
 
     # 7. Encode and return
