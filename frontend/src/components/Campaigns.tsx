@@ -339,6 +339,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   const [haleonCategory, setHaleonCategory] = useState("");
 
   const [formats, setFormats] = useState<Set<FormatType>>(new Set());
+  const [infosysColor, setInfosysColor] = useState("blue");
   const [imgSz, setImgSz]     = useState("16:9");
   const [reelSz, setReelSz]   = useState("9:16");
   const [tvcLen, setTvcLen]   = useState("15");
@@ -594,6 +595,7 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
             body.copy_subline  = copyRes.subline || "";
             body.copy_cta      = copyRes.cta     || "";
           }
+          if (brand === "Infosys") body.color_theme = infosysColor;
         }
         const key = fmt==="image"?"kv":fmt==="tvc"?"tvc":"reel";
         const r = await fetch(`${API_BASE}/agents/${key}/run`, {
@@ -918,6 +920,42 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
                     color:"var(--text-secondary)", fontSize:12, cursor:"pointer" }}>
                   ↻ Regenerate copy
                 </button>
+              </div>
+            )}
+
+            {/* Infosys color theme picker — shown when Image format is selected */}
+            {brand === "Infosys" && formats.has("image") && (
+              <div style={{ marginTop:20, padding:"16px 20px", borderRadius:14,
+                background:"var(--card-bg)", border:"1.5px solid var(--card-border)" }}>
+                <div style={{ fontSize:11, fontWeight:700, color:"var(--text-secondary)",
+                  textTransform:"uppercase" as const, letterSpacing:".08em", marginBottom:12 }}>
+                  Background Color
+                </div>
+                <div style={{ display:"flex", gap:12, alignItems:"center" }}>
+                  {([
+                    { key:"blue",        hex:"#007CC3", label:"Blue"        },
+                    { key:"purple",      hex:"#9B35B5", label:"Purple"      },
+                    { key:"amber",       hex:"#D4880F", label:"Amber"       },
+                    { key:"deep-purple", hex:"#6B2FA0", label:"Deep Purple" },
+                  ] as const).map(t => (
+                    <button key={t.key} onClick={()=>setInfosysColor(t.key)}
+                      title={t.label}
+                      style={{
+                        width:36, height:36, borderRadius:"50%", border:"none",
+                        background:t.hex, cursor:"pointer", padding:0,
+                        outline: infosysColor===t.key ? `3px solid ${t.hex}` : "none",
+                        outlineOffset: infosysColor===t.key ? 3 : 0,
+                        boxShadow: infosysColor===t.key
+                          ? `0 0 0 2px var(--card-bg), 0 0 0 4px ${t.hex}`
+                          : "0 2px 6px rgba(0,0,0,0.2)",
+                        transform: infosysColor===t.key ? "scale(1.15)" : "scale(1)",
+                        transition:"all .15s ease",
+                      }} />
+                  ))}
+                  <span style={{ fontSize:12, color:"var(--text-secondary)", marginLeft:4 }}>
+                    {({"blue":"Infosys Blue","purple":"Light Purple","amber":"Gold/Amber","deep-purple":"Deep Purple"} as Record<string,string>)[infosysColor]}
+                  </span>
+                </div>
               </div>
             )}
 

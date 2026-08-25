@@ -39,13 +39,31 @@ _TPL = {
     "speaker":      _ASSETS / "Template_ Speaker_Linkedin.jpg",
 }
 
-# Background fill colour per template (covers placeholder text before new text is drawn)
+# Background fill colour per sub-brand template (non-default templates)
 _BG = {
-    "default":      (0,   124, 195),   # Infosys Blue #007CC3
-    "aster":        (0,   124, 195),
+    "aster":        (0,   124, 195),   # Infosys Blue #007CC3
     "topaz+cobalt": (155,  47, 172),   # Purple       #9B2FAC
     "speaker":      (212, 136,  15),   # Amber        #D4880F
 }
+
+# IT Services color themes — 4 variants of the default blue template
+_THEMES: dict[str, tuple[int, int, int]] = {
+    "blue":        (0,   124, 195),   # Infosys Blue (default)
+    "purple":      (155,  53, 181),   # Light Purple
+    "amber":       (212, 136,  15),   # Gold/Amber
+    "deep-purple": (107,  47, 160),   # Deep Purple
+}
+_BLUE_SRC = (0, 124, 195)  # source blue pixels to recolor in template
+
+
+def _recolor_bg(img: Image.Image, tgt: tuple[int, int, int], tol: int = 55) -> Image.Image:
+    """Replace blue background pixels with target color (numpy, JPEG-tolerant)."""
+    import numpy as np
+    arr  = np.array(img, dtype=np.int32)
+    src  = np.array(_BLUE_SRC, dtype=np.int32)
+    mask = np.abs(arr - src).max(axis=2) < tol
+    arr[mask] = np.array(tgt, dtype=np.int32)
+    return Image.fromarray(arr.astype(np.uint8))
 
 # ── Text layout at 1200×627 ───────────────────────────────────────────────────
 # Per Infosys Type-Reference brand spec + template pixel measurements
@@ -116,6 +134,7 @@ def generate_kv(
     cta:          str = "",
     sub_brand:    str = "",
     aspect_ratio: str = "16:9",
+    color_theme:  str = "blue",
 ) -> bytes:
     """
     Composite an Infosys LinkedIn KV from the brand template.
@@ -127,6 +146,7 @@ def generate_kv(
         cta:          Short CTA text shown in the lower text zone (≤ 5 words)
         sub_brand:    e.g. "Infosys Aster (Healthcare)", "Infosys Topaz (AI/Cloud)"
         aspect_ratio: Ignored for now (always 16:9 LinkedIn); reserved for future formats
+        color_theme:  IT Services color variant: "blue" | "purple" | "amber" | "deep-purple"
     """
     headline = headline.rstrip(" .,;:!?")
     subline  = subline.rstrip(" .,;:!?")
@@ -134,18 +154,29 @@ def generate_kv(
 
     key      = _tpl_key(sub_brand)
     tpl_path = _TPL.get(key, _TPL["default"])
-    bg_rgb   = _BG.get(key, _BG["default"])
+
+    if key == "default":
+        # IT Services: color theme controls background; recolor template if needed
+        bg_rgb = _THEMES.get(color_theme, _THEMES["blue"])
+    else:
+        # Sub-brand template: use its own background color, no recoloring
+        bg_rgb = _BG.get(key, _THEMES["blue"])
+        color_theme = "blue"  # suppress recolor for sub-brand templates
 
     # 1. Load and resize template
     img = Image.open(tpl_path).convert("RGB")
     img = img.resize((_W, _H), Image.LANCZOS)
 
+    # 2. Apply color theme (recolor blue background pixels if not default)
+    if color_theme != "blue":
+        img = _recolor_bg(img, bg_rgb)
+
     draw = ImageDraw.Draw(img)
 
-    # 2. Clear placeholder text zone with the brand background colour
+    # 3. Clear placeholder text zone with the brand background colour
     draw.rectangle(_CLEAR_RECT, fill=bg_rgb)
 
-    # 3. Load fonts per Infosys brand spec
+    # 4. Load fonts per Infosys brand spec
     # Tungsten Medium = brand headline font (online banners)
     # Myriad Pro SemiBold = attribution / standout text
     # Myriad Pro Regular = body / CTA
@@ -153,25 +184,25 @@ def generate_kv(
     f_sub  = _load_font("MYRIADPRO-SEMIBOLD.OTF", 24)   # support / attribution
     f_cta  = _load_font("MYRIADPRO-REGULAR.OTF",  20)   # CTA caption
 
-    # 4. Headline — Tungsten Medium, flows from _HEADING_Y, up to 3 lines
+    # 5. Headline — Tungsten Medium, flows from _HEADING_Y, up to 3 lines
     y = _HEADING_Y
     for line in _wrap(headline, f_head, _TEXT_MAX_W)[:3]:
         draw.text((_TEXT_X, y), line, font=f_head, fill=_WHITE)
         y += 80   # 72px + 8px leading
 
-    # 5. Sub-heading — flows immediately below headline, no floor gap
+    # 6. Sub-heading — flows immediately below headline, no floor gap
     if subline:
         y += 14   # fixed gap between headline block and sub-heading
         for line in _wrap(subline, f_sub, _TEXT_MAX_W)[:2]:
             draw.text((_TEXT_X, y), line, font=f_sub, fill=_WHITE)
             y += 30   # 24px + 6px leading
 
-    # 6. CTA — flows immediately below sub-heading
+    # 7. CTA — flows immediately below sub-heading
     if cta:
         y += 16   # fixed gap between sub-heading and CTA
         draw.text((_TEXT_X, y), cta[:50], font=f_cta, fill=_WHITE)
 
-    # 7. Encode and return
+    # 8. Encode and return
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=93, optimize=True)
     return buf.getvalue()

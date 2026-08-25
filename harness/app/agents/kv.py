@@ -250,6 +250,7 @@ def run_kv(
     campaign_id: str = "",
     concept_id: str = "",
     aspect_ratio: str = "16:9",
+    color_theme: str = "blue",
 ) -> dict:
     """
     Standalone Morphis — key visual generator.
@@ -288,6 +289,7 @@ def run_kv(
                 cta          = copy_cta      or "Navigate Your Next",
                 sub_brand    = product_name  or "",
                 aspect_ratio = aspect_ratio,
+                color_theme  = color_theme   or "blue",
             )
             return {
                 "agent":    "kv",

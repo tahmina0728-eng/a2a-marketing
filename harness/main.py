@@ -2444,6 +2444,7 @@ class AgentStandaloneRequest(_BaseModel):
     campaign_id:   str = ""  # Explicit campaign identifier, e.g. "wimbledon" — exact match, no substring
     concept_id:    str = ""  # Specific creative concept, e.g. "c1_journey" — skips keyword matching
     aspect_ratio:  str = "16:9"  # Output image aspect ratio: "16:9" | "1:1" | "4:5" | "9:16"
+    color_theme:   str = "blue"  # Infosys IT Services color: "blue"|"purple"|"amber"|"deep-purple"
 
 
 @app.post("/agents/{agent_key}/run")
@@ -2475,6 +2476,7 @@ async def run_agent_standalone(agent_key: str, req: AgentStandaloneRequest):
             copy_body=req.copy_body, copy_cta=req.copy_cta,
             campaign_type=req.campaign_type, campaign_id=req.campaign_id,
             concept_id=req.concept_id, aspect_ratio=req.aspect_ratio,
+            color_theme=req.color_theme,
         )
         return result
     except ValueError as e:
