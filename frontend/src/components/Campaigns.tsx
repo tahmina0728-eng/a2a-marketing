@@ -417,6 +417,8 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
   const [vidLen, setVidLen]   = useState("30s");
 
   const [copyRes, setCopyRes] = useState<{headline:string;subline:string;body:string;cta:string}|null>(null);
+  const [copyVariants, setCopyVariants] = useState<any[]>([]);
+  const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [copyBusy, setCopyBusy] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [results, setResults] = useState<Partial<Record<FormatType, GeneratedResult>>>(initialResults ?? {});
@@ -601,8 +603,6 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         }
 
         const deck = d.copy_deck ?? {};
-        // New schema: pick recommended variant (or highest-scored); fall back to
-        // banner_copy then the old headlines.hero_options path for backwards compat.
         const recIdx = typeof deck.recommended_variant === "number" ? deck.recommended_variant : 0;
         const variants: any[] = Array.isArray(deck.variants) ? deck.variants : [];
         const best = variants[recIdx] ?? variants[0] ?? null;
@@ -617,6 +617,8 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
         const body     = best?.body ?? deck.body_copy?.web ?? "";
         const cta      = best?.cta  ?? deck.cta_bank?.[0] ?? "Navigate Your Next";
         if (!headline && !body) throw new Error("Empty response from Infosys pipeline");
+        setCopyVariants(variants);
+        setSelectedVariantIdx(recIdx);
         setCopyRes({ headline, subline, body, cta });
       } else {
         const r = await fetch(`${API_BASE}/agents/copy/run`, {
@@ -977,27 +979,124 @@ export default function Campaigns({ initialName, initialBrand, initialResults, i
               </div>
             ) : (
               <div style={{ display:"flex", flexDirection:"column" as const, gap:14 }}>
-                {[
-                  { key:"Headline",       val:copyRes.headline, large:true  },
-                  { key:"Subline",        val:copyRes.subline,  large:false },
-                  { key:"Body Copy",      val:copyRes.body,     large:false },
-                  { key:"Call to Action", val:copyRes.cta,      large:false },
-                ].map(f => (
-                  <div key={f.key} style={{ padding:"16px 20px", borderRadius:14,
-                    background:"var(--card-bg)", border:"1.5px solid var(--card-border)",
-                    boxShadow:"0 2px 10px rgba(0,0,0,0.05)" }}>
-                    <div style={{ fontSize:10, fontWeight:700, color:"var(--text-secondary)",
-                      textTransform:"uppercase" as const, letterSpacing:".08em", marginBottom:8 }}>
-                      {f.key}
+
+                {/* Variant cards — pick one before generating */}
+                {copyVariants.length > 0 ? (
+                  <>
+                    <div style={{ fontSize:11, fontWeight:700, color:"var(--text-secondary)",
+                      textTransform:"uppercase" as const, letterSpacing:".07em" }}>
+                      {copyVariants.length} copy variants — pick one to use
                     </div>
-                    <div style={{ fontSize:f.large?17:13, fontWeight:f.large?800:400,
-                      color:"var(--text-primary)", lineHeight:1.6 }}>
-                      {f.val}
+                    <div style={{ display:"flex", flexDirection:"column" as const, gap:10 }}>
+                      {copyVariants.map((v: any, i: number) => {
+                        const isSelected = i === selectedVariantIdx;
+                        const score = typeof v.quality_score === "number" ? v.quality_score : null;
+                        const isRec = i === (typeof copyVariants.length === "number" ?
+                          copyVariants.indexOf(copyVariants.reduce((a: any, b: any) =>
+                            (b.quality_score ?? 0) > (a.quality_score ?? 0) ? b : a)) : 0);
+                        return (
+                          <div key={i} onClick={() => {
+                            setSelectedVariantIdx(i);
+                            setCopyRes({ headline: v.headline ?? "", subline: v.subheadline ?? "",
+                              body: v.body ?? "", cta: v.cta ?? "" });
+                          }} style={{
+                            padding:"16px 18px", borderRadius:14, cursor:"pointer",
+                            border:`2px solid ${isSelected ? "#7c3aed" : "var(--card-border)"}`,
+                            background: isSelected ? "rgba(124,58,237,0.06)" : "var(--card-bg)",
+                            boxShadow: isSelected ? "0 0 0 4px rgba(124,58,237,0.1)" : "0 2px 8px rgba(0,0,0,0.04)",
+                            transition:"all .15s ease",
+                          }}>
+                            {/* Header row */}
+                            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:10, flexWrap:"wrap" as const }}>
+                              {v.tone && (
+                                <span style={{ fontSize:10, fontWeight:700, padding:"2px 9px",
+                                  borderRadius:99, letterSpacing:".05em", textTransform:"uppercase" as const,
+                                  background: isSelected ? "rgba(124,58,237,0.15)" : "var(--card-bg-soft)",
+                                  color: isSelected ? "#7c3aed" : "var(--text-secondary)" }}>
+                                  {v.tone}
+                                </span>
+                              )}
+                              {isRec && (
+                                <span style={{ fontSize:10, fontWeight:800, padding:"2px 9px",
+                                  borderRadius:99, background:"rgba(16,185,129,0.12)",
+                                  color:"#059669", letterSpacing:".04em" }}>
+                                  ★ Recommended
+                                </span>
+                              )}
+                              {score !== null && (
+                                <span style={{ marginLeft:"auto", fontSize:11, fontWeight:700,
+                                  color: isSelected ? "#7c3aed" : "var(--text-muted)" }}>
+                                  {(score * 10).toFixed(0)}/10
+                                </span>
+                              )}
+                              {isSelected && (
+                                <span style={{ fontSize:11, fontWeight:700, color:"#7c3aed" }}>✓ Selected</span>
+                              )}
+                            </div>
+                            {/* Copy content */}
+                            <div style={{ fontSize:16, fontWeight:800, color:"var(--text-primary)",
+                              lineHeight:1.4, marginBottom:6 }}>
+                              {v.headline}
+                            </div>
+                            {v.subheadline && (
+                              <div style={{ fontSize:13, color:"var(--text-secondary)",
+                                lineHeight:1.5, marginBottom:8 }}>
+                                {v.subheadline}
+                              </div>
+                            )}
+                            {v.cta && (
+                              <span style={{ display:"inline-block", fontSize:11, fontWeight:700,
+                                padding:"3px 11px", borderRadius:99,
+                                background: isSelected ? "rgba(124,58,237,0.12)" : "var(--card-bg-soft)",
+                                color: isSelected ? "#7c3aed" : "var(--text-secondary)",
+                                border:`1px solid ${isSelected ? "rgba(124,58,237,0.25)" : "var(--card-border)"}` }}>
+                                {v.cta} →
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                  </div>
-                ))}
+
+                    {/* Selected variant body copy */}
+                    {copyRes?.body && (
+                      <div style={{ padding:"14px 18px", borderRadius:12,
+                        background:"var(--card-bg)", border:"1px solid var(--card-border)" }}>
+                        <div style={{ fontSize:10, fontWeight:700, color:"var(--text-secondary)",
+                          textTransform:"uppercase" as const, letterSpacing:".08em", marginBottom:8 }}>
+                          Body Copy
+                        </div>
+                        <div style={{ fontSize:13, color:"var(--text-primary)", lineHeight:1.7 }}>
+                          {copyRes.body}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  /* Fallback: non-Infosys single copy display */
+                  [
+                    { key:"Headline",       val:copyRes.headline, large:true  },
+                    { key:"Subline",        val:copyRes.subline,  large:false },
+                    { key:"Body Copy",      val:copyRes.body,     large:false },
+                    { key:"Call to Action", val:copyRes.cta,      large:false },
+                  ].map(f => (
+                    <div key={f.key} style={{ padding:"16px 20px", borderRadius:14,
+                      background:"var(--card-bg)", border:"1.5px solid var(--card-border)",
+                      boxShadow:"0 2px 10px rgba(0,0,0,0.05)" }}>
+                      <div style={{ fontSize:10, fontWeight:700, color:"var(--text-secondary)",
+                        textTransform:"uppercase" as const, letterSpacing:".08em", marginBottom:8 }}>
+                        {f.key}
+                      </div>
+                      <div style={{ fontSize:f.large?17:13, fontWeight:f.large?800:400,
+                        color:"var(--text-primary)", lineHeight:1.6 }}>
+                        {f.val}
+                      </div>
+                    </div>
+                  ))
+                )}
+
                 <button onClick={genCopy} disabled={copyBusy}
-                  style={{ padding:"8px 18px", borderRadius:8,
+                  style={{ padding:"8px 18px", borderRadius:8, alignSelf:"flex-start" as const,
                     border:"1.5px solid var(--card-border)", background:"transparent",
                     color:"var(--text-secondary)", fontSize:12, cursor:"pointer" }}>
                   ↻ Regenerate copy
