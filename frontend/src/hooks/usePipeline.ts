@@ -313,12 +313,24 @@ export function usePipeline() {
       const plat  = result.creative_platform ?? {};
       const vbrief = result.validated_brief ?? {};
 
+      // Pick the recommended variant from Ideon's variants[] array.
+      // Ideon schema: variants[recommended_variant].{headline,subheadline,body,cta}
+      // Fallback chain: banner_copy → old headlines.hero_options (backward compat)
+      const _recIdx   = typeof deck.recommended_variant === "number" ? deck.recommended_variant : 0;
+      const _variants = Array.isArray(deck.variants) ? deck.variants : [];
+      const _best     = _variants[_recIdx] ?? _variants[0] ?? null;
+
       // Normalise into standard pipeline_output shape so existing panels render
       const campaign_copy = {
-        short_headline:  deck.headlines?.hero_options?.[0] ?? "",
-        medium_headline: deck.headlines?.hero_options?.[1] ?? deck.headlines?.support_options?.[0] ?? "",
-        body:            deck.body_copy?.web ?? "",
-        cta:             deck.cta_bank?.[0] ?? "",
+        short_headline:  _best?.headline
+                         ?? deck.banner_copy?.linkedin_1200x627?.heading
+                         ?? deck.headlines?.hero_options?.[0] ?? "",
+        medium_headline: _best?.subheadline
+                         ?? deck.banner_copy?.linkedin_1200x627?.subheading
+                         ?? deck.headlines?.hero_options?.[1]
+                         ?? deck.headlines?.support_options?.[0] ?? "",
+        body:            _best?.body ?? deck.body_copy?.web ?? "",
+        cta:             _best?.cta  ?? deck.cta_bank?.[0] ?? "",
         channel_copy: {
           linkedin:      deck.social_captions?.linkedin ?? "",
           email:         deck.body_copy?.email ?? "",
@@ -357,6 +369,9 @@ export function usePipeline() {
             medium_headline: campaign_copy.medium_headline,
             body:            campaign_copy.body,
             cta:             campaign_copy.cta,
+            // also expose variants so any copy panel can show all options
+            variants:        _variants,
+            recommended_variant: _recIdx,
           },
         },
       });
