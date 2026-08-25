@@ -246,22 +246,37 @@ def _infosys_runner(agent_key: str, text: str, **kwargs) -> dict:
                 color_theme=color_theme,
                 sub_brand=brief.get("sub_brand", ""),
             )
-        # Fallback: run full pipeline when no copy is pre-supplied
+        # No pre-supplied copy: run full Logos→Helia→Ideon pipeline,
+        # auto-select the best copy variant, then generate the KV image.
         from app.agents.infosys.logos import LogosAgent
         from app.agents.infosys.helia import HeliaAgent
         from app.agents.infosys.ideon import IdeonAgent
-        from app.agents.infosys.morphis import MorphisAgent
         from app.schemas.common import AgentResponse, AgentInfo, JobInfo, Artifact
         logos = LogosAgent().run(brief)
         helia = HeliaAgent().run(logos)
         ideon = IdeonAgent().run({"brief": logos, "creative_platform": helia})
-        if ideon and ideon.artifact:
-            best_content = _pick_best_ideon_copy(ideon.artifact.content)
-            ideon = AgentResponse(
-                agent=ideon.agent, job=ideon.job, status=ideon.status,
-                artifact=Artifact(type=ideon.artifact.type, content=best_content),
+        best_content = (
+            _pick_best_ideon_copy(ideon.artifact.content)
+            if ideon and ideon.artifact else {}
+        )
+        best = best_content.get("selected_copy", {})
+        # Use the AI-generated copy — never fall back to the raw user prompt
+        auto_headline = best.get("headline", "")
+        auto_subline  = best.get("subheadline", "")
+        auto_cta      = best.get("cta", "")
+        if auto_headline:
+            return _infosys_morphis_with_copy(
+                brief, auto_headline, auto_subline, auto_cta,
+                color_theme=color_theme,
+                sub_brand=brief.get("sub_brand", ""),
             )
-        r = MorphisAgent().run({"creative_platform": helia, "copy_deck": ideon})
+        # Last resort: return Morphis visual spec when image generation isn't possible
+        from app.agents.infosys.morphis import MorphisAgent
+        ideon_resp = AgentResponse(
+            agent=ideon.agent, job=ideon.job, status=ideon.status,
+            artifact=Artifact(type=ideon.artifact.type, content=best_content),
+        ) if ideon and ideon.artifact else ideon
+        r = MorphisAgent().run({"creative_platform": helia, "copy_deck": ideon_resp})
     elif agent_key == "infosys_kinetik":
         from app.agents.infosys.logos import LogosAgent
         from app.agents.infosys.helia import HeliaAgent
