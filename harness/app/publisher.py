@@ -303,6 +303,55 @@ def generate_infosys_website(campaign_image_b64: str = "", campaign_id: str = ""
         "background:linear-gradient(135deg,#061838 0%,#0d3a6b 100%);"
     )
 
+    # ── Reel section HTML (pre-computed to avoid nested f-string) ────────────
+    _perf_holes = "".join('<div class="reel-hole"></div>' for _ in range(28))
+    if video_b64:
+        _reel_frame = (
+            f'<video class="reel-video" controls poster="{kv_src}">'
+            f'<source src="data:video/mp4;base64,{video_b64}" type="video/mp4">'
+            '</video>'
+        )
+    else:
+        _kv_overlay = (
+            f'<img src="{kv_src}" alt="Campaign visual" class="reel-img"'
+            ' style="position:absolute;inset:0;width:100%;height:100%;'
+            'object-fit:cover;opacity:0.55;">'
+        ) if kv_src else ""
+        _reel_frame = (
+            '<div class="reel-img-placeholder" style="position:relative;">'
+            + _kv_overlay +
+            '<div style="position:relative;z-index:2;display:flex;flex-direction:column;'
+            'align-items:center;gap:16px;">'
+            '<div class="reel-play-btn">'
+            '<svg width="26" height="26" viewBox="0 0 24 24" fill="white">'
+            '<polygon points="5,3 19,12 5,21"/></svg></div>'
+            '<span style="color:rgba(255,255,255,0.5);font-size:12px;font-weight:600;'
+            'letter-spacing:0.06em;">MOTION SPEC READY</span>'
+            '</div></div>'
+        )
+    _hl_short   = headline[:70] + ("…" if len(headline) > 70 else "")
+    _reel_section = f"""
+<!-- ── CAMPAIGN REEL ──────────────────────────────────────────────────── -->
+<section class="section-reel">
+  <p class="reel-eyebrow">Kinetik &middot; Motion</p>
+  <h2 class="reel-title">Campaign Reel</h2>
+  <p class="reel-sub">
+    A cinematic execution of the campaign narrative &mdash; motion specs, storyboard
+    and footage direction produced by Kinetik for multi-format distribution.
+  </p>
+  <div class="reel-stage">
+    <div class="reel-filmstrip"><div class="reel-holes">{_perf_holes}</div></div>
+    {_reel_frame}
+    <div class="reel-overlay">
+      <div class="reel-overlay-label">Kinetik &middot; Multi-format</div>
+      <div class="reel-overlay-title">{_hl_short}</div>
+      <div class="reel-overlay-sub">9:16 &nbsp;&middot;&nbsp; 1:1 &nbsp;&middot;&nbsp; 4:5 &nbsp;&middot;&nbsp; 16:9 &nbsp;|&nbsp; 15s &middot; 30s cutdowns</div>
+    </div>
+    <div class="reel-filmstrip-bot"></div>
+  </div>
+</section>
+"""
+
     # Story card image
     story_img_html = (
         f'<img src="{kv_src}" alt="Campaign visual" '
@@ -423,6 +472,41 @@ nav{{position:fixed;top:0;width:100%;background:rgba(6,24,56,0.94);backdrop-filt
   border:1.5px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);
   padding:8px 18px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer}}
 
+/* ── CAMPAIGN REEL ── */
+.section-reel{{background:#080E1A;padding:80px 80px;text-align:center}}
+.reel-eyebrow{{font-size:11px;font-weight:800;letter-spacing:0.14em;
+  color:#007CC3;text-transform:uppercase;margin-bottom:14px}}
+.reel-title{{color:#fff;font-size:clamp(26px,3.2vw,40px);font-weight:700;margin-bottom:14px}}
+.reel-sub{{color:rgba(255,255,255,0.5);font-size:15px;max-width:600px;
+  margin:0 auto 48px;line-height:1.7}}
+.reel-stage{{position:relative;max-width:900px;margin:0 auto;border-radius:18px;
+  overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6)}}
+.reel-filmstrip{{position:absolute;top:0;left:0;right:0;height:28px;
+  background:repeating-linear-gradient(90deg,#111 0px,#111 18px,#222 18px,
+  #222 26px,#111 26px,#111 44px);display:flex;align-items:center}}
+.reel-filmstrip-bot{{position:absolute;bottom:0;left:0;right:0;height:28px;
+  background:repeating-linear-gradient(90deg,#111 0px,#111 18px,#222 18px,
+  #222 26px,#111 26px,#111 44px)}}
+.reel-holes{{display:flex;gap:26px;padding:0 16px}}
+.reel-hole{{width:14px;height:10px;background:#000;border-radius:2px;flex-shrink:0}}
+.reel-img{{width:100%;display:block;aspect-ratio:16/9;object-fit:cover}}
+.reel-img-placeholder{{width:100%;aspect-ratio:16/9;
+  background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 40%,#1e3a8a 100%);
+  display:flex;align-items:center;justify-content:center}}
+.reel-play-btn{{width:72px;height:72px;border-radius:50%;
+  background:rgba(0,124,195,0.85);border:3px solid rgba(255,255,255,0.4);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:all 0.2s;backdrop-filter:blur(8px)}}
+.reel-play-btn:hover{{background:rgba(0,124,195,1);transform:scale(1.06)}}
+.reel-overlay{{position:absolute;bottom:28px;left:0;right:0;padding:28px 36px;
+  background:linear-gradient(to top,rgba(6,14,26,0.95) 0%,transparent 100%);
+  text-align:left}}
+.reel-overlay-label{{font-size:10px;font-weight:800;letter-spacing:0.12em;
+  color:#60a5fa;text-transform:uppercase;margin-bottom:8px}}
+.reel-overlay-title{{color:#fff;font-size:18px;font-weight:700;margin-bottom:6px}}
+.reel-overlay-sub{{color:rgba(255,255,255,0.55);font-size:13px}}
+video.reel-video{{width:100%;display:block;aspect-ratio:16/9;background:#000}}
+
 /* ── INDUSTRIES ── */
 .section-industries{{background:linear-gradient(160deg,#F8FAFC 0%,#EDF0F7 100%);
   padding:80px 80px;text-align:center}}
@@ -474,7 +558,7 @@ footer{{background:#F8FAFC;padding:64px 80px;border-top:1px solid #E5E7EB}}
   .cta-inner{{flex-direction:column;gap:40px}}
   .cta-img{{width:100%}}
   .foot-grid{{grid-template-columns:repeat(2,1fr)}}
-  section,.section-stories,.section-crafting,.section-action,
+  section,.section-stories,.section-crafting,.section-action,.section-reel,
   .section-industries,.section-cta-band,footer{{padding-left:20px!important;padding-right:20px!important}}
 }}
 </style>
@@ -618,6 +702,8 @@ footer{{background:#F8FAFC;padding:64px 80px;border-top:1px solid #E5E7EB}}
     </div>
   </div>
 </section>
+
+{_reel_section}
 
 <!-- ── INDUSTRIES AND SERVICES ───────────────────────────────────────── -->
 <section class="section-industries">
