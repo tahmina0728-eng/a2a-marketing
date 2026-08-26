@@ -286,25 +286,26 @@ def _infosys_runner(agent_key: str, text: str, **kwargs) -> dict:
             speaker_image_b64=speaker_image_b64, speaker_name=speaker_name,
             speaker_title=speaker_title, content_type_badge=content_type_badge,
         )
-        # If the user stated a headline/slogan directly in the prompt, use it.
-        if not copy_headline:
-            copy_headline = _extract_prompt_headline(text)
-
+        # copy_headline from kwargs = user explicitly opted in to a previous Ideon run.
+        # Use it directly and skip the pipeline — the sub/CTA came with it.
         if copy_headline:
-            # Honour explicit copy — either from a previous Ideon run or stated in the prompt.
             return _infosys_morphis_with_copy(
                 brief, copy_headline, copy_subline, copy_cta,
                 color_theme=color_theme,
                 sub_brand=brief.get("sub_brand", ""),
                 **_spk,
             )
-        # No copy found anywhere: run full Logos→Helia→Ideon pipeline,
-        # auto-select the best copy variant, then generate the KV image.
+        # No explicit copy from kwargs — run the full pipeline like the Campaign wizard:
+        # pin any slogan stated in the prompt BEFORE Logos rewrites the objective, then
+        # let Ideon generate a complete copy deck and pick the recommended variant.
         from app.agents.infosys.logos import LogosAgent
         from app.agents.infosys.helia import HeliaAgent
         from app.agents.infosys.ideon import IdeonAgent
         from app.schemas.common import AgentResponse, AgentInfo, JobInfo, Artifact
+        _pinned_headline = _extract_prompt_headline(text)
         logos = LogosAgent().run(brief)
+        if _pinned_headline and logos and logos.artifact:
+            logos.artifact.content["preferred_headline"] = _pinned_headline
         helia = HeliaAgent().run(logos)
         ideon = IdeonAgent().run({"brief": logos, "creative_platform": helia})
         best_content = (
