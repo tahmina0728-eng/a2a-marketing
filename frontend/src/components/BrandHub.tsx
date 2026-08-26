@@ -833,7 +833,7 @@ function OverviewSection({ activeBrand, onNavigate }: OverviewSectionProps) {
 
     fetch(`${API_BASE}/brands/${enc}/list-logos`)
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.logos?.length) setLogo(d.logos[0].url); })
+      .then(d => { if (d?.logos?.length) setLogo(API_BASE + d.logos[0].url); })
       .catch(() => {});
 
     fetch(`${API_BASE}/brands/${enc}/list-colours`)
@@ -1443,9 +1443,9 @@ function MarketResearchSection({ activeBrand }: { activeBrand?: string }) {
   useEffect(() => {
     if (!brand) return;
     const folder = brand === "UBS Bank" ? "UBS" : brand;
-    fetch(`/brands/${encodeURIComponent(folder)}/list-products`)
+    fetch(`${API_BASE}/brands/${encodeURIComponent(folder)}/list-products`)
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.products) setAssets(d.products); })
+      .then(d => { if (d?.products) setAssets(d.products.map((p: any) => ({ ...p, url: API_BASE + p.url }))); })
       .catch(() => {});
   }, [brand]);
 
