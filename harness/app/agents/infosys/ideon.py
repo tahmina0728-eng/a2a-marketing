@@ -95,6 +95,21 @@ class IdeonAgent(BaseInfosysAgent):
             platform.get("big_idea", {}).get("statement", "") if isinstance(platform.get("big_idea"), dict) else "",
         ]))
 
+        # preferred_headline is pre-injected by the runner BEFORE Logos runs,
+        # so it survives Logos rewriting the objective. Only use it if explicitly set —
+        # never try to extract from the Logos-processed text (risk of false positives).
+        _required_headline = brief.get("preferred_headline", "")
+
+        _headline_rule = (
+            "\n\nREQUIRED HEADLINE: The user has specified an exact headline to use: "
+            f'"{_required_headline}". '
+            "ALL variants MUST use this exact string as their headline field, verbatim — "
+            "every variant[].headline must be identical to this string. "
+            "Variants differentiate through tone, subheadline, body copy, and CTA only. "
+            "Do NOT alter, paraphrase, or replace this headline in any variant."
+            if _required_headline else ""
+        )
+
         input_text = (
             "VALIDATED BRIEF (from Logos):\n\n"
             + json.dumps(brief, indent=2)
@@ -104,6 +119,7 @@ class IdeonAgent(BaseInfosysAgent):
             "subheadline, or endline string. Each headline is a single clean phrase — "
             "no slashes, no separators, no stylistic / devices. Slashes are NOT permitted "
             "anywhere in variants[].headline or variants[].subheadline."
+            + _headline_rule
         )
 
         result = self._run_sync(input_text, rag_query=rag_query)

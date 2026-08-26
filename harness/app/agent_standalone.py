@@ -124,6 +124,25 @@ def _pick_best_ideon_copy(ideon_content: dict) -> dict:
     return out
 
 
+def _extract_prompt_headline(text: str) -> str:
+    # Extract an explicitly stated headline/slogan from the user prompt.
+    # Handles: slogan 'Don't Navigate AI Alone'  /  headline: "AI you can answer for"
+    import re
+    _TRIGGER = r"(?:slogan|headline|heading|tagline|called|titled)\s*[:\-]?\s*"
+    # Double-quoted match
+    m = re.search(_TRIGGER + r'"([^"]{3,80})"', text, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    # Single-quoted — allow contractions (apostrophe + lowercase) inside the string
+    m = re.search(
+        _TRIGGER + r"'((?:[^']|'(?=[a-z])){3,80})'",
+        text, re.IGNORECASE,
+    )
+    if m:
+        return m.group(1).strip()
+    return ""
+
+
 def _infosys_morphis_with_copy(
     brief: dict,
     copy_headline: str,
@@ -216,9 +235,13 @@ def _infosys_runner(agent_key: str, text: str, **kwargs) -> dict:
     """
     import asyncio, json as _json
 
-    # Accept JSON brief or natural-language text
+    # Accept JSON brief or natural-language text.
+    # The Campaign wizard prefixes the JSON with "Infosys — " — strip any non-JSON
+    # preamble before the first "{" so the structured brief is always parsed correctly.
+    _brace = text.find("{")
+    _parse_text = text[_brace:] if _brace >= 0 else text
     try:
-        brief: dict = _json.loads(text)
+        brief: dict = _json.loads(_parse_text)
     except Exception:
         brief = {"campaign_name": "Infosys Campaign", "objective": text,
                  "channels": ["LinkedIn"], "market": "UK"}
@@ -235,7 +258,15 @@ def _infosys_runner(agent_key: str, text: str, **kwargs) -> dict:
         from app.agents.infosys.logos import LogosAgent
         from app.agents.infosys.helia import HeliaAgent
         from app.agents.infosys.ideon import IdeonAgent
+        # Capture any slogan from the raw brief BEFORE Logos rewrites the objective.
+        # We check the raw objective text and the original free-text prompt because
+        # Logos transforms the objective field and the slogan would be lost otherwise.
+        _raw_objective = brief.get("objective", "") or brief.get("campaign_name", "") or text
+        _pinned_headline = _extract_prompt_headline(_raw_objective)
         logos = LogosAgent().run(brief)
+        # Inject the pinned headline into the Logos output so Ideon can read it directly.
+        if _pinned_headline and logos and logos.artifact:
+            logos.artifact.content["preferred_headline"] = _pinned_headline
         helia = HeliaAgent().run(logos)
         r = IdeonAgent().run({"brief": logos, "creative_platform": helia})
     elif agent_key == "infosys_aether":
@@ -255,15 +286,19 @@ def _infosys_runner(agent_key: str, text: str, **kwargs) -> dict:
             speaker_image_b64=speaker_image_b64, speaker_name=speaker_name,
             speaker_title=speaker_title, content_type_badge=content_type_badge,
         )
+        # If the user stated a headline/slogan directly in the prompt, use it.
+        if not copy_headline:
+            copy_headline = _extract_prompt_headline(text)
+
         if copy_headline:
-            # User already ran Ideon — use that copy directly and generate the image
+            # Honour explicit copy — either from a previous Ideon run or stated in the prompt.
             return _infosys_morphis_with_copy(
                 brief, copy_headline, copy_subline, copy_cta,
                 color_theme=color_theme,
                 sub_brand=brief.get("sub_brand", ""),
                 **_spk,
             )
-        # No pre-supplied copy: run full Logos→Helia→Ideon pipeline,
+        # No copy found anywhere: run full Logos→Helia→Ideon pipeline,
         # auto-select the best copy variant, then generate the KV image.
         from app.agents.infosys.logos import LogosAgent
         from app.agents.infosys.helia import HeliaAgent
