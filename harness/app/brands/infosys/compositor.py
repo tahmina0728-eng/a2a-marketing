@@ -311,20 +311,19 @@ def generate_kv(
     img = Image.open(tpl_path).convert("RGB")
     img = img.resize((_W, _H), Image.LANCZOS)
 
-    # 2. Flood the placeholder text zone with solid source blue BEFORE recoloring.
-    # Pixel-threshold detection can't reliably separate JPEG anti-aliasing halos
-    # from grid texture — both sit in the same 0–18 unit range from source blue.
-    # A solid fill is 100% reliable: the recolor step then maps the flat blue to
-    # the target color, and the text zone ends up clean on all 4 themes.
-    x1, y1, x2, y2 = _CLEAR_RECT
-    img.paste(Image.new("RGB", (x2 - x1, y2 - y1), _BLUE_SRC), (x1, y1))
-
-    # 3. Apply color theme — run for ALL colors.
-    # Blue→blue is a no-op on hue, but amplify=3.0 brings up the subtle blue grid
-    # to the same perceptual contrast level as amber/purple (which naturally have
-    # high contrast because their small B-channel amplifies the same +10 pixel offset).
+    # 2. Apply color theme first so background texture is preserved consistently.
+    # Blue→blue: amplify=3.0 raises the subtle grid to the same perceptual contrast
+    # as amber/purple themes. Must run BEFORE the clear rect so the text zone fill
+    # uses the already-computed target color — preventing the visible seam that
+    # appeared when a flat _BLUE_SRC patch was amplified differently from the rest.
     amp = 3.0 if color_theme == "blue" else 1.0
     img = _recolor_bg(img, bg_rgb, amplify=amp)
+
+    # 3. Clear the placeholder text zone with the solid target color (post-recolor).
+    # Using bg_rgb directly (not _BLUE_SRC) means the fill matches the base tone of
+    # the surrounding recolored background — no double-background rectangle visible.
+    x1, y1, x2, y2 = _CLEAR_RECT
+    img.paste(Image.new("RGB", (x2 - x1, y2 - y1), bg_rgb), (x1, y1))
 
     draw = ImageDraw.Draw(img)
 

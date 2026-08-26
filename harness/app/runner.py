@@ -1949,6 +1949,19 @@ def _overlay_reel(
                         _hint = next((p for p in ps if logo_hint.lower() in p.lower()), None)
                         if _hint:
                             return _hint
+                    # Infosys: always use the master brand tagline logo (dark-background variant).
+                    # list_logos returns paths where every file contains "infosys" in the directory
+                    # component, so path-substring matching picks the alphabetically-first file
+                    # (Aster_DB.png) instead of the intended master wordmark.
+                    # Match by filename stem to avoid the directory-name false-positive.
+                    if _bslug == "infosys":
+                        import os as _os
+                        return (
+                            next((p for p in ps if "infosys-tagline_db" in _os.path.basename(p).lower()), None) or
+                            next((p for p in ps if "infosys-tagline" in _os.path.basename(p).lower()), None) or
+                            next((p for p in ps if _os.path.basename(p).lower().startswith("infosys")), None) or
+                            (ps[0] if ps else None)
+                        )
                     # Barclays: use _wb (white/reversed) on dark video backgrounds;
                     # avoid eagle-only symbol; prefer full wordmark.
                     # Wimbledon hint selects co-brand lockup via logo_hint above.

@@ -44,12 +44,24 @@ def _build_branded_start_frame(brand: str):
         # ── Logo: white pill overlay, top-right (matches _apply_brand_overlay) ─
         logos = loader.list_logos(brand)
         if logos:
+            import os as _os_reel
             _bslug = brand.split()[0].lower()
-            logo_uri = (
-                next((p for p in logos if _bslug in p.lower() and "_dark" in p.lower()), None) or
-                next((p for p in logos if _bslug in p.lower()), None) or
-                logos[0]
-            )
+            if _bslug == "infosys":
+                # All Infosys logos share the same brand directory, so path-substring
+                # matching on "infosys" hits every file (Aster_DB, Cobalt_DB, …).
+                # Match by filename stem to pin the master-brand tagline logo.
+                logo_uri = (
+                    next((p for p in logos if "infosys-tagline_db" in _os_reel.path.basename(p).lower()), None) or
+                    next((p for p in logos if "infosys-tagline" in _os_reel.path.basename(p).lower()), None) or
+                    next((p for p in logos if _os_reel.path.basename(p).lower().startswith("infosys")), None) or
+                    logos[0]
+                )
+            else:
+                logo_uri = (
+                    next((p for p in logos if _bslug in p.lower() and "_dark" in p.lower()), None) or
+                    next((p for p in logos if _bslug in p.lower()), None) or
+                    logos[0]
+                )
             logo_bytes = _load_bytes(logo_uri)
             if logo_bytes:
                 logo = PILImage.open(BytesIO(logo_bytes)).convert("RGBA")
