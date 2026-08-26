@@ -305,16 +305,20 @@ export function usePipeline() {
         sub_brand:     vbrief.sub_brand ?? "",
       };
 
+      const _cp = result.creative_pipeline ?? {};
+      const _pf = result.performance_forecast ?? {};
       return {
         pipeline_output: {
           campaign_copy,
           creative_strategy,
           machine_brief,
-          validated_brief:   vbrief,
-          creative_platform: plat,
-          copy_deck:         deck,
-          infosys_pipeline:  true,
-          compliance_flags:  result.compliance_flags ?? [],
+          validated_brief:      vbrief,
+          creative_platform:    plat,
+          copy_deck:            deck,
+          creative_pipeline:    _cp,
+          performance_forecast: _pf,
+          infosys_pipeline:     true,
+          compliance_flags:     result.compliance_flags ?? [],
         },
         copy_milestone: {
           short_headline:      campaign_copy.short_headline,
@@ -366,9 +370,11 @@ export function usePipeline() {
             pipeline_output,
             milestones: {
               ...s.milestones,
-              copy:     copy_milestone,
-              strategy: result.creative_platform ?? s.milestones["strategy"],
-              briefing: result.validated_brief   ?? s.milestones["briefing"],
+              copy:        copy_milestone,
+              strategy:    result.creative_platform         ?? s.milestones["strategy"],
+              briefing:    result.validated_brief           ?? s.milestones["briefing"],
+              performance: result.performance_forecast ?? s.milestones["performance"],
+              kv:          result.creative_pipeline         ?? s.milestones["kv"],
             },
           }));
           return;

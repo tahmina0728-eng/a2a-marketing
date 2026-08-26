@@ -1231,18 +1231,16 @@ function ChannelPanel({ m, liveMsg, kvImgB64 }: {
                 gap: isPortrait ? 0 : 0,
               }}>
 
-                {/* KV image — shaped to channel's aspect ratio */}
-                {kvImgB64 && (
-                  isPortrait ? (
+                {/* KV image — prefer per-channel adapted image, fall back to shared KV */}
+                {(ch.image_b64 || kvImgB64) && (() => {
+                  const imgSrc = `data:image/jpeg;base64,${ch.image_b64 ?? kvImgB64}`;
+                  return isPortrait ? (
                     /* 9:16: narrow portrait column on the left */
                     <div style={{ flexShrink: 0, width: 88, alignSelf: "stretch",
                       overflow: "hidden", background: "#000" }}>
-                      <img
-                        src={`data:image/jpeg;base64,${kvImgB64}`}
-                        alt={`${key} KV`}
+                      <img src={imgSrc} alt={`${key} KV`}
                         style={{ width: "100%", height: "100%", objectFit: "cover",
-                          objectPosition: "center", display: "block" }}
-                      />
+                          objectPosition: "center", display: "block" }} />
                     </div>
                   ) : (
                     /* 1:1 or 16:9: full-width image with correct aspect ratio */
@@ -1253,15 +1251,12 @@ function ChannelPanel({ m, liveMsg, kvImgB64 }: {
                       overflow: "hidden",
                       background: "#000",
                     }}>
-                      <img
-                        src={`data:image/jpeg;base64,${kvImgB64}`}
-                        alt={`${key} KV`}
+                      <img src={imgSrc} alt={`${key} KV`}
                         style={{ width: "100%", height: "100%", objectFit: "cover",
-                          objectPosition: "center", display: "block" }}
-                      />
+                          objectPosition: "center", display: "block" }} />
                     </div>
-                  )
-                )}
+                  );
+                })()}
 
                 {/* Copy */}
                 <div style={{ padding: "10px 14px", flex: 1 }}>
@@ -1682,11 +1677,7 @@ function RunningView({
   const v = displayKey ? (AGENT_VISUALS[displayKey] ?? DEFAULT_VISUAL) : DEFAULT_VISUAL;
   const stage = displayKey ? HARNESS_STAGES.find(s => s.key === displayKey) : null;
 
-  // Infosys only runs 3 agents; filter sidebar + progress to match
-  const _INFOSYS_KEYS = ["briefing", "strategy", "copy"];
-  const activeStages = brand === "Infosys"
-    ? HARNESS_STAGES.filter(s => _INFOSYS_KEYS.includes(s.key))
-    : HARNESS_STAGES.filter(s => s.key !== "compliance");
+  const activeStages = HARNESS_STAGES.filter(s => s.key !== "compliance");
   const doneCount = activeStages.filter(s => agentStatus[s.key] === "done").length;
 
   return (
@@ -2605,9 +2596,8 @@ function ResultsView({ output, campaignId }: {
 
   const imagesB64Raw: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
   // For historical campaigns loaded from GCS, base64 is stripped — use the KV proxy endpoint instead.
-  // Generate up to 3 candidate URLs; broken ones are hidden via onError in the thumbnail strip.
-  // Only try proxy URLs for campaigns that had a creative_pipeline (regular brands).
-  // Infosys has no KV generation so cp is undefined — skip to avoid 404s.
+  // Fall back to proxy URLs only when no base64 images and creative_pipeline exists.
+  // cp is undefined for older campaigns without a creative_pipeline — skip to avoid 404s.
   const kvHttpUrls: string[] = imagesB64Raw.length === 0 && campaignId && cp
     ? Array.from({ length: 3 }, (_, i) => `${API_BASE_PUB}/campaign/${encodeURIComponent(campaignId)}/kv/${i + 1}`)
     : [];
@@ -4959,17 +4949,12 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 
       {/* Workflow stages — timeline layout */}
       <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 0 8px" }}>
-        {WORKFLOW_STAGES.filter(stage =>
-          // For Infosys: hide Channel Adoption and Performance stages (agents never run)
-          brand !== "Infosys" || !["channel", "perform"].includes(stage.id)
-        ).map((stage, idx, visibleStages) => {
+        {WORKFLOW_STAGES.map((stage, idx, visibleStages) => {
           const isActive    = stage.id === activeStageId;
           const isDone      = activeIdx > WORKFLOW_STAGES.findIndex(s => s.id === stage.id);
           const isLast      = idx === visibleStages.length - 1;
-          const _infosysKeys = ["briefing", "strategy", "copy"];
           const stageAgents = HARNESS_STAGES.filter(s =>
-            stage.agents.includes(s.key) &&
-            (brand !== "Infosys" || _infosysKeys.includes(s.key))
+            stage.agents.includes(s.key)
           );
 
           return (

@@ -247,8 +247,461 @@ def generate_brand_website(brand: str, hero_message: str = "", tagline: str = ""
         return generate_sunrise_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     if brand.lower() == "haleon":
         return generate_haleon_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
+    if brand.lower() == "infosys":
+        return generate_infosys_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     return _generate_sunglow_website(brand, hero_message, tagline, body_copy, cta,
                                      campaign_image_b64, campaign_id, hero_image_b64, video_b64)
+
+
+def generate_infosys_website(campaign_image_b64: str = "", campaign_id: str = "",
+                              hero_message: str = "", body_copy: str = "", cta: str = "",
+                              hero_image_b64: str = "", video_b64: str = "") -> str:
+    """
+    Infosys brand landing page — modelled on infosys.com design language.
+    Dark sapphire hero, pill navigation, abstract gradient cards, industries grid, dark footer.
+    """
+    from pathlib import Path as _P
+
+    # ── Infosys brand logos ───────────────────────────────────────────────────
+    _logo_dir   = _P(__file__).parent / "brands" / "infosys" / "logos"
+    def _load_logo(name: str) -> str:
+        p = _logo_dir / name
+        try:
+            return base64.b64encode(p.read_bytes()).decode() if p.exists() else ""
+        except Exception:
+            return ""
+
+    _logo_dark_b64  = _load_logo("Infosys_DB.png")   # white logo (for dark nav)
+    _logo_light_b64 = _load_logo("Infosys_WB.png")   # dark logo (for light footer)
+    _topaz_b64      = _load_logo("Topaz_DB.png")
+    _cobalt_b64     = _load_logo("Cobalt_DB.png")
+    _aster_b64      = _load_logo("Aster_DB.png")
+
+    def _logo_img(b64: str, alt: str, h: int = 28) -> str:
+        if b64:
+            return f'<img src="data:image/png;base64,{b64}" alt="{alt}" style="height:{h}px;display:block;">'
+        return f'<span style="font-weight:700;font-size:16px;color:white;">{alt}</span>'
+
+    # ── Copy & images ─────────────────────────────────────────────────────────
+    headline  = hero_message or "Navigate your next"
+    sub       = body_copy or "Infosys helps enterprises navigate AI transformation — from strategy to execution."
+    cta_text  = cta or "Explore How →"
+    hero_src  = _make_bg_src(hero_image_b64) or _make_bg_src(campaign_image_b64)
+    kv_src    = _make_bg_src(campaign_image_b64) or _make_bg_src(hero_image_b64)
+
+    nav_logo  = _logo_img(_logo_dark_b64,  "Infosys", 26)
+    foot_logo = _logo_img(_logo_light_b64, "Infosys", 24)
+
+    # Sub-brand logos for feature cards
+    topaz_logo  = _logo_img(_topaz_b64,  "Infosys Topaz",  22)
+    cobalt_logo = _logo_img(_cobalt_b64, "Infosys Cobalt", 22)
+    aster_logo  = _logo_img(_aster_b64,  "Infosys Aster",  22)
+
+    # Hero background style
+    hero_bg_style = (
+        f'background-image:url("{hero_src}");' if hero_src else
+        "background:linear-gradient(135deg,#061838 0%,#0d3a6b 100%);"
+    )
+
+    # Story card image
+    story_img_html = (
+        f'<img src="{kv_src}" alt="Campaign visual" '
+        f'style="width:340px;flex-shrink:0;object-fit:cover;display:block;">'
+        if kv_src else
+        '<div style="width:340px;flex-shrink:0;background:linear-gradient(135deg,#667eea,#764ba2);"></div>'
+    )
+
+    # ── Abstract gradient palettes for AI/card sections ───────────────────────
+    GRADIENTS = [
+        "linear-gradient(135deg,#1e3a8a 0%,#6d28d9 100%)",   # deep blue → purple
+        "linear-gradient(135deg,#065f46 0%,#1e40af 100%)",   # teal → blue
+        "linear-gradient(135deg,#7c2d12 0%,#7e22ce 100%)",   # amber → violet
+    ]
+    TOPAZ_GRAD  = "linear-gradient(135deg,#0369a1 0%,#7c3aed 100%)"
+    COBALT_GRAD = "linear-gradient(135deg,#1d4ed8 0%,#6d28d9 100%)"
+    ASTER_GRAD  = "linear-gradient(135deg,#7c3aed 0%,#be185d 100%)"
+
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Infosys | {headline}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+html{{scroll-behavior:smooth}}
+body{{font-family:'Inter',system-ui,sans-serif;color:#1A1A2E;background:#fff}}
+a{{text-decoration:none;color:inherit}}
+
+/* ── NAV ── */
+nav{{position:fixed;top:0;width:100%;background:rgba(6,24,56,0.94);backdrop-filter:blur(14px);
+  display:flex;align-items:center;padding:0 40px;height:64px;z-index:200;gap:24px}}
+.nav-logo{{color:#fff;font-size:20px;font-weight:700;flex-shrink:0}}
+.nav-tabs{{margin:0 auto;background:rgba(255,255,255,0.1);border-radius:99px;
+  display:flex;align-items:center;padding:4px;gap:2px}}
+.nav-tab{{padding:8px 18px;border-radius:99px;color:rgba(255,255,255,0.75);font-size:13px;
+  font-weight:500;cursor:pointer;transition:all 0.2s}}
+.nav-tab:hover,.nav-tab.active{{background:rgba(255,255,255,0.18);color:#fff}}
+.ask-leon{{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.2);
+  color:#fff;padding:9px 20px;border-radius:99px;font-size:13px;font-weight:500;
+  display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap}}
+
+/* ── HERO ── */
+.hero{{min-height:100vh;position:relative;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;padding:120px 40px 80px;
+  background:#061838;overflow:hidden}}
+.hero-bg{{position:absolute;inset:0;{hero_bg_style}background-size:cover;
+  background-position:center;opacity:0.38}}
+.hero-overlay{{position:absolute;inset:0;background:linear-gradient(
+  to bottom,rgba(6,24,56,0.55) 0%,rgba(6,24,56,0.88) 100%)}}
+.hero-content{{position:relative;z-index:2;max-width:960px}}
+.hero h1{{font-size:clamp(48px,7.5vw,96px);font-weight:300;color:#fff;line-height:1.06;
+  letter-spacing:-0.025em;margin-bottom:48px}}
+.hero-search{{background:#fff;border-radius:14px;padding:18px 24px;max-width:720px;
+  width:100%;text-align:left;margin:0 auto 20px;box-shadow:0 12px 48px rgba(0,0,0,0.35)}}
+.search-label{{display:flex;align-items:center;gap:8px;color:#9CA3AF;font-size:14px;margin-bottom:14px}}
+.search-label svg{{opacity:0.5}}
+.search-chips{{display:flex;gap:8px;flex-wrap:wrap}}
+.search-chip{{border:1px solid #E5E7EB;border-radius:99px;padding:7px 16px;font-size:13px;
+  color:#374151;cursor:pointer;transition:all 0.2s;background:#fff}}
+.search-chip:hover{{border-color:#007CC3;color:#007CC3}}
+.hero-sub{{color:rgba(255,255,255,0.45);font-size:12px;font-style:italic}}
+
+/* ── TOP STORIES ── */
+.section-stories{{background:#E8ECF2;padding:72px 80px}}
+.stories-header{{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}}
+.eyebrow{{font-size:11px;font-weight:800;letter-spacing:0.13em;color:#374151;
+  text-transform:uppercase}}
+.stories-nav{{display:flex;gap:10px}}
+.stories-nav button{{width:34px;height:34px;border-radius:50%;border:1px solid #CBD5E0;
+  background:#fff;cursor:pointer;font-size:13px;transition:all 0.2s}}
+.stories-nav button:hover{{background:#007CC3;border-color:#007CC3;color:#fff}}
+.story-card{{background:#fff;border-radius:18px;overflow:hidden;display:flex;
+  max-width:900px;box-shadow:0 4px 24px rgba(0,0,0,0.08)}}
+.story-body{{padding:48px;display:flex;flex-direction:column;justify-content:center;flex:1}}
+.story-body h3{{font-size:22px;font-weight:700;color:#1A1A2E;margin-bottom:16px;line-height:1.35}}
+.story-body p{{font-size:15px;color:#6B7280;line-height:1.75;margin-bottom:28px}}
+.read-more{{color:#1A1A2E;font-size:13px;font-weight:700;display:inline-flex;
+  align-items:center;gap:6px;border-bottom:1.5px solid #1A1A2E;padding-bottom:2px}}
+.story-counter{{font-size:13px;color:#9CA3AF;font-weight:600}}
+
+/* ── CRAFTING SECTION ── */
+.section-crafting{{background:#fff;padding:80px 80px;text-align:center}}
+.crafting-title{{font-size:clamp(28px,3.5vw,48px);font-weight:700;margin-bottom:16px;
+  color:#1A1A2E}}
+.crafting-title em{{color:#7C3AED;font-style:normal}}
+.crafting-sub{{color:#6B7280;font-size:15px;max-width:680px;margin:0 auto 36px;line-height:1.7}}
+.crafting-cta{{display:inline-flex;align-items:center;gap:8px;background:#1A1A2E;
+  color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;margin-bottom:56px;
+  transition:background 0.2s}}
+.crafting-cta:hover{{background:#007CC3}}
+.feature-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1120px;margin:0 auto}}
+.feature-card{{border-radius:22px;overflow:hidden;position:relative}}
+.feature-img{{width:100%;aspect-ratio:4/3;display:block}}
+.feature-foot{{background:#fff;padding:20px 24px 24px}}
+.feature-foot h4{{font-size:17px;font-weight:700;color:#1A1A2E;margin-bottom:8px}}
+.feature-foot p{{font-size:13px;color:#6B7280;line-height:1.55}}
+.feature-logo{{margin-bottom:12px}}
+
+/* ── AI IN ACTION ── */
+.section-action{{background:#0D1117;padding:80px 80px}}
+.action-title{{color:#fff;font-size:clamp(28px,3.5vw,42px);font-weight:700;
+  text-align:center;margin-bottom:12px}}
+.action-sub{{color:rgba(255,255,255,0.55);text-align:center;font-size:15px;
+  max-width:760px;margin:0 auto 48px;line-height:1.75}}
+.action-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1200px;margin:0 auto}}
+.action-card{{border-radius:18px;overflow:hidden}}
+.action-img{{width:100%;aspect-ratio:4/3;display:block}}
+.action-body{{background:#1A2030;padding:22px 24px}}
+.case-badge{{display:inline-block;background:#1e3a8a;color:#93c5fd;font-size:10px;
+  font-weight:800;letter-spacing:0.08em;padding:4px 12px;border-radius:4px;margin-bottom:12px}}
+.action-body h4{{color:#fff;font-size:17px;font-weight:700;margin-bottom:8px;line-height:1.3}}
+.action-body p{{color:rgba(255,255,255,0.45);font-size:13px;line-height:1.65}}
+.action-cta{{margin-top:14px;display:inline-flex;align-items:center;gap:6px;
+  border:1.5px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.7);
+  padding:8px 18px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer}}
+
+/* ── INDUSTRIES ── */
+.section-industries{{background:linear-gradient(160deg,#F8FAFC 0%,#EDF0F7 100%);
+  padding:80px 80px;text-align:center}}
+.ind-title{{font-size:clamp(26px,3vw,38px);font-weight:700;margin-bottom:14px;color:#1A1A2E}}
+.ind-sub{{color:#6B7280;font-size:15px;max-width:520px;margin:0 auto 48px}}
+.ind-grid{{display:grid;grid-template-columns:repeat(4,1fr);gap:4px 32px;
+  max-width:960px;margin:0 auto;text-align:left}}
+.ind-link{{font-size:15px;font-weight:600;color:#1A1A2E;padding:14px 0;
+  border-bottom:2px solid currentColor;display:block;width:fit-content;
+  transition:color 0.2s}}
+.ind-link:hover{{color:#007CC3}}
+
+/* ── CTA BAND ── */
+.section-cta-band{{background:#061838;padding:0 80px}}
+.cta-inner{{display:flex;align-items:center;gap:72px;max-width:1200px;margin:0 auto;padding:80px 0 100px}}
+.cta-text{{flex:1}}
+.cta-badge{{display:inline-block;background:#1e3a8a;color:#93c5fd;font-size:10px;
+  font-weight:800;letter-spacing:0.1em;padding:5px 14px;border-radius:4px;margin-bottom:20px}}
+.cta-title{{color:#fff;font-size:clamp(26px,3.2vw,42px);font-weight:700;margin-bottom:18px;
+  line-height:1.2}}
+.cta-body{{color:rgba(255,255,255,0.6);font-size:15px;line-height:1.75;margin-bottom:32px;
+  max-width:480px}}
+.cta-btn{{border:2px solid rgba(255,255,255,0.4);color:#fff;padding:14px 32px;border-radius:9px;
+  font-size:14px;font-weight:700;display:inline-flex;align-items:center;gap:8px;
+  transition:all 0.2s;cursor:pointer}}
+.cta-btn:hover{{background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.7)}}
+.cta-img{{width:400px;flex-shrink:0;border-radius:18px;overflow:hidden;
+  box-shadow:0 28px 80px rgba(0,0,0,0.45)}}
+.cta-img img{{width:100%;display:block}}
+
+/* ── FOOTER ── */
+footer{{background:#F8FAFC;padding:64px 80px;border-top:1px solid #E5E7EB}}
+.foot-grid{{display:grid;grid-template-columns:repeat(4,1fr);gap:48px;margin-bottom:48px}}
+.foot-col h5{{font-size:13px;font-weight:800;color:#007CC3;margin-bottom:18px;
+  letter-spacing:0.04em;text-transform:uppercase}}
+.foot-link{{display:block;font-size:13px;color:#374151;margin-bottom:9px;transition:color 0.2s}}
+.foot-link:hover{{color:#007CC3;text-decoration:underline}}
+.foot-bottom{{border-top:1px solid #E5E7EB;padding-top:24px;display:flex;
+  justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}}
+.foot-legal{{font-size:12px;color:#9CA3AF}}
+
+@media(max-width:768px){{
+  nav{{padding:0 20px}}
+  .nav-tabs{{display:none}}
+  .hero h1{{font-size:40px}}
+  .story-card{{flex-direction:column}}
+  .story-card .story-img{{width:100%;height:200px;object-fit:cover}}
+  .feature-grid,.action-grid,.ind-grid{{grid-template-columns:1fr}}
+  .cta-inner{{flex-direction:column;gap:40px}}
+  .cta-img{{width:100%}}
+  .foot-grid{{grid-template-columns:repeat(2,1fr)}}
+  section,.section-stories,.section-crafting,.section-action,
+  .section-industries,.section-cta-band,footer{{padding-left:20px!important;padding-right:20px!important}}
+}}
+</style>
+</head>
+<body>
+
+<!-- ── NAVIGATION ─────────────────────────────────────────────────── -->
+<nav>
+  <div class="nav-logo">{nav_logo}</div>
+  <div class="nav-tabs">
+    <a class="nav-tab active" href="#">Navigate your next</a>
+    <a class="nav-tab" href="#">Investors</a>
+    <a class="nav-tab" href="#">Knowledge Institute</a>
+    <a class="nav-tab" href="#">Careers</a>
+  </div>
+  <div class="ask-leon">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    Ask Leon
+  </div>
+</nav>
+
+<!-- ── HERO ──────────────────────────────────────────────────────────── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <h1>{headline}</h1>
+    <div class="hero-search">
+      <div class="search-label">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+        Ask Leon
+      </div>
+      <div class="search-chips">
+        <div class="search-chip">{headline[:45]}{"…" if len(headline) > 45 else ""}</div>
+        <div class="search-chip">Discover the power of Infosys Cobalt</div>
+        <div class="search-chip">Infosys AI solutions for enterprise</div>
+      </div>
+    </div>
+    <p class="hero-sub">Content is generated with AI assistance</p>
+  </div>
+</section>
+
+<!-- ── TOP STORIES ────────────────────────────────────────────────────── -->
+<section class="section-stories">
+  <div class="stories-header">
+    <span class="eyebrow">Campaign Story</span>
+    <div style="display:flex;align-items:center;gap:16px">
+      <span class="story-counter">1 / 1</span>
+      <div class="stories-nav">
+        <button>&#8592;</button>
+        <button>&#8594;</button>
+      </div>
+    </div>
+  </div>
+  <div class="story-card">
+    {story_img_html}
+    <div class="story-body">
+      <h3>{headline}</h3>
+      <p>{sub}</p>
+      <a href="#contact" class="read-more">Read More &#8599;</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── CRAFTING EXPERIENCES ──────────────────────────────────────────── -->
+<section class="section-crafting">
+  <h2 class="crafting-title">Crafting <em>Intelligent</em> Experiences</h2>
+  <p class="crafting-sub">
+    Whether you're building your own models, transforming your cloud strategy, or amplifying
+    your marketing efforts, data remains the biggest enabler of AI.
+  </p>
+  <a href="#contact" class="crafting-cta">I'm Curious &#8599;</a>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-img" style="background:{TOPAZ_GRAD};"></div>
+      <div class="feature-foot">
+        <div class="feature-logo">{topaz_logo}</div>
+        <h4>Infosys Topaz</h4>
+        <p>Adapts best-in-class foundation models for your business, ensuring sustainable and
+          successful AI programs tailored to your enterprise needs.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-img" style="background:{COBALT_GRAD};"></div>
+      <div class="feature-foot">
+        <div class="feature-logo">{cobalt_logo}</div>
+        <h4>Infosys Cobalt</h4>
+        <p>A set of services, solutions, and platforms that acts as a force multiplier
+          for cloud-powered enterprise transformation.</p>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-img" style="background:{ASTER_GRAD};"></div>
+      <div class="feature-foot">
+        <div class="feature-logo">{aster_logo}</div>
+        <h4>Infosys Aster</h4>
+        <p>Empowers marketers with the superpower of AI to create memorable customer experiences,
+          increase efficiency, and drive growth.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── AI IN ACTION ──────────────────────────────────────────────────── -->
+<section class="section-action">
+  <h2 class="action-title">AI In Action</h2>
+  <p class="action-sub">
+    For all enterprises, Infosys AI solutions improve your business by improving your data and
+    cloud infrastructure. This leads to streamlined operations and enhanced decision-making
+    capabilities. Ultimately, these improvements drive significant growth and a competitive edge.
+  </p>
+  <div class="action-grid">
+    <div class="action-card">
+      <div class="action-img" style="background:{GRADIENTS[0]};"></div>
+      <div class="action-body">
+        <div class="case-badge">Case Study</div>
+        <h4>Now Serving: Virtual Tennis</h4>
+        <p>Tennis is now on the Cloud and powered by Applied AI</p>
+        <div class="action-cta">I'm Curious &#8599;</div>
+      </div>
+    </div>
+    <div class="action-card">
+      <div class="action-img" style="background:{GRADIENTS[1]};{("background-image:url(" + kv_src + ");background-size:cover;background-position:center;") if kv_src else ""}"></div>
+      <div class="action-body">
+        <div class="case-badge">Case Study</div>
+        <h4>{headline[:60]}{"…" if len(headline) > 60 else ""}</h4>
+        <p>{sub[:100]}{"…" if len(sub) > 100 else ""}</p>
+        <div class="action-cta">I'm Curious &#8599;</div>
+      </div>
+    </div>
+    <div class="action-card">
+      <div class="action-img" style="background:{GRADIENTS[2]};"></div>
+      <div class="action-body">
+        <div class="case-badge">Case Study</div>
+        <h4>Digitally Empowered Energy Efficiency</h4>
+        <p>Energy-as-a-service — unlocking energy savings through digitalization</p>
+        <div class="action-cta">I'm Curious &#8599;</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── INDUSTRIES AND SERVICES ───────────────────────────────────────── -->
+<section class="section-industries">
+  <h2 class="ind-title">Industries and Services</h2>
+  <p class="ind-sub">As strategic advisors, we build programs that help enterprises
+    operate stronger today and prepare for tomorrow.</p>
+  <div class="ind-grid">
+    <a href="#" class="ind-link">Services</a>
+    <a href="#" class="ind-link">Financial Services</a>
+    <a href="#" class="ind-link">Industrial Manufacturing</a>
+    <a href="#" class="ind-link">Utilities</a>
+    <a href="#" class="ind-link">Insurance</a>
+    <a href="#" class="ind-link">Oil and Gas</a>
+    <a href="#" class="ind-link">Healthcare</a>
+    <a href="#" class="ind-link">Consumer Products</a>
+    <a href="#" class="ind-link">Energy Transition</a>
+    <a href="#" class="ind-link">Life Sciences</a>
+    <a href="#" class="ind-link">Retail &amp; Logistics</a>
+    <a href="#" class="ind-link">Communications Services</a>
+  </div>
+</section>
+
+<!-- ── CTA BAND ───────────────────────────────────────────────────────── -->
+<div class="section-cta-band">
+  <div class="cta-inner" id="contact">
+    <div class="cta-text">
+      <div class="cta-badge">Campaign</div>
+      <h2 class="cta-title">Build your future<br>with Infosys</h2>
+      <p class="cta-body">{sub}</p>
+      <a href="#" class="cta-btn">{cta_text} &#8599;</a>
+    </div>
+    <div class="cta-img">
+      {f'<img src="{kv_src}" alt="Campaign visual">' if kv_src else
+       '<div style="height:280px;background:linear-gradient(135deg,#1e3a8a,#6d28d9);"></div>'}
+    </div>
+  </div>
+</div>
+
+<!-- ── FOOTER ─────────────────────────────────────────────────────────── -->
+<footer>
+  <div class="foot-grid">
+    <div class="foot-col">
+      <h5>Subsidiaries</h5>
+      <a class="foot-link" href="#">EdgeVerve Systems</a>
+      <a class="foot-link" href="#">Infosys BPM</a>
+      <a class="foot-link" href="#">Infosys Consulting</a>
+      <a class="foot-link" href="#">Infosys Public Services</a>
+    </div>
+    <div class="foot-col">
+      <h5>Programs</h5>
+      <a class="foot-link" href="#">Infosys Foundation</a>
+      <a class="foot-link" href="#">Infosys Foundation USA</a>
+      <a class="foot-link" href="#">Infosys Science Foundation</a>
+      <a class="foot-link" href="#">Infosys Leadership Institute</a>
+    </div>
+    <div class="foot-col">
+      <h5>Company</h5>
+      <a class="foot-link" href="#">About Us</a>
+      <a class="foot-link" href="#">Investors</a>
+      <a class="foot-link" href="#">Navigate your next</a>
+      <a class="foot-link" href="#">Careers</a>
+      <a class="foot-link" href="#">ESG</a>
+      <a class="foot-link" href="#">Newsroom</a>
+      <a class="foot-link" href="#">Alumni</a>
+    </div>
+    <div class="foot-col">
+      <h5>Support</h5>
+      <a class="foot-link" href="#">Terms of Use</a>
+      <a class="foot-link" href="#">Privacy Statement</a>
+      <a class="foot-link" href="#">Cookie Policy</a>
+      <a class="foot-link" href="#">Safe Harbour Provision</a>
+      <a class="foot-link" href="#">Site Map</a>
+      <a class="foot-link" href="#">Modern Slavery Statement</a>
+      <a class="foot-link" href="#">Payment Guide for Suppliers</a>
+    </div>
+  </div>
+  <div class="foot-bottom">
+    <div>{foot_logo}</div>
+    <p class="foot-legal">© 2025 Infosys Limited | Generated by CampaignOS A2A</p>
+  </div>
+</footer>
+
+</body>
+</html>"""
 
 
 def generate_barclays_website(campaign_image_b64: str = "", campaign_id: str = "",

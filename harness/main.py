@@ -1318,16 +1318,183 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             "cta":             _best.get("cta", ""),
         }))
 
-        # ── Done: emit full result (same keys as /infosys/pipeline) ───────────
+        # ── KV generation (Morphis) — Infosys compositor ─────────────────
+        await push_event(campaign_id, "kv", "running",
+                         "Morphis: compositing Infosys LinkedIn key visual…")
+        _sub_brand = req.sub_brand
+        def _gen_kv_sync() -> bytes:
+            from app.brands.infosys.compositor import generate_kv
+            return generate_kv(
+                headline  = _best_hl or "Infosys Campaign",
+                subline   = _best.get("subheadline", "") or _bi_stmt[:80],
+                cta       = _best.get("cta", ""),
+                sub_brand = _sub_brand,
+            )
+        try:
+            import base64 as _b64
+            _kv_bytes  = await loop.run_in_executor(None, _gen_kv_sync)
+            _kv_b64    = _b64.b64encode(_kv_bytes).decode()
+            await push_event(campaign_id, "kv", "milestone",
+                             json.dumps({"images_b64": [_kv_b64]}))
+            await push_event(campaign_id, "kv", "done", "Morphis: LinkedIn KV ready ✓")
+            _kv_images = [_kv_b64]
+        except Exception as _kv_err:
+            logger.warning("infosys_kv_failed", error=str(_kv_err))
+            await push_event(campaign_id, "kv", "done", "Morphis: KV generation skipped")
+            _kv_images = []
+
+        # ── Reel spec (Kinetik) ──────────────────────────────────────────
+        await push_event(campaign_id, "reel", "running",
+                         "Kinetik: building motion storyboard & format specs…")
+        from app.agents.infosys.kinetik import KinetikAgent
+        hb_kinetik = asyncio.create_task(_heartbeat(campaign_id, "reel", [
+            "Kinetik: beating out story spine with VO & supers…",
+            "Kinetik: specifying footage prompts & safe margins…",
+            "Kinetik: building QA checklist & end-frame spec…",
+        ], interval=18))
+        try:
+            kinetik_result = await loop.run_in_executor(
+                None, KinetikAgent().run,
+                {"creative_platform": helia_result, "copy_deck": ideon_result},
+            )
+            motion_spec = kinetik_result.artifact.content if kinetik_result.artifact else {}
+        except Exception as _kr:
+            logger.warning("infosys_kinetik_failed", error=str(_kr))
+            motion_spec = {}
+        finally:
+            hb_kinetik.cancel()
+
+        if motion_spec:
+            await push_event(campaign_id, "reel", "milestone", json.dumps({"motion_spec": motion_spec}))
+        await push_event(campaign_id, "reel", "done", "Kinetik: motion spec ready ✓")
+
+        # ── Channel packaging (Poly) ──────────────────────────────────────
+        await push_event(campaign_id, "channel", "running",
+                         "Poly: packaging copy for LinkedIn & email channels…")
+        _channels_list = [c.lower() for c in (req.channels or [])]
+
+        # Build per-channel adapted images from the LinkedIn KV using PIL
+        def _crop_to(img_bytes: bytes, w: int, h: int) -> str:
+            """Center-crop and resize JPEG bytes to w×h, return base64."""
+            import io as _io, base64 as _b64
+            from PIL import Image as _Img
+            src = _Img.open(_io.BytesIO(img_bytes)).convert("RGB")
+            sw, sh = src.size
+            target_ratio = w / h
+            src_ratio    = sw / sh
+            if src_ratio > target_ratio:
+                # wider than target — crop sides
+                new_w = int(sh * target_ratio)
+                left  = (sw - new_w) // 2
+                src   = src.crop((left, 0, left + new_w, sh))
+            else:
+                # taller than target — crop top/bottom
+                new_h = int(sw / target_ratio)
+                top   = (sh - new_h) // 2
+                src   = src.crop((0, top, sw, top + new_h))
+            src = src.resize((w, h), _Img.LANCZOS)
+            buf = _io.BytesIO()
+            src.save(buf, format="JPEG", quality=90, optimize=True)
+            return _b64.b64encode(buf.getvalue()).decode()
+
+        _li_img_b64  = _kv_images[0] if _kv_images else None
+        _em_img_b64: str | None = None
+        if _kv_images:
+            try:
+                import base64 as _b64e
+                _em_img_b64 = await loop.run_in_executor(
+                    None, _crop_to, _b64e.b64decode(_kv_images[0]), 600, 338)
+            except Exception:
+                _em_img_b64 = _li_img_b64   # fallback: same image
+
+        _ch_data: dict = {}
+        _li_caption = copy_deck.get("social_captions", {}).get("linkedin", "")
+        _em_body    = copy_deck.get("body_copy", {}).get("email", "")
+        if "linkedin" in _channels_list or not _channels_list:
+            _ch_data["linkedin"] = {
+                "platform":  "LinkedIn", "format": "Feed Post — 1200×627",
+                "headline":  _best_hl, "cta": _best.get("cta", ""),
+                "caption":   _li_caption[:200] if _li_caption else _bi_stmt[:200],
+                **({"image_b64": _li_img_b64} if _li_img_b64 else {}),
+            }
+        if "email" in _channels_list or not _channels_list:
+            _ch_data["email"] = {
+                "platform":  "Email", "format": "Newsletter — 600×338",
+                "subject":   _best_hl,
+                "preview":   _best.get("subheadline", "") or _bi_stmt[:100],
+                "body":      _em_body[:300] if _em_body else _best.get("body", "")[:300],
+                **({"image_b64": _em_img_b64} if _em_img_b64 else {}),
+            }
+        if not _ch_data:
+            _ch_data["linkedin"] = {
+                "platform": "LinkedIn", "format": "Feed Post — 1200×627",
+                "headline": _best_hl, "cta": _best.get("cta", ""),
+                **({"image_b64": _li_img_b64} if _li_img_b64 else {}),
+            }
+        await asyncio.sleep(2)
+        await push_event(campaign_id, "channel", "done",
+                         f"Poly: campaign ready for {len(_ch_data)} channels ✓")
+        await push_event(campaign_id, "channel", "milestone", json.dumps(_ch_data))
+        await asyncio.sleep(2)
+
+        # ── Performance forecast (Nexus) ──────────────────────────────────
+        await push_event(campaign_id, "performance", "running",
+                         "Nexus: forecasting LinkedIn reach & ROAS…")
+        hb_perf = asyncio.create_task(_heartbeat(campaign_id, "performance", [
+            "Querying B2B campaign benchmarks…",
+            "Applying Fan Truth score uplift factors…",
+            "Modelling LinkedIn reach curves…",
+            "Computing blended ROAS confidence intervals…",
+        ], interval=18))
+        try:
+            _strat_for_perf = {
+                "hero_message":    _bi_stmt,
+                "brand_territory": _rec_terr_name,
+            }
+            _copy_for_perf = {
+                "short_headline": _best_hl,
+                "body":           _best.get("body", ""),
+                "cta":            _best.get("cta", ""),
+            }
+            perf_forecast = await run_performance_forecast(
+                machine_brief = brief_content,
+                strategy      = _strat_for_perf,
+                copy          = _copy_for_perf,
+                channels      = _channels_list or ["linkedin"],
+                campaign_id   = campaign_id,
+            )
+        except Exception as _pe:
+            logger.warning("infosys_performance_forecast_failed", error=str(_pe))
+            perf_forecast = {}
+        finally:
+            hb_perf.cancel()
+
+        if perf_forecast and "raw_output" not in perf_forecast:
+            await push_event(campaign_id, "performance", "milestone",
+                             json.dumps(perf_forecast))
+        else:
+            perf_forecast = {}
+        await push_event(campaign_id, "performance", "done",
+                         f"Nexus: forecast ready — {perf_forecast.get('overall_confidence','—')} confidence ✓")
+        await asyncio.sleep(2)
+
+        # ── Done: emit full result ────────────────────────────────────────
         all_flags = logos_result.flags + helia_result.flags + ideon_result.flags
+        _creative_pipeline = {
+            "images_b64":  _kv_images,
+            "motion_spec": motion_spec,
+        } if (_kv_images or motion_spec) else {}
         full_result = {
-            "status":            "completed" if ideon_result.status != "failed" else "partial",
-            "stage":             "ideon",
-            "validated_brief":   brief_content,
-            "creative_platform": creative_platform,
-            "copy_deck":         copy_deck,
-            "compliance_flags":  [f.model_dump() for f in all_flags],
-            "gate_warnings":     gate_blockers,
+            "status":               "completed" if ideon_result.status != "failed" else "partial",
+            "stage":                "done",
+            "validated_brief":      brief_content,
+            "creative_platform":    creative_platform,
+            "copy_deck":            copy_deck,
+            "creative_pipeline":    _creative_pipeline,
+            "performance_forecast": perf_forecast,
+            "channel_data":         _ch_data,
+            "compliance_flags":     [f.model_dump() for f in all_flags],
+            "gate_warnings":        gate_blockers,
         }
         await push_event(campaign_id, "__done__", "done", json.dumps(full_result))
 
