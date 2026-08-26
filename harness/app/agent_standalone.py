@@ -269,6 +269,11 @@ def _infosys_runner(agent_key: str, text: str, **kwargs) -> dict:
             logos.artifact.content["preferred_headline"] = _pinned_headline
         helia = HeliaAgent().run(logos)
         r = IdeonAgent().run({"brief": logos, "creative_platform": helia})
+        # Post-processing: force pinned headline on every variant regardless of LLM output.
+        # The prompt instruction is not 100% reliable; this guarantees the headline matches.
+        if _pinned_headline and r and r.artifact and r.artifact.content:
+            for _v in r.artifact.content.get("variants", []):
+                _v["headline"] = _pinned_headline
     elif agent_key == "infosys_aether":
         from app.agents.infosys.aether import AetherAgent
         scope = {**brief, "segment": brief.get("audience", ""), "brand": "Infosys"}
@@ -313,8 +318,9 @@ def _infosys_runner(agent_key: str, text: str, **kwargs) -> dict:
             if ideon and ideon.artifact else {}
         )
         best = best_content.get("selected_copy", {})
-        # Use the AI-generated copy — never fall back to the raw user prompt
-        auto_headline = best.get("headline", "")
+        # If the user pinned a headline, enforce it here regardless of what Ideon
+        # generated — the LLM instruction may not be followed 100% of the time.
+        auto_headline = _pinned_headline if _pinned_headline else best.get("headline", "")
         auto_subline  = best.get("subheadline", "")
         auto_cta      = best.get("cta", "")
         if auto_headline:
