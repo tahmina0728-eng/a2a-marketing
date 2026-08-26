@@ -1536,16 +1536,29 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             "audience":        req.audience,
             "channels":        req.channels,
             "sub_brand":       req.sub_brand,
-            "fan_truth":       _bt_stmt,
+            # fan_truth must be a dict so ResultsView can read fan_truth.overall for the score ring
+            "fan_truth":       {"statement": _bt_stmt, "overall": _gate_score},
             "buyer_truth":     _bt_stmt,
             "fan_truth_score": {"statement": _bt_stmt, "overall": _gate_score},
+            "score":           _gate_score,
         }
+        # Pull messaging pillars from the recommended territory or the platform root.
+        # ResultsView renders these as chips under the big idea.
+        _pillars_raw = (
+            _rec_terr.get("messaging_pillars") or _rec_terr.get("key_messages") or
+            creative_platform.get("messaging_pillars") or
+            [t.get("name", "") for t in _territories[:4] if t.get("name")]
+        ) if _rec_terr else []
+        _messaging_pillars = [str(p) for p in (_pillars_raw or []) if p][:4]
+
         _creative_strategy = {
             "hero_message":        _bi_stmt,
+            "big_idea":            _bi_stmt,
             "brand_territory":     _rec_terr_name,
             "strategic_framework": _pos_stmt,
             "tone_of_voice":       _rec_terr.get("verbal_tone", "") if _rec_terr else "",
             "visual_world":        creative_platform.get("visual_world", ""),
+            "messaging_pillars":   _messaging_pillars,
         }
         _campaign_copy = {
             "short_headline":  _best_hl,
@@ -1565,11 +1578,38 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             "compliance_flags": [f.model_dump() for f in all_flags],
             "gate_warnings":    gate_blockers,
         }
+        # channel_adaptations: shape ResultsView expects — { key: { label, image_b64, ratio } }
+        _channel_adaptations: dict = {}
+        if _li_img_b64:
+            _channel_adaptations["linkedin_feed"] = {
+                "label": "LinkedIn Feed", "image_b64": _li_img_b64, "ratio": "1200×627",
+            }
+        if _em_img_b64:
+            _channel_adaptations["email"] = {
+                "label": "Email Newsletter", "image_b64": _em_img_b64, "ratio": "600×338",
+            }
+
+        # culture_brief: synthesise a cultural-intelligence paragraph from Helia territory
+        # so the Cultural Intelligence card renders in ResultsView.
+        _culture_sentences = []
+        if _rec_terr:
+            if _rec_terr.get("audience_truth"):
+                _culture_sentences.append(str(_rec_terr["audience_truth"]))
+            if _rec_terr.get("cultural_tension"):
+                _culture_sentences.append(str(_rec_terr["cultural_tension"]))
+            if _rec_terr.get("positioning_statement"):
+                _culture_sentences.append(str(_rec_terr["positioning_statement"]))
+        if creative_platform.get("cultural_context"):
+            _culture_sentences.append(str(creative_platform["cultural_context"]))
+        _culture_brief = " ".join(_culture_sentences) if _culture_sentences else ""
+
         _creative_pipeline = {
-            "images_b64":  _kv_images,
-            "motion_spec": motion_spec,
+            "images_b64":          _kv_images,
+            "motion_spec":         motion_spec,
+            "channel_adaptations": _channel_adaptations,
+            **({"culture_brief": _culture_brief} if _culture_brief else {}),
             **({"video_b64": _video_b64, "video_uri": _video_uri} if _video_b64 else {}),
-        } if (_kv_images or motion_spec or _video_b64) else {}
+        } if (_kv_images or motion_spec or _video_b64 or _channel_adaptations) else {}
         full_result = {
             "status":               "ok",
             "campaign_id":          campaign_id,
