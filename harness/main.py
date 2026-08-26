@@ -1345,26 +1345,48 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             "cta":             _best.get("cta", ""),
         }))
 
-        # ── KV generation (Morphis) — Infosys compositor ─────────────────
+        # ── KV generation — 2 variations like other brands ───────────────
+        # KV 1: recommended variant, blue theme
+        # KV 2: second variant (or same copy), purple theme — gives a distinct
+        #        visual on default templates; copy differs on all templates.
         await push_event(campaign_id, "kv", "running",
-                         "Morphis: compositing Infosys LinkedIn key visual…")
+                         "Morphis: compositing 2 Infosys LinkedIn key visuals…")
         _sub_brand = req.sub_brand
-        def _gen_kv_sync() -> bytes:
-            from app.brands.infosys.compositor import generate_kv
-            return generate_kv(
-                headline  = _best_hl or "Infosys Campaign",
-                subline   = _best.get("subheadline", "") or _bi_stmt[:80],
-                cta       = _best.get("cta", ""),
-                sub_brand = _sub_brand,
+        _v2 = _variants[1] if len(_variants) > 1 else _best
+
+        import base64 as _b64
+        from app.brands.infosys.compositor import generate_kv as _gen_kv
+
+        def _kv1_sync() -> bytes:
+            return _gen_kv(
+                headline    = _best_hl or "Infosys Campaign",
+                subline     = _best.get("subheadline", "") or _bi_stmt[:80],
+                cta         = _best.get("cta", ""),
+                sub_brand   = _sub_brand,
+                color_theme = "blue",
             )
+
+        def _kv2_sync() -> bytes:
+            return _gen_kv(
+                headline    = _v2.get("headline", _best_hl) or "Infosys Campaign",
+                subline     = _v2.get("subheadline", "") or _bi_stmt[:80],
+                cta         = _v2.get("cta", ""),
+                sub_brand   = _sub_brand,
+                color_theme = "purple",
+            )
+
         try:
-            import base64 as _b64
-            _kv_bytes  = await loop.run_in_executor(None, _gen_kv_sync)
-            _kv_b64    = _b64.b64encode(_kv_bytes).decode()
+            _bytes1, _bytes2 = await asyncio.gather(
+                loop.run_in_executor(None, _kv1_sync),
+                loop.run_in_executor(None, _kv2_sync),
+            )
+            _kv_b64_1 = _b64.b64encode(_bytes1).decode()
+            _kv_b64_2 = _b64.b64encode(_bytes2).decode()
+            _kv_images = [_kv_b64_1, _kv_b64_2]
             await push_event(campaign_id, "kv", "milestone",
-                             json.dumps({"images_b64": [_kv_b64]}))
-            await push_event(campaign_id, "kv", "done", "Morphis: LinkedIn KV ready ✓")
-            _kv_images = [_kv_b64]
+                             json.dumps({"images_b64": _kv_images}))
+            await push_event(campaign_id, "kv", "done",
+                             "Morphis: 2 LinkedIn KV variations ready ✓")
         except Exception as _kv_err:
             logger.warning("infosys_kv_failed", error=str(_kv_err))
             await push_event(campaign_id, "kv", "done", "Morphis: KV generation skipped")
