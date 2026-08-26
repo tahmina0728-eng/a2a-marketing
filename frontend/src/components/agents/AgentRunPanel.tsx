@@ -43,6 +43,8 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
   const [speakerTitle,   setSpeakerTitle]   = useState("");
   const [speakerBadge,   setSpeakerBadge]   = useState("");
   const [speakerImgB64,  setSpeakerImgB64]  = useState("");
+  // Computed outside any JSX narrowing context so TS sees agentKey as plain string
+  const showInfosysControls = agentKey === "infosys_morphis" || (agentKey === "kv" && kvBrand === "Infosys");
   useEffect(() => {
     if (!["briefing", "kv", "reel"].includes(agentKey)) return;
     fetch(`${API_BASE_PUB}/brands`).then(r => r.json()).then(d => {
@@ -319,134 +321,134 @@ export default function AgentRunPanel({ agentKey, agentLabel, color, prompt, onP
                 </div>
               )}
 
-              {/* Infosys: color theme + speaker / executive layout */}
-              {(agentKey === "infosys_morphis" || (agentKey === "kv" && kvBrand === "Infosys")) && (
-                <>
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
-                      letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>
-                      Color theme
+            </div>
+          )}
+
+          {/* Infosys: color theme + speaker / executive layout */}
+          {showInfosysControls && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                  letterSpacing: "0.08em", textTransform: "uppercase" as const, marginBottom: 6 }}>
+                  Color theme
+                </div>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                  {[
+                    { key: "blue",        label: "Blue",         hex: "#007CC3" },
+                    { key: "purple",      label: "Purple",       hex: "#9B35B5" },
+                    { key: "amber",       label: "Amber",        hex: "#D4880F" },
+                    { key: "deep-purple", label: "Deep Purple",  hex: "#6B2FA0" },
+                  ].map(({ key: k, label, hex }) => (
+                    <button key={k} onClick={() => setKvColorTheme(k)}
+                      style={{ padding: "5px 13px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                        cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                        border: `1.5px solid ${kvColorTheme === k ? hex : "var(--card-border)"}`,
+                        background: kvColorTheme === k ? `${hex}22` : "var(--card-bg-soft)",
+                        color: kvColorTheme === k ? hex : "var(--text-secondary)" }}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginTop: 10 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
+                    letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
+                    Executive / Speaker
+                  </div>
+                  <button onClick={() => setSpeakerMode(m => !m)}
+                    style={{ padding: "2px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                      cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                      border: `1.5px solid ${speakerMode ? color : "var(--card-border)"}`,
+                      background: speakerMode ? `${color}18` : "var(--card-bg-soft)",
+                      color: speakerMode ? color : "var(--text-secondary)" }}>
+                    {speakerMode ? "On" : "Off"}
+                  </button>
+                </div>
+
+                {speakerMode && (
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 8,
+                    padding: "12px 14px", borderRadius: 10, border: "1px solid var(--card-border)",
+                    background: "var(--card-bg-soft)" }}>
+
+                    {/* Photo upload */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)",
+                        letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 5 }}>
+                        Headshot photo
+                      </div>
+                      <label style={{ display: "inline-flex", alignItems: "center", gap: 6,
+                        padding: "5px 12px", borderRadius: 8, border: "1px dashed var(--card-border)",
+                        background: speakerImgB64 ? `${color}10` : "transparent",
+                        color: speakerImgB64 ? color : "var(--text-secondary)",
+                        fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
+                        {speakerImgB64 ? "✓ Photo loaded — click to replace" : "Upload photo (JPEG / PNG)"}
+                        <input type="file" accept="image/jpeg,image/png,image/webp"
+                          style={{ display: "none" }}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                              const dataUrl = reader.result as string;
+                              setSpeakerImgB64(dataUrl.split(",")[1] ?? "");
+                            };
+                            reader.readAsDataURL(file);
+                          }} />
+                      </label>
                     </div>
-                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                      {[
-                        { key: "blue",        label: "Blue",         hex: "#007CC3" },
-                        { key: "purple",      label: "Purple",       hex: "#9B35B5" },
-                        { key: "amber",       label: "Amber",        hex: "#D4880F" },
-                        { key: "deep-purple", label: "Deep Purple",  hex: "#6B2FA0" },
-                      ].map(({ key: k, label, hex }) => (
-                        <button key={k} onClick={() => setKvColorTheme(k)}
-                          style={{ padding: "5px 13px", borderRadius: 99, fontSize: 11, fontWeight: 700,
-                            cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-                            border: `1.5px solid ${kvColorTheme === k ? hex : "var(--card-border)"}`,
-                            background: kvColorTheme === k ? `${hex}22` : "var(--card-bg-soft)",
-                            color: kvColorTheme === k ? hex : "var(--text-secondary)" }}>
-                          {label}
-                        </button>
-                      ))}
+
+                    {/* Name */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)",
+                        letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 4 }}>
+                        Name
+                      </div>
+                      <input value={speakerName} onChange={e => setSpeakerName(e.target.value)}
+                        placeholder="e.g. Salil Parekh"
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: 7,
+                          border: "1px solid var(--card-border)", background: "var(--card-bg)",
+                          color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit",
+                          boxSizing: "border-box" as const }} />
+                    </div>
+
+                    {/* Title */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)",
+                        letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 4 }}>
+                        Title / Company
+                      </div>
+                      <input value={speakerTitle} onChange={e => setSpeakerTitle(e.target.value)}
+                        placeholder="e.g. CEO & MD, Infosys"
+                        style={{ width: "100%", padding: "7px 10px", borderRadius: 7,
+                          border: "1px solid var(--card-border)", background: "var(--card-bg)",
+                          color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit",
+                          boxSizing: "border-box" as const }} />
+                    </div>
+
+                    {/* Optional badge */}
+                    <div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)",
+                        letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 4 }}>
+                        Content badge (optional)
+                      </div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
+                        {["", "BYLINE", "MEDIA ARTICLE", "THOUGHT LEADERSHIP"].map(b => (
+                          <button key={b || "none"} onClick={() => setSpeakerBadge(b)}
+                            style={{ padding: "4px 11px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                              cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
+                              border: `1.5px solid ${speakerBadge === b ? color : "var(--card-border)"}`,
+                              background: speakerBadge === b ? `${color}18` : "var(--card-bg-soft)",
+                              color: speakerBadge === b ? color : "var(--text-secondary)" }}>
+                            {b || "None"}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
-
-                  <div style={{ marginTop: 10 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)",
-                        letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
-                        Executive / Speaker
-                      </div>
-                      <button onClick={() => setSpeakerMode(m => !m)}
-                        style={{ padding: "2px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700,
-                          cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-                          border: `1.5px solid ${speakerMode ? color : "var(--card-border)"}`,
-                          background: speakerMode ? `${color}18` : "var(--card-bg-soft)",
-                          color: speakerMode ? color : "var(--text-secondary)" }}>
-                        {speakerMode ? "On" : "Off"}
-                      </button>
-                    </div>
-
-                    {speakerMode && (
-                      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8,
-                        padding: "12px 14px", borderRadius: 10, border: "1px solid var(--card-border)",
-                        background: "var(--card-bg-soft)" }}>
-
-                        {/* Photo upload */}
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)",
-                            letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 5 }}>
-                            Headshot photo
-                          </div>
-                          <label style={{ display: "inline-flex", alignItems: "center", gap: 6,
-                            padding: "5px 12px", borderRadius: 8, border: "1px dashed var(--card-border)",
-                            background: speakerImgB64 ? `${color}10` : "transparent",
-                            color: speakerImgB64 ? color : "var(--text-secondary)",
-                            fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
-                            {speakerImgB64 ? "✓ Photo loaded — click to replace" : "Upload photo (JPEG / PNG)"}
-                            <input type="file" accept="image/jpeg,image/png,image/webp"
-                              style={{ display: "none" }}
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                const reader = new FileReader();
-                                reader.onload = () => {
-                                  const dataUrl = reader.result as string;
-                                  // strip "data:image/...;base64," prefix
-                                  setSpeakerImgB64(dataUrl.split(",")[1] ?? "");
-                                };
-                                reader.readAsDataURL(file);
-                              }} />
-                          </label>
-                        </div>
-
-                        {/* Name */}
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)",
-                            letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 4 }}>
-                            Name
-                          </div>
-                          <input value={speakerName} onChange={e => setSpeakerName(e.target.value)}
-                            placeholder="e.g. Salil Parekh"
-                            style={{ width: "100%", padding: "7px 10px", borderRadius: 7,
-                              border: "1px solid var(--card-border)", background: "var(--card-bg)",
-                              color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit",
-                              boxSizing: "border-box" as const }} />
-                        </div>
-
-                        {/* Title */}
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)",
-                            letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 4 }}>
-                            Title / Company
-                          </div>
-                          <input value={speakerTitle} onChange={e => setSpeakerTitle(e.target.value)}
-                            placeholder="e.g. CEO & MD, Infosys"
-                            style={{ width: "100%", padding: "7px 10px", borderRadius: 7,
-                              border: "1px solid var(--card-border)", background: "var(--card-bg)",
-                              color: "var(--text-primary)", fontSize: 13, fontFamily: "inherit",
-                              boxSizing: "border-box" as const }} />
-                        </div>
-
-                        {/* Optional badge */}
-                        <div>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-muted)",
-                            letterSpacing: "0.06em", textTransform: "uppercase" as const, marginBottom: 4 }}>
-                            Content badge (optional)
-                          </div>
-                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" as const }}>
-                            {["", "BYLINE", "MEDIA ARTICLE", "THOUGHT LEADERSHIP"].map(b => (
-                              <button key={b || "none"} onClick={() => setSpeakerBadge(b)}
-                                style={{ padding: "4px 11px", borderRadius: 99, fontSize: 11, fontWeight: 700,
-                                  cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s",
-                                  border: `1.5px solid ${speakerBadge === b ? color : "var(--card-border)"}`,
-                                  background: speakerBadge === b ? `${color}18` : "var(--card-bg-soft)",
-                                  color: speakerBadge === b ? color : "var(--text-secondary)" }}>
-                                {b || "None"}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </>
-              )}
+                )}
+              </div>
             </div>
           )}
 

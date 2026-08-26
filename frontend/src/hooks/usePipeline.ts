@@ -340,12 +340,35 @@ export function usePipeline() {
         },
       };
 
+      // Normalise Helia's nested objects to strings for the UI panels
+      const _bigIdea      = typeof plat.big_idea === "string" ? plat.big_idea : (plat.big_idea?.statement ?? "");
+      const _buyerTruth   = typeof vbrief.buyer_truth === "string" ? vbrief.buyer_truth : (vbrief.buyer_truth?.statement ?? "");
+      const _recTerrName  = plat.recommended_territory ?? plat.territory_name ?? "";
+      const _recTerr      = (plat.territories ?? []).find((t: any) => t.name === _recTerrName) ?? (plat.territories ?? [])[0] ?? null;
+
       const creative_strategy = {
-        hero_message:       plat.big_idea ?? plat.territory_name ?? "",
-        brand_territory:    plat.territory_name ?? "",
-        creative_direction: plat.visual_world ?? "",
-        tone_of_voice:      plat.tone_of_voice ?? "",
-        audience_insight:   vbrief.buyer_truth ?? vbrief.audience ?? "",
+        hero_message:       _bigIdea || plat.hero_message?.hero_line || "",
+        brand_territory:    _recTerrName,
+        creative_direction: (_recTerr?.visual_cues?.[0]) ?? plat.visual_world ?? "",
+        tone_of_voice:      _recTerr?.verbal_tone ?? plat.tone_of_voice ?? "",
+        audience_insight:   _buyerTruth || vbrief.audience || "",
+      };
+
+      // machine_brief: flat copy of validated_brief mapped to App.tsx brief field names
+      const machine_brief = {
+        ...vbrief,
+        brand:         vbrief.brand ?? "",
+        campaign_name: vbrief.campaign_name ?? "",
+        market:        vbrief.market ?? "",
+        fan_truth:     _buyerTruth,
+        buyer_truth:   _buyerTruth,
+        audience:      vbrief.audience ?? "",
+        objective:     vbrief.objective ?? vbrief.campaign_goal ?? "",
+        kpi:           vbrief.kpi ?? "",
+        channels:      vbrief.channels ?? [],
+        budget:        vbrief.budget ?? "",
+        timing:        vbrief.timing ?? "",
+        sub_brand:     vbrief.sub_brand ?? "",
       };
 
       setState({
@@ -354,6 +377,7 @@ export function usePipeline() {
         pipeline_output: {
           campaign_copy,
           creative_strategy,
+          machine_brief,
           validated_brief:    vbrief,
           creative_platform:  plat,
           copy_deck:          deck,

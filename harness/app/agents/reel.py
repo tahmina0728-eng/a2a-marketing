@@ -668,16 +668,87 @@ def run_reel(brand: str, prompt: str, campaign_type: str = "", copy_headline: st
             f"Clean white and Haleon green, aspirational yet completely real.",
         ])
 
+    def _infosys_scene(p: str) -> str:
+        # Kinetik brand rules: footage layer ONLY — no text, logos, dashboards, product screens,
+        # or identifiable real people. Focus on the human decision-moment in the story spine.
+        # Check both product/service string AND brand name itself for sub-brand signals.
+        _combined = (f"{p} {brand}").lower()
+        _is_topaz   = any(x in _combined for x in ["topaz", "ai agent", "artificial intelligence", "machine learning", "generative"])
+        _is_cobalt  = any(x in _combined for x in ["cobalt", "cloud", "infrastructure", "migration", "platform"])
+        _is_finacle = any(x in _combined for x in ["finacle", "banking", "bank", "financial services", "core banking"])
+        _is_aster   = any(x in _combined for x in ["aster", "marketing", "marketing cloud", "cx"])
+        if _is_topaz:
+            return _rnd.choice([
+                "A senior executive pauses at a floor-to-ceiling glass window of a sleek high-rise office — "
+                "city skyline at dusk behind them, deep in thought, then a quiet decisive nod. "
+                "Sapphire Dark #061838 ground, Infosys Blue #007CC3 ambient rim-light, cinematic tension resolving into clarity.",
+                "A diverse leadership team around a clean modern boardroom table — abstract light patterns in soft bokeh, "
+                "one person leans forward with certainty as others align. "
+                "Deep Sapphire Dark ground, cool Infosys Blue window light, engineering-minded confidence.",
+            ])
+        if _is_cobalt:
+            return _rnd.choice([
+                "An engineer walks calmly through a modern data centre — blue-lit server racks stretching into the distance, "
+                "everything controlled and precise, a purposeful stride. "
+                "Sapphire Dark ground with cool Infosys Blue accent light, quiet mastery and forward motion.",
+                "A technologist gestures toward an abstract light array in soft bokeh — team watching, "
+                "nodding in confident agreement. "
+                "Deep navy ground, electric Infosys Blue ambient light, composed enterprise confidence.",
+            ])
+        if _is_finacle:
+            return _rnd.choice([
+                "A banking executive walks purposefully through a sleek modern branch — customers and advisors "
+                "visible in warm background bokeh, pausing to greet someone with genuine warmth. "
+                "Sapphire Dark and Infosys Blue palette, trust and human connection at the centre.",
+                "A financial professional at a bright minimalist desk glances up with quiet, knowing confidence — "
+                "the decision made, calm authority in their expression. "
+                "Deep navy and Infosys Blue accent, precise and credible.",
+            ])
+        if _is_aster:
+            return _rnd.choice([
+                "A creative team around a bright collaborative workspace — energy and movement, "
+                "one strategist presents a clear direction that visibly lands for the group. "
+                "Sapphire Dark ground, Infosys Blue and warm accent light, confident and human.",
+                "A digital strategist stands at a light-filled window, city below — a quiet moment before a "
+                "decision, then turns back to the team with calm certainty. "
+                "Infosys Blue and Sapphire Dark palette, aspirational B2B energy.",
+            ])
+        # Master brand — 'Navigate your next' tension-to-clarity beat
+        return _rnd.choice([
+            "A business leader stands in a busy modern atrium — people moving around them, a clear path "
+            "forming, then a confident stride begins. "
+            "Sapphire Dark ground, Infosys Blue ambient light, the navigation moment made visible.",
+            "A diverse enterprise team — engineer, strategist, executive — walking together through a glass-walled "
+            "corridor toward a bright destination. "
+            "Cinematic dolly, Sapphire Dark and Infosys Blue palette, purposeful forward motion.",
+            "Close-up of a thoughtful executive's face as tension resolves into clarity — "
+            "city lights blur softly in the background window, quiet confidence in their expression. "
+            "Sapphire Dark ground, cool Infosys Blue side-light, human and credible.",
+        ])
+
     _BRAND_SCENE_FN = {
-        "Sunglow":     _sunglow_scene,
-        "Rnorr":       _rnorr_scene,
-        "Boozt":       _boozt_scene,
-        "Glenfiddich": _glenfiddich_scene,
-        "UBS Bank":    _ubs_scene,
-        "sunrise":     _sunrise_scene,
-        "Sunrise":     _sunrise_scene,
-        "Haleon":      _haleon_scene,
+        "Sunglow":          _sunglow_scene,
+        "Rnorr":            _rnorr_scene,
+        "Boozt":            _boozt_scene,
+        "Glenfiddich":      _glenfiddich_scene,
+        "UBS Bank":         _ubs_scene,
+        "sunrise":          _sunrise_scene,
+        "Sunrise":          _sunrise_scene,
+        "Haleon":           _haleon_scene,
+        # Infosys master brand + all sub-brands as potential brand values
+        "Infosys":          _infosys_scene,
+        "Infosys Topaz":    _infosys_scene,
+        "Infosys Cobalt":   _infosys_scene,
+        "Infosys Aster":    _infosys_scene,
+        "Infosys Finacle":  _infosys_scene,
+        "Topaz":            _infosys_scene,
+        "Cobalt":           _infosys_scene,
+        "Aster":            _infosys_scene,
+        "Finacle":          _infosys_scene,
     }
+    # Treat any Infosys variant (master brand or sub-brand) the same way
+    _infosys_families = {"infosys", "topaz", "cobalt", "aster", "finacle"}
+    _is_infosys = any(x in brand.lower() for x in _infosys_families)
     if _is_barclays:
         brand_scene = _barclays_brand.reel_scene(big_idea, "", voiceover)
     else:
@@ -696,11 +767,27 @@ def run_reel(brand: str, prompt: str, campaign_type: str = "", copy_headline: st
         f"- AUDIO: upbeat brand-appropriate background music + {_voiceover_line}\n"
         f"- The voiceover should be delivered confidently and warmly over the music\n"
     ) if not _is_barclays else ""
+
+    # Infosys-specific Veo rules (Kinetik brand guidelines — applies to master brand and all sub-brands)
+    _infosys_subbrand = next((s for s in ["Topaz", "Cobalt", "Aster", "Finacle"] if s.lower() in brand.lower()), None)
+    _infosys_veo_rules = (
+        f"- INFOSYS{'/' + _infosys_subbrand if _infosys_subbrand else ''} BRAND: footage layer only — "
+        f"NO logos, NO brand marks, NO text overlays, NO dashboards, NO product screens, "
+        f"NO data visualisations, NO readable interfaces\n"
+        f"- NO identifiable real executives, clients, or named individuals — all talent must be generic\n"
+        f"- Story arc: 'Navigate your next' — open on the human tension/decision moment, resolve to confident "
+        f"forward motion; credible, engineering-minded, specific — never generic corporate stock footage\n"
+        f"- Colour palette: Sapphire Dark (#061838) as the dominant ground, Infosys Blue (#007CC3) as accent "
+        f"light or environmental colour; avoid warm consumer tones — this is B2B enterprise\n"
+        f"- AUDIO: measured, confident background score (not upbeat pop) + {_voiceover_line}\n"
+        f"- The voiceover should be delivered with calm, credible authority\n"
+    ) if _is_infosys else ""
+
     prompt_req = (
         f"Write a single cinematic video+audio generation prompt (80-100 words) "
         f"for a 6-second {brand} campaign reel with voiceover.\n\n"
         f"Brand: {brand}\n"
-        f"Product: {product or '(service brand — no physical product)'}\n"
+        f"Product: {product or '(pure service brand — no physical product or packaging)'}\n"
         f"Campaign Big Idea: {big_idea}\n"
         f"Season/Context: {season or 'evergreen'}\n"
         f"Audience: {audience}\n"
@@ -708,16 +795,25 @@ def run_reel(brand: str, prompt: str, campaign_type: str = "", copy_headline: st
         f"Base visual direction: {brand_scene}\n\n"
         f"Rules:\n"
         f"- Photorealistic, premium advertising quality, dynamic motion, brand colours prominent\n"
-        f"{_generic_audio}"
-        f"- No text or typography visible in the image\n"
+        + (_infosys_veo_rules if _is_infosys else _generic_audio)
+        + f"- No text or typography visible in the image\n"
         f"- CRITICAL: absolutely NO film strip borders, NO film perforations, NO sprocket holes, "
         f"NO timecodes, NO frame counters, NO film slates, NO clapperboards, NO camera overlays — "
         f"this is a pure premium advertising spot, NOT a film/cinema aesthetic\n"
-        f"- CRITICAL PRODUCT RULE: Show ONLY {product or brand} product packaging. "
-        f"Do NOT show any other product, competing brand, or unrelated packaging in the scene.\n"
-        f"- CRITICAL: Do NOT use any financial or wealth terms: no 'wealth', 'investment', "
-        f"'high-net-worth', 'banking', 'financial', 'portfolio', 'returns', 'assets', 'affluent', "
-        f"'prosperity'. Describe only pure visual/lifestyle/emotional content.\n"
+        + (
+            f"- CRITICAL: This is a pure service brand — do NOT show any physical product packaging, "
+            f"hardware, or consumer goods in the scene.\n"
+            if _is_infosys else
+            f"- CRITICAL PRODUCT RULE: Show ONLY {product or brand} product packaging. "
+            f"Do NOT show any other product, competing brand, or unrelated packaging in the scene.\n"
+        )
+        + (
+            ""
+            if _is_infosys else
+            f"- CRITICAL: Do NOT use any financial or wealth terms: no 'wealth', 'investment', "
+            f"'high-net-worth', 'banking', 'financial', 'portfolio', 'returns', 'assets', 'affluent', "
+            f"'prosperity'. Describe only pure visual/lifestyle/emotional content.\n"
+        )
         + (f"- BARCLAYS BRAND RULES: {_barclays_veo_rules}\n" if _barclays_veo_rules else "")
         + "Output the prompt only — no labels, no markdown, no explanation."
     )

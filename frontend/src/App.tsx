@@ -36,6 +36,7 @@ import {
   AGENT_COLORS, AGENT_DESCS, AGENT_AVATARS, avatarUrl, WORKFLOW_STAGES,
 } from "./constants/agents";
 import { API_BASE_PUB } from "./services/briefingApi";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 import AgentProfile from "./components/agents/AgentProfile";
 import BriefingAgentDashboard from "./components/briefing/BriefingAgentDashboard";
 import EmailConverter from "./components/EmailConverter";
@@ -1139,15 +1140,41 @@ function CopyPanel({ m }: { m?: Record<string,unknown> }) {
 }
 
 const CHANNEL_CFG: Record<string, { icon: string; color: string; bg: string; border: string }> = {
-  instagram: { icon: "📸", color: "#c026d3", bg: "#fdf4ff", border: "#e9d5ff" },
-  tiktok:    { icon: "🎵", color: "var(--text-primary)", bg: "#eef0f4", border: "#e2e8f0" },
-  google:    { icon: "🔍", color: "#1967d2", bg: "#eff6ff", border: "#bfdbfe" },
-  email:     { icon: "📧", color: "#059669", bg: "#f0fdf4", border: "#86efac" },
-  ooh:       { icon: "🪧", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-  youtube:   { icon: "▶️", color: "#dc2626", bg: "#fff1f2", border: "#fecdd3" },
+  instagram:         { icon: "📸", color: "#c026d3", bg: "#fdf4ff", border: "#e9d5ff" },
+  instagram_feed:    { icon: "📸", color: "#c026d3", bg: "#fdf4ff", border: "#e9d5ff" },
+  instagram_stories: { icon: "📱", color: "#c026d3", bg: "#fdf4ff", border: "#e9d5ff" },
+  tiktok:            { icon: "🎵", color: "var(--text-primary)", bg: "#eef0f4", border: "#e2e8f0" },
+  google:            { icon: "🔍", color: "#1967d2", bg: "#eff6ff", border: "#bfdbfe" },
+  google_ads:        { icon: "🔍", color: "#1967d2", bg: "#eff6ff", border: "#bfdbfe" },
+  meta_ads:          { icon: "📘", color: "#1877f2", bg: "#eff6ff", border: "#bfdbfe" },
+  linkedin:          { icon: "💼", color: "#0a66c2", bg: "#eff6ff", border: "#bae6fd" },
+  email:             { icon: "📧", color: "#059669", bg: "#f0fdf4", border: "#86efac" },
+  ooh:               { icon: "🪧", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+  youtube:           { icon: "▶️", color: "#dc2626", bg: "#fff1f2", border: "#fecdd3" },
+  website:           { icon: "🌐", color: "#6366f1", bg: "#eef2ff", border: "#c7d2fe" },
 };
 
-function ChannelPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: string|null }) {
+// Per-channel image dimensions — used to shape the KV preview in each channel card
+const CHANNEL_SPECS: Record<string, { w: number; h: number; label: string }> = {
+  instagram:         { w: 1080, h: 1080, label: "1:1 · 1080×1080" },
+  instagram_feed:    { w: 1080, h: 1080, label: "1:1 · 1080×1080" },
+  instagram_stories: { w: 1080, h: 1920, label: "9:16 · 1080×1920" },
+  tiktok:            { w: 1080, h: 1920, label: "9:16 · 1080×1920" },
+  google:            { w: 1200, h: 628,  label: "1.91:1 · 1200×628" },
+  google_ads:        { w: 1200, h: 628,  label: "1.91:1 · 1200×628" },
+  meta_ads:          { w: 1200, h: 628,  label: "1.91:1 · 1200×628" },
+  linkedin:          { w: 1200, h: 627,  label: "1.91:1 · 1200×627" },
+  email:             { w: 600,  h: 338,  label: "16:9 · 600×338" },
+  ooh:               { w: 1920, h: 1080, label: "16:9 · 1920×1080" },
+  youtube:           { w: 1920, h: 1080, label: "16:9 · 1920×1080" },
+  website:           { w: 1920, h: 1080, label: "16:9 · 1920×1080" },
+};
+
+function ChannelPanel({ m, liveMsg, kvImgB64 }: {
+  m?: Record<string,unknown>;
+  liveMsg: string|null;
+  kvImgB64?: string;
+}) {
   const hasData = m && Object.keys(m).length > 0;
 
   if (!hasData) return (
@@ -1174,31 +1201,98 @@ function ChannelPanel({ m, liveMsg }: { m?: Record<string,unknown>; liveMsg: str
         textTransform: "uppercase" as const, marginBottom: 12 }}>
         {Object.keys(m!).length} Channels Ready to Publish
       </div>
-      <div style={{ display: "flex", flexDirection: "column" as const, gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
         {Object.entries(m!).map(([key, val]) => {
-          const ch  = val as any;
-          const cfg = CHANNEL_CFG[key] ?? { icon: "📢", color: "var(--text-tertiary)", bg: "#eef0f4", border: "#e2e8f0" };
+          const ch   = val as any;
+          const cfg  = CHANNEL_CFG[key] ?? { icon: "📢", color: "var(--text-tertiary)", bg: "#eef0f4", border: "#e2e8f0" };
+          const spec = CHANNEL_SPECS[key] ?? { w: 1920, h: 1080, label: "16:9" };
+          const isPortrait = spec.h > spec.w;   // 9:16 (TikTok, Stories)
+          const isSquare   = spec.w === spec.h;  // 1:1 (Instagram)
+
           return (
-            <div key={key} style={{ borderRadius: 12, overflow: "hidden", border: `1px solid ${cfg.border}` }}>
-              <div style={{ padding: "7px 12px", background: cfg.bg, borderBottom: `1px solid ${cfg.border}`,
+            <div key={key} style={{ borderRadius: 14, overflow: "hidden",
+              border: `1px solid ${cfg.border}`, background: "var(--card-bg)" }}>
+
+              {/* ── Card header ─────────────────────────────────── */}
+              <div style={{ padding: "8px 14px", background: cfg.bg, borderBottom: `1px solid ${cfg.border}`,
                 display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 15 }}>{cfg.icon}</span>
-                <span style={{ fontSize: 12, fontWeight: 800, color: cfg.color }}>{ch.platform}</span>
-                <span style={{ marginLeft: "auto", fontSize: 9, padding: "2px 8px", borderRadius: 99,
-                  background: cfg.border, color: cfg.color, fontWeight: 700 }}>{ch.format}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, color: cfg.color }}>{ch.platform ?? key}</span>
+                <span style={{ marginLeft: "auto", fontSize: 9, padding: "2px 10px", borderRadius: 99,
+                  background: "rgba(0,0,0,0.07)", color: cfg.color, fontWeight: 700,
+                  letterSpacing: "0.04em" }}>{spec.label}</span>
                 <span style={{ fontSize: 10, color: "#10b981", fontWeight: 700 }}>✓ Ready</span>
               </div>
-              <div style={{ padding: "8px 12px", background: "white" }}>
-                {(ch.headline || ch.hook) && (
-                  <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
-                    "{String(ch.headline || ch.hook).slice(0, 60)}{String(ch.headline || ch.hook).length > 60 ? "…" : ""}"
-                  </div>
+
+              {/* ── KV preview + copy ───────────────────────────── */}
+              <div style={{
+                display: "flex",
+                flexDirection: isPortrait ? "row" : "column" as const,
+                gap: isPortrait ? 0 : 0,
+              }}>
+
+                {/* KV image — shaped to channel's aspect ratio */}
+                {kvImgB64 && (
+                  isPortrait ? (
+                    /* 9:16: narrow portrait column on the left */
+                    <div style={{ flexShrink: 0, width: 88, alignSelf: "stretch",
+                      overflow: "hidden", background: "#000" }}>
+                      <img
+                        src={`data:image/jpeg;base64,${kvImgB64}`}
+                        alt={`${key} KV`}
+                        style={{ width: "100%", height: "100%", objectFit: "cover",
+                          objectPosition: "center", display: "block" }}
+                      />
+                    </div>
+                  ) : (
+                    /* 1:1 or 16:9: full-width image with correct aspect ratio */
+                    <div style={{
+                      width: "100%",
+                      aspectRatio: `${spec.w} / ${spec.h}`,
+                      maxHeight: isSquare ? 220 : 180,
+                      overflow: "hidden",
+                      background: "#000",
+                    }}>
+                      <img
+                        src={`data:image/jpeg;base64,${kvImgB64}`}
+                        alt={`${key} KV`}
+                        style={{ width: "100%", height: "100%", objectFit: "cover",
+                          objectPosition: "center", display: "block" }}
+                      />
+                    </div>
+                  )
                 )}
-                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  {ch.cta && <span style={{ fontSize: 10, padding: "2px 10px", borderRadius: 99,
-                    background: cfg.color, color: "white", fontWeight: 700 }}>{ch.cta}</span>}
-                  {ch.caption && <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>{String(ch.caption).slice(0, 50)}…</span>}
-                  {ch.subject && <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>Subject: {ch.subject}</span>}
+
+                {/* Copy */}
+                <div style={{ padding: "10px 14px", flex: 1 }}>
+                  {(ch.headline || ch.hook) && (
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)",
+                      marginBottom: 6, lineHeight: 1.4 }}>
+                      "{String(ch.headline || ch.hook).slice(0, 80)}{String(ch.headline || ch.hook).length > 80 ? "…" : ""}"
+                    </div>
+                  )}
+                  {ch.body && (
+                    <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.5,
+                      marginBottom: 6 }}>
+                      {String(ch.body).slice(0, 100)}{String(ch.body).length > 100 ? "…" : ""}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" as const }}>
+                    {ch.cta && (
+                      <span style={{ fontSize: 10, padding: "3px 12px", borderRadius: 99,
+                        background: cfg.color, color: "white", fontWeight: 700 }}>{ch.cta}</span>
+                    )}
+                    {ch.caption && (
+                      <span style={{ fontSize: 10, color: "var(--text-tertiary)", lineHeight: 1.4 }}>
+                        {String(ch.caption).slice(0, 60)}{String(ch.caption).length > 60 ? "…" : ""}
+                      </span>
+                    )}
+                    {ch.subject && (
+                      <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
+                        Subject: {ch.subject}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -2493,8 +2587,11 @@ function ResultsView({ output, campaignId }: {
   const [expanded,   setExpanded]   = useState(false);
   const [selectedKV, setSelectedKV] = useState(0);
   const [copyTab,    setCopyTab]    = useState<"short" | "medium" | "long" | "channels">("short");
-  const [kvSaveState,   setKvSaveState]   = useState<"idle" | "saving" | "saved">("idle");
-  const [reelSaveState, setReelSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [kvSaveState,       setKvSaveState]       = useState<"idle" | "saving" | "saved">("idle");
+  const [reelSaveState,     setReelSaveState]     = useState<"idle" | "saving" | "saved">("idle");
+  const [infosysKvBusy,     setInfosysKvBusy]     = useState(false);
+  const [infosysKvImg,      setInfosysKvImg]       = useState<string | null>(null);
+  const [infosysKvTheme,    setInfosysKvTheme]     = useState("blue");
 
   const brief    = (output as any)?.machine_brief ?? output as any;
   const strategy = output?.creative_strategy as any;
@@ -2546,6 +2643,37 @@ function ResultsView({ output, campaignId }: {
     } catch (e) {
       console.error("content_hub_save_reel_failed", e);
       setReelSaveState("idle");
+    }
+  };
+
+  const handleGenerateInfosysKV = async () => {
+    const _hl  = (copy as any)?.short_headline  ?? "";
+    const _sub = (copy as any)?.medium_headline ?? "";
+    const _cta = (copy as any)?.cta             ?? "";
+    if (!_hl) return;
+    setInfosysKvBusy(true);
+    setInfosysKvImg(null);
+    try {
+      const res = await fetch(`${API_BASE}/agents/kv/run`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt:         `Infosys — ${brief?.campaign_name ?? "campaign"}`,
+          brand:          "Infosys",
+          copy_headline:  _hl,
+          copy_subline:   _sub,
+          copy_cta:       _cta,
+          color_theme:    infosysKvTheme,
+        }),
+      });
+      if (!res.ok) { const t = await res.text(); throw new Error(t); }
+      const data = await res.json();
+      const img = data.image_b64 ?? data.images_b64?.[0] ?? null;
+      setInfosysKvImg(img);
+    } catch (e) {
+      console.error("infosys_kv_generate_failed", e);
+    } finally {
+      setInfosysKvBusy(false);
     }
   };
 
@@ -2825,6 +2953,69 @@ function ResultsView({ output, campaignId }: {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+              </div>
+            </StageCard>
+          );
+        })()}
+
+        {/* ── 3b. Infosys — Generate Key Visual ────────────────────────── */}
+        {(output as any)?.infosys_pipeline && !!(copy as any)?.short_headline && (() => {
+          const n = S();
+          const THEMES = [
+            { key: "blue",        label: "Cobalt",   swatch: "#0A4DA6" },
+            { key: "purple",      label: "Purple",   swatch: "#5C2D91" },
+            { key: "deep-purple", label: "Deep",     swatch: "#2D1B69" },
+            { key: "amber",       label: "Amber",    swatch: "#92400E" },
+          ];
+          return (
+            <StageCard step={n} label="Key Visual" color="#e11d48">
+              <div style={{ padding: "20px 22px" }}>
+                {/* Color theme picker */}
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>Theme</span>
+                  {THEMES.map(t => (
+                    <button key={t.key} onClick={() => setInfosysKvTheme(t.key)} title={t.label} style={{
+                      width: 26, height: 26, borderRadius: "50%", background: t.swatch, border: `3px solid ${infosysKvTheme === t.key ? "white" : "transparent"}`,
+                      boxShadow: infosysKvTheme === t.key ? `0 0 0 2px ${t.swatch}` : "none",
+                      cursor: "pointer", flexShrink: 0, transition: "border 0.15s, box-shadow 0.15s",
+                    }} />
+                  ))}
+                  <button
+                    onClick={handleGenerateInfosysKV}
+                    disabled={infosysKvBusy}
+                    style={{
+                      marginLeft: "auto", padding: "9px 22px", borderRadius: 99, border: "none", cursor: infosysKvBusy ? "not-allowed" : "pointer",
+                      background: infosysKvBusy ? "rgba(225,29,72,0.35)" : "linear-gradient(135deg,#e11d48,#f43f5e)",
+                      color: "white", fontSize: 12, fontWeight: 800, letterSpacing: "0.04em",
+                      boxShadow: infosysKvBusy ? "none" : "0 4px 14px rgba(225,29,72,0.4)", transition: "all 0.2s",
+                    }}
+                  >
+                    {infosysKvBusy ? "Generating…" : infosysKvImg ? "Regenerate" : "Generate Key Visual"}
+                  </button>
+                </div>
+
+                {/* Generated image */}
+                {infosysKvImg && (
+                  <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid rgba(225,29,72,0.25)", marginTop: 4 }}>
+                    <img
+                      src={`data:image/jpeg;base64,${infosysKvImg}`}
+                      alt="Generated Infosys key visual"
+                      style={{ width: "100%", display: "block" }}
+                    />
+                  </div>
+                )}
+
+                {/* Placeholder while not yet generated */}
+                {!infosysKvImg && !infosysKvBusy && (
+                  <div style={{ padding: "32px 0", textAlign: "center" as const, color: "var(--text-secondary)", fontSize: 13 }}>
+                    Select a colour theme and click <strong>Generate Key Visual</strong> to create a 16:9 banner using the campaign copy above.
+                  </div>
+                )}
+                {infosysKvBusy && (
+                  <div style={{ padding: "32px 0", textAlign: "center" as const, color: "var(--text-secondary)", fontSize: 13 }}>
+                    Rendering key visual…
                   </div>
                 )}
               </div>
@@ -3884,18 +4075,23 @@ function ReelIntakeView({ milestone, liveMsg }: {
 }
 
 // ── Channel Adapter intake view ───────────────────────────────
-function ChannelAdapterIntakeView({ milestone, liveMsg }: {
+function ChannelAdapterIntakeView({ milestone, liveMsg, kvMilestone }: {
   milestone: Record<string,unknown> | undefined;
   liveMsg: string | null;
+  kvMilestone?: Record<string,unknown>;
 }) {
   if (!milestone) return <AgentGeneratingView liveMsg={liveMsg} />;
+
+  // Extract the first KV image from the Morphis milestone
+  const _kvImgs = kvMilestone?.images_b64 as string[] | undefined;
+  const kvImgB64 = (_kvImgs?.[0]) ?? (kvMilestone?.image_b64 ? String(kvMilestone.image_b64) : undefined);
 
   return (
     <div style={{ flex: 1, overflowY: "auto" as const, padding: "32px 36px",
       background: "var(--page-bg)" }}>
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
         <AgentIntakeHeader label="POLY" title="Publishing to Channels" done={true} />
-        <ChannelPanel m={milestone} liveMsg={liveMsg} />
+        <ChannelPanel m={milestone} liveMsg={liveMsg} kvImgB64={kvImgB64} />
       </div>
     </div>
   );
@@ -5351,6 +5547,7 @@ export default function App() {
                 <ChannelAdapterIntakeView
                   milestone={state.milestones["channel"]}
                   liveMsg={liveMsg("channel")}
+                  kvMilestone={state.milestones["kv"]}
                 />
               );
               if (focusKey === "performance") return (
