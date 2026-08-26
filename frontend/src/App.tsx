@@ -2585,9 +2585,6 @@ function ResultsView({ output, campaignId }: {
   const [copyTab,    setCopyTab]    = useState<"short" | "medium" | "long" | "channels">("short");
   const [kvSaveState,       setKvSaveState]       = useState<"idle" | "saving" | "saved">("idle");
   const [reelSaveState,     setReelSaveState]     = useState<"idle" | "saving" | "saved">("idle");
-  const [infosysKvBusy,     setInfosysKvBusy]     = useState(false);
-  const [infosysKvImg,      setInfosysKvImg]       = useState<string | null>(null);
-  const [infosysKvTheme,    setInfosysKvTheme]     = useState("blue");
 
   const brief    = (output as any)?.machine_brief ?? output as any;
   const strategy = output?.creative_strategy as any;
@@ -2643,36 +2640,6 @@ function ResultsView({ output, campaignId }: {
     }
   };
 
-  const handleGenerateInfosysKV = async () => {
-    const _hl  = (copy as any)?.short_headline  ?? "";
-    const _sub = (copy as any)?.medium_headline ?? "";
-    const _cta = (copy as any)?.cta             ?? "";
-    if (!_hl) return;
-    setInfosysKvBusy(true);
-    setInfosysKvImg(null);
-    try {
-      const res = await fetch(`${API_BASE}/agents/kv/run`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          prompt:         `Infosys — ${brief?.campaign_name ?? "campaign"}`,
-          brand:          "Infosys",
-          copy_headline:  _hl,
-          copy_subline:   _sub,
-          copy_cta:       _cta,
-          color_theme:    infosysKvTheme,
-        }),
-      });
-      if (!res.ok) { const t = await res.text(); throw new Error(t); }
-      const data = await res.json();
-      const img = data.image_b64 ?? data.images_b64?.[0] ?? null;
-      setInfosysKvImg(img);
-    } catch (e) {
-      console.error("infosys_kv_generate_failed", e);
-    } finally {
-      setInfosysKvBusy(false);
-    }
-  };
 
   const CHANNEL_ICONS: Record<string, string> = {
     instagram_feed: "📸", instagram_stories: "📱", tiktok: "🎵",
@@ -2957,68 +2924,6 @@ function ResultsView({ output, campaignId }: {
           );
         })()}
 
-        {/* ── 3b. Infosys — Generate Key Visual ────────────────────────── */}
-        {(output as any)?.infosys_pipeline && !!(copy as any)?.short_headline && (() => {
-          const n = S();
-          const THEMES = [
-            { key: "blue",        label: "Cobalt",   swatch: "#0A4DA6" },
-            { key: "purple",      label: "Purple",   swatch: "#5C2D91" },
-            { key: "deep-purple", label: "Deep",     swatch: "#2D1B69" },
-            { key: "amber",       label: "Amber",    swatch: "#92400E" },
-          ];
-          return (
-            <StageCard step={n} label="Key Visual" color="#e11d48">
-              <div style={{ padding: "20px 22px" }}>
-                {/* Color theme picker */}
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-secondary)", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>Theme</span>
-                  {THEMES.map(t => (
-                    <button key={t.key} onClick={() => setInfosysKvTheme(t.key)} title={t.label} style={{
-                      width: 26, height: 26, borderRadius: "50%", background: t.swatch, border: `3px solid ${infosysKvTheme === t.key ? "white" : "transparent"}`,
-                      boxShadow: infosysKvTheme === t.key ? `0 0 0 2px ${t.swatch}` : "none",
-                      cursor: "pointer", flexShrink: 0, transition: "border 0.15s, box-shadow 0.15s",
-                    }} />
-                  ))}
-                  <button
-                    onClick={handleGenerateInfosysKV}
-                    disabled={infosysKvBusy}
-                    style={{
-                      marginLeft: "auto", padding: "9px 22px", borderRadius: 99, border: "none", cursor: infosysKvBusy ? "not-allowed" : "pointer",
-                      background: infosysKvBusy ? "rgba(225,29,72,0.35)" : "linear-gradient(135deg,#e11d48,#f43f5e)",
-                      color: "white", fontSize: 12, fontWeight: 800, letterSpacing: "0.04em",
-                      boxShadow: infosysKvBusy ? "none" : "0 4px 14px rgba(225,29,72,0.4)", transition: "all 0.2s",
-                    }}
-                  >
-                    {infosysKvBusy ? "Generating…" : infosysKvImg ? "Regenerate" : "Generate Key Visual"}
-                  </button>
-                </div>
-
-                {/* Generated image */}
-                {infosysKvImg && (
-                  <div style={{ borderRadius: 14, overflow: "hidden", border: "1px solid rgba(225,29,72,0.25)", marginTop: 4 }}>
-                    <img
-                      src={`data:image/jpeg;base64,${infosysKvImg}`}
-                      alt="Generated Infosys key visual"
-                      style={{ width: "100%", display: "block" }}
-                    />
-                  </div>
-                )}
-
-                {/* Placeholder while not yet generated */}
-                {!infosysKvImg && !infosysKvBusy && (
-                  <div style={{ padding: "32px 0", textAlign: "center" as const, color: "var(--text-secondary)", fontSize: 13 }}>
-                    Select a colour theme and click <strong>Generate Key Visual</strong> to create a 16:9 banner using the campaign copy above.
-                  </div>
-                )}
-                {infosysKvBusy && (
-                  <div style={{ padding: "32px 0", textAlign: "center" as const, color: "var(--text-secondary)", fontSize: 13 }}>
-                    Rendering key visual…
-                  </div>
-                )}
-              </div>
-            </StageCard>
-          );
-        })()}
 
         {/* ── 4. Cultural Intelligence ───────────────────────────────────── */}
         {cp?.culture_brief && (() => {

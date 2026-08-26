@@ -247,90 +247,6 @@ export function usePipeline() {
       run_visuals:   false,
     };
 
-    // Helper: normalise a raw Infosys pipeline result → pipeline_output shape
-    const _normalise = (result: any) => {
-      const deck   = result.copy_deck ?? {};
-      const plat   = result.creative_platform ?? {};
-      const vbrief = result.validated_brief ?? {};
-
-      const _recIdx   = typeof deck.recommended_variant === "number" ? deck.recommended_variant : 0;
-      const _variants = Array.isArray(deck.variants) ? deck.variants : [];
-      const _best     = _variants[_recIdx] ?? _variants[0] ?? null;
-
-      const campaign_copy = {
-        short_headline:  _best?.headline
-                         ?? deck.banner_copy?.linkedin_1200x627?.heading
-                         ?? deck.headlines?.hero_options?.[0] ?? "",
-        medium_headline: _best?.subheadline
-                         ?? deck.banner_copy?.linkedin_1200x627?.subheading
-                         ?? deck.headlines?.hero_options?.[1]
-                         ?? deck.headlines?.support_options?.[0] ?? "",
-        body:            _best?.body ?? deck.body_copy?.web ?? "",
-        cta:             _best?.cta  ?? deck.cta_bank?.[0] ?? "",
-        channel_copy: {
-          linkedin: deck.social_captions?.linkedin ?? "",
-          email:    deck.body_copy?.email ?? "",
-          ...(deck.banner_copy?.linkedin_1200x627
-            ? { linkedin_banner: `${deck.banner_copy.linkedin_1200x627.heading} — ${deck.banner_copy.linkedin_1200x627.subheading}` }
-            : {}),
-        },
-      };
-
-      const _bigIdea     = typeof plat.big_idea === "string" ? plat.big_idea : (plat.big_idea?.statement ?? "");
-      const _buyerTruth  = typeof vbrief.buyer_truth === "string" ? vbrief.buyer_truth : (vbrief.buyer_truth?.statement ?? "");
-      const _recTerrName = plat.recommended_territory ?? plat.territory_name ?? "";
-      const _recTerr     = (plat.territories ?? []).find((t: any) => t.name === _recTerrName) ?? (plat.territories ?? [])[0] ?? null;
-
-      const creative_strategy = {
-        hero_message:       _bigIdea || plat.hero_message?.hero_line || "",
-        brand_territory:    _recTerrName,
-        creative_direction: (_recTerr?.visual_cues?.[0]) ?? plat.visual_world ?? "",
-        tone_of_voice:      _recTerr?.verbal_tone ?? plat.tone_of_voice ?? "",
-        audience_insight:   _buyerTruth || vbrief.audience || "",
-      };
-
-      const machine_brief = {
-        ...vbrief,
-        brand:         vbrief.brand ?? "",
-        campaign_name: vbrief.campaign_name ?? "",
-        market:        vbrief.market ?? "",
-        fan_truth:     _buyerTruth,
-        buyer_truth:   _buyerTruth,
-        audience:      vbrief.audience ?? "",
-        objective:     vbrief.objective ?? vbrief.campaign_goal ?? "",
-        kpi:           vbrief.kpi ?? "",
-        channels:      vbrief.channels ?? [],
-        budget:        vbrief.budget ?? "",
-        timing:        vbrief.timing ?? "",
-        sub_brand:     vbrief.sub_brand ?? "",
-      };
-
-      const _cp = result.creative_pipeline ?? {};
-      const _pf = result.performance_forecast ?? {};
-      return {
-        pipeline_output: {
-          campaign_copy,
-          creative_strategy,
-          machine_brief,
-          validated_brief:      vbrief,
-          creative_platform:    plat,
-          copy_deck:            deck,
-          creative_pipeline:    _cp,
-          performance_forecast: _pf,
-          infosys_pipeline:     true,
-          compliance_flags:     result.compliance_flags ?? [],
-        },
-        copy_milestone: {
-          short_headline:      campaign_copy.short_headline,
-          medium_headline:     campaign_copy.medium_headline,
-          body:                campaign_copy.body,
-          cta:                 campaign_copy.cta,
-          variants:            _variants,
-          recommended_variant: _recIdx,
-        },
-      };
-    };
-
     try {
       // 1. POST /infosys/campaign → get campaign_id (non-blocking)
       const res = await fetch(`${API_BASE}/infosys/campaign`, {
@@ -363,19 +279,23 @@ export function usePipeline() {
           es.close();
           esRef.current = null;
           const result = JSON.parse(ev.message);
-          const { pipeline_output, copy_milestone } = _normalise(result);
+          const _rawMB = result.machine_brief ?? {};
+          let _flatMB: Record<string,unknown> = typeof _rawMB === "string" ? JSON.parse(_rawMB) : { ..._rawMB };
+          if (_flatMB.machine_brief && typeof _flatMB.machine_brief === "string") {
+            try { _flatMB = { ..._flatMB, ...JSON.parse(_flatMB.machine_brief as string) }; } catch {}
+          }
+          const output = {
+            ..._flatMB,
+            creative_strategy:    result.creative_strategy,
+            campaign_copy:        result.campaign_copy,
+            audience_insights:    (_flatMB.audience_insights as string | undefined) ?? (result.audience_insights as string | undefined) ?? result.machine_brief?.audience_insights,
+            creative_pipeline:    result.creative_pipeline,
+            performance_forecast: result.performance_forecast,
+          };
           setState((s) => ({
             ...s,
             status:          "done",
-            pipeline_output,
-            milestones: {
-              ...s.milestones,
-              copy:        copy_milestone,
-              strategy:    result.creative_platform         ?? s.milestones["strategy"],
-              briefing:    result.validated_brief           ?? s.milestones["briefing"],
-              performance: result.performance_forecast ?? s.milestones["performance"],
-              kv:          result.creative_pipeline         ?? s.milestones["kv"],
-            },
+            pipeline_output: Object.keys(output).length > 0 ? output : result,
           }));
           return;
         }

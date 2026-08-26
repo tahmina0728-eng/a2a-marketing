@@ -1478,23 +1478,60 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
                          f"Nexus: forecast ready — {perf_forecast.get('overall_confidence','—')} confidence ✓")
         await asyncio.sleep(2)
 
-        # ── Done: emit full result ────────────────────────────────────────
+        # ── Done: emit full result in Barclays-compatible structure ──────
         all_flags = logos_result.flags + helia_result.flags + ideon_result.flags
+        _machine_brief = {
+            **brief_content,
+            "brand":           "Infosys",
+            "campaign_name":   req.campaign_name,
+            "market":          req.market,
+            "objective":       req.objective,
+            "audience":        req.audience,
+            "channels":        req.channels,
+            "sub_brand":       req.sub_brand,
+            "fan_truth":       _bt_stmt,
+            "buyer_truth":     _bt_stmt,
+            "fan_truth_score": {"statement": _bt_stmt, "overall": _gate_score},
+        }
+        _creative_strategy = {
+            "hero_message":        _bi_stmt,
+            "brand_territory":     _rec_terr_name,
+            "strategic_framework": _pos_stmt,
+            "tone_of_voice":       _rec_terr.get("verbal_tone", "") if _rec_terr else "",
+            "visual_world":        creative_platform.get("visual_world", ""),
+        }
+        _campaign_copy = {
+            "short_headline":  _best_hl,
+            "medium_headline": _best.get("subheadline", ""),
+            "body":            _best.get("body", ""),
+            "cta":             _best.get("cta", ""),
+            "channel_copy": {
+                "linkedin": copy_deck.get("social_captions", {}).get("linkedin", ""),
+                "email":    copy_deck.get("body_copy", {}).get("email", ""),
+            },
+            "channel_data": _ch_data,
+        }
+        _audience_insights = {
+            "buyer_truth":      _bt_stmt,
+            "fan_truth":        _bt_stmt,
+            "gate_score":       _gate_score,
+            "compliance_flags": [f.model_dump() for f in all_flags],
+            "gate_warnings":    gate_blockers,
+        }
         _creative_pipeline = {
             "images_b64":  _kv_images,
             "motion_spec": motion_spec,
         } if (_kv_images or motion_spec) else {}
         full_result = {
-            "status":               "completed" if ideon_result.status != "failed" else "partial",
-            "stage":                "done",
-            "validated_brief":      brief_content,
-            "creative_platform":    creative_platform,
-            "copy_deck":            copy_deck,
+            "status":               "ok",
+            "campaign_id":          campaign_id,
+            "machine_brief":        _machine_brief,
+            "creative_strategy":    _creative_strategy,
+            "campaign_copy":        _campaign_copy,
+            "audience_insights":    _audience_insights,
             "creative_pipeline":    _creative_pipeline,
             "performance_forecast": perf_forecast,
-            "channel_data":         _ch_data,
-            "compliance_flags":     [f.model_dump() for f in all_flags],
-            "gate_warnings":        gate_blockers,
+            "processing_time_ms":   0,
         }
         await push_event(campaign_id, "__done__", "done", json.dumps(full_result))
 
