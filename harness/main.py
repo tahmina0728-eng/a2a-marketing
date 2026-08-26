@@ -1203,15 +1203,23 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
         # ── Logos → "briefing" key (matches HARNESS_STAGES / BriefIntakeView) ──
         await push_event(campaign_id, "briefing", "running", "Logos: validating brief & brand compliance…")
         from app.agents.infosys.logos import LogosAgent
-        logos_result = await loop.run_in_executor(None, LogosAgent().run, brief)
+        hb_logos = asyncio.create_task(_heartbeat(campaign_id, "briefing", [
+            "Logos: analysing buyer truth statement…",
+            "Logos: checking brand & compliance gates…",
+            "Logos: scoring campaign objectives against benchmarks…",
+        ], interval=18))
+        try:
+            logos_result = await loop.run_in_executor(None, LogosAgent().run, brief)
+        finally:
+            hb_logos.cancel()
 
         brief_content = logos_result.artifact.content if logos_result.artifact else {}
         gate = brief_content.get("gate", {})
         gate_blockers = [f for f in gate.get("flags", []) if f.get("status") == "BLOCK"]
 
         # Surface validated_brief as briefing milestone so BriefIntakeView can render it
-        _bt_raw    = brief_content.get("buyer_truth", "")
-        _bt_stmt   = _bt_raw.get("statement", "") if isinstance(_bt_raw, dict) else str(_bt_raw)
+        _bt_raw     = brief_content.get("buyer_truth", "")
+        _bt_stmt    = _bt_raw.get("statement", "") if isinstance(_bt_raw, dict) else str(_bt_raw)
         _gate_score = int(brief_content.get("gate", {}).get("score", 0) or 0)
         await push_event(campaign_id, "briefing", "milestone", json.dumps({
             **brief_content,
@@ -1231,7 +1239,15 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
         # ── Helia → "strategy" key (matches StrategyIntakeView) ───────────────
         await push_event(campaign_id, "strategy", "running", "Helia: developing creative territories & big idea…")
         from app.agents.infosys.helia import HeliaAgent
-        helia_result = await loop.run_in_executor(None, HeliaAgent().run, logos_result)
+        hb_helia = asyncio.create_task(_heartbeat(campaign_id, "strategy", [
+            "Helia: mapping creative territories…",
+            "Helia: crafting the big idea statement…",
+            "Helia: building messaging framework & tone of voice…",
+        ], interval=18))
+        try:
+            helia_result = await loop.run_in_executor(None, HeliaAgent().run, logos_result)
+        finally:
+            hb_helia.cancel()
 
         creative_platform = helia_result.artifact.content if helia_result.artifact else {}
         # Normalise Helia output → flat strings for StrategyIntakeView
@@ -1265,8 +1281,16 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
         # ── Ideon → "copy" key (matches copy intake view) ─────────────────────
         await push_event(campaign_id, "copy", "running", "Ideon: writing headline, body & copy variants…")
         from app.agents.infosys.ideon import IdeonAgent
+        hb_ideon = asyncio.create_task(_heartbeat(campaign_id, "copy", [
+            "Ideon: writing headline variants…",
+            "Ideon: crafting long-form body copy…",
+            "Ideon: generating LinkedIn & email channel copy…",
+        ], interval=18))
         ideon_input = {"brief": logos_result, "creative_platform": helia_result}
-        ideon_result = await loop.run_in_executor(None, IdeonAgent().run, ideon_input)
+        try:
+            ideon_result = await loop.run_in_executor(None, IdeonAgent().run, ideon_input)
+        finally:
+            hb_ideon.cancel()
 
         copy_deck = ideon_result.artifact.content if ideon_result.artifact else {}
         # Normalise Ideon output → flat strings for CopyIntakeView

@@ -1682,7 +1682,12 @@ function RunningView({
   const v = displayKey ? (AGENT_VISUALS[displayKey] ?? DEFAULT_VISUAL) : DEFAULT_VISUAL;
   const stage = displayKey ? HARNESS_STAGES.find(s => s.key === displayKey) : null;
 
-  const doneCount = HARNESS_STAGES.filter(s => s.key !== "compliance" && agentStatus[s.key] === "done").length;
+  // Infosys only runs 3 agents; filter sidebar + progress to match
+  const _INFOSYS_KEYS = ["briefing", "strategy", "copy"];
+  const activeStages = brand === "Infosys"
+    ? HARNESS_STAGES.filter(s => _INFOSYS_KEYS.includes(s.key))
+    : HARNESS_STAGES.filter(s => s.key !== "compliance");
+  const doneCount = activeStages.filter(s => agentStatus[s.key] === "done").length;
 
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden", fontFamily: "Inter,sans-serif" }}>
@@ -1701,16 +1706,16 @@ function RunningView({
             <div style={{ height: "100%", borderRadius: 99, transition: "width 0.8s ease",
               background: `linear-gradient(90deg, ${v.g1}, ${v.g2})`,
               boxShadow: `0 0 10px ${v.g1}80`,
-              width: `${Math.max(4, (doneCount / HARNESS_STAGES.length) * 100)}%` }} />
+              width: `${Math.max(4, (doneCount / activeStages.length) * 100)}%` }} />
           </div>
           <div style={{ fontSize: 11, color: "var(--text-secondary)", marginTop: 5 }}>
-            {doneCount} of {HARNESS_STAGES.length} complete · 2–5 min
+            {doneCount} of {activeStages.length} complete · 2–5 min
           </div>
         </div>
 
         {/* Step list */}
         <div style={{ display: "flex", flexDirection: "column" as const, gap: 5, flex: 1 }}>
-          {HARNESS_STAGES.filter(s => s.key !== "compliance").map((s, i) => {
+          {activeStages.map((s, i) => {
             const origIdx = HARNESS_STAGES.findIndex(h => h.key === s.key);
             const st    = agentStatus[s.key];
             const isOn  = s.key === activeKey;
@@ -1893,8 +1898,8 @@ function RunningView({
                     style={{ animation: `ring-out ${2.5 + ri * 0.8}s ${ri * 0.4}s ease-out infinite` }} />
                 ))}
                 {/* Connecting lines from center to each agent */}
-                {HARNESS_STAGES.map((s, i) => {
-                  const a = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
+                {activeStages.map((s, i) => {
+                  const a = (i / activeStages.length) * 2 * Math.PI - Math.PI / 2;
                   const x2 = 200 + Math.cos(a) * 158;
                   const y2 = 200 + Math.sin(a) * 158;
                   const vis = AGENT_VISUALS[s.key] ?? DEFAULT_VISUAL;
@@ -1920,8 +1925,8 @@ function RunningView({
               }}>🤖</div>
 
               {/* Agent nodes */}
-              {HARNESS_STAGES.map((s, i) => {
-                const a    = (i / HARNESS_STAGES.length) * 2 * Math.PI - Math.PI / 2;
+              {activeStages.map((s, i) => {
+                const a    = (i / activeStages.length) * 2 * Math.PI - Math.PI / 2;
                 const r    = 158;
                 const cx   = 200 + Math.cos(a) * r;
                 const cy   = 200 + Math.sin(a) * r;
@@ -1976,7 +1981,7 @@ function RunningView({
                     opacity: 0.7, animation: `wave-dot 1.4s ${d * 0.2}s ease-in-out infinite` }} />
                 ))}
                 <span style={{ fontSize: 13, color: "var(--text-secondary)", marginLeft: 4 }}>
-                  {HARNESS_STAGES.length} agents connecting
+                  {activeStages.length} agents connecting
                 </span>
               </div>
             </div>
