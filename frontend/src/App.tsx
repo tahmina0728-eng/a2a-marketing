@@ -36,7 +36,6 @@ import {
   AGENT_COLORS, AGENT_DESCS, AGENT_AVATARS, avatarUrl, WORKFLOW_STAGES,
 } from "./constants/agents";
 import { API_BASE_PUB } from "./services/briefingApi";
-const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8000";
 import AgentProfile from "./components/agents/AgentProfile";
 import BriefingAgentDashboard from "./components/briefing/BriefingAgentDashboard";
 import EmailConverter from "./components/EmailConverter";
@@ -4806,7 +4805,7 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
 // ── Steps panel ───────────────────────────────────────────────
 // All 7 agents mapped to their workflow stage
 
-function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditName, brand }: {
+function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditName, brand: _brand }: {
   campaignName: string;
   activeStageId: string | null;
   agentStatus: Record<string, string>;
