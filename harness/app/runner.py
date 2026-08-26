@@ -2361,6 +2361,14 @@ async def generate_campaign_reel(
         "Sunrise":     _sunrise_scene,
         "Haleon":      _haleon_scene,
         "Barclays":    lambda _: _barclays.reel_scene(big_idea, fan_truth, copy_headline),
+        # Infosys: big_idea IS the Kinetik footage prompt — use it directly as the visual direction.
+        # Fall back to a generic B2B scene if Kinetik didn't produce a footage prompt.
+        "Infosys": lambda _: big_idea if big_idea else (
+            "Cinematic B2B technology scene: diverse professional teams collaborating "
+            "in a modern glass-walled office, data visualisations glowing on screens, "
+            "confident CXO making a strategic decision. Deep Infosys blue (#007CC3) "
+            "colour grade. Premium corporate storytelling, documentary lighting."
+        ),
     }
     # Sunrise lifestyle (no product selected): use hard-coded adventure scenes.
     # _sunrise_scene defaults to "friends in Zurich with phones" which Veo
@@ -2589,8 +2597,24 @@ async def generate_campaign_reel(
     else:
         _veo_aspect_ratio = "16:9"
 
+    _is_infosys_reel = brand.lower() == "infosys"
+
     if _is_barclays_reel:
         _prompt_rules = _barclays.reel_veo_rules(copy_headline)
+    elif _is_infosys_reel:
+        _vo_line = (
+            f'A calm authoritative voiceover says: "{copy_headline}"' if copy_headline
+            else "A calm authoritative voiceover delivers the campaign message."
+        )
+        _prompt_rules = (
+            f"- Cinematic B2B quality, documentary-grade lighting, premium corporate storytelling\n"
+            f"- Professional business context: technology teams, leadership, data, digital transformation\n"
+            f"- Infosys brand palette: deep blue (#007CC3), white, dark navy — colour grade accordingly\n"
+            f"- AUDIO: confident minimal orchestral or electronic score + {_vo_line}\n"
+            f"- No text, no typography, no product packaging in the footage layer\n"
+            f"- No identifiable real people, no logos in the AI-generated footage\n"
+            f"- CRITICAL: NO film strip borders, NO sprocket holes, NO timecodes, NO film slates\n"
+        )
     else:
         _language_rule = (
             f"\nLanguage: {_lang_label} — the voiceover MUST be delivered entirely in {_lang_label}."
