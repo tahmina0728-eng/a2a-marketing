@@ -66,7 +66,7 @@ export default function FormSelect({ value, onChange, placeholder = "Select…",
           position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 9999,
           background: "white", borderRadius: 12, border: "1px solid #d0d0e0",
           boxShadow: "0 8px 24px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.06)",
-          overflow: "hidden", maxHeight: 320, overflowY: "auto",
+          overflow: "hidden", maxHeight: 420, overflowY: "auto",
         }}>
           {opts.map(opt => (
             <button

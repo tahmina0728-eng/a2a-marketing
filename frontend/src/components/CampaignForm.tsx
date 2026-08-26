@@ -6,14 +6,14 @@ import { API_BASE_PUB } from "../services/briefingApi";
 /* ── Data ──────────────────────────────────────────────────────── */
 const BRANDS = [
   { id: "Infosys",     label: "Infosys",            logo: `${API_BASE_PUB}/brand-logo/Infosys` },
-  { id: "Rnorr",       label: "Rnorr",             logo: `${API_BASE_PUB}/brands/Rnorr/serve/Logos/Rnorr-Logo.png` },
+  { id: "Barclays",    label: "Barclays",            logo: `${API_BASE_PUB}/brands/Barclays/serve/Logos/barclays1_wb.png` },
+  { id: "Rnorr",       label: "Rnorr",              logo: `${API_BASE_PUB}/brands/Rnorr/serve/Logos/Rnorr-Logo.png` },
   { id: "Sunglow",     label: "Sunglow",            logo: `${API_BASE_PUB}/brands/Sunglow/serve/Logos/sunglow_logo.png` },
   { id: "Boozt",       label: "Boozt",              logo: `${API_BASE_PUB}/brands/Boozt/serve/Logos/Boozt_Logo.png` },
   { id: "Glenfiddich", label: "Glenfiddich × AMF1", logo: `${API_BASE_PUB}/brands/Glenfiddich/serve/Logos/logo_glenfiddich_dark.png` },
   { id: "UBS Bank",    label: "UBS Bank",           logo: `${API_BASE_PUB}/brands/UBS%20Bank/serve/Logos/ubs-bank-logo.png` },
   { id: "sunrise",     label: "Sunrise",            logo: `${API_BASE_PUB}/brands/sunrise/serve/Logos/sunrise_logo_red.svg` },
   { id: "Haleon",      label: "Haleon",             logo: `${API_BASE_PUB}/brands/Haleon/serve/Logos/haleon_logo_black.svg` },
-  { id: "Barclays",   label: "Barclays",            logo: `${API_BASE_PUB}/brands/Barclays/serve/Logos/barclays1_wb.png` },
 ];
 const MARKETS  = ["United Kingdom","Germany","France","Spain","India","Thailand","China","Australia","United States","New Zealand","SEA","Switzerland","Global"];
 
