@@ -10,7 +10,7 @@ export default function BriefingAgentDashboard({ result, color, originalPrompt, 
   const verdict  = (result.verdict  as string) ?? (score >= 70 ? "PASS" : "NEEDS WORK");
   const brand    = (result.brand    as string) ?? "";
   const product  = (result.product  as string) ?? "";
-  const fanTruth = (result.fan_truth as string) ?? "";
+  const fanTruth = typeof result.fan_truth === "string" ? result.fan_truth : ((result.fan_truth as any)?.statement ?? "");
   const audience = (result.audience  as string) ?? "";
   const market   = (result.market    as string) ?? "";
   const season   = (result.season    as string) ?? "";
