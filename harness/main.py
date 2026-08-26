@@ -653,8 +653,14 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             )
         finally:
             hb3.cancel()
-        _headline    = copy.get("headline", "")
-        copy_subline = copy.get("subline", "").strip()
+        # Copy agent returns variants list — headline lives inside variants[recommended_variant]
+        _copy_vars   = copy.get("variants", [])
+        _copy_rec    = copy.get("recommended_variant", 0)
+        _copy_best   = (_copy_vars[_copy_rec] if _copy_rec < len(_copy_vars)
+                        else (_copy_vars[0] if _copy_vars else {}))
+        _headline    = _copy_best.get("headline", "") or copy.get("headline", "")
+        copy_subline = (_copy_best.get("subline", "") or _copy_best.get("subheadline", "")
+                        or copy.get("subline", "")).strip()
         short_hl     = _headline
         medium_hl    = _headline
 
@@ -669,8 +675,8 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             "subline":         copy_subline,
             "medium_headline": _headline,
             "long_headline":   _headline,
-            "body":            copy.get("body", "")[:160],
-            "cta":             copy.get("cta", ""),
+            "body":            (_copy_best.get("body", "") or copy.get("body", ""))[:160],
+            "cta":             _copy_best.get("cta", "") or copy.get("cta", ""),
             "channel_copy":    {},
         }))
         await asyncio.sleep(8)  # Let user read copy deck
@@ -683,9 +689,9 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         if _brand_profile_json and _brand_profile_json != "{}":
             _copy_text = " ".join(filter(None, [
                 _headline,
-                copy.get("subline", ""),
-                copy.get("body", ""),
-                copy.get("cta", ""),
+                _copy_best.get("subline", "") or copy.get("subline", ""),
+                _copy_best.get("body", "")    or copy.get("body", ""),
+                _copy_best.get("cta", "")     or copy.get("cta", ""),
             ]))
             _MAX_COPY_RETRIES = 2
             for _retry in range(_MAX_COPY_RETRIES):
@@ -720,15 +726,20 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
                     copy = await asyncio.get_event_loop().run_in_executor(
                         None, lambda p=_copy_prompt_retry: _ideon(brief.brand, p)
                     )
-                    _headline    = copy.get("headline", "") or _headline
+                    _copy_vars   = copy.get("variants", [])
+                    _copy_rec    = copy.get("recommended_variant", 0)
+                    _copy_best   = (_copy_vars[_copy_rec] if _copy_rec < len(_copy_vars)
+                                    else (_copy_vars[0] if _copy_vars else {}))
+                    _headline    = _copy_best.get("headline", "") or copy.get("headline", "") or _headline
                     short_hl     = _headline
                     medium_hl    = _headline
-                    copy_subline = copy.get("subline", "").strip() or copy_subline
+                    copy_subline = (_copy_best.get("subline", "") or _copy_best.get("subheadline", "")
+                                    or copy.get("subline", "")).strip() or copy_subline
                     _copy_text   = " ".join(filter(None, [
                         _headline,
-                        copy.get("subline", ""),
-                        copy.get("body", ""),
-                        copy.get("cta", ""),
+                        _copy_best.get("subline", "") or copy.get("subline", ""),
+                        _copy_best.get("body", "")    or copy.get("body", ""),
+                        _copy_best.get("cta", "")     or copy.get("cta", ""),
                     ]))
                 except Exception as _cr_err:
                     logger.warning("copy_regenerate_failed", error=str(_cr_err))
@@ -835,7 +846,7 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
             copy_headline      = short_hl or medium_hl,
             copy_subline       = copy_subline,
             copy_headlines     = [short_hl or medium_hl, medium_hl or short_hl],
-            copy_cta           = copy.get("cta", ""),
+            copy_cta           = _copy_best.get("cta", "") or copy.get("cta", ""),
             product_name       = brief.product if hasattr(brief, "product") else "",
             fan_truth          = str(machine_brief.get("fan_truth_score", machine_brief.get("fan_truth", {})).get("statement", "")),
             season             = brief.season if hasattr(brief, "season") else "",
@@ -881,12 +892,14 @@ async def _run_campaign_background(campaign_id: str, brief: BriefRequest) -> Non
         channels_list = [c.lower() for c in brief.channels] if brief.channels else []
         channel_data: dict = {}
         if "instagram" in channels_list or not channels_list:
+            _copy_cta = _copy_best.get("cta", "") or copy.get("cta", "")
             channel_data["instagram"] = {"platform": "Instagram", "format": "Stories + Feed",
-                "headline": short_hl, "cta": copy.get("cta",""),
+                "headline": short_hl, "cta": _copy_cta,
                 "caption": (copy.get("instagram_caption","") or "")[:100]}
         if "tiktok" in channels_list or not channels_list:
+            _copy_cta = _copy_best.get("cta", "") or copy.get("cta", "")
             channel_data["tiktok"] = {"platform": "TikTok", "format": "Video 15–30s",
-                "hook": copy.get("tiktok_hook","") or short_hl, "cta": copy.get("cta","")}
+                "hook": copy.get("tiktok_hook","") or short_hl, "cta": _copy_cta}
         if any(c in channels_list for c in ["google", "youtube", "search"]) or not channels_list:
             channel_data["google"] = {"platform": "Google Ads", "format": "Responsive Search",
                 "headline": short_hl, "description": medium_hl}
