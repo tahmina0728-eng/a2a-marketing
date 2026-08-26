@@ -2606,7 +2606,9 @@ function ResultsView({ output, campaignId }: {
   const imagesB64Raw: string[] = cp?.images_b64 ?? (cp?.image_b64 ? [cp.image_b64] : []);
   // For historical campaigns loaded from GCS, base64 is stripped — use the KV proxy endpoint instead.
   // Generate up to 3 candidate URLs; broken ones are hidden via onError in the thumbnail strip.
-  const kvHttpUrls: string[] = imagesB64Raw.length === 0 && campaignId
+  // Only try proxy URLs for campaigns that had a creative_pipeline (regular brands).
+  // Infosys has no KV generation so cp is undefined — skip to avoid 404s.
+  const kvHttpUrls: string[] = imagesB64Raw.length === 0 && campaignId && cp
     ? Array.from({ length: 3 }, (_, i) => `${API_BASE_PUB}/campaign/${encodeURIComponent(campaignId)}/kv/${i + 1}`)
     : [];
   const imagesB64: string[] = imagesB64Raw;
@@ -4909,12 +4911,13 @@ function Sidebar({ theme, onToggleTheme, view, onNavigate, onSelectCampaign, sav
 // ── Steps panel ───────────────────────────────────────────────
 // All 7 agents mapped to their workflow stage
 
-function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditName }: {
+function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditName, brand }: {
   campaignName: string;
   activeStageId: string | null;
   agentStatus: Record<string, string>;
   liveLog: AgentEvent[];
   onEditName: () => void;
+  brand?: string;
 }) {
   const [editing, setEditing]   = useState(false);
   const [nameVal, setNameVal]   = useState(campaignName);
@@ -4956,11 +4959,18 @@ function StepsPanel({ campaignName, activeStageId, agentStatus, liveLog, onEditN
 
       {/* Workflow stages — timeline layout */}
       <div style={{ flex: 1, overflowY: "auto" as const, padding: "20px 0 8px" }}>
-        {WORKFLOW_STAGES.map((stage, idx) => {
+        {WORKFLOW_STAGES.filter(stage =>
+          // For Infosys: hide Channel Adoption and Performance stages (agents never run)
+          brand !== "Infosys" || !["channel", "perform"].includes(stage.id)
+        ).map((stage, idx, visibleStages) => {
           const isActive    = stage.id === activeStageId;
-          const isDone      = activeIdx > idx;
-          const isLast      = idx === WORKFLOW_STAGES.length - 1;
-          const stageAgents = HARNESS_STAGES.filter(s => stage.agents.includes(s.key));
+          const isDone      = activeIdx > WORKFLOW_STAGES.findIndex(s => s.id === stage.id);
+          const isLast      = idx === visibleStages.length - 1;
+          const _infosysKeys = ["briefing", "strategy", "copy"];
+          const stageAgents = HARNESS_STAGES.filter(s =>
+            stage.agents.includes(s.key) &&
+            (brand !== "Infosys" || _infosysKeys.includes(s.key))
+          );
 
           return (
             <div key={stage.id} style={{ display: "flex", paddingLeft: 18 }}>
@@ -5398,6 +5408,7 @@ export default function App() {
             agentStatus={state.agentStatus}
             liveLog={state.liveLog}
             onEditName={() => {}}
+            brand={briefData?.brand}
           />
         )}
 
