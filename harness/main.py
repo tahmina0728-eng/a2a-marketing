@@ -1570,6 +1570,13 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
                 "email":    copy_deck.get("body_copy", {}).get("email", ""),
             },
             "channel_data": _ch_data,
+            # Full copy deck so ResultsView can render all 3 variants like standalone Ideon
+            "variants":            copy_deck.get("variants", []),
+            "recommended_variant": copy_deck.get("recommended_variant", 0),
+            "banner_copy":         copy_deck.get("banner_copy", {}),
+            "social_captions":     copy_deck.get("social_captions", {}),
+            "body_copy":           copy_deck.get("body_copy", {}),
+            "cta_bank":            copy_deck.get("cta_bank", []),
         }
         _audience_insights = {
             "buyer_truth":      _bt_stmt,

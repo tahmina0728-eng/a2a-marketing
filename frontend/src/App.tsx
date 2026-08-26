@@ -2849,76 +2849,171 @@ function ResultsView({ output, campaignId }: {
         })()}
 
         {/* ── 3. Campaign Copy ───────────────────────────────────────────── */}
-        {((copy as any)?.short_headline || copy?.short?.headline || (copy as any)?.headline) && (() => {
+        {((copy as any)?.short_headline || copy?.short?.headline || (copy as any)?.headline || (copy as any)?.variants?.length > 0) && (() => {
           const n = S();
           const _hl       = (copy as any)?.short_headline ?? copy?.short?.headline ?? (copy as any)?.headline ?? "";
-          const _medHl    = (copy as any)?.medium_headline ?? copy?.medium?.headline ?? "";
           const _longBody = (copy as any)?.body ?? copy?.long?.body ?? "";
-          const hasMedium   = !!_medHl;
-          const hasLong     = !!_longBody;
           const hasChannels = copy.channel_copy && Object.keys(copy.channel_copy as object).length > 0;
+          const copyVariants: any[] = Array.isArray((copy as any)?.variants) ? (copy as any).variants : [];
+          const copyRec: number = typeof (copy as any)?.recommended_variant === "number" ? (copy as any).recommended_variant : 0;
+          const hasVariants = copyVariants.length > 0;
+          const SCORE_LABELS_R: Record<string, string> = {
+            brand_voice: "Brand Voice", strategy_alignment: "Strategy", message_clarity: "Clarity",
+            audience_relevance: "Audience", originality: "Originality",
+            channel_suitability: "Channel", grammar_readability: "Readability",
+          };
+          const scoreBarR = (v: number, col: string) => (
+            <div style={{ height: 3, borderRadius: 2, background: "var(--card-border)", overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${Math.round((v ?? 0) * 100)}%`, background: col, borderRadius: 2 }} />
+            </div>
+          );
           return (
-            <StageCard step={n} label="Campaign Copy" color="#a855f7">
-              {/* Tab bar */}
-              <div style={{ display: "flex", borderBottom: "1px solid var(--card-border)", background: "rgba(0,0,0,0.25)" }}>
-                {([
-                  { key: "short",    label: "Short"    },
-                  ...(hasMedium   ? [{ key: "medium",   label: "Medium"   }] : []),
-                  ...(hasLong     ? [{ key: "long",     label: "Long"     }] : []),
-                  ...(hasChannels ? [{ key: "channels", label: "Channels" }] : []),
-                ] as { key: typeof copyTab; label: string }[]).map(({ key, label }) => (
-                  <button key={key} onClick={() => setCopyTab(key)} style={{
-                    padding: "11px 22px", border: "none", cursor: "pointer", background: "transparent",
-                    fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const,
-                    color: copyTab === key ? "#7c3aed" : "var(--text-secondary)",
-                    borderBottom: `2px solid ${copyTab === key ? "#a855f7" : "transparent"}`,
-                    transition: "color 0.15s",
-                  }}>{label}</button>
-                ))}
-              </div>
-              <div style={{ padding: "24px" }}>
-                {copyTab === "short" && (
-                  <div>
-                    <div style={{ padding: "28px 24px", borderRadius: 14, textAlign: "center" as const, marginBottom: 14, background: "linear-gradient(135deg, rgba(168,85,247,0.14), rgba(168,85,247,0.05))", border: "1px solid rgba(168,85,247,0.22)" }}>
-                      <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Short Headline</div>
-                      <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.2 }}>"{_hl}"</div>
-                      {!!(copy as any)?.subline && <div style={{ fontSize: 14, color: "var(--text-secondary)", marginTop: 8, lineHeight: 1.5 }}>{String((copy as any).subline)}</div>}
-                    </div>
-                    {copy.cta && (
-                      <div style={{ textAlign: "center" as const }}>
-                        <span style={{ display: "inline-block", padding: "9px 28px", borderRadius: 99, background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "white", fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", boxShadow: "0 4px 16px rgba(168,85,247,0.35)" }}>{copy.cta}</span>
-                      </div>
-                    )}
+            <StageCard step={n} label={`Campaign Copy${hasVariants ? ` — ${copyVariants.length} Variants` : ""}`} color="#a855f7">
+              {hasVariants ? (
+                /* ── Variant cards (same layout as standalone Ideon) ─────── */
+                <div style={{ padding: "18px" }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: "#c084fc", letterSpacing: "0.12em",
+                    textTransform: "uppercase" as const, marginBottom: 14 }}>
+                    {copyVariants.length} Copy Variants — Pick One to Use
                   </div>
-                )}
-                {copyTab === "medium" && (
-                  <div style={{ padding: "22px 24px", borderRadius: 14, background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.18)" }}>
-                    <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Medium Headline</div>
-                    {_medHl && <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.3, marginBottom: 10 }}>"{_medHl}"</div>}
-                    {copy.medium?.body && <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.7 }}>{copy.medium.body.slice(0, 220)}{copy.medium.body.length > 220 ? "…" : ""}</div>}
-                  </div>
-                )}
-                {copyTab === "long" && (
-                  <div style={{ padding: "22px 24px", borderRadius: 14, background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.18)" }}>
-                    <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Long Copy</div>
-                    {_hl && <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", marginBottom: 10 }}>"{_hl}"</div>}
-                    {_longBody && <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.75 }}>{_longBody.slice(0, 320)}{_longBody.length > 320 ? "…" : ""}</div>}
-                  </div>
-                )}
-                {copyTab === "channels" && hasChannels && (
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-                    {Object.entries(copy.channel_copy as Record<string, string>).map(([key, val]) => {
-                      const cfg = COPY_CH[key] ?? { icon: "📢", label: key, color: "var(--text-tertiary)" };
+                  <div style={{ display: "flex", flexDirection: "column" as const, gap: 12 }}>
+                    {copyVariants.map((v: any, i: number) => {
+                      const isRec = i === copyRec;
+                      const vc = isRec ? "#a855f7" : i === 1 ? "#8b5cf6" : "#06b6d4";
+                      const qs = v.quality_score ?? 0;
                       return (
-                        <div key={key} style={{ padding: "12px 14px", borderRadius: 12, background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
-                          <div style={{ fontSize: 9, fontWeight: 700, color: cfg.color, textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 5 }}>{cfg.icon} {cfg.label}</div>
-                          <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>{val.slice(0, 100)}{val.length > 100 ? "…" : ""}</div>
+                        <div key={i} style={{ borderRadius: 10, border: `1.5px solid ${vc}${isRec ? "60" : "30"}`, overflow: "hidden" }}>
+                          {/* header */}
+                          <div style={{ padding: "10px 14px", background: `${vc}${isRec ? "14" : "08"}`,
+                            display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <div>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: vc,
+                                letterSpacing: "0.06em", textTransform: "uppercase" as const, marginRight: 8 }}>
+                                {isRec ? "★ Recommended" : `Variant ${i + 1}`}
+                              </span>
+                              {v.tone && <span style={{ fontSize: 10, color: "var(--text-tertiary)", fontStyle: "italic" }}>{v.tone}</span>}
+                            </div>
+                            <div style={{ textAlign: "center" as const }}>
+                              <div style={{ fontSize: 16, fontWeight: 800, color: vc }}>{Math.round(qs * 100)}</div>
+                              <div style={{ fontSize: 8, color: "var(--text-tertiary)", letterSpacing: "0.06em" }}>SCORE</div>
+                            </div>
+                          </div>
+                          {/* body */}
+                          <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column" as const, gap: 8 }}>
+                            {v.approach && <div style={{ fontSize: 11, color: "var(--text-tertiary)", fontStyle: "italic" }}>{v.approach}</div>}
+                            {v.headline && <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", lineHeight: 1.2 }}>{v.headline}</div>}
+                            {v.subheadline && <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", lineHeight: 1.4 }}>{v.subheadline}</div>}
+                            {v.body && (
+                              <div style={{ fontSize: 12, color: "var(--text-primary)", lineHeight: 1.6,
+                                padding: "8px 10px", borderRadius: 6, background: `${vc}08`, borderLeft: `3px solid ${vc}40` }}>
+                                {v.body}
+                              </div>
+                            )}
+                            {v.cta && (
+                              <div>
+                                <span style={{ fontSize: 11, fontWeight: 700, padding: "5px 14px",
+                                  borderRadius: 99, background: `${vc}18`, color: vc, border: `1.5px solid ${vc}40` }}>
+                                  {v.cta} →
+                                </span>
+                              </div>
+                            )}
+                            {v.scores && (
+                              <div style={{ borderTop: `1px solid ${vc}18`, paddingTop: 10, marginTop: 2 }}>
+                                <div style={{ fontSize: 9, fontWeight: 700, color: "var(--text-tertiary)",
+                                  letterSpacing: "0.07em", textTransform: "uppercase" as const, marginBottom: 8 }}>
+                                  Scoring Breakdown
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 20px" }}>
+                                  {Object.entries(v.scores).map(([k, sv]) => (
+                                    <div key={k}>
+                                      <div style={{ fontSize: 10, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 3 }}>
+                                        {SCORE_LABELS_R[k] ?? k}
+                                      </div>
+                                      {scoreBarR(sv as number, vc)}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
-                )}
-              </div>
+                  {/* Channel-specific copy */}
+                  {hasChannels && (
+                    <div style={{ marginTop: 16 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: "#c084fc", letterSpacing: "0.12em",
+                        textTransform: "uppercase" as const, marginBottom: 10 }}>Channel Copy</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        {Object.entries(copy.channel_copy as Record<string, string>).map(([key, val]) => {
+                          const cfg = COPY_CH[key] ?? { icon: "📢", label: key, color: "var(--text-tertiary)" };
+                          return (
+                            <div key={key} style={{ padding: "12px 14px", borderRadius: 12, background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: cfg.color, textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 5 }}>{cfg.icon} {cfg.label}</div>
+                              <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>{val.slice(0, 150)}{val.length > 150 ? "…" : ""}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* ── Fallback tabs for campaigns without full copy deck ── */
+                <>
+                  <div style={{ display: "flex", borderBottom: "1px solid var(--card-border)", background: "rgba(0,0,0,0.25)" }}>
+                    {([
+                      { key: "short",    label: "Short"    },
+                      ...(_longBody     ? [{ key: "long",     label: "Long"     }] : []),
+                      ...(hasChannels   ? [{ key: "channels", label: "Channels" }] : []),
+                    ] as { key: typeof copyTab; label: string }[]).map(({ key, label }) => (
+                      <button key={key} onClick={() => setCopyTab(key)} style={{
+                        padding: "11px 22px", border: "none", cursor: "pointer", background: "transparent",
+                        fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" as const,
+                        color: copyTab === key ? "#7c3aed" : "var(--text-secondary)",
+                        borderBottom: `2px solid ${copyTab === key ? "#a855f7" : "transparent"}`,
+                        transition: "color 0.15s",
+                      }}>{label}</button>
+                    ))}
+                  </div>
+                  <div style={{ padding: "24px" }}>
+                    {copyTab === "short" && (
+                      <div>
+                        <div style={{ padding: "28px 24px", borderRadius: 14, textAlign: "center" as const, marginBottom: 14, background: "linear-gradient(135deg, rgba(168,85,247,0.14), rgba(168,85,247,0.05))", border: "1px solid rgba(168,85,247,0.22)" }}>
+                          <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Short Headline</div>
+                          <div style={{ fontSize: 28, fontWeight: 900, color: "var(--text-primary)", lineHeight: 1.2 }}>"{_hl}"</div>
+                        </div>
+                        {copy.cta && (
+                          <div style={{ textAlign: "center" as const }}>
+                            <span style={{ display: "inline-block", padding: "9px 28px", borderRadius: 99, background: "linear-gradient(135deg, #7c3aed, #a855f7)", color: "white", fontSize: 13, fontWeight: 800, letterSpacing: "0.04em", boxShadow: "0 4px 16px rgba(168,85,247,0.35)" }}>{copy.cta}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {copyTab === "long" && (
+                      <div style={{ padding: "22px 24px", borderRadius: 14, background: "rgba(168,85,247,0.07)", border: "1px solid rgba(168,85,247,0.18)" }}>
+                        <div style={{ fontSize: 10, color: "#c084fc", fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase" as const, marginBottom: 10 }}>Long Copy</div>
+                        {_hl && <div style={{ fontSize: 18, fontWeight: 800, color: "var(--text-primary)", marginBottom: 10 }}>"{_hl}"</div>}
+                        {_longBody && <div style={{ fontSize: 13, color: "var(--text-tertiary)", lineHeight: 1.75 }}>{_longBody.slice(0, 320)}{_longBody.length > 320 ? "…" : ""}</div>}
+                      </div>
+                    )}
+                    {copyTab === "channels" && hasChannels && (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                        {Object.entries(copy.channel_copy as Record<string, string>).map(([key, val]) => {
+                          const cfg = COPY_CH[key] ?? { icon: "📢", label: key, color: "var(--text-tertiary)" };
+                          return (
+                            <div key={key} style={{ padding: "12px 14px", borderRadius: 12, background: "var(--card-bg)", border: "1px solid var(--card-border)" }}>
+                              <div style={{ fontSize: 9, fontWeight: 700, color: cfg.color, textTransform: "uppercase" as const, letterSpacing: "0.1em", marginBottom: 5 }}>{cfg.icon} {cfg.label}</div>
+                              <div style={{ fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.5 }}>{val.slice(0, 100)}{val.length > 100 ? "…" : ""}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </StageCard>
           );
         })()}
