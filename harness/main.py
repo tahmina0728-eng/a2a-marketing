@@ -1343,7 +1343,7 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             await push_event(campaign_id, "kv", "done", "Morphis: KV generation skipped")
             _kv_images = []
 
-        # ── Reel spec (Kinetik) ──────────────────────────────────────────
+        # ── Reel spec (Kinetik) + VEO 3.1 video generation ──────────────
         await push_event(campaign_id, "reel", "running",
                          "Kinetik: building motion storyboard & format specs…")
         from app.agents.infosys.kinetik import KinetikAgent
@@ -1351,7 +1351,10 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             "Kinetik: beating out story spine with VO & supers…",
             "Kinetik: specifying footage prompts & safe margins…",
             "Kinetik: building QA checklist & end-frame spec…",
+            "Veo 3.1: rendering campaign reel from motion spec…",
         ], interval=18))
+        _video_b64 = ""
+        _video_uri = ""
         try:
             kinetik_result = await loop.run_in_executor(
                 None, KinetikAgent().run,
@@ -1364,9 +1367,40 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
         finally:
             hb_kinetik.cancel()
 
-        if motion_spec:
-            await push_event(campaign_id, "reel", "milestone", json.dumps({"motion_spec": motion_spec}))
-        await push_event(campaign_id, "reel", "done", "Kinetik: motion spec ready ✓")
+        # ── VEO 3.1: render actual video from Kinetik footage prompt ─────
+        await push_event(campaign_id, "reel", "running",
+                         "Veo 3.1: rendering campaign reel…")
+        from app.runner import generate_campaign_reel
+        _footage_prompt = (
+            (motion_spec.get("footage_prompts") or [{}])[0].get("prompt", "")
+            if motion_spec else ""
+        ) or _bi_stmt
+        try:
+            _video_b64, _video_uri = await generate_campaign_reel(
+                brand         = "Infosys",
+                big_idea      = _footage_prompt,
+                fan_truth     = _bt_stmt,
+                season        = req.market,
+                product_name  = req.sub_brand or "Infosys",
+                audience      = req.audience,
+                gcs_bucket    = settings.gcs_bucket,
+                gcp_project   = settings.gcp_project,
+                gcp_region    = settings.gcp_region,
+                campaign_id   = campaign_id,
+                copy_headline = _best_hl,
+                copy_cta      = _best.get("cta", ""),
+                channels      = req.channels or ["LinkedIn"],
+            )
+            logger.info("infosys_veo_done", campaign_id=campaign_id, has_video=bool(_video_b64))
+        except Exception as _ve:
+            logger.warning("infosys_veo_failed", error=str(_ve))
+
+        await push_event(campaign_id, "reel", "milestone", json.dumps({
+            **({"motion_spec": motion_spec} if motion_spec else {}),
+            **({"video_b64": _video_b64, "video_uri": _video_uri} if _video_b64 else {}),
+        }))
+        await push_event(campaign_id, "reel", "done",
+                         "Kinetik + Veo 3.1: reel ready ✓" if _video_b64 else "Kinetik: motion spec ready ✓")
 
         # ── Channel packaging (Poly) ──────────────────────────────────────
         await push_event(campaign_id, "channel", "running",
@@ -1521,7 +1555,8 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
         _creative_pipeline = {
             "images_b64":  _kv_images,
             "motion_spec": motion_spec,
-        } if (_kv_images or motion_spec) else {}
+            **({"video_b64": _video_b64, "video_uri": _video_uri} if _video_b64 else {}),
+        } if (_kv_images or motion_spec or _video_b64) else {}
         full_result = {
             "status":               "ok",
             "campaign_id":          campaign_id,
