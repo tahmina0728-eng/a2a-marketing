@@ -1210,17 +1210,18 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
         gate_blockers = [f for f in gate.get("flags", []) if f.get("status") == "BLOCK"]
 
         # Surface validated_brief as briefing milestone so BriefIntakeView can render it
-        _bt_raw  = brief_content.get("buyer_truth", "")
-        _bt_stmt = _bt_raw.get("statement", "") if isinstance(_bt_raw, dict) else str(_bt_raw)
+        _bt_raw    = brief_content.get("buyer_truth", "")
+        _bt_stmt   = _bt_raw.get("statement", "") if isinstance(_bt_raw, dict) else str(_bt_raw)
+        _gate_score = int(brief_content.get("gate", {}).get("score", 0) or 0)
         await push_event(campaign_id, "briefing", "milestone", json.dumps({
             **brief_content,
-            "score":      brief_content.get("gate", {}).get("score", 0),
-            "fan_truth":  {"statement": _bt_stmt, "overall": 0},
+            "score":     _gate_score,
+            "fan_truth": {"statement": _bt_stmt, "overall": _gate_score},
         }))
         await push_event(campaign_id, "briefing", "done", json.dumps({
-            "_text": "Logos: brief validated ✓",
-            "score": brief_content.get("gate", {}).get("score", 0),
-            "fan_truth": {"statement": _bt_stmt, "overall": 0},
+            "_text":     "Logos: brief validated ✓",
+            "score":     _gate_score,
+            "fan_truth": {"statement": _bt_stmt, "overall": _gate_score},
         }))
 
         if logos_result.status == "failed":

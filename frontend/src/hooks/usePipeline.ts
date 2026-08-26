@@ -401,7 +401,20 @@ export function usePipeline() {
         if (ev.status === "done") {
           try {
             const parsed = JSON.parse(ev.message);
-            if (parsed?._text) displayMsg = parsed._text;
+            if (parsed && typeof parsed === "object" && parsed._text) {
+              displayMsg = parsed._text;
+              // Merge done-event data into milestones (same pattern as startFullCampaign)
+              const { _text, ...milestoneData } = parsed;
+              if (Object.keys(milestoneData).length > 0) {
+                setState((s) => ({
+                  ...s,
+                  milestones: {
+                    ...s.milestones,
+                    [ev.agent]: { ...(s.milestones[ev.agent] ?? {}), ...milestoneData },
+                  },
+                }));
+              }
+            }
           } catch {}
         }
         setState((s) => ({
