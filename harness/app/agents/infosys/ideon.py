@@ -100,7 +100,20 @@ class IdeonAgent(BaseInfosysAgent):
             + json.dumps(brief, indent=2)
             + "\n\nCREATIVE PLATFORM (from Helia — write inside this territory):\n\n"
             + json.dumps(platform, indent=2)
+            + "\n\nCRITICAL COPY RULE: Never use a forward slash (/) inside any headline, "
+            "subheadline, or endline string. Each headline is a single clean phrase — "
+            "no slashes, no separators, no stylistic / devices. Slashes are NOT permitted "
+            "anywhere in variants[].headline or variants[].subheadline."
         )
 
         result = self._run_sync(input_text, rag_query=rag_query)
+
+        # Strip any "/" that slipped into headline/subheadline strings.
+        # The SKILL.md example used "/" to separate option listings; the LLM
+        # sometimes treats it as a creative device within the headline itself.
+        for variant in result.get("variants", []):
+            for field in ("headline", "subheadline", "subline"):
+                if field in variant and isinstance(variant[field], str):
+                    variant[field] = variant[field].replace(" / ", " ").replace("/", " ").strip()
+
         return self._make_response(result, campaign_name=campaign_name)
