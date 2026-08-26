@@ -33,7 +33,7 @@ const MARKET_LANGUAGES: Record<string, string[]> = {
   "Global":         ["English"],
 };
 const BUDGETS   = ["£50K – £150K","£150K – £500K","£500K – £1M","£1M – £5M","£5M+"];
-const CHANNELS  = ["Instagram","TikTok","YouTube","OOH","Google Ads","Meta Ads","Website","Email"];
+const CHANNELS  = ["LinkedIn","Instagram","TikTok","YouTube","OOH","Google Ads","Meta Ads","Website","Email"];
 const SEASONS   = ["Evergreen","Spring","Summer","Autumn","Winter","Christmas","Valentine's Day","Easter","Diwali","New Year"];
 const MOMENTS   = ["Day-to-Day","Brand Moment","Partnership Moment"];
 const AGES      = ["13–17","18–24","25–34","35–44","45–54","55+"];
