@@ -1213,6 +1213,12 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
     try:
         brief = req.model_dump(exclude={"run_aether", "run_visuals", "strict_gate"})
 
+        # Extract any slogan the user stated in their objective BEFORE Logos rewrites it.
+        # Same pattern as standalone Ideon and Campaign wizard Step 3.
+        from app.agent_standalone import _extract_prompt_headline
+        _raw_objective = brief.get("objective", "") or brief.get("campaign_name", "") or ""
+        _pinned_headline = _extract_prompt_headline(_raw_objective)
+
         # ── Logos → "briefing" key (matches HARNESS_STAGES / BriefIntakeView) ──
         await push_event(campaign_id, "briefing", "running", "Logos: validating brief & brand compliance…")
         from app.agents.infosys.logos import LogosAgent
@@ -1225,6 +1231,10 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             logos_result = await loop.run_in_executor(None, LogosAgent().run, brief)
         finally:
             hb_logos.cancel()
+
+        # Inject pinned headline into Logos output so Ideon reads it directly.
+        if _pinned_headline and logos_result and logos_result.artifact:
+            logos_result.artifact.content["preferred_headline"] = _pinned_headline
 
         brief_content = logos_result.artifact.content if logos_result.artifact else {}
         gate = brief_content.get("gate", {})
@@ -1306,6 +1316,10 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             hb_ideon.cancel()
 
         copy_deck = ideon_result.artifact.content if ideon_result.artifact else {}
+        # Force pinned headline on every variant — LLM instructions are not 100% reliable.
+        if _pinned_headline and copy_deck:
+            for _v in copy_deck.get("variants", []):
+                _v["headline"] = _pinned_headline
         # Normalise Ideon output → flat strings for CopyIntakeView
         _variants = copy_deck.get("variants", [])
         _rec_idx  = copy_deck.get("recommended_variant", 0)
