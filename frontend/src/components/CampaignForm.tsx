@@ -38,6 +38,10 @@ const SEASONS   = ["Evergreen","Spring","Summer","Autumn","Winter","Christmas","
 const MOMENTS   = ["Day-to-Day","Brand Moment","Partnership Moment"];
 const AGES      = ["13–17","18–24","25–34","35–44","45–54","55+"];
 
+// Infosys B2B — role/seniority-based audience + business campaign contexts
+const INFOSYS_AUDIENCES = ["C-Suite / Board","VP / Director","Senior Manager","Technical Lead","IT Decision Maker","Procurement Head","Marketing & Comms Lead","Data & Analytics Lead"];
+const INFOSYS_CAMPAIGN_CONTEXTS = ["Thought Leadership","Industry Conference / Event","Product / Solution Launch","Account-Based Marketing (ABM)","Digital Transformation","Cloud Migration","AI Adoption","Partner Summit","Analyst Relations","RFP Support"];
+
 // Haleon sub-brand catalog (mirrors harness/app/haleon_catalog.py)
 const HALEON_CATALOG: Record<string, { brand: string; category: string }> = {
   sensodyne:  { brand: "Sensodyne",  category: "Oral Health" },
@@ -182,6 +186,9 @@ interface FD {
   // Sunrise-specific
   sunrisePlan: string;      // "Lifestyle KV" | plan name e.g. "Mobile Unlimited"
   sunriseAudience: string;
+  // Infosys B2B-specific
+  infosysAudience: string;
+  infosysCampaignContext: string;
 }
 const INIT: FD = {
   brand:"", objective:"", market:"", language:"", budget:"",
@@ -189,6 +196,7 @@ const INIT: FD = {
   fanTruth:"", kpiTargets:"", productService:"", haleonCategory:"",
   campaignType:"",
   sunrisePlan:"Lifestyle KV", sunriseAudience:"",
+  infosysAudience:"", infosysCampaignContext:"",
 };
 const toggle = <T,>(arr: T[], v: T): T[] => arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 
@@ -381,6 +389,7 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
   onBack: () => void; onLaunch: () => void;
 }) {
   const isSunrise = data.brand === "sunrise";
+  const isInfosys = data.brand === "Infosys";
 
   const ok = isSunrise
     ? data.campaignName.trim().length > 0 && data.sunriseAudience.length > 0
@@ -400,6 +409,8 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
           <p style={{ fontFamily:F, fontSize:13, color:"var(--text-secondary,#475569)", margin:0, lineHeight:1.5 }}>
             {isSunrise
               ? "Choose your Sunrise mode, target audience and give your campaign a name."
+              : isInfosys
+              ? "Choose your channels, B2B target audience and campaign context."
               : "Choose your channels, audience and give your campaign a name."}
           </p>
         </div>
@@ -448,6 +459,13 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
                   placeholder="Select audience" options={SUNRISE_AUDIENCES} />
               </div>
             </>
+          ) : isInfosys ? (
+            /* ── Infosys B2B: seniority / role audience ── */
+            <div>
+              <span style={label}>Target Audience</span>
+              <FormSelect value={data.infosysAudience} onChange={v => onChange("infosysAudience", v)}
+                placeholder="Select seniority / role" options={INFOSYS_AUDIENCES} />
+            </div>
           ) : (
             /* ── Generic: Target Age Groups ── */
             <div>
@@ -474,19 +492,27 @@ function Page2({ data, onChange, onToggle, onBack, onLaunch }: {
             </div>
           )}
 
-          {/* ── Season / Moment (all brands) ── */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+          {/* ── Campaign Context (Infosys B2B) or Season / Moment (all other brands) ── */}
+          {isInfosys ? (
             <div>
-              <span style={label}>Season / Occasion</span>
-              <FormSelect value={data.season} onChange={v => onChange("season", v)}
-                placeholder="Select season" options={SEASONS} />
+              <span style={label}>Campaign Context</span>
+              <FormSelect value={data.infosysCampaignContext} onChange={v => onChange("infosysCampaignContext", v)}
+                placeholder="Select campaign context" options={INFOSYS_CAMPAIGN_CONTEXTS} />
             </div>
-            <div>
-              <span style={label}>Campaign Moment</span>
-              <FormSelect value={data.moment} onChange={v => onChange("moment", v)}
-                placeholder="Select moment" options={MOMENTS} />
+          ) : (
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
+              <div>
+                <span style={label}>Season / Occasion</span>
+                <FormSelect value={data.season} onChange={v => onChange("season", v)}
+                  placeholder="Select season" options={SEASONS} />
+              </div>
+              <div>
+                <span style={label}>Campaign Moment</span>
+                <FormSelect value={data.moment} onChange={v => onChange("moment", v)}
+                  placeholder="Select moment" options={MOMENTS} />
+              </div>
             </div>
-          </div>
+          )}
 
           {/* ── Campaign Name (all brands) ── */}
           <div>
@@ -537,6 +563,7 @@ export default function CampaignForm({ onFullCampaign }: {
     const brandLabel = BRANDS.find(b => b.id === data.brand)?.label ?? data.brand;
     const isSunrise  = data.brand === "sunrise";
     const isHaleon   = data.brand === "Haleon";
+    const isInfosys  = data.brand === "Infosys";
 
     // Build product string for Sunrise:
     // Offer plan  → "Mobile Unlimited CHF 39.90" — runner.py regex splits price from label
@@ -552,6 +579,10 @@ export default function CampaignForm({ onFullCampaign }: {
         const sym = MARKET_CURRENCY_SYMBOL[data.market] ?? "CHF";
         product = `${plan.name} ${sym} ${plan.amount}`;
       }
+    }
+
+    if (isInfosys) {
+      audienceSegment = data.infosysAudience || "Enterprise Decision Makers";
     }
 
     if (isHaleon) {
@@ -599,12 +630,12 @@ export default function CampaignForm({ onFullCampaign }: {
       channels:         data.channels,
       market:           data.market,
       language:         data.language || undefined,
-      season:           resolvedSeason,
-      moment_type:      data.moment as any,
+      season:           isInfosys ? "Evergreen" : resolvedSeason,
+      moment_type:      (isInfosys ? (data.infosysCampaignContext || "Thought Leadership") : data.moment) as any,
       audience: {
         segment:   audienceSegment,
         location:  data.market,
-        age_range: isSunrise ? audienceSegment : (data.age[0]?.replace("–","-") ?? "All ages"),
+        age_range: isSunrise ? audienceSegment : isInfosys ? audienceSegment : (data.age[0]?.replace("–","-") ?? "All ages"),
         gender:    "All genders",
       },
       tone: "Warm & friendly",

@@ -5130,6 +5130,18 @@ export default function App() {
   const [briefApproved, setBriefApproved]   = useState(false);
   const [rerunMode,     setRerunMode]       = useState(false);
 
+  // Auto-approve the brief for Infosys once Logos (briefing) completes — no manual gate needed
+  useEffect(() => {
+    if (
+      briefData?.brand === "Infosys" &&
+      state.agentStatus["briefing"] === "done" &&
+      !briefApproved
+    ) {
+      const t = setTimeout(() => setBriefApproved(true), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [briefData?.brand, state.agentStatus["briefing"], briefApproved]);
+
   const handleReset = () => {
     reset();
     setWizardStarted(false);

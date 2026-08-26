@@ -223,21 +223,20 @@ export function usePipeline() {
     }
   }, [closeSSE]);
 
-  // ── Infosys A2A pipeline ───────────────────────────────────────────────────
+  // ── Infosys A2A pipeline (SSE streaming) ─────────────────────────────────
   const startInfosysCampaign = useCallback(async (brief: HarnessBriefRequest) => {
     closeSSE();
     setState({ ...INITIAL_STATE, status: "running" });
 
-    // Map HarnessBriefRequest → InfosysPipelineRequest
-    const product = (brief as any).product ?? "";
+    // Map HarnessBriefRequest → InfosysPipelineRequest body
+    const product  = (brief as any).product ?? "";
     const subBrand = product === "Infosys (IT Services & Consulting)" ? "" : product;
-
     const b = brief as any;
     const body = {
       campaign_name: brief.campaign_name ?? "Infosys Campaign",
       sub_brand:     subBrand,
       objective:     b.objective ?? b.campaign_objective ?? brief.goal ?? "",
-      audience:      b.audience_description ?? b.audience ?? "",
+      audience:      b.audience_description ?? (typeof b.audience === "string" ? b.audience : (b.audience?.segment ?? "")),
       buyer_truth:   b.buyer_truth ?? b.fan_truth ?? "",
       channels:      brief.channels ?? ["LinkedIn"],
       market:        brief.market ?? "UK",
@@ -248,79 +247,16 @@ export function usePipeline() {
       run_visuals:   false,
     };
 
-    try {
-      const res = await fetch(`${API_BASE}/infosys/pipeline`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const text = await res.text();
-        let msg = text;
-        try {
-          const j = JSON.parse(text);
-          msg = Array.isArray(j.detail) ? j.detail.map((e: any) => e.msg).join(", ") : j.detail ?? text;
-        } catch {}
-        setState((s) => ({ ...s, status: "error", error: msg }));
-        return;
-      }
-
-      const result = await res.json();
-
-      // Logos gate blocked the brief — surface feedback as a structured pipeline output
-      if (result.status === "blocked") {
-        const vb = result.validated_brief ?? {};
-        const blockers: string[] = (result.blockers ?? []).map((b: any) => `${b.element}: ${b.rule}`);
-        const missing = [
-          vb.kpi?.startsWith?.("MISSING") ? "KPI (e.g. 150 MQLs over 8 weeks)" : null,
-          vb.buyer_truth?.statement?.startsWith?.("MISSING") ? "Buyer truth (the human tension)" : null,
-          (vb.formats ?? []).some((f: string) => f?.startsWith?.("MISSING")) ? "Ad formats/specs (e.g. LinkedIn 1200×627)" : null,
-          vb.budget === "MISSING" ? "Budget" : null,
-          vb.timing === "MISSING" ? "Flight dates" : null,
-        ].filter(Boolean);
-        setState({
-          campaign_id:     null,
-          status:          "done",
-          pipeline_output: {
-            campaign_copy: {
-              short_headline:  "⚠ Brief Incomplete — Logos Gate",
-              medium_headline: `Missing: ${missing.join(" · ")}`,
-              body:            vb.display_brief ?? blockers.join("\n"),
-              cta:             "Please add the missing fields and regenerate",
-            },
-            creative_strategy: { hero_message: "Brief blocked at Logos validation gate" },
-            validated_brief:   vb,
-            infosys_pipeline:  true,
-            infosys_blocked:   true,
-            compliance_flags:  result.blockers ?? [],
-          },
-          error:       null,
-          agentStatus: { logos: "done" },
-          liveLog:     [],
-          milestones:  {
-            copy: {
-              short_headline:  "⚠ Brief Incomplete — Logos Gate",
-              medium_headline: `Missing: ${missing.join(" · ")}`,
-              body:            vb.display_brief ?? blockers.join("\n"),
-              cta:             "Please add the missing fields and regenerate",
-            },
-          },
-        });
-        return;
-      }
-
-      const deck  = result.copy_deck ?? {};
-      const plat  = result.creative_platform ?? {};
+    // Helper: normalise a raw Infosys pipeline result → pipeline_output shape
+    const _normalise = (result: any) => {
+      const deck   = result.copy_deck ?? {};
+      const plat   = result.creative_platform ?? {};
       const vbrief = result.validated_brief ?? {};
 
-      // Pick the recommended variant from Ideon's variants[] array.
-      // Ideon schema: variants[recommended_variant].{headline,subheadline,body,cta}
-      // Fallback chain: banner_copy → old headlines.hero_options (backward compat)
       const _recIdx   = typeof deck.recommended_variant === "number" ? deck.recommended_variant : 0;
       const _variants = Array.isArray(deck.variants) ? deck.variants : [];
       const _best     = _variants[_recIdx] ?? _variants[0] ?? null;
 
-      // Normalise into standard pipeline_output shape so existing panels render
       const campaign_copy = {
         short_headline:  _best?.headline
                          ?? deck.banner_copy?.linkedin_1200x627?.heading
@@ -332,19 +268,18 @@ export function usePipeline() {
         body:            _best?.body ?? deck.body_copy?.web ?? "",
         cta:             _best?.cta  ?? deck.cta_bank?.[0] ?? "",
         channel_copy: {
-          linkedin:      deck.social_captions?.linkedin ?? "",
-          email:         deck.body_copy?.email ?? "",
+          linkedin: deck.social_captions?.linkedin ?? "",
+          email:    deck.body_copy?.email ?? "",
           ...(deck.banner_copy?.linkedin_1200x627
             ? { linkedin_banner: `${deck.banner_copy.linkedin_1200x627.heading} — ${deck.banner_copy.linkedin_1200x627.subheading}` }
             : {}),
         },
       };
 
-      // Normalise Helia's nested objects to strings for the UI panels
-      const _bigIdea      = typeof plat.big_idea === "string" ? plat.big_idea : (plat.big_idea?.statement ?? "");
-      const _buyerTruth   = typeof vbrief.buyer_truth === "string" ? vbrief.buyer_truth : (vbrief.buyer_truth?.statement ?? "");
-      const _recTerrName  = plat.recommended_territory ?? plat.territory_name ?? "";
-      const _recTerr      = (plat.territories ?? []).find((t: any) => t.name === _recTerrName) ?? (plat.territories ?? [])[0] ?? null;
+      const _bigIdea     = typeof plat.big_idea === "string" ? plat.big_idea : (plat.big_idea?.statement ?? "");
+      const _buyerTruth  = typeof vbrief.buyer_truth === "string" ? vbrief.buyer_truth : (vbrief.buyer_truth?.statement ?? "");
+      const _recTerrName = plat.recommended_territory ?? plat.territory_name ?? "";
+      const _recTerr     = (plat.territories ?? []).find((t: any) => t.name === _recTerrName) ?? (plat.territories ?? [])[0] ?? null;
 
       const creative_strategy = {
         hero_message:       _bigIdea || plat.hero_message?.hero_line || "",
@@ -354,7 +289,6 @@ export function usePipeline() {
         audience_insight:   _buyerTruth || vbrief.audience || "",
       };
 
-      // machine_brief: flat copy of validated_brief mapped to App.tsx brief field names
       const machine_brief = {
         ...vbrief,
         brand:         vbrief.brand ?? "",
@@ -371,34 +305,121 @@ export function usePipeline() {
         sub_brand:     vbrief.sub_brand ?? "",
       };
 
-      setState({
-        campaign_id:     null,
-        status:          "done",
+      return {
         pipeline_output: {
           campaign_copy,
           creative_strategy,
           machine_brief,
-          validated_brief:    vbrief,
-          creative_platform:  plat,
-          copy_deck:          deck,
-          infosys_pipeline:   true,
-          compliance_flags:   result.compliance_flags ?? [],
+          validated_brief:   vbrief,
+          creative_platform: plat,
+          copy_deck:         deck,
+          infosys_pipeline:  true,
+          compliance_flags:  result.compliance_flags ?? [],
         },
-        error:       null,
-        agentStatus: { logos: "done", helia: "done", ideon: "done" },
-        liveLog:     [],
-        milestones:  {
-          copy: {
-            short_headline:  campaign_copy.short_headline,
-            medium_headline: campaign_copy.medium_headline,
-            body:            campaign_copy.body,
-            cta:             campaign_copy.cta,
-            // also expose variants so any copy panel can show all options
-            variants:        _variants,
-            recommended_variant: _recIdx,
-          },
+        copy_milestone: {
+          short_headline:      campaign_copy.short_headline,
+          medium_headline:     campaign_copy.medium_headline,
+          body:                campaign_copy.body,
+          cta:                 campaign_copy.cta,
+          variants:            _variants,
+          recommended_variant: _recIdx,
         },
+      };
+    };
+
+    try {
+      // 1. POST /infosys/campaign → get campaign_id (non-blocking)
+      const res = await fetch(`${API_BASE}/infosys/campaign`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
+      if (!res.ok) {
+        const text = await res.text();
+        let msg = text;
+        try {
+          const j = JSON.parse(text);
+          msg = Array.isArray(j.detail) ? j.detail.map((e: any) => e.msg).join(", ") : j.detail ?? text;
+        } catch {}
+        setState((s) => ({ ...s, status: "error", error: msg }));
+        return;
+      }
+      const { campaign_id } = await res.json();
+      setState((s) => ({ ...s, campaign_id }));
+
+      // 2. Open SSE stream — same /events/{id} endpoint as regular pipeline
+      const es = new EventSource(`${API_BASE}/events/${campaign_id}`);
+      esRef.current = es;
+
+      es.onmessage = (e) => {
+        const ev: AgentEvent = JSON.parse(e.data);
+
+        // ── Pipeline complete ──────────────────────────────────────────────
+        if (ev.agent === "__done__") {
+          es.close();
+          esRef.current = null;
+          const result = JSON.parse(ev.message);
+          const { pipeline_output, copy_milestone } = _normalise(result);
+          setState((s) => ({
+            ...s,
+            status:          "done",
+            pipeline_output,
+            milestones: {
+              ...s.milestones,
+              copy:     copy_milestone,
+              strategy: result.creative_platform ?? s.milestones["strategy"],
+              briefing: result.validated_brief   ?? s.milestones["briefing"],
+            },
+          }));
+          return;
+        }
+
+        if (ev.agent === "__error__") {
+          es.close();
+          esRef.current = null;
+          setState((s) => ({ ...s, status: "error", error: ev.message }));
+          return;
+        }
+
+        // ── Milestone data (per-agent live output) ─────────────────────────
+        if (ev.status === "milestone") {
+          try {
+            const payload = JSON.parse(ev.message);
+            setState((s) => ({
+              ...s,
+              milestones: {
+                ...s.milestones,
+                [ev.agent]: { ...(s.milestones[ev.agent] ?? {}), ...payload },
+              },
+            }));
+          } catch {}
+          return;
+        }
+
+        // ── Regular progress event ─────────────────────────────────────────
+        let displayMsg = ev.message;
+        if (ev.status === "done") {
+          try {
+            const parsed = JSON.parse(ev.message);
+            if (parsed?._text) displayMsg = parsed._text;
+          } catch {}
+        }
+        setState((s) => ({
+          ...s,
+          agentStatus: { ...s.agentStatus, [ev.agent]: ev.status as AgentStatus },
+          liveLog:     [...s.liveLog, { ...ev, message: displayMsg }],
+        }));
+      };
+
+      es.onerror = () => {
+        es.close();
+        esRef.current = null;
+        setState((s) =>
+          s.status === "running"
+            ? { ...s, status: "error", error: "Lost connection to pipeline. Is the harness running?" }
+            : s
+        );
+      };
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Connection failed — is the harness running?";
       setState((s) => ({ ...s, status: "error", error: msg }));

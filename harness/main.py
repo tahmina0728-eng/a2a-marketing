@@ -1194,6 +1194,133 @@ async def infosys_pipeline(req: InfosysPipelineRequest):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
+async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelineRequest) -> None:
+    """Background task: run Infosys pipeline step-by-step with per-agent SSE events."""
+    loop = asyncio.get_event_loop()
+    try:
+        brief = req.model_dump(exclude={"run_aether", "run_visuals", "strict_gate"})
+
+        # ── Logos → "briefing" key (matches HARNESS_STAGES / BriefIntakeView) ──
+        await push_event(campaign_id, "briefing", "running", "Logos: validating brief & brand compliance…")
+        from app.agents.infosys.logos import LogosAgent
+        logos_result = await loop.run_in_executor(None, LogosAgent().run, brief)
+
+        brief_content = logos_result.artifact.content if logos_result.artifact else {}
+        gate = brief_content.get("gate", {})
+        gate_blockers = [f for f in gate.get("flags", []) if f.get("status") == "BLOCK"]
+
+        # Surface validated_brief as briefing milestone so BriefIntakeView can render it
+        await push_event(campaign_id, "briefing", "milestone", json.dumps({
+            **brief_content,
+            "score":      brief_content.get("gate", {}).get("score", 0),
+            "fan_truth":  {"statement": brief_content.get("buyer_truth", ""), "overall": 0},
+        }))
+        await push_event(campaign_id, "briefing", "done", json.dumps({
+            "_text": "Logos: brief validated ✓",
+            "score": brief_content.get("gate", {}).get("score", 0),
+            "fan_truth": {"statement": brief_content.get("buyer_truth", ""), "overall": 0},
+        }))
+
+        if logos_result.status == "failed":
+            await push_event(campaign_id, "__error__", "error", "Logos validation failed")
+            return
+
+        # ── Helia → "strategy" key (matches StrategyIntakeView) ───────────────
+        await push_event(campaign_id, "strategy", "running", "Helia: developing creative territories & big idea…")
+        from app.agents.infosys.helia import HeliaAgent
+        helia_result = await loop.run_in_executor(None, HeliaAgent().run, logos_result)
+
+        creative_platform = helia_result.artifact.content if helia_result.artifact else {}
+        # Normalise Helia output → flat strings for StrategyIntakeView
+        _big_idea_raw  = creative_platform.get("big_idea", {})
+        _bi_stmt       = _big_idea_raw.get("statement", "") if isinstance(_big_idea_raw, dict) else str(_big_idea_raw)
+        _rec_terr_name = creative_platform.get("recommended_territory", "")
+        _territories   = creative_platform.get("territories", [])
+        _rec_terr      = next((t for t in _territories if t.get("name") == _rec_terr_name), _territories[0] if _territories else {})
+        _pos_stmt      = _rec_terr.get("positioning_statement", "") or creative_platform.get("positioning_statement", "")
+        await push_event(campaign_id, "strategy", "milestone", json.dumps({
+            "big_idea":            _bi_stmt,
+            "hero_message":        _bi_stmt,
+            "strategic_framework": _pos_stmt,
+            "brand_territory":     _rec_terr_name,
+            "territories":         _territories,
+            "tone_of_voice":       _rec_terr.get("verbal_tone", ""),
+            "visual_world":        creative_platform.get("visual_world", ""),
+            "_creative_platform":  creative_platform,
+        }))
+        await push_event(campaign_id, "strategy", "done", json.dumps({
+            "_text":               f'Helia: strategy ready — "{_bi_stmt}"' if _bi_stmt else "Helia: creative platform ready ✓",
+            "hero_message":        _bi_stmt,
+            "big_idea":            _bi_stmt,
+            "strategic_framework": _pos_stmt,
+        }))
+
+        if helia_result.status == "failed":
+            await push_event(campaign_id, "__error__", "error", "Helia agent failed")
+            return
+
+        # ── Ideon → "copy" key (matches copy intake view) ─────────────────────
+        await push_event(campaign_id, "copy", "running", "Ideon: writing headline, body & copy variants…")
+        from app.agents.infosys.ideon import IdeonAgent
+        ideon_input = {"brief": logos_result, "creative_platform": helia_result}
+        ideon_result = await loop.run_in_executor(None, IdeonAgent().run, ideon_input)
+
+        copy_deck = ideon_result.artifact.content if ideon_result.artifact else {}
+        # Normalise Ideon output → flat strings for CopyIntakeView
+        _variants = copy_deck.get("variants", [])
+        _rec_idx  = copy_deck.get("recommended_variant", 0)
+        _best     = (_variants[_rec_idx] if _rec_idx < len(_variants) else (_variants[0] if _variants else {}))
+        _best_hl  = _best.get("headline", "")
+        await push_event(campaign_id, "copy", "milestone", json.dumps({
+            "short_headline":  _best_hl,
+            "subline":         _best.get("subheadline", ""),
+            "medium_headline": _best_hl,
+            "body":            _best.get("body", ""),
+            "cta":             _best.get("cta", ""),
+            "channel_copy": {
+                "linkedin": copy_deck.get("social_captions", {}).get("linkedin", ""),
+                "email":    copy_deck.get("body_copy", {}).get("email", ""),
+            },
+            "_copy_deck": copy_deck,
+        }))
+        await push_event(campaign_id, "copy", "done", json.dumps({
+            "_text":           f'Ideon: copy ready — "{_best_hl}"' if _best_hl else "Ideon: copy deck ready ✓",
+            "short_headline":  _best_hl,
+            "medium_headline": _best_hl,
+            "body":            _best.get("body", ""),
+            "cta":             _best.get("cta", ""),
+        }))
+
+        # ── Done: emit full result (same keys as /infosys/pipeline) ───────────
+        all_flags = logos_result.flags + helia_result.flags + ideon_result.flags
+        full_result = {
+            "status":            "completed" if ideon_result.status != "failed" else "partial",
+            "stage":             "ideon",
+            "validated_brief":   brief_content,
+            "creative_platform": creative_platform,
+            "copy_deck":         copy_deck,
+            "compliance_flags":  [f.model_dump() for f in all_flags],
+            "gate_warnings":     gate_blockers,
+        }
+        await push_event(campaign_id, "__done__", "done", json.dumps(full_result))
+
+    except Exception as exc:
+        logger.error("infosys_campaign_error", campaign_id=campaign_id, error=str(exc))
+        await push_event(campaign_id, "__error__", "error", str(exc))
+
+
+@app.post("/infosys/campaign")
+async def infosys_campaign_stream(req: InfosysPipelineRequest):
+    """Start Infosys pipeline with SSE streaming — returns campaign_id immediately."""
+    campaign_id = (
+        f"infosys-{req.campaign_name.lower().replace(' ', '-')[:20]}"
+        f"-{str(uuid.uuid4())[:6]}"
+    )
+    _pipelines[campaign_id] = {"events": [], "signal": asyncio.Event()}
+    asyncio.create_task(_run_infosys_pipeline_background(campaign_id, req))
+    return {"campaign_id": campaign_id, "status": "started"}
+
+
 @app.post("/infosys/logos")
 async def infosys_logos(req: _BaseModel):
     """Run only the Logos (brief validation) stage for Infosys."""
