@@ -1574,8 +1574,25 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
                 "body":           _best.get("body", ""),
                 "cta":            _best.get("cta", ""),
             }
+            # Augment brief_content with fields run_performance_forecast expects:
+            # - brand: Logos artifact doesn't set it; add explicitly
+            # - fan_truth: Logos uses buyer_truth; map it so confidence tier is computed
+            _bt_raw_pf = brief_content.get("buyer_truth", {})
+            _bt_overall_pf = (
+                _bt_raw_pf.get("overall", _bt_raw_pf.get("score", 70))
+                if isinstance(_bt_raw_pf, dict) else 70
+            )
+            _brief_for_perf = {
+                **brief_content,
+                "brand":      "Infosys",
+                "market":     req.market or brief_content.get("market", "Global"),
+                "fan_truth":  {
+                    "overall":    _bt_overall_pf,
+                    "statement":  _bt_raw_pf.get("statement", "") if isinstance(_bt_raw_pf, dict) else "",
+                },
+            }
             perf_forecast = await run_performance_forecast(
-                machine_brief = brief_content,
+                machine_brief = _brief_for_perf,
                 strategy      = _strat_for_perf,
                 copy          = _copy_for_perf,
                 channels      = _channels_list or ["linkedin"],

@@ -4424,6 +4424,21 @@ async def run_performance_forecast(
 - OOH: Impressions 500k-2M; essential for local footprint and store traffic
 - Email: CTR 12-18%, ROAS 3-5x (upsell to existing base)
 - TikTok: CTR 2-3.5%, growing for youth acquisition"""
+    elif any(x in _brand_lower for x in ("infosys",)):
+        _cat = "B2B enterprise technology"
+        _benchmarks = """B2B Enterprise Technology benchmarks ({market}):
+- LinkedIn (Sponsored Content): CTR 0.35-0.65%, CPL £60-140, Pipeline-influenced ROAS 3-6x
+  (Primary CXO reach channel; Thought Leadership ads 2× CTR vs standard image)
+- LinkedIn (InMail/Message Ads): Open rate 30-45%, CTR 3-6%, CPL £80-180
+  (Highest intent for event registrations and demo requests)
+- Google Search (branded + category): CTR 5-9%, ROAS 4-8x
+  (Decision-stage queries; competitor conquesting adds 20-30% volume)
+- Programmatic Display (IT/Finance verticals): CTR 0.08-0.15%, Reach 500k-2M CXO audience
+  (Brand reinforcement; combine with LinkedIn for 3× recall lift)
+- Email (opted-in CXO/decision maker list): Open rate 22-32%, CTR 4-8%, ROAS 5-10x
+  (Highest ROI for warm pipeline; personalise to industry vertical)
+- YouTube (pre-roll, B2B targeting): View-through rate 25-40%, CPV £0.04-0.10
+  (Brand story channel; measure influenced pipeline, not direct ROAS)"""
     elif any(x in _brand_lower for x in ("ubs", "bank", "finance", "insurance")):
         _cat = "financial services"
         _benchmarks = """Financial Services benchmarks ({market}):
@@ -4578,31 +4593,33 @@ kpi_validation must include one entry per validated KPI target listed above."""
         for i, ch in enumerate(channels):
             _split[ch] = _even if i < _n_chan - 1 else round(1.0 - _even * (i), 2)
 
-        # Reach / ROAS estimates by confidence tier
+        # Reach / ROAS estimates by confidence tier — B2B uses smaller, targeted reach
+        _is_b2b_cat = "b2b" in _cat.lower() or "enterprise" in _cat.lower()
         if conf == "HIGH":
-            _reach_lo, _reach_hi, _roas_mid = 7.5, 11.2, 3.2
+            _reach_lo, _reach_hi, _roas_mid = (0.8, 1.4, 4.5) if _is_b2b_cat else (7.5, 11.2, 3.2)
         elif conf == "MEDIUM":
-            _reach_lo, _reach_hi, _roas_mid = 4.8, 7.6, 2.5
+            _reach_lo, _reach_hi, _roas_mid = (0.4, 0.9, 3.2) if _is_b2b_cat else (4.8, 7.6, 2.5)
         else:
-            _reach_lo, _reach_hi, _roas_mid = 2.1, 3.9, 1.7
+            _reach_lo, _reach_hi, _roas_mid = (0.2, 0.5, 2.0) if _is_b2b_cat else (2.1, 3.9, 1.7)
+        _reach_unit = "M targeted CXOs" if _is_b2b_cat else "M"
 
         _cfs = []
         for ch in channels:
             _ch_conf = conf
-            _ch_ctr  = "1.8%" if conf == "HIGH" else "1.2%" if conf == "MEDIUM" else "0.8%"
+            _ch_ctr  = ("0.55%" if conf == "HIGH" else "0.40%" if conf == "MEDIUM" else "0.25%") if _is_b2b_cat else ("1.8%" if conf == "HIGH" else "1.2%" if conf == "MEDIUM" else "0.8%")
             _ch_roas = f"{_roas_mid:.1f}x"
-            _ch_reach_lo = round(_reach_lo / _n_chan, 1)
-            _ch_reach_hi = round(_reach_hi / _n_chan, 1)
+            _ch_reach_lo = round(_reach_lo / _n_chan, 2 if _is_b2b_cat else 1)
+            _ch_reach_hi = round(_reach_hi / _n_chan, 2 if _is_b2b_cat else 1)
             _cfs.append({
                 "channel":              ch,
                 "predicted_reach":      f"{_ch_reach_lo}M – {_ch_reach_hi}M",
                 "predicted_ctr":        _ch_ctr,
                 "predicted_roas":       _ch_roas,
-                "predicted_engagement": "3.5%" if conf == "HIGH" else "2.1%",
+                "predicted_engagement": ("1.8%" if conf == "HIGH" else "1.2%") if _is_b2b_cat else ("3.5%" if conf == "HIGH" else "2.1%"),
                 "confidence":           _ch_conf,
                 "budget_pct":           _split.get(ch, _even),
-                "risk_flag":            "Monitor frequency cap — audience may saturate in first 7 days.",
-                "opportunity":          "Fan Truth score indicates above-average organic amplification potential.",
+                "risk_flag":            "Monitor frequency cap — decision-maker audience is small; cap at 8–10 impressions/user/week." if _is_b2b_cat else "Monitor frequency cap — audience may saturate in first 7 days.",
+                "opportunity":          "Thought Leadership format and personalised InMail can double CPL efficiency for B2B pipeline." if _is_b2b_cat else "Fan Truth score indicates above-average organic amplification potential.",
             })
 
         result = {
@@ -4613,7 +4630,7 @@ kpi_validation must include one entry per validated KPI target listed above."""
                 f"driven by a {conf} Fan Truth score."
             ),
             "overall_confidence":     conf,
-            "predicted_total_reach":  f"{_reach_lo:.1f}M – {_reach_hi:.1f}M",
+            "predicted_total_reach":  f"{_reach_lo:.1f}–{_reach_hi:.1f} {_reach_unit}",
             "predicted_blended_roas": f"{_roas_mid:.1f}x",
             "fan_truth_impact":       ft_effect,
             "benchmark_comparison":   (
