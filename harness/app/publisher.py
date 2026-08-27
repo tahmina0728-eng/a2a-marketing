@@ -299,39 +299,49 @@ def generate_infosys_website(campaign_image_b64: str = "", campaign_id: str = ""
     cobalt_logo = _logo_img(_cobalt_b64, "Infosys Cobalt", 22)
     aster_logo  = _logo_img(_aster_b64,  "Infosys Aster",  22)
 
-    # Hero background style
+    # Hero background style — static image or gradient (video handled inline)
     hero_bg_style = (
-        f'background-image:url("{hero_src}");' if hero_src else
+        f'background-image:url("{hero_src}");' if hero_src and not video_b64 else
         "background:linear-gradient(135deg,#061838 0%,#0d3a6b 100%);"
     )
+    # Hero video element (replaces static background when reel is available)
+    _hero_video_el = (
+        f'<video class="hero-vid" autoplay muted loop playsinline aria-hidden="true">'
+        f'<source src="data:video/mp4;base64,{video_b64}" type="video/mp4"></video>'
+    ) if video_b64 else ""
 
-    # ── Reel section HTML (pre-computed to avoid nested f-string) ────────────
-    _perf_holes = "".join('<div class="reel-hole"></div>' for _ in range(28))
+    # Strip Ideon compliance placeholder tokens from visible copy
+    import re as _re
+    sub = _re.sub(r'\[APPROVED[^\]]*\]', '', sub).strip()
+
+    # ── Reel section HTML — clean player, no filmstrip borders ──────────────
+    _hl_short = headline[:70] + ("…" if len(headline) > 70 else "")
     if video_b64:
-        _reel_frame = (
-            f'<video class="reel-video" controls poster="{kv_src}">'
+        _reel_media = (
+            f'<video class="reel-video" controls autoplay muted loop playsinline'
+            f' poster="{kv_src if kv_src else ""}">'
             f'<source src="data:video/mp4;base64,{video_b64}" type="video/mp4">'
-            '</video>'
+            f'</video>'
+        )
+    elif kv_src:
+        _reel_media = (
+            f'<div style="position:relative;aspect-ratio:16/9;background:#000;">'
+            f'<img src="{kv_src}" alt="Campaign visual"'
+            f' style="width:100%;height:100%;object-fit:cover;opacity:0.55;">'
+            f'<div style="position:absolute;inset:0;display:flex;flex-direction:column;'
+            f'align-items:center;justify-content:center;gap:16px;">'
+            f'<div class="reel-play-btn"><svg width="26" height="26" viewBox="0 0 24 24" fill="white">'
+            f'<polygon points="5,3 19,12 5,21"/></svg></div>'
+            f'<span style="color:rgba(255,255,255,0.6);font-size:12px;font-weight:600;'
+            f'letter-spacing:0.06em;">MOTION SPEC READY</span>'
+            f'</div></div>'
         )
     else:
-        _kv_overlay = (
-            f'<img src="{kv_src}" alt="Campaign visual" class="reel-img"'
-            ' style="position:absolute;inset:0;width:100%;height:100%;'
-            'object-fit:cover;opacity:0.55;">'
-        ) if kv_src else ""
-        _reel_frame = (
-            '<div class="reel-img-placeholder" style="position:relative;">'
-            + _kv_overlay +
-            '<div style="position:relative;z-index:2;display:flex;flex-direction:column;'
-            'align-items:center;gap:16px;">'
-            '<div class="reel-play-btn">'
-            '<svg width="26" height="26" viewBox="0 0 24 24" fill="white">'
-            '<polygon points="5,3 19,12 5,21"/></svg></div>'
-            '<span style="color:rgba(255,255,255,0.5);font-size:12px;font-weight:600;'
-            'letter-spacing:0.06em;">MOTION SPEC READY</span>'
-            '</div></div>'
+        _reel_media = (
+            '<div class="reel-img-placeholder">'
+            '<div class="reel-play-btn"><svg width="26" height="26" viewBox="0 0 24 24" fill="white">'
+            '<polygon points="5,3 19,12 5,21"/></svg></div></div>'
         )
-    _hl_short   = headline[:70] + ("…" if len(headline) > 70 else "")
     _reel_section = f"""
 <!-- ── CAMPAIGN REEL ──────────────────────────────────────────────────── -->
 <section class="section-reel">
@@ -342,24 +352,23 @@ def generate_infosys_website(campaign_image_b64: str = "", campaign_id: str = ""
     and footage direction produced by Kinetik for multi-format distribution.
   </p>
   <div class="reel-stage">
-    <div class="reel-filmstrip"><div class="reel-holes">{_perf_holes}</div></div>
-    {_reel_frame}
+    {_reel_media}
     <div class="reel-overlay">
       <div class="reel-overlay-label">Kinetik &middot; Multi-format</div>
       <div class="reel-overlay-title">{_hl_short}</div>
       <div class="reel-overlay-sub">9:16 &nbsp;&middot;&nbsp; 1:1 &nbsp;&middot;&nbsp; 4:5 &nbsp;&middot;&nbsp; 16:9 &nbsp;|&nbsp; 15s &middot; 30s cutdowns</div>
     </div>
-    <div class="reel-filmstrip-bot"></div>
   </div>
 </section>
 """
 
-    # Story card image
+    # Story card image — responsive, not fixed-width
     story_img_html = (
+        f'<div style="flex:0 0 42%;min-height:260px;overflow:hidden;">'
         f'<img src="{kv_src}" alt="Campaign visual" '
-        f'style="width:340px;flex-shrink:0;object-fit:cover;display:block;">'
+        f'style="width:100%;height:100%;object-fit:cover;display:block;"></div>'
         if kv_src else
-        '<div style="width:340px;flex-shrink:0;background:linear-gradient(135deg,#667eea,#764ba2);"></div>'
+        '<div style="flex:0 0 42%;min-height:260px;background:linear-gradient(135deg,#667eea,#764ba2);"></div>'
     )
 
     # ── Abstract gradient palettes for AI/card sections ───────────────────────
@@ -368,9 +377,9 @@ def generate_infosys_website(campaign_image_b64: str = "", campaign_id: str = ""
         "linear-gradient(135deg,#065f46 0%,#1e40af 100%)",   # teal → blue
         "linear-gradient(135deg,#7c2d12 0%,#7e22ce 100%)",   # amber → violet
     ]
-    TOPAZ_GRAD  = "linear-gradient(135deg,#0369a1 0%,#7c3aed 100%)"
-    COBALT_GRAD = "linear-gradient(135deg,#1d4ed8 0%,#6d28d9 100%)"
-    ASTER_GRAD  = "linear-gradient(135deg,#7c3aed 0%,#be185d 100%)"
+    TOPAZ_GRAD  = "linear-gradient(135deg,#0369a1 0%,#7c3aed 50%,#0891b2 100%)"
+    COBALT_GRAD = "linear-gradient(135deg,#1d4ed8 0%,#6d28d9 50%,#1e40af 100%)"
+    ASTER_GRAD  = "linear-gradient(135deg,#7c3aed 0%,#be185d 50%,#db2777 100%)"
 
     return f"""<!doctype html>
 <html lang="en">
@@ -405,7 +414,9 @@ nav{{position:fixed;top:0;width:100%;background:rgba(6,24,56,0.94);backdrop-filt
   background:#061838;overflow:hidden}}
 .hero-bg{{position:absolute;inset:0;{hero_bg_style}background-size:cover;
   background-position:center;opacity:0.38}}
-.hero-overlay{{position:absolute;inset:0;background:linear-gradient(
+.hero-vid{{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
+  opacity:0.42;z-index:0;pointer-events:none}}
+.hero-overlay{{position:absolute;inset:0;z-index:1;background:linear-gradient(
   to bottom,rgba(6,24,56,0.55) 0%,rgba(6,24,56,0.88) 100%)}}
 .hero-content{{position:relative;z-index:2;max-width:960px}}
 .hero h1{{font-size:clamp(48px,7.5vw,96px);font-weight:300;color:#fff;line-height:1.06;
@@ -450,7 +461,13 @@ nav{{position:fixed;top:0;width:100%;background:rgba(6,24,56,0.94);backdrop-filt
 .crafting-cta:hover{{background:#007CC3}}
 .feature-grid{{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;max-width:1120px;margin:0 auto}}
 .feature-card{{border-radius:22px;overflow:hidden;position:relative}}
-.feature-img{{width:100%;aspect-ratio:4/3;display:block}}
+.feature-img{{width:100%;aspect-ratio:4/3;display:block;background-size:300% 300%;
+  animation:gradFlow 8s ease infinite}}
+@keyframes gradFlow{{
+  0%{{background-position:0% 50%}}
+  50%{{background-position:100% 50%}}
+  100%{{background-position:0% 50%}}
+}}
 .feature-foot{{background:#fff;padding:20px 24px 24px}}
 .feature-foot h4{{font-size:17px;font-weight:700;color:#1A1A2E;margin-bottom:8px}}
 .feature-foot p{{font-size:13px;color:#6B7280;line-height:1.55}}
@@ -481,28 +498,19 @@ nav{{position:fixed;top:0;width:100%;background:rgba(6,24,56,0.94);backdrop-filt
 .reel-title{{color:#fff;font-size:clamp(26px,3.2vw,40px);font-weight:700;margin-bottom:14px}}
 .reel-sub{{color:rgba(255,255,255,0.5);font-size:15px;max-width:600px;
   margin:0 auto 48px;line-height:1.7}}
-.reel-stage{{position:relative;max-width:900px;margin:0 auto;border-radius:18px;
+.reel-stage{{position:relative;max-width:960px;margin:0 auto;border-radius:18px;
   overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.6)}}
-.reel-filmstrip{{position:absolute;top:0;left:0;right:0;height:28px;
-  background:repeating-linear-gradient(90deg,#111 0px,#111 18px,#222 18px,
-  #222 26px,#111 26px,#111 44px);display:flex;align-items:center}}
-.reel-filmstrip-bot{{position:absolute;bottom:0;left:0;right:0;height:28px;
-  background:repeating-linear-gradient(90deg,#111 0px,#111 18px,#222 18px,
-  #222 26px,#111 26px,#111 44px)}}
-.reel-holes{{display:flex;gap:26px;padding:0 16px}}
-.reel-hole{{width:14px;height:10px;background:#000;border-radius:2px;flex-shrink:0}}
-.reel-img{{width:100%;display:block;aspect-ratio:16/9;object-fit:cover}}
 .reel-img-placeholder{{width:100%;aspect-ratio:16/9;
   background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 40%,#1e3a8a 100%);
-  display:flex;align-items:center;justify-content:center}}
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px}}
 .reel-play-btn{{width:72px;height:72px;border-radius:50%;
   background:rgba(0,124,195,0.85);border:3px solid rgba(255,255,255,0.4);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   transition:all 0.2s;backdrop-filter:blur(8px)}}
 .reel-play-btn:hover{{background:rgba(0,124,195,1);transform:scale(1.06)}}
-.reel-overlay{{position:absolute;bottom:28px;left:0;right:0;padding:28px 36px;
+.reel-overlay{{position:absolute;bottom:0;left:0;right:0;padding:28px 36px;
   background:linear-gradient(to top,rgba(6,14,26,0.95) 0%,transparent 100%);
-  text-align:left}}
+  text-align:left;pointer-events:none}}
 .reel-overlay-label{{font-size:10px;font-weight:800;letter-spacing:0.12em;
   color:#60a5fa;text-transform:uppercase;margin-bottom:8px}}
 .reel-overlay-title{{color:#fff;font-size:18px;font-weight:700;margin-bottom:6px}}
@@ -586,6 +594,7 @@ footer{{background:#F8FAFC;padding:64px 80px;border-top:1px solid #E5E7EB}}
 <!-- ── HERO ──────────────────────────────────────────────────────────── -->
 <section class="hero">
   <div class="hero-bg"></div>
+  {_hero_video_el}
   <div class="hero-overlay"></div>
   <div class="hero-content">
     <h1>{headline}</h1>
@@ -686,7 +695,7 @@ footer{{background:#F8FAFC;padding:64px 80px;border-top:1px solid #E5E7EB}}
       </div>
     </div>
     <div class="action-card">
-      <div class="action-img" style="background:{GRADIENTS[1]};{("background-image:url(" + kv_src + ");background-size:cover;background-position:center;") if kv_src else ""}"></div>
+      <div class="action-img" style="background:{GRADIENTS[1]};"></div>
       <div class="action-body">
         <div class="case-badge">Case Study</div>
         <h4>{headline[:60]}{"…" if len(headline) > 60 else ""}</h4>
