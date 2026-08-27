@@ -41,7 +41,7 @@ _TPL = {
 
 # Background fill colour per sub-brand template (non-default templates)
 _BG = {
-    "aster":        (0,   124, 195),   # Infosys Blue #007CC3
+    "aster":        (0,   125, 195),   # Infosys Blue #007DC3 — matches template actual
     "topaz+cobalt": (155,  47, 172),   # Purple       #9B2FAC
     "speaker":      (212, 136,  15),   # Amber        #D4880F
 }
