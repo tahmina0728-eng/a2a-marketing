@@ -2678,7 +2678,32 @@ async def list_brand_colours(brand_name: str):
         candidates = list((loader._local_root / brand_name / "Colours").glob("*.json")) if (loader._local_root / brand_name / "Colours").is_dir() else []
         if candidates:
             import json as _json
+            import re as _re_col
             data = _json.loads(candidates[0].read_text(encoding="utf-8"))
+            # Normalise design-tokens format (nested $value) → {group: [{hex,name}]}
+            def _norm_colours(raw: dict) -> dict:
+                def _extract(obj: dict) -> list[dict]:
+                    items: list[dict] = []
+                    for k, v in obj.items():
+                        if isinstance(v, dict):
+                            if "$value" in v and isinstance(v.get("$value"), str) and v["$value"].startswith("#"):
+                                items.append({"hex": v["$value"], "name": _re_col.sub(r"([A-Z])", r" \1", k).strip()})
+                            elif "$value" not in v:
+                                items.extend(_extract(v))
+                    return items
+                # Already flat (Barclays-style arrays)?
+                if any(isinstance(v, list) for v in raw.values()):
+                    return raw
+                # Design-tokens: root key "color" → groups
+                root = raw.get("color", raw)
+                result: dict = {}
+                for grp, val in root.items():
+                    if isinstance(val, dict) and "$value" not in val:
+                        tokens = _extract(val)
+                        if tokens:
+                            result[grp] = tokens
+                return result or raw
+            data = _norm_colours(data)
             return {"brand": brand_name, "mode": "json", "palette": data}
     # Fallback: list PNG swatch images
     swatches = loader.list_colours(brand_name)

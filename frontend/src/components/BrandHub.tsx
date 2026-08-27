@@ -835,7 +835,18 @@ function OverviewSection({ activeBrand, onNavigate }: OverviewSectionProps) {
 
     fetch(`${API_BASE}/brands/${enc}/list-logos`)
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d?.logos?.length) setLogo(API_BASE + d.logos[0].url); })
+      .then(d => {
+        if (!d?.logos?.length) return;
+        const slug = brand.toLowerCase().split(" ")[0];
+        const logos = d.logos as { name: string; url: string }[];
+        // Prefer: primary brand wordmark with white-background variant
+        const pick =
+          logos.find(l => { const n = l.name.toLowerCase(); return n.includes(slug) && (n.includes("_wb") || n.includes("whitebg")); }) ??
+          logos.find(l => l.name.toLowerCase().includes(slug)) ??
+          logos.find(l => { const n = l.name.toLowerCase(); return n.includes("_wb") || n.includes("whitebg"); }) ??
+          logos[0];
+        setLogo(API_BASE + pick.url);
+      })
       .catch(() => {});
 
     fetch(`${API_BASE}/brands/${enc}/list-colours`)
