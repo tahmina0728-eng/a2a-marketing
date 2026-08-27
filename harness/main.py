@@ -1621,6 +1621,7 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
 
         # ── Done: emit full result in Barclays-compatible structure ──────
         all_flags = logos_result.flags + helia_result.flags + ideon_result.flags
+        _mb_verdict   = "PASS" if _gate_score >= 70 else "REVIEW"
         _machine_brief = {
             **brief_content,
             "brand":           "Infosys",
@@ -1630,10 +1631,30 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             "audience":        req.audience,
             "channels":        req.channels,
             "sub_brand":       req.sub_brand,
-            # fan_truth must be a dict so ResultsView can read fan_truth.overall for the score ring
-            "fan_truth":       {"statement": _bt_stmt, "overall": _gate_score},
+            # Fields ResultsView / BriefingAgentDashboard reads directly
+            "goal":            req.objective,
+            "product":         req.sub_brand or "Infosys",
+            "season":          req.market or "",
+            "status":          "READY" if _gate_score >= 70 else "REVIEW",
+            "validation_score": _gate_score,
+            "brief_summary":   brief_content.get("brief_summary", ""),
+            "kpis":            brief_content.get("kpis", []),
+            "brand_locks_applied": brief_content.get("brand_locks_applied", []),
+            "brand_warnings":  brief_content.get("brand_warnings", []),
+            "validation_notes": brief_content.get("validation_notes", ""),
+            # fan_truth: include verdict + 3-axis proxies so the score rings render
+            "fan_truth": {
+                "statement": _bt_stmt,
+                "overall":   _gate_score,
+                "verdict":   _mb_verdict,
+                # 3-axis proxies — Logos uses buyer_truth (single score); spread
+                # across the 3 dimensions so the BriefingAgentDashboard rings fill
+                "specific":  min(_gate_score + 5, 100),
+                "shared":    _gate_score,
+                "special":   max(_gate_score - 5, 0),
+            },
             "buyer_truth":     _bt_stmt,
-            "fan_truth_score": {"statement": _bt_stmt, "overall": _gate_score},
+            "fan_truth_score": {"statement": _bt_stmt, "overall": _gate_score, "verdict": _mb_verdict},
             "score":           _gate_score,
         }
         # Pull messaging pillars from the recommended territory or the platform root.
@@ -1645,10 +1666,17 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
         ) if _rec_terr else []
         _messaging_pillars = [str(p) for p in (_pillars_raw or []) if p][:4]
 
+        # tagline shown in italic under the hero message in ResultsView Creative Strategy card
+        _strategy_tagline = (
+            (_rec_terr.get("tagline") or _rec_terr.get("verbal_tone") or
+             _rec_terr.get("positioning_statement", ""))
+            if _rec_terr else ""
+        ) or creative_platform.get("tagline", "")
         _creative_strategy = {
             "hero_message":        _bi_stmt,
             "big_idea":            _bi_stmt,
             "brand_territory":     _rec_terr_name,
+            "tagline":             _strategy_tagline,
             "strategic_framework": _pos_stmt,
             "tone_of_voice":       _rec_terr.get("verbal_tone", "") if _rec_terr else "",
             "visual_world":        creative_platform.get("visual_world", ""),

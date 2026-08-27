@@ -2647,6 +2647,8 @@ function ResultsView({ output, campaignId }: {
     google_ads: "🔍", meta_ads: "📘", email: "📧", ooh: "🏙️", website: "🌐",
   };
   const COPY_CH: Record<string, { icon: string; label: string; color: string }> = {
+    linkedin:          { icon: "💼", label: "LinkedIn",  color: "#60a5fa" },
+    email:             { icon: "📧", label: "Email",     color: "#38bdf8" },
     instagram_caption: { icon: "📸", label: "Instagram", color: "#c084fc" },
     tiktok_hook:       { icon: "🎵", label: "TikTok",    color: "#f472b6" },
     youtube_script:    { icon: "▶️", label: "YouTube",   color: "#f87171" },
@@ -2655,6 +2657,7 @@ function ResultsView({ output, campaignId }: {
     ooh_headline:      { icon: "🏙️", label: "OOH",      color: "#fbbf24" },
     web_headline:      { icon: "🌐", label: "Website",   color: "#34d399" },
     email_subject:     { icon: "📧", label: "Email",     color: "#38bdf8" },
+    x:                 { icon: "𝕏",  label: "X",         color: "#94a3b8" },
   };
 
   // Sequential step counter — increments only for present stages
