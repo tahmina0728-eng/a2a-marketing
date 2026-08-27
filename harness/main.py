@@ -1456,56 +1456,91 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
                          "Poly: packaging copy for LinkedIn & email channels…")
         _channels_list = [c.lower() for c in (req.channels or [])]
 
-        # Build per-channel adapted images from the LinkedIn KV using PIL
-        def _crop_to(img_bytes: bytes, w: int, h: int) -> str:
-            """Center-crop and resize JPEG bytes to w×h, return base64."""
-            import io as _io, base64 as _b64
-            from PIL import Image as _Img
-            src = _Img.open(_io.BytesIO(img_bytes)).convert("RGB")
+        # ── KV crop helpers ──────────────────────────────────────────────────────
+        import io as _io_ch, base64 as _b64_ch
+        from PIL import Image as _PILImg
+
+        def _kv_crop_left(img_bytes: bytes, w: int, h: int) -> str:
+            """Left-anchored crop: preserves the Infosys text zone (left side of KV)."""
+            src = _PILImg.open(_io_ch.BytesIO(img_bytes)).convert("RGB")
             sw, sh = src.size
             target_ratio = w / h
             src_ratio    = sw / sh
             if src_ratio > target_ratio:
-                # wider than target — crop sides
                 new_w = int(sh * target_ratio)
-                left  = (sw - new_w) // 2
-                src   = src.crop((left, 0, left + new_w, sh))
+                src   = src.crop((0, 0, new_w, sh))          # anchor LEFT
             else:
-                # taller than target — crop top/bottom
                 new_h = int(sw / target_ratio)
                 top   = (sh - new_h) // 2
                 src   = src.crop((0, top, sw, top + new_h))
-            src = src.resize((w, h), _Img.LANCZOS)
-            buf = _io.BytesIO()
+            src = src.resize((w, h), _PILImg.LANCZOS)
+            buf = _io_ch.BytesIO()
             src.save(buf, format="JPEG", quality=90, optimize=True)
-            return _b64.b64encode(buf.getvalue()).decode()
+            return _b64_ch.b64encode(buf.getvalue()).decode()
 
-        _li_img_b64  = _kv_images[0] if _kv_images else None
-        _em_img_b64: str | None = None
+        def _kv_stories(img_bytes: bytes) -> str:
+            """9:16 Stories format: left square of KV centred on brand-blue canvas."""
+            src = _PILImg.open(_io_ch.BytesIO(img_bytes)).convert("RGB")
+            sw, sh = src.size
+            side    = min(sw, sh)                              # square from left
+            sq      = src.crop((0, 0, side, side))
+            canvas_h = int(side * 16 / 9)
+            canvas   = _PILImg.new("RGB", (side, canvas_h), (0, 124, 195))  # Infosys Blue
+            canvas.paste(sq, (0, (canvas_h - side) // 2))
+            canvas   = canvas.resize((1080, 1920), _PILImg.LANCZOS)
+            buf = _io_ch.BytesIO()
+            canvas.save(buf, format="JPEG", quality=90, optimize=True)
+            return _b64_ch.b64encode(buf.getvalue()).decode()
+
+        _li_img_b64   = _kv_images[0] if _kv_images else None
+        _li2_img_b64  = _kv_images[1] if len(_kv_images) > 1 else _li_img_b64
+        _ig_feed_b64: str | None  = None
+        _ig_story_b64: str | None = None
+        _em_img_b64:  str | None  = None
+
         if _kv_images:
+            _kv1_raw = _b64_ch.b64decode(_kv_images[0])
             try:
-                import base64 as _b64e
-                _em_img_b64 = await loop.run_in_executor(
-                    None, _crop_to, _b64e.b64decode(_kv_images[0]), 600, 338)
+                _ig_feed_b64  = await loop.run_in_executor(None, _kv_crop_left, _kv1_raw, 1080, 1080)
+            except Exception: pass
+            try:
+                _ig_story_b64 = await loop.run_in_executor(None, _kv_stories, _kv1_raw)
+            except Exception: pass
+            try:
+                _em_img_b64   = await loop.run_in_executor(None, _kv_crop_left, _kv1_raw, 600, 338)
             except Exception:
-                _em_img_b64 = _li_img_b64   # fallback: same image
+                _em_img_b64 = _li_img_b64
+
+        _li_caption = copy_deck.get("social_captions", {}).get("linkedin", "")
+        _em_body    = copy_deck.get("body_copy",       {}).get("email",    "")
 
         _ch_data: dict = {}
-        _li_caption = copy_deck.get("social_captions", {}).get("linkedin", "")
-        _em_body    = copy_deck.get("body_copy", {}).get("email", "")
         if "linkedin" in _channels_list or not _channels_list:
             _ch_data["linkedin"] = {
-                "platform":  "LinkedIn", "format": "Feed Post — 1200×627",
-                "headline":  _best_hl, "cta": _best.get("cta", ""),
-                "caption":   _li_caption[:200] if _li_caption else _bi_stmt[:200],
+                "platform": "LinkedIn", "format": "Feed Post — 1200×627",
+                "headline": _best_hl, "cta": _best.get("cta", ""),
+                "caption":  _li_caption[:200] if _li_caption else _bi_stmt[:200],
                 **({"image_b64": _li_img_b64} if _li_img_b64 else {}),
             }
+        if "instagram" in _channels_list or not _channels_list:
+            if _ig_feed_b64:
+                _ch_data["instagram_feed"] = {
+                    "platform": "Instagram", "format": "Feed Post — 1080×1080",
+                    "headline": _best_hl, "cta": _best.get("cta", ""),
+                    "image_b64": _ig_feed_b64,
+                }
+            if _ig_story_b64:
+                _ch_data["instagram_stories"] = {
+                    "platform": "Instagram", "format": "Stories — 1080×1920",
+                    "headline": _best_hl, "cta": _best.get("cta", ""),
+                    "image_b64": _ig_story_b64,
+                }
         if "email" in _channels_list or not _channels_list:
             _ch_data["email"] = {
-                "platform":  "Email", "format": "Newsletter — 600×338",
-                "subject":   _best_hl,
-                "preview":   _best.get("subheadline", "") or _bi_stmt[:100],
-                "body":      _em_body[:300] if _em_body else _best.get("body", "")[:300],
+                "platform": "Email", "format": "Newsletter — 600×338",
+                "subject":  _best_hl,
+                "preview":  _best.get("subheadline", "") or _bi_stmt[:100],
+                "body":     _em_body[:300] if _em_body else _best.get("body", "")[:300],
                 **({"image_b64": _em_img_b64} if _em_img_b64 else {}),
             }
         if not _ch_data:
@@ -1622,14 +1657,27 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             "gate_warnings":    gate_blockers,
         }
         # channel_adaptations: shape ResultsView expects — { key: { label, image_b64, ratio } }
+        # All images are compositor output (branded KV with text + logo), NOT raw video frames.
         _channel_adaptations: dict = {}
         if _li_img_b64:
             _channel_adaptations["linkedin_feed"] = {
-                "label": "LinkedIn Feed", "image_b64": _li_img_b64, "ratio": "1200×627",
+                "label": "LinkedIn Feed", "image_b64": _li_img_b64, "ratio": "16:9",
+            }
+        if _li2_img_b64 and _li2_img_b64 != _li_img_b64:
+            _channel_adaptations["linkedin_variation"] = {
+                "label": "LinkedIn — Variation 2", "image_b64": _li2_img_b64, "ratio": "16:9",
+            }
+        if _ig_feed_b64:
+            _channel_adaptations["instagram_feed"] = {
+                "label": "Instagram Feed", "image_b64": _ig_feed_b64, "ratio": "1:1",
+            }
+        if _ig_story_b64:
+            _channel_adaptations["instagram_stories"] = {
+                "label": "Instagram Stories", "image_b64": _ig_story_b64, "ratio": "9:16",
             }
         if _em_img_b64:
             _channel_adaptations["email"] = {
-                "label": "Email Newsletter", "image_b64": _em_img_b64, "ratio": "600×338",
+                "label": "Email Newsletter", "image_b64": _em_img_b64, "ratio": "16:9",
             }
 
         # culture_brief: synthesise a cultural-intelligence paragraph from Helia territory
