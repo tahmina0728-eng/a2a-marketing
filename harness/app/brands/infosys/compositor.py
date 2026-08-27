@@ -48,12 +48,12 @@ _BG = {
 
 # IT Services color themes — 4 variants of the default blue template
 _THEMES: dict[str, tuple[int, int, int]] = {
-    "blue":        (0,   124, 195),   # Infosys Blue (default)
+    "blue":        (0,   125, 195),   # Infosys Blue #007DC3 — matches template actual pixels
     "purple":      (155,  53, 181),   # Light Purple
     "amber":       (212, 136,  15),   # Gold/Amber
     "deep-purple": (107,  47, 160),   # Deep Purple
 }
-_BLUE_SRC = (0, 124, 195)  # source blue pixels to recolor in template
+_BLUE_SRC = (0, 125, 195)  # source blue pixels to recolor — sampled from template (#007DC3)
 
 
 def _recolor_bg(
@@ -311,13 +311,11 @@ def generate_kv(
     img = Image.open(tpl_path).convert("RGB")
     img = img.resize((_W, _H), Image.LANCZOS)
 
-    # 2. Apply color theme first so background texture is preserved consistently.
-    # Blue→blue: amplify=3.0 raises the subtle grid to the same perceptual contrast
-    # as amber/purple themes. Must run BEFORE the clear rect so the text zone fill
-    # uses the already-computed target color — preventing the visible seam that
-    # appeared when a flat _BLUE_SRC patch was amplified differently from the rest.
-    amp = 3.0 if color_theme == "blue" else 1.0
-    img = _recolor_bg(img, bg_rgb, amplify=amp)
+    # 2. Recolor template for non-blue themes. The blue default template already
+    # carries #007DC3 so amplify=1.0 is a mathematical no-op (source==target);
+    # calling it only to clear the text-zone seam consistently across all paths.
+    if color_theme != "blue":
+        img = _recolor_bg(img, bg_rgb, amplify=1.0)
 
     # 3. Clear the placeholder text zone with the solid target color (post-recolor).
     # Using bg_rgb directly (not _BLUE_SRC) means the fill matches the base tone of
