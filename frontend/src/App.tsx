@@ -2602,7 +2602,7 @@ function ResultsView({ output, campaignId }: {
   const videoUri: string    = cp?.video_uri
     ? String(cp.video_uri).replace(/^gs:\/\/([^/]+)\/(.+)$/, "https://storage.googleapis.com/$1/$2") : "";
   const videoSrc: string    = videoB64 ? `data:video/mp4;base64,${videoB64}` : videoUri;
-  const adaptations = cp?.channel_adaptations as Record<string, { label: string; image_b64: string; ratio: string }> | undefined;
+  const adaptations = cp?.channel_adaptations as Record<string, { label: string; image_b64: string; ratio: string; use_reel?: boolean }> | undefined;
   const perfForecast = (output as any)?.performance_forecast as Record<string, unknown> | undefined;
 
   const resultHeadline = (copy as any)?.short_headline ?? copy?.short?.headline ?? (copy as any)?.headline ?? strategy?.hero_message ?? "";
@@ -2641,8 +2641,10 @@ function ResultsView({ output, campaignId }: {
 
 
   const CHANNEL_ICONS: Record<string, string> = {
-    instagram_feed: "📸", instagram_stories: "📱", tiktok: "🎵",
-    youtube: "▶️", google_ads: "🔍", meta_ads: "📘", email: "📧", ooh: "🏙️", website: "🌐",
+    linkedin_feed: "💼", linkedin_variation: "💼",
+    instagram_feed: "📸", instagram_stories: "📱", instagram_reels: "🎬",
+    tiktok: "🎵", youtube: "▶️",
+    google_ads: "🔍", meta_ads: "📘", email: "📧", ooh: "🏙️", website: "🌐",
   };
   const COPY_CH: Record<string, { icon: string; label: string; color: string }> = {
     instagram_caption: { icon: "📸", label: "Instagram", color: "#c084fc" },
@@ -3141,7 +3143,18 @@ function ResultsView({ output, campaignId }: {
                       <span style={{ fontSize: 11, fontWeight: 700, color: "#60a5fa" }}>{val.label}</span>
                       <span style={{ marginLeft: "auto", fontSize: 9, color: "#334155", fontFamily: "monospace" }}>{val.ratio}</span>
                     </div>
-                    <img src={`data:image/jpeg;base64,${val.image_b64}`} alt={val.label} style={{ width: "100%", display: "block" }} />
+                    {val.use_reel && (videoSrc) ? (
+                      <video
+                        src={videoSrc}
+                        poster={val.image_b64 ? `data:image/jpeg;base64,${val.image_b64}` : undefined}
+                        controls
+                        muted
+                        playsInline
+                        style={{ width: "100%", display: "block", background: "#000" }}
+                      />
+                    ) : (
+                      <img src={`data:image/jpeg;base64,${val.image_b64}`} alt={val.label} style={{ width: "100%", display: "block" }} />
+                    )}
                   </div>
                 ))}
               </div>

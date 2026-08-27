@@ -1679,6 +1679,22 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             _channel_adaptations["email"] = {
                 "label": "Email Newsletter", "image_b64": _em_img_b64, "ratio": "16:9",
             }
+        # Video channels — use_reel=True tells ResultsView to render the Veo video from
+        # creative_pipeline instead of a static image. Poster = branded KV for that ratio.
+        # No data duplication: the video_b64 lives once in creative_pipeline.
+        if _video_b64 or _video_uri:
+            _channel_adaptations["youtube"] = {
+                "label": "YouTube", "ratio": "16:9", "use_reel": True,
+                "image_b64": _li_img_b64 or "",
+            }
+            _channel_adaptations["tiktok"] = {
+                "label": "TikTok", "ratio": "9:16", "use_reel": True,
+                "image_b64": _ig_story_b64 or _li_img_b64 or "",
+            }
+            _channel_adaptations["instagram_reels"] = {
+                "label": "Instagram Reels", "ratio": "9:16", "use_reel": True,
+                "image_b64": _ig_story_b64 or _li_img_b64 or "",
+            }
 
         # culture_brief: synthesise a cultural-intelligence paragraph from Helia territory
         # so the Cultural Intelligence card renders in ResultsView.
