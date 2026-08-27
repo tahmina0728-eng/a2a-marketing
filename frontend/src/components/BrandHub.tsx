@@ -830,6 +830,11 @@ function OverviewSection({ activeBrand, onNavigate }: OverviewSectionProps) {
   const [traits,  setTraits]  = useState<string[]>([]);
 
   useEffect(() => {
+    // Reset immediately so switching brands shows a clean state, not the previous brand's data
+    setLogo(null);
+    setPalette([]);
+    setTraits([]);
+
     if (!brand) return;
     const enc = encodeURIComponent(brand);
 
@@ -839,7 +844,7 @@ function OverviewSection({ activeBrand, onNavigate }: OverviewSectionProps) {
         if (!d?.logos?.length) return;
         const slug = brand.toLowerCase().split(" ")[0];
         const logos = d.logos as { name: string; url: string }[];
-        // Prefer: primary brand wordmark with white-background variant
+        // Prefer: primary brand wordmark with white-background variant over sub-brand logos
         const pick =
           logos.find(l => { const n = l.name.toLowerCase(); return n.includes(slug) && (n.includes("_wb") || n.includes("whitebg")); }) ??
           logos.find(l => l.name.toLowerCase().includes(slug)) ??
@@ -858,8 +863,10 @@ function OverviewSection({ activeBrand, onNavigate }: OverviewSectionProps) {
           for (const entries of Object.values(d.palette)) {
             if (Array.isArray(entries)) {
               for (const e of entries as { hex: string; name: string }[]) {
-                swatches.push({ hex: e.hex, name: e.name });
-                if (swatches.length >= 8) break;
+                if (e.hex && e.hex.startsWith("#")) {
+                  swatches.push({ hex: e.hex, name: e.name });
+                  if (swatches.length >= 8) break;
+                }
               }
             }
             if (swatches.length >= 8) break;
@@ -889,7 +896,9 @@ function OverviewSection({ activeBrand, onNavigate }: OverviewSectionProps) {
           <div style={{ width: 72, height: 72, borderRadius: 14, overflow: "hidden", flexShrink: 0,
             background: "repeating-conic-gradient(#80808018 0% 25%, transparent 0% 50%) 0 0 / 12px 12px",
             display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <img src={logo} alt={meta.label} style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }} />
+            <img src={logo} alt={meta.label}
+              style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+              onError={() => setLogo(null)} />
           </div>
         ) : (
           <div style={{ width: 72, height: 72, borderRadius: 14, flexShrink: 0, fontSize: 34,
