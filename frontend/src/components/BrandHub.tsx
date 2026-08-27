@@ -797,6 +797,7 @@ function PersonaModal({ persona, isNew, onSave, onDelete, onClose }: {
 
 // ── Overview section ───────────────────────────────────────────
 const BRANDS_META: Record<string, { emoji: string; label: string }> = {
+  Infosys:     { emoji: "🔷", label: "Infosys" },
   Rnorr:       { emoji: "🎯", label: "Rnorr" },
   Sunglow:     { emoji: "✨", label: "Sunglow" },
   Boozt:       { emoji: "👗", label: "Boozt" },
@@ -804,6 +805,7 @@ const BRANDS_META: Record<string, { emoji: string; label: string }> = {
   "UBS Bank":  { emoji: "🏦", label: "UBS Bank" },
   sunrise:     { emoji: "🌅", label: "Sunrise" },
   Haleon:      { emoji: "💊", label: "Haleon" },
+  Barclays:    { emoji: "🦅", label: "Barclays" },
 };
 
 const QUICK_LINKS: { id: BrandHubSection; label: string; icon: string }[] = [

@@ -18,6 +18,7 @@ export type BrandHubSection =
   | "documents";
 
 const BRANDS = [
+  { id: "Infosys",     label: "Infosys",            emoji: "🔷", industry: "B2B Enterprise Technology", logo: `${API_BASE_PUB}/brands/Infosys/serve/Logos/Infosys_WB.png`             },
   { id: "Rnorr",       label: "Rnorr",             emoji: "🎯", industry: "Food & Beverage",    logo: `${API_BASE_PUB}/brands/Rnorr/serve/Logos/Rnorr-Logo.png`                        },
   { id: "Sunglow",     label: "Sunglow",            emoji: "✨", industry: "Beauty & Lifestyle", logo: `${API_BASE_PUB}/brands/Sunglow/serve/Logos/sunglow_logo.png`                    },
   { id: "Boozt",       label: "Boozt",              emoji: "👗", industry: "Fashion & Retail",   logo: `${API_BASE_PUB}/brands/Boozt/serve/Logos/Boozt_Logo.png`                        },
