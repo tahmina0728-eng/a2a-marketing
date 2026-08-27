@@ -2079,7 +2079,7 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
           // Product name for email footer / product spotlight
           product_name:    String((output as any)?.product_name ?? brief?.structured_brief?.product ?? ""),
           // KV image — use explicitly selected variation first
-          image_b64:       selectedImageB64 ?? cp?.images_b64?.[0] ?? cp?.image_b64 ?? "",
+          image_b64:       selectedImageB64 ?? cp?.images_b64?.[0] ?? cp?.image_b64 ?? cp?.kv_images?.[0] ?? "",
           to_email:        selected.has("email") ? email : "",
           channels:        Array.from(selected),
         }),
@@ -2178,10 +2178,10 @@ function DistributePanel({ output, campaignId, selectedImageB64 }: {
 
           {/* KV image + headline row */}
           <div style={{ display: "flex", gap: 20, alignItems: "flex-start" }}>
-            {(selectedImageB64 ?? cp?.image_b64) && (
+            {(selectedImageB64 ?? cp?.images_b64?.[0] ?? cp?.image_b64) && (
               <div style={{ flexShrink: 0, width: 180, borderRadius: 12, overflow: "hidden",
                 boxShadow: "0 4px 16px rgba(0,0,0,0.15)" }}>
-                <img src={`data:image/jpeg;base64,${selectedImageB64 ?? cp?.image_b64}`}
+                <img src={`data:image/jpeg;base64,${selectedImageB64 ?? cp?.images_b64?.[0] ?? cp?.image_b64}`}
                   alt="Campaign visual"
                   style={{ width: "100%", display: "block", objectFit: "cover" as const }} />
               </div>

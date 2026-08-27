@@ -248,14 +248,15 @@ def generate_brand_website(brand: str, hero_message: str = "", tagline: str = ""
     if brand.lower() == "haleon":
         return generate_haleon_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
     if brand.lower() == "infosys":
-        return generate_infosys_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64)
+        return generate_infosys_website(campaign_image_b64, campaign_id, hero_message, body_copy, cta, hero_image_b64, video_b64, tagline)
     return _generate_sunglow_website(brand, hero_message, tagline, body_copy, cta,
                                      campaign_image_b64, campaign_id, hero_image_b64, video_b64)
 
 
 def generate_infosys_website(campaign_image_b64: str = "", campaign_id: str = "",
                               hero_message: str = "", body_copy: str = "", cta: str = "",
-                              hero_image_b64: str = "", video_b64: str = "") -> str:
+                              hero_image_b64: str = "", video_b64: str = "",
+                              subheadline: str = "") -> str:
     """
     Infosys brand landing page — modelled on infosys.com design language.
     Dark sapphire hero, pill navigation, abstract gradient cards, industries grid, dark footer.
@@ -283,9 +284,10 @@ def generate_infosys_website(campaign_image_b64: str = "", campaign_id: str = ""
         return f'<span style="font-weight:700;font-size:16px;color:white;">{alt}</span>'
 
     # ── Copy & images ─────────────────────────────────────────────────────────
-    headline  = hero_message or "Navigate your next"
-    sub       = body_copy or "Infosys helps enterprises navigate AI transformation — from strategy to execution."
-    cta_text  = cta or "Explore How →"
+    headline    = hero_message or "Navigate your next"
+    hero_sub    = subheadline or ""   # Ideon subheadline shown under the hero headline
+    sub         = body_copy or "Infosys helps enterprises navigate AI transformation — from strategy to execution."
+    cta_text    = cta or "Explore How →"
     hero_src  = _make_bg_src(hero_image_b64) or _make_bg_src(campaign_image_b64)
     kv_src    = _make_bg_src(campaign_image_b64) or _make_bg_src(hero_image_b64)
 
@@ -587,6 +589,7 @@ footer{{background:#F8FAFC;padding:64px 80px;border-top:1px solid #E5E7EB}}
   <div class="hero-overlay"></div>
   <div class="hero-content">
     <h1>{headline}</h1>
+    {f'<p style="color:rgba(255,255,255,0.78);font-size:clamp(16px,2vw,22px);font-weight:400;margin-bottom:32px;max-width:720px;margin-left:auto;margin-right:auto;line-height:1.5;">{hero_sub}</p>' if hero_sub else ''}
     <div class="hero-search">
       <div class="search-label">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"

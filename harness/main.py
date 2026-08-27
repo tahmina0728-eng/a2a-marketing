@@ -1444,6 +1444,12 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
         except Exception as _ve:
             logger.warning("infosys_veo_failed", error=str(_ve))
 
+        # Register reel in module-level store so /publish/ endpoint can embed it in landing page
+        if _video_b64:
+            _campaign_reels[campaign_id] = _video_b64
+        if _video_uri:
+            _campaign_reel_uris[campaign_id] = _video_uri
+
         await push_event(campaign_id, "reel", "milestone", json.dumps({
             **({"motion_spec": motion_spec} if motion_spec else {}),
             **({"video_b64": _video_b64, "video_uri": _video_uri} if _video_b64 else {}),
@@ -1910,10 +1916,22 @@ async def publish_campaign(campaign_id: str, req: PublishRequest):
         )
 
         _reel_b64 = _campaign_reels.get(campaign_id, "")
+        # Fallback: if reel isn't in memory (e.g. after harness restart), try GCS download
+        if not _reel_b64:
+            _reel_uri_fb = _campaign_reel_uris.get(campaign_id, "")
+            if _reel_uri_fb and _reel_uri_fb.startswith("gs://"):
+                try:
+                    from google.cloud import storage as _gcs_lp2
+                    _uri_parts = _reel_uri_fb[5:].partition("/")
+                    _lp_blob = _gcs_lp2.Client().bucket(_uri_parts[0]).blob(_uri_parts[2])
+                    _reel_b64 = base64.b64encode(_lp_blob.download_as_bytes()).decode()
+                except Exception as _re:
+                    logger.warning("landing_page_reel_gcs_failed", error=str(_re))
         html = generate_brand_website(
             brand              = req.brand,
             hero_message       = req.short_headline or req.hero_message,
-            tagline            = req.tagline,
+            # medium_headline (Ideon subheadline) used as tagline for hero subtext
+            tagline            = req.medium_headline or req.tagline,
             body_copy          = req.body,
             cta                = req.cta,
             campaign_image_b64 = _kv_image_b64,
