@@ -110,7 +110,7 @@ async def _bq_log_machine_brief(campaign_id: str, machine_brief: dict, brief) ->
         row = {
             "campaign_id":       campaign_id,
             "campaign_name":     getattr(brief, "campaign_name", ""),
-            "brand":             getattr(brief, "brand", ""),
+            "brand":             getattr(brief, "brand", None) or machine_brief.get("brand", ""),
             "market":            getattr(brief, "market", ""),
             "product_category":  getattr(brief, "product_category", ""),
             "season":            getattr(brief, "season", ""),
@@ -1779,6 +1779,9 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
             "performance_forecast": perf_forecast,
             "processing_time_ms":   0,
         }
+        # Log to BigQuery so Campaign History shows Infosys campaigns
+        asyncio.create_task(_bq_log_machine_brief(campaign_id, _machine_brief, req))
+
         await push_event(campaign_id, "__done__", "done", json.dumps(full_result))
 
     except Exception as exc:
