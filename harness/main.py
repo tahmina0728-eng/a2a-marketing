@@ -1462,41 +1462,29 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
                          "Poly: packaging copy for LinkedIn & email channels…")
         _channels_list = [c.lower() for c in (req.channels or [])]
 
-        # ── KV crop helpers ──────────────────────────────────────────────────────
+        # ── KV format helpers ─────────────────────────────────────────────────────
         import io as _io_ch, base64 as _b64_ch
         from PIL import Image as _PILImg
 
-        def _kv_crop_left(img_bytes: bytes, w: int, h: int) -> str:
-            """Left-anchored crop: preserves the Infosys text zone (left side of KV)."""
-            src = _PILImg.open(_io_ch.BytesIO(img_bytes)).convert("RGB")
-            sw, sh = src.size
-            target_ratio = w / h
-            src_ratio    = sw / sh
-            if src_ratio > target_ratio:
-                new_w = int(sh * target_ratio)
-                src   = src.crop((0, 0, new_w, sh))          # anchor LEFT
-            else:
-                new_h = int(sw / target_ratio)
-                top   = (sh - new_h) // 2
-                src   = src.crop((0, top, sw, top + new_h))
-            src = src.resize((w, h), _PILImg.LANCZOS)
-            buf = _io_ch.BytesIO()
-            src.save(buf, format="JPEG", quality=90, optimize=True)
-            return _b64_ch.b64encode(buf.getvalue()).decode()
+        _INFOSYS_BLUE = (0, 125, 195)  # #007DC3 — matches template background
 
-        def _kv_stories(img_bytes: bytes) -> str:
-            """9:16 Stories format: left square of KV centred on brand-blue canvas."""
+        def _kv_fit_pad(img_bytes: bytes, w: int, h: int) -> str:
+            """Fit the full KV into w×h without cropping; pad with Infosys blue."""
             src = _PILImg.open(_io_ch.BytesIO(img_bytes)).convert("RGB")
-            sw, sh = src.size
-            side    = min(sw, sh)                              # square from left
-            sq      = src.crop((0, 0, side, side))
-            canvas_h = int(side * 16 / 9)
-            canvas   = _PILImg.new("RGB", (side, canvas_h), (0, 124, 195))  # Infosys Blue
-            canvas.paste(sq, (0, (canvas_h - side) // 2))
-            canvas   = canvas.resize((1080, 1920), _PILImg.LANCZOS)
+            src_w, src_h = src.size
+            scale = min(w / src_w, h / src_h)
+            new_w = int(src_w * scale)
+            new_h = int(src_h * scale)
+            src    = src.resize((new_w, new_h), _PILImg.LANCZOS)
+            canvas = _PILImg.new("RGB", (w, h), _INFOSYS_BLUE)
+            canvas.paste(src, ((w - new_w) // 2, (h - new_h) // 2))
             buf = _io_ch.BytesIO()
             canvas.save(buf, format="JPEG", quality=90, optimize=True)
             return _b64_ch.b64encode(buf.getvalue()).decode()
+
+        def _kv_stories(img_bytes: bytes) -> str:
+            """9:16 Stories: fit full KV centred on brand-blue 1080×1920 canvas."""
+            return _kv_fit_pad(img_bytes, 1080, 1920)
 
         _li_img_b64   = _kv_images[0] if _kv_images else None
         _li2_img_b64  = _kv_images[1] if len(_kv_images) > 1 else _li_img_b64
@@ -1507,13 +1495,13 @@ async def _run_infosys_pipeline_background(campaign_id: str, req: InfosysPipelin
         if _kv_images:
             _kv1_raw = _b64_ch.b64decode(_kv_images[0])
             try:
-                _ig_feed_b64  = await loop.run_in_executor(None, _kv_crop_left, _kv1_raw, 1080, 1080)
+                _ig_feed_b64  = await loop.run_in_executor(None, _kv_fit_pad, _kv1_raw, 1080, 1080)
             except Exception: pass
             try:
                 _ig_story_b64 = await loop.run_in_executor(None, _kv_stories, _kv1_raw)
             except Exception: pass
             try:
-                _em_img_b64   = await loop.run_in_executor(None, _kv_crop_left, _kv1_raw, 600, 338)
+                _em_img_b64   = await loop.run_in_executor(None, _kv_fit_pad, _kv1_raw, 600, 338)
             except Exception:
                 _em_img_b64 = _li_img_b64
 
